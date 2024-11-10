@@ -11,13 +11,15 @@ local function describe(name, func, ...)
     local start_s = os.clock()
     local start_kb = collectgarbage('count')
 
-    local success = pcall(func, ...)
+    local success, result = pcall(func, ...)
 
     local finish_s = os.clock() - start_s
     local finish_kb = collectgarbage('count') - start_kb
 
-    print(string.format('    %s | ms: %f | kb: %f',
-        success and 'OK' or 'FAILED', finish_s * 1000, finish_kb))
+    print(string.format('    %s | ms: %.2f | mb: %.2f',
+        success and 'OK' or 'FAILED', finish_s * 1000, finish_kb / 1024))
+
+    if not success then print('    ' .. result) end
 
     collectgarbage('restart')
 end
