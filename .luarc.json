@@ -1,5 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/sumneko/vscode-lua/master/setting/schema.json",
+    "completion": {
+        "autoRequire": false
+    },
     "runtime": {
         "version": "LuaJIT",
         "pathStrict": true

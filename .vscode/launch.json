@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Evolved Example",
+            "type": "lua-local",
+            "request": "launch",
+            "program": {
+                "lua": "luajit",
+                "file": "${workspaceFolder}/example.lua"
+            }
+        },
+        {
+            "name": "Launch Evolved Unbench",
+            "type": "lua-local",
+            "request": "launch",
+            "program": {
+                "lua": "luajit",
+                "file": "${workspaceFolder}/unbench.lua"
+            }
+        },
+        {
+            "name": "Launch Evolved Untests",
+            "type": "lua-local",
+            "request": "launch",
+            "program": {
+                "lua": "luajit",
+                "file": "${workspaceFolder}/untests.lua"
+            }
+        }
+    ]
+}
