@@ -56,6 +56,7 @@ end
 
 ---@param owner evolved.registry
 ---@param id integer
+---@return evolved.entity
 local function create_entity(owner, id)
     ---@type evolved.entity
     local entity = {
@@ -65,6 +66,7 @@ local function create_entity(owner, id)
     return setmetatable(entity, evolved_entity_mt)
 end
 
+---@return evolved.registry
 local function create_registry()
     ---@type evolved.registry
     local registry = {
