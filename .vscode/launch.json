@@ -2,6 +2,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Evolved All",
+            "type": "lua-local",
+            "request": "launch",
+            "program": {
+                "lua": "luajit",
+                "file": "${workspaceFolder}/develop/all.lua"
+            }
+        },
+        {
             "name": "Launch Evolved Example",
             "type": "lua-local",
             "request": "launch",

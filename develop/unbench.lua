@@ -1,4 +1,5 @@
 local evolved = require 'evolved'
+local utilities = require 'develop.utilities'
 
 ---@param name string
 ---@param func fun(...):...
@@ -6,7 +7,7 @@ local evolved = require 'evolved'
 local function describe(name, func, ...)
     collectgarbage('stop')
 
-    print(string.format('- %s ...', name))
+    print(string.format('| unbench | %s ...', name))
 
     local start_s = os.clock()
     local start_kb = collectgarbage('count')
@@ -23,3 +24,18 @@ local function describe(name, func, ...)
 
     collectgarbage('restart')
 end
+
+describe('memory footprint of 1k entities', function()
+    local registry = evolved.registry()
+    for _ = 1, 1000 do registry:entity() end
+end)
+
+describe('memory footprint of 10k entities', function()
+    local registry = evolved.registry()
+    for _ = 1, 10000 do registry:entity() end
+end)
+
+describe('memory footprint of 100k entities', function()
+    local registry = evolved.registry()
+    for _ = 1, 100000 do registry:entity() end
+end)
