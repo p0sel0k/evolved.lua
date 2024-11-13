@@ -17,4 +17,12 @@ do
     local query = registry:query(
         fragments.position,
         fragments.velocity)
+
+    for chunk in query:chunks() do
+        local ps = chunk.components[fragments.position]
+        local vs = chunk.components[fragments.position]
+
+        for i = 1, #chunk.entities do
+        end
+    end
 end

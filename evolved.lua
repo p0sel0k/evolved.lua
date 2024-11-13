@@ -11,6 +11,7 @@ local evolved = {}
 ---@field owner evolved.registry
 ---@field parent? evolved.chunk
 ---@field fragment? evolved.entity
+---@field children evolved.chunk[]
 ---@field entities evolved.entity[]
 ---@field components table<evolved.entity, any[]>
 ---@field with_cache table<evolved.entity, evolved.chunk>
@@ -21,6 +22,8 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 ---@class evolved.query
 ---@field owner evolved.registry
 ---@field id integer
+---@field roots evolved.chunk[]
+---@field fragments evolved.entity[]
 local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
@@ -37,108 +40,10 @@ evolved_entity_mt.__index = evolved_entity_mt
 ---@field chunks evolved.chunk[]
 ---@field queries evolved.query[]
 ---@field entities evolved.entity[]
+---@field chunks_by_fragment table<evolved.entity, evolved.chunk[]>
+---@field queries_by_fragment table<evolved.entity, evolved.query[]>
 local evolved_registry_mt = {}
 evolved_registry_mt.__index = evolved_registry_mt
-
----
----
----
----
----
-
----@param owner evolved.registry
----@param chunk evolved.chunk
-local function on_new_chunk(owner, chunk)
-    owner.chunks[#owner.chunks + 1] = chunk
-end
-
----@param owner evolved.registry
----@param query evolved.query
-local function on_new_query(owner, query)
-    owner.queries[#owner.queries + 1] = query
-end
-
----@param owner evolved.registry
----@param entity evolved.entity
-local function on_new_entity(owner, entity)
-    owner.entities[#owner.entities + 1] = entity
-end
-
----
----
----
----
----
-
----@param owner evolved.registry
----@param parent? evolved.chunk
----@param fragment? evolved.entity
----@return evolved.chunk
-local function create_chunk(owner, parent, fragment)
-    ---@type evolved.chunk
-    local chunk = {
-        owner = owner,
-        parent = parent,
-        fragment = fragment,
-        entities = {},
-        components = {},
-        with_cache = {},
-        without_cache = {},
-    }
-
-    do
-        local iter = chunk
-        while iter and iter.fragment do
-            chunk.components[iter.fragment] = {}
-            iter = iter.parent
-        end
-    end
-
-    return setmetatable(chunk, evolved_chunk_mt)
-end
-
----@param owner evolved.registry
----@param id integer
----@return evolved.query
-local function create_query(owner, id)
-    ---@type evolved.query
-    local query = {
-        owner = owner,
-        id = id,
-    }
-    return setmetatable(query, evolved_query_mt)
-end
-
----@param owner evolved.registry
----@param id integer
----@return evolved.entity
-local function create_entity(owner, id)
-    ---@type evolved.entity
-    local entity = {
-        owner = owner,
-        id = id,
-    }
-
-    owner.chunks[1]:insert(entity)
-
-    return setmetatable(entity, evolved_entity_mt)
-end
-
----@return evolved.registry
-local function create_registry()
-    ---@type evolved.registry
-    local registry = {
-        nextid = 1,
-        chunks = {},
-        queries = {},
-        entities = {},
-    }
-
-    local chunk = create_chunk(registry)
-    on_new_chunk(registry, chunk)
-
-    return setmetatable(registry, evolved_registry_mt)
-end
 
 ---
 ---
@@ -166,17 +71,7 @@ function evolved_chunk_mt:with(fragment)
         return self
     end
 
-    if not self.fragment or self.fragment.id < fragment.id then
-        local new_chunk = create_chunk(self.owner, self, fragment)
-        on_new_chunk(self.owner, new_chunk)
-
-        self.with_cache[fragment] = new_chunk
-        new_chunk.without_cache[fragment] = self
-
-        return new_chunk
-    end
-
-    do
+    if self.fragment and self.fragment.id > fragment.id then
         local sibling_chunk = self.parent
             :with(fragment)
             :with(self.fragment)
@@ -185,6 +80,52 @@ function evolved_chunk_mt:with(fragment)
 
         return sibling_chunk
     end
+
+    ---@type evolved.chunk
+    local new_chunk = {
+        owner = self.owner,
+        parent = self,
+        fragment = fragment,
+        children = {},
+        entities = {},
+        components = {},
+        with_cache = {},
+        without_cache = {},
+    }
+    setmetatable(new_chunk, evolved_chunk_mt)
+    self.owner.chunks[#self.owner.chunks + 1] = new_chunk
+
+    do
+        local iter = new_chunk
+        while iter and iter.fragment do
+            new_chunk.components[iter.fragment] = {}
+            iter = iter.parent
+        end
+    end
+
+    do
+        self.children[#self.children + 1] = new_chunk
+    end
+
+    do
+        local chunks = self.owner.chunks_by_fragment[fragment] or {}
+        chunks[#chunks + 1] = new_chunk
+        self.owner.chunks_by_fragment[fragment] = chunks
+    end
+
+    do
+        local queries = self.owner.queries_by_fragment[fragment] or {}
+        for _, query in ipairs(queries) do
+            if new_chunk:has_all_fragments(unpack(query.fragments)) then
+                query.roots[#query.roots + 1] = new_chunk
+            end
+        end
+    end
+
+    self.with_cache[fragment] = new_chunk
+    new_chunk.without_cache[fragment] = self
+
+    return new_chunk
 end
 
 ---@param fragment evolved.entity
@@ -199,15 +140,13 @@ function evolved_chunk_mt:without(fragment)
         return self
     end
 
-    do
-        local sibling_chunk = self.parent
-            :without(fragment)
-            :with(self.fragment)
+    local sibling_chunk = self.parent
+        :without(fragment)
+        :with(self.fragment)
 
-        self.without_cache[fragment] = sibling_chunk
+    self.without_cache[fragment] = sibling_chunk
 
-        return sibling_chunk
-    end
+    return sibling_chunk
 end
 
 ---@param entity evolved.entity
@@ -270,6 +209,37 @@ end
 
 ---
 ---
+--- QUERY API
+---
+---
+
+function evolved_query_mt:__tostring()
+    return string.format('evolved.query(%d)', self.id)
+end
+
+---@return fun(): evolved.chunk?
+function evolved_query_mt:chunks()
+    return coroutine.wrap(function()
+        local queue = {}
+
+        for i = #self.roots, 1, -1 do
+            queue[#queue + 1] = self.roots[i]
+        end
+
+        while #queue > 0 do
+            local chunk = table.remove(queue)
+
+            coroutine.yield(chunk)
+
+            for i = #chunk.children, 1, -1 do
+                queue[#queue + 1] = chunk.children[i]
+            end
+        end
+    end)
+end
+
+---
+---
 --- ENTITY API
 ---
 ---
@@ -306,18 +276,45 @@ end
 ---
 ---
 
----@return evolved.chunk
-function evolved_registry_mt:root()
-    return self.chunks[1]
-end
-
 ---@param ... evolved.entity
 ---@return evolved.query
 function evolved_registry_mt:query(...)
     local id = self.nextid
     self.nextid = self.nextid + 1
-    local query = create_query(self, id)
-    on_new_query(self, query)
+
+    ---@type evolved.query
+    local query = {
+        owner = self,
+        id = id,
+        roots = {},
+        fragments = {},
+    }
+    setmetatable(query, evolved_query_mt)
+    self.queries[#self.queries + 1] = query
+
+    do
+        local fragments = { ... }
+        table.sort(fragments, function(a, b) return a.id < b.id end)
+        query.fragments = fragments
+    end
+
+    if #query.fragments > 0 then
+        local fragment = query.fragments[#query.fragments]
+        local chunks = self.chunks_by_fragment[fragment] or {}
+        for _, chunk in ipairs(chunks) do
+            if chunk:has_all_fragments(...) then
+                query.roots[#query.roots + 1] = chunk
+            end
+        end
+    end
+
+    if #query.fragments > 0 then
+        local fragment = query.fragments[#query.fragments]
+        local queries = self.queries_by_fragment[fragment] or {}
+        queries[#queries + 1] = query
+        self.queries_by_fragment[fragment] = queries
+    end
+
     return query
 end
 
@@ -325,8 +322,21 @@ end
 function evolved_registry_mt:entity()
     local id = self.nextid
     self.nextid = self.nextid + 1
-    local entity = create_entity(self, id)
-    on_new_entity(self, entity)
+
+    ---@type evolved.entity
+    local entity = {
+        owner = self,
+        id = id,
+        chunk = nil,
+        index_in_chunk = nil,
+    }
+    setmetatable(entity, evolved_entity_mt)
+    self.entities[#self.entities + 1] = entity
+
+    do
+        self.chunks[1]:insert(entity)
+    end
+
     return entity
 end
 
@@ -338,7 +348,33 @@ end
 
 ---@return evolved.registry
 function evolved.registry()
-    return create_registry()
+    ---@type evolved.registry
+    local registry = {
+        nextid = 1,
+        chunks = {},
+        queries = {},
+        entities = {},
+        chunks_by_fragment = {},
+        queries_by_fragment = {},
+    }
+    setmetatable(registry, evolved_registry_mt)
+
+    ---@type evolved.chunk
+    local root_chunk = {
+        owner = registry,
+        parent = nil,
+        fragment = nil,
+        children = {},
+        entities = {},
+        components = {},
+        with_cache = {},
+        without_cache = {},
+    }
+    setmetatable(root_chunk, evolved_chunk_mt)
+
+    registry.chunks[1] = root_chunk
+
+    return registry
 end
 
 ---
