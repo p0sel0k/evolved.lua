@@ -18,6 +18,12 @@ local evolved = {}
 local evolved_chunk_mt = {}
 evolved_chunk_mt.__index = evolved_chunk_mt
 
+---@class evolved.query
+---@field owner evolved.registry
+---@field id integer
+local evolved_query_mt = {}
+evolved_query_mt.__index = evolved_query_mt
+
 ---@class evolved.entity
 ---@field owner evolved.registry
 ---@field id integer
@@ -29,8 +35,34 @@ evolved_entity_mt.__index = evolved_entity_mt
 ---@class evolved.registry
 ---@field nextid integer
 ---@field chunks evolved.chunk[]
+---@field queries evolved.query[]
+---@field entities evolved.entity[]
 local evolved_registry_mt = {}
 evolved_registry_mt.__index = evolved_registry_mt
+
+---
+---
+---
+---
+---
+
+---@param owner evolved.registry
+---@param chunk evolved.chunk
+local function on_new_chunk(owner, chunk)
+    owner.chunks[#owner.chunks + 1] = chunk
+end
+
+---@param owner evolved.registry
+---@param query evolved.query
+local function on_new_query(owner, query)
+    owner.queries[#owner.queries + 1] = query
+end
+
+---@param owner evolved.registry
+---@param entity evolved.entity
+local function on_new_entity(owner, entity)
+    owner.entities[#owner.entities + 1] = entity
+end
 
 ---
 ---
@@ -67,6 +99,18 @@ end
 
 ---@param owner evolved.registry
 ---@param id integer
+---@return evolved.query
+local function create_query(owner, id)
+    ---@type evolved.query
+    local query = {
+        owner = owner,
+        id = id,
+    }
+    return setmetatable(query, evolved_query_mt)
+end
+
+---@param owner evolved.registry
+---@param id integer
 ---@return evolved.entity
 local function create_entity(owner, id)
     ---@type evolved.entity
@@ -86,9 +130,12 @@ local function create_registry()
     local registry = {
         nextid = 1,
         chunks = {},
+        queries = {},
+        entities = {},
     }
 
-    registry.chunks[1] = create_chunk(registry)
+    local chunk = create_chunk(registry)
+    on_new_chunk(registry, chunk)
 
     return setmetatable(registry, evolved_registry_mt)
 end
@@ -121,7 +168,7 @@ function evolved_chunk_mt:with(fragment)
 
     if not self.fragment or self.fragment.id < fragment.id then
         local new_chunk = create_chunk(self.owner, self, fragment)
-        self.owner.chunks[#self.owner.chunks + 1] = new_chunk
+        on_new_chunk(self.owner, new_chunk)
 
         self.with_cache[fragment] = new_chunk
         new_chunk.without_cache[fragment] = self
@@ -264,11 +311,22 @@ function evolved_registry_mt:root()
     return self.chunks[1]
 end
 
+---@param ... evolved.entity
+---@return evolved.query
+function evolved_registry_mt:query(...)
+    local id = self.nextid
+    self.nextid = self.nextid + 1
+    local query = create_query(self, id)
+    on_new_query(self, query)
+    return query
+end
+
 ---@return evolved.entity
 function evolved_registry_mt:entity()
     local id = self.nextid
     self.nextid = self.nextid + 1
     local entity = create_entity(self, id)
+    on_new_entity(self, entity)
     return entity
 end
 

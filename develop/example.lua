@@ -12,3 +12,9 @@ do
     entity:insert(fragments.position)
     entity:insert(fragments.velocity)
 end
+
+do
+    local query = registry:query(
+        fragments.position,
+        fragments.velocity)
+end
