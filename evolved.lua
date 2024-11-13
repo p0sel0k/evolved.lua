@@ -12,6 +12,7 @@ local evolved = {}
 ---@field parent? evolved.chunk
 ---@field fragment? evolved.entity
 ---@field entities evolved.entity[]
+---@field components table<evolved.entity, any[]>
 ---@field with_cache table<evolved.entity, evolved.chunk>
 ---@field without_cache table<evolved.entity, evolved.chunk>
 local evolved_chunk_mt = {}
@@ -48,9 +49,19 @@ local function create_chunk(owner, parent, fragment)
         parent = parent,
         fragment = fragment,
         entities = {},
+        components = {},
         with_cache = {},
         without_cache = {},
     }
+
+    do
+        local iter = chunk
+        while iter and iter.fragment do
+            chunk.components[iter.fragment] = {}
+            iter = iter.parent
+        end
+    end
+
     return setmetatable(chunk, evolved_chunk_mt)
 end
 
@@ -63,6 +74,9 @@ local function create_entity(owner, id)
         owner = owner,
         id = id,
     }
+
+    owner.chunks[1]:insert(entity)
+
     return setmetatable(entity, evolved_entity_mt)
 end
 
@@ -255,7 +269,6 @@ function evolved_registry_mt:entity()
     local id = self.nextid
     self.nextid = self.nextid + 1
     local entity = create_entity(self, id)
-    self.chunks[1]:insert(entity)
     return entity
 end
 
