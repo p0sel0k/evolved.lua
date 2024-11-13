@@ -168,6 +168,45 @@ function evolved_chunk_mt:remove(entity)
     entity.chunk, entity.index_in_chunk = nil, 0
 end
 
+---@param fragment evolved.entity
+---@return boolean
+---@nodiscard
+function evolved_chunk_mt:has_fragment(fragment)
+    return self.components[fragment] ~= nil
+end
+
+---@param ... evolved.entity
+---@return boolean
+---@nodiscard
+function evolved_chunk_mt:has_all_fragments(...)
+    local fragment_count = select('#', ...)
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        if self.components[fragment] == nil then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@param ... evolved.entity
+---@return boolean
+---@nodiscard
+function evolved_chunk_mt:has_any_fragment(...)
+    local fragment_count = select('#', ...)
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        if self.components[fragment] ~= nil then
+            return true
+        end
+    end
+
+    return false
+end
+
 ---
 ---
 --- ENTITY API
