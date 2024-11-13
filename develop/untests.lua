@@ -27,6 +27,31 @@ local function describe(name, func, ...)
     collectgarbage('restart')
 end
 
+describe('entity:entity', function()
+    for _ = 1, 500 do
+        local registry = evolved.registry()
+
+        ---@type evolved.entity[]
+        local all_fragments = {}
+        local all_fragment_count = math.random(1, 10)
+        for i = 1, all_fragment_count do all_fragments[i] = registry:entity() end
+
+        for _ = 1, 100 do
+            ---@type evolved.entity[]
+            local insert_fragments = {}
+            local insert_fragment_count = math.random(1, 10)
+            for i = 1, insert_fragment_count do insert_fragments[i] = all_fragments[math.random(1, all_fragment_count)] end
+
+            local e1 = registry:entity()
+            for _, fragment in ipairs(insert_fragments) do e1:insert(fragment) end
+
+            local e2 = registry:entity(unpack(insert_fragments))
+
+            assert(e1.chunk == e2.chunk)
+        end
+    end
+end)
+
 describe('entity:chunk', function()
     for _ = 1, 500 do
         local registry = evolved.registry()

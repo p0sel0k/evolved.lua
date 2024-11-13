@@ -277,6 +277,18 @@ end
 ---
 
 ---@param ... evolved.entity
+---@return evolved.chunk
+function evolved_registry_mt:chunk(...)
+    local chunk = self.chunks[1]
+
+    for i = 1, select('#', ...) do
+        chunk = chunk:with(select(i, ...))
+    end
+
+    return chunk
+end
+
+---@param ... evolved.entity
 ---@return evolved.query
 function evolved_registry_mt:query(...)
     local id = self.nextid
@@ -318,8 +330,9 @@ function evolved_registry_mt:query(...)
     return query
 end
 
+---@param ... evolved.entity
 ---@return evolved.entity
-function evolved_registry_mt:entity()
+function evolved_registry_mt:entity(...)
     local id = self.nextid
     self.nextid = self.nextid + 1
 
@@ -333,9 +346,7 @@ function evolved_registry_mt:entity()
     setmetatable(entity, evolved_entity_mt)
     self.entities[#self.entities + 1] = entity
 
-    do
-        self.chunks[1]:insert(entity)
-    end
+    self:chunk(...):insert(entity)
 
     return entity
 end

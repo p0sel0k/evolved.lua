@@ -8,6 +8,12 @@ local fragments = {
 }
 
 do
+    registry:entity(
+        fragments.position,
+        fragments.velocity)
+end
+
+do
     local entity = registry:entity()
     entity:insert(fragments.position)
     entity:insert(fragments.velocity)
