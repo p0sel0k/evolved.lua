@@ -2,25 +2,23 @@ local evolved = require 'evolved.evolved'
 local evolved_singles = require 'evolved.singles'
 local evolved_vectors = require 'evolved.vectors'
 
-local registry = evolved.create_registry()
-
 local singles = {
-    delta_time = evolved_singles.create(registry, 0.016),
+    delta_time = evolved_singles.create(0.016),
 }
 
 local fragments = {
-    position = evolved.create_entity(registry),
-    velocity = evolved.create_entity(registry),
+    position = evolved.create_entity(),
+    velocity = evolved.create_entity(),
 }
 
 local queries = {
-    bodies = evolved.create_query(registry,
+    bodies = evolved.create_query(
         fragments.position,
         fragments.velocity),
 }
 
 do
-    local entity = evolved.create_entity(registry)
+    local entity = evolved.create_entity()
     local position = evolved_vectors.vector2(512, 50)
     local velocity = evolved_vectors.vector2(math.random(-20, 20), 20)
     evolved.insert_component(entity, fragments.position, position)

@@ -3,12 +3,11 @@ local evolved = require 'evolved.evolved'
 ---@class evolved.singles
 local singles = {}
 
----@param registry evolved.registry
 ---@param component any
 ---@return evolved.entity
 ---@nodiscard
-function singles.create(registry, component)
-    local single = evolved.create_entity(registry)
+function singles.create(component)
+    local single = evolved.create_entity()
     evolved.insert_component(single, single, component)
     return single
 end

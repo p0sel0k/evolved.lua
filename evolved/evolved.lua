@@ -1,10 +1,6 @@
 ---@class evolved
 local evolved = {}
 
----@class evolved.registry
-local evolved_registry_mt = {}
-evolved_registry_mt.__index = evolved_registry_mt
-
 ---@class evolved.entity
 local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
@@ -19,14 +15,9 @@ evolved_query_mt.__index = evolved_query_mt
 local evolved_chunk_mt = {}
 evolved_chunk_mt.__index = evolved_chunk_mt
 
----@return evolved.registry
----@nodiscard
-function evolved.create_registry() end
-
----@param registry evolved.registry
 ---@return evolved.entity
 ---@nodiscard
-function evolved.create_entity(registry) end
+function evolved.create_entity() end
 
 ---@param entity evolved.entity
 function evolved.destroy_entity(entity) end
@@ -69,11 +60,10 @@ function evolved.insert_component(entity, fragment, component) end
 ---@param fragment evolved.entity
 function evolved.remove_component(entity, fragment) end
 
----@param registry evolved.registry
 ---@param ... evolved.entity
 ---@return evolved.query
 ---@nodiscard
-function evolved.create_query(registry, ...) end
+function evolved.create_query(...) end
 
 ---@param query evolved.query
 ---@return fun(): evolved.chunk?
