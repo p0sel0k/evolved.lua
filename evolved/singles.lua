@@ -1,4 +1,4 @@
-local evolved = require 'evolved.evolved'
+local registry = require 'evolved.registry'
 
 ---@class evolved.singles
 local singles = {}
@@ -7,8 +7,8 @@ local singles = {}
 ---@return evolved.entity
 ---@nodiscard
 function singles.create(component)
-    local single = evolved.create_entity()
-    evolved.insert_component(single, single, component)
+    local single = registry.create_entity()
+    registry.insert_component(single, single, component)
     return single
 end
 
@@ -16,20 +16,20 @@ end
 ---@return any
 ---@nodiscard
 function singles.get(single)
-    return evolved.get_component(single, single)
+    return registry.get_component(single, single)
 end
 
 ---@param single evolved.entity
 ---@return boolean
 ---@nodiscard
 function singles.has(single)
-    return evolved.has_component(single, single)
+    return registry.has_component(single, single)
 end
 
 ---@param single evolved.entity
 ---@param component any
 function singles.assign(single, component)
-    evolved.assign_component(single, single, component)
+    registry.assign_component(single, single, component)
 end
 
 return singles
