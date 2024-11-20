@@ -4,8 +4,8 @@ local vectors = {}
 ---@class evolved.vector2
 ---@field x number
 ---@field y number
-local vector2_mt = {}
-vector2_mt.__index = vector2_mt
+local evolved_vector2_mt = {}
+evolved_vector2_mt.__index = evolved_vector2_mt
 
 ---@param x number
 ---@param y number
@@ -14,13 +14,13 @@ vector2_mt.__index = vector2_mt
 local function vector2(x, y)
     ---@type evolved.vector2
     local v = { x = x, y = y }
-    return setmetatable(v, vector2_mt)
+    return setmetatable(v, evolved_vector2_mt)
 end
 
 ---@param v evolved.vector2
 ---@return evolved.vector2
 ---@nodiscard
-function vector2_mt.__unm(v)
+function evolved_vector2_mt.__unm(v)
     return vector2(-v.x, -v.y)
 end
 
@@ -28,7 +28,7 @@ end
 ---@param b number | evolved.vector2
 ---@return evolved.vector2
 ---@nodiscard
-function vector2_mt.__add(a, b)
+function evolved_vector2_mt.__add(a, b)
     if type(a) == 'number' then
         return vector2(a + b.x, a + b.y)
     elseif type(b) == 'number' then
@@ -42,7 +42,7 @@ end
 ---@param b number | evolved.vector2
 ---@return evolved.vector2
 ---@nodiscard
-function vector2_mt.__sub(a, b)
+function evolved_vector2_mt.__sub(a, b)
     if type(a) == 'number' then
         return vector2(a - b.x, a - b.y)
     elseif type(b) == 'number' then
@@ -56,7 +56,7 @@ end
 ---@param b number | evolved.vector2
 ---@return evolved.vector2
 ---@nodiscard
-function vector2_mt.__mul(a, b)
+function evolved_vector2_mt.__mul(a, b)
     if type(a) == 'number' then
         return vector2(a * b.x, a * b.y)
     elseif type(b) == 'number' then
@@ -70,7 +70,7 @@ end
 ---@param b number | evolved.vector2
 ---@return evolved.vector2
 ---@nodiscard
-function vector2_mt.__div(a, b)
+function evolved_vector2_mt.__div(a, b)
     if type(a) == 'number' then
         return vector2(a / b.x, a / b.y)
     elseif type(b) == 'number' then
@@ -84,7 +84,7 @@ end
 ---@param b evolved.vector2
 ---@return boolean
 ---@nodiscard
-function vector2_mt.__eq(a, b)
+function evolved_vector2_mt.__eq(a, b)
     return a.x == b.x and a.y == b.y
 end
 
@@ -92,7 +92,7 @@ end
 ---@param b evolved.vector2
 ---@return boolean
 ---@nodiscard
-function vector2_mt.__le(a, b)
+function evolved_vector2_mt.__le(a, b)
     return a.x < b.x or (a.x == b.x and a.y <= b.y)
 end
 
@@ -100,14 +100,14 @@ end
 ---@param b evolved.vector2
 ---@return boolean
 ---@nodiscard
-function vector2_mt.__lt(a, b)
+function evolved_vector2_mt.__lt(a, b)
     return a.x < b.x or (a.x == b.x and a.y < b.y)
 end
 
 ---@param v evolved.vector2
 ---@return string
 ---@nodiscard
-function vector2_mt.__tostring(v)
+function evolved_vector2_mt.__tostring(v)
     return string.format('(%f, %f)', v.x, v.y)
 end
 
@@ -129,7 +129,7 @@ end
 ---@return boolean
 ---@nodiscard
 function vectors.is_vector2(v)
-    return getmetatable(v) == vector2_mt
+    return getmetatable(v) == evolved_vector2_mt
 end
 
 return vectors

@@ -1,15 +1,23 @@
+---@class evolved
+local evolved = {}
+
 ---@class evolved.registry
----
+local evolved_registry_mt = {}
+evolved_registry_mt.__index = evolved_registry_mt
+
 ---@class evolved.entity
----
+local evolved_entity_mt = {}
+evolved_entity_mt.__index = evolved_entity_mt
+
 ---@class evolved.query
----
+local evolved_query_mt = {}
+evolved_query_mt.__index = evolved_query_mt
+
 ---@class evolved.chunk
 ---@field entities evolved.entity[]
 ---@field components table<evolved.entity, any[]>
-
----@class evolved
-local evolved = {}
+local evolved_chunk_mt = {}
+evolved_chunk_mt.__index = evolved_chunk_mt
 
 ---@return evolved.registry
 ---@nodiscard
