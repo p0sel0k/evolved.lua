@@ -6,9 +6,9 @@ local singles = {}
 ---@param component any
 ---@return evolved.entity
 ---@nodiscard
-function singles.create(component)
-    local single = registry.create_entity()
-    registry.insert_component(single, single, component)
+function singles.single(component)
+    local single = registry.entity()
+    registry.insert(single, single, component)
     return single
 end
 
@@ -16,20 +16,20 @@ end
 ---@return any
 ---@nodiscard
 function singles.get(single)
-    return registry.get_component(single, single)
+    return registry.get(single, single)
 end
 
 ---@param single evolved.entity
 ---@return boolean
 ---@nodiscard
 function singles.has(single)
-    return registry.has_component(single, single)
+    return registry.has(single, single)
 end
 
 ---@param single evolved.entity
 ---@param component any
 function singles.assign(single, component)
-    registry.assign_component(single, single, component)
+    registry.assign(single, single, component)
 end
 
 return singles

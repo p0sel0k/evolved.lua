@@ -17,57 +17,57 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 
 ---@return evolved.entity
 ---@nodiscard
-function registry.create_entity() end
+function registry.entity() end
 
 ---@param entity evolved.entity
-function registry.destroy_entity(entity) end
+function registry.destroy(entity) end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@return any
 ---@nodiscard
-function registry.get_component(entity, fragment) end
+function registry.get(entity, fragment) end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@return boolean
 ---@nodiscard
-function registry.has_component(entity, fragment) end
+function registry.has(entity, fragment) end
 
 ---@param entity evolved.entity
 ---@param ... evolved.entity
 ---@return boolean
 ---@nodiscard
-function registry.has_all_components(entity, ...) end
+function registry.has_all(entity, ...) end
 
 ---@param entity evolved.entity
 ---@param ... evolved.entity
 ---@return boolean
 ---@nodiscard
-function registry.has_any_components(entity, ...) end
+function registry.has_any(entity, ...) end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
-function registry.assign_component(entity, fragment, component) end
+function registry.assign(entity, fragment, component) end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
-function registry.insert_component(entity, fragment, component) end
+function registry.insert(entity, fragment, component) end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
-function registry.remove_component(entity, fragment) end
+function registry.remove(entity, fragment) end
 
 ---@param ... evolved.entity
 ---@return evolved.query
 ---@nodiscard
-function registry.create_query(...) end
+function registry.query(...) end
 
 ---@param query evolved.query
 ---@return fun(): evolved.chunk?
 ---@nodiscard
-function registry.execute_query(query) end
+function registry.execute(query) end
 
 return registry
