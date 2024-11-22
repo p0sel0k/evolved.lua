@@ -30,7 +30,7 @@ do
         local ps = chunk.components[fragments.position]
         local vs = chunk.components[fragments.velocity]
 
-        for i in #chunk.entities do
+        for i = 1, #chunk.entities do
             ps[i] = ps[i] + vs[i] * dt
         end
     end
