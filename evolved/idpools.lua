@@ -12,11 +12,11 @@ evolved_idpool_mt.__index = evolved_idpool_mt
 ---@return evolved.idpool
 function idpools.idpool()
     ---@type evolved.idpool
-    local self = {
+    local idpool = {
         acquired_ids = {},
         available_index = 0,
     }
-    return setmetatable(self, evolved_idpool_mt)
+    return setmetatable(idpool, evolved_idpool_mt)
 end
 
 ---@param id integer
@@ -52,7 +52,15 @@ end
 function idpools.release_id(idpool, id)
     local index = bit.band(id, 0xFFFFF)
     local version = bit.band(id, 0x7FF00000)
-    version = version == 0x7FF00000 and 0x100000 or version + 0x100000
+
+    if idpool.acquired_ids[index] ~= id then
+        error('id is not acquired or already released', 2)
+    end
+
+    version = version == 0x7FF00000
+        and 0x100000
+        or version + 0x100000
+
     idpool.acquired_ids[index] = idpool.available_index + version
     idpool.available_index = index
 end
