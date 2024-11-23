@@ -6,11 +6,11 @@
 
 ```
 idpools.idpool -> (idpool)
-idpools.pack -> integer -> integer -> (integer)
-idpools.unpack -> integer -> (integer, integer)
-idpools.acquire -> idpool -> (integer)
-idpools.release -> idpool -> integer -> ()
-idpools.is_alive -> idpool -> integer -> (boolean)
+idpools.pack -> integer -> integer -> (id)
+idpools.unpack -> id -> (integer, integer)
+idpools.acquire -> idpool -> (id)
+idpools.release -> idpool -> id -> ()
+idpools.is_alive -> idpool -> id -> (boolean)
 ```
 
 ### Module `registry`
