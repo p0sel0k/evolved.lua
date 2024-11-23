@@ -36,9 +36,11 @@ evolved_query_mt.__index = evolved_query_mt
 ---@class evolved.chunk
 ---@field package __parent? evolved.chunk
 ---@field package __fragment evolved.entity
----@field package __children table<evolved.entity, evolved.chunk>
+---@field package __children evolved.chunk[]
 ---@field package __entities evolved.entity[]
 ---@field package __components table<evolved.entity, any[]>
+---@field package __with_fragment_cache table<evolved.entity, evolved.chunk>
+---@field package __without_fragment_cache table<evolved.entity, evolved.chunk>
 local evolved_chunk_mt = {}
 evolved_chunk_mt.__index = evolved_chunk_mt
 
@@ -162,6 +164,8 @@ local function __root_chunk(fragment)
         __children = {},
         __entities = {},
         __components = { [fragment] = {} },
+        __with_fragment_cache = {},
+        __without_fragment_cache = {},
     }
 
     setmetatable(root_chunk, evolved_chunk_mt)
@@ -183,18 +187,22 @@ local function __chunk_with_fragment(chunk, fragment)
         return __root_chunk(fragment)
     end
 
+    do
+        local cached_chunk = chunk.__with_fragment_cache[fragment]
+        if cached_chunk then return cached_chunk end
+    end
+
     if fragment.__guid == chunk.__fragment.__guid then
         return chunk
     end
 
     if fragment.__guid < chunk.__fragment.__guid then
-        local sibling_chunk = __chunk_with_fragment(chunk.__parent, fragment)
-        return __chunk_with_fragment(sibling_chunk, chunk.__fragment)
-    end
-
-    do
-        local child_chunk = chunk.__children[fragment]
-        if child_chunk then return child_chunk end
+        local sibling_chunk = __chunk_with_fragment(
+            __chunk_with_fragment(chunk.__parent, fragment),
+            chunk.__fragment)
+        chunk.__with_fragment_cache[fragment] = sibling_chunk
+        sibling_chunk.__without_fragment_cache[fragment] = chunk
+        return sibling_chunk
     end
 
     ---@type evolved.chunk
@@ -204,6 +212,8 @@ local function __chunk_with_fragment(chunk, fragment)
         __children = {},
         __entities = {},
         __components = { [fragment] = {} },
+        __with_fragment_cache = {},
+        __without_fragment_cache = {},
     }
 
     for f, _ in pairs(chunk.__components) do
@@ -213,7 +223,9 @@ local function __chunk_with_fragment(chunk, fragment)
     setmetatable(child_chunk, evolved_chunk_mt)
 
     do
-        chunk.__children[fragment] = child_chunk
+        table.insert(chunk.__children, child_chunk)
+        chunk.__with_fragment_cache[fragment] = child_chunk
+        child_chunk.__without_fragment_cache[fragment] = chunk
     end
 
     __on_new_chunk(child_chunk)
@@ -229,13 +241,22 @@ local function __chunk_without_fragment(chunk, fragment)
         return nil
     end
 
+    do
+        local cached_chunk = chunk.__without_fragment_cache[fragment]
+        if cached_chunk then return cached_chunk end
+    end
+
     if fragment.__guid == chunk.__fragment.__guid then
         return chunk.__parent
     end
 
     if fragment.__guid < chunk.__fragment.__guid then
-        local sibling_chunk = __chunk_without_fragment(chunk.__parent, fragment)
-        return __chunk_with_fragment(sibling_chunk, chunk.__fragment)
+        local sibling_chunk = __chunk_with_fragment(
+            __chunk_without_fragment(chunk.__parent, fragment),
+            chunk.__fragment)
+        chunk.__without_fragment_cache[fragment] = sibling_chunk
+        sibling_chunk.__with_fragment_cache[fragment] = chunk
+        return sibling_chunk
     end
 
     return chunk
@@ -463,7 +484,7 @@ function registry.execute(query)
             local matched_chunk = matched_chunk_stack[#matched_chunk_stack]
             matched_chunk_stack[#matched_chunk_stack] = nil
 
-            for _, matched_chunk_child in pairs(matched_chunk.__children) do
+            for _, matched_chunk_child in ipairs(matched_chunk.__children) do
                 matched_chunk_stack[#matched_chunk_stack + 1] = matched_chunk_child
             end
 
