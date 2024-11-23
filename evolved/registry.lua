@@ -471,12 +471,6 @@ function registry.execute(query)
     end
 end
 
----
----
----
----
----
-
 ---@param fragment evolved.entity
 ---@param ... evolved.entity
 ---@return evolved.chunk
