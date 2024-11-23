@@ -10,19 +10,19 @@ end
 do
     local p = evo.idpools.idpool()
 
-    local i1_1 = evo.idpools.acquire(p)
+    local i1_1 = p:acquire()
     assert(i1_1 == 0x100001)
 
-    local i2_1 = evo.idpools.acquire(p)
+    local i2_1 = p:acquire()
     assert(i2_1 == 0x100002)
 
     do
-        local i, v = evo.idpools.unpack(i1_1)
+        local i, v = p.unpack(i1_1)
         assert(i == 1 and v == 1)
     end
 
     do
-        local i, v = evo.idpools.unpack(i2_1)
+        local i, v = p.unpack(i2_1)
         assert(i == 2 and v == 1)
     end
 end
@@ -30,39 +30,39 @@ end
 do
     local p = evo.idpools.idpool()
 
-    local i1_1 = evo.idpools.acquire(p)
-    local i2_1 = evo.idpools.acquire(p)
-    assert(evo.idpools.is_alive(p, i1_1))
-    assert(evo.idpools.is_alive(p, i2_1))
+    local i1_1 = p:acquire()
+    local i2_1 = p:acquire()
+    assert(p:is_alive(i1_1))
+    assert(p:is_alive(i2_1))
 
-    evo.idpools.release(p, i1_1)
-    assert(not evo.idpools.is_alive(p, i1_1))
-    assert(evo.idpools.is_alive(p, i2_1))
+    p:release(i1_1)
+    assert(not p:is_alive(i1_1))
+    assert(p:is_alive(i2_1))
 
-    evo.idpools.release(p, i2_1)
-    assert(not evo.idpools.is_alive(p, i1_1))
-    assert(not evo.idpools.is_alive(p, i2_1))
+    p:release(i2_1)
+    assert(not p:is_alive(i1_1))
+    assert(not p:is_alive(i2_1))
 
-    local i2_2 = evo.idpools.acquire(p)
+    local i2_2 = p:acquire()
     assert(i2_2 == 0x200002)
 
-    local i1_2 = evo.idpools.acquire(p)
+    local i1_2 = p:acquire()
     assert(i1_2 == 0x200001)
 
-    assert(not evo.idpools.is_alive(p, i1_1))
-    assert(not evo.idpools.is_alive(p, i2_1))
-    assert(evo.idpools.is_alive(p, i1_2))
-    assert(evo.idpools.is_alive(p, i2_2))
+    assert(not p:is_alive(i1_1))
+    assert(not p:is_alive(i2_1))
+    assert(p:is_alive(i1_2))
+    assert(p:is_alive(i2_2))
 end
 
 do
     local p = evo.idpools.idpool()
 
     for _ = 1, 0xFFFFF - 1 do
-        _ = evo.idpools.acquire(p)
+        _ = p:acquire()
     end
 
-    assert(evo.idpools.acquire(p) == 0x1FFFFF)
+    assert(p:acquire() == 0x1FFFFF)
 
     if not os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") then
         assert(not pcall(evo.idpools.acquire, p))
@@ -73,16 +73,16 @@ do
     local p = evo.idpools.idpool()
 
     for _ = 1, 0x7FF - 1 do
-        evo.idpools.release(p, evo.idpools.acquire(p))
+        p:release(p:acquire())
     end
 
-    local i1_7FF = evo.idpools.acquire(p)
+    local i1_7FF = p:acquire()
     assert(i1_7FF == 0x7FF00001)
-    evo.idpools.release(p, i1_7FF)
+    p:release(i1_7FF)
 
-    local i1_1 = evo.idpools.acquire(p)
+    local i1_1 = p:acquire()
     assert(i1_1 == 0x100001)
-    evo.idpools.release(p, i1_1)
+    p:release(i1_1)
 end
 
 for _ = 1, 100 do

@@ -1,8 +1,6 @@
 # evolved.lua
 
-## API Reference
-
-### Module `idpools`
+## Module `idpools`
 
 ```
 idpools.idpool -> (idpool)
@@ -13,7 +11,17 @@ idpools.release -> idpool -> id -> ()
 idpools.is_alive -> idpool -> id -> (boolean)
 ```
 
-### Module `registry`
+### Instance `idpool`
+
+```
+idpool.pack -> integer -> integer -> (id)
+idpool.unpack -> id -> (integer, integer)
+idpool:acquire -> (id)
+idpool:release -> id -> ()
+idpool:is_alive -> id -> (boolean)
+```
+
+## Module `registry`
 
 ```
 registry.entity -> (entity)
@@ -30,11 +38,39 @@ registry.remove -> entity -> entity -> ()
 registry.query -> entity -> entity... -> (query)
 registry.execute -> query -> (() -> (chunk?))
 registry.chunk -> entity -> entity... -> (chunk)
-registry.chunk_entities -> chunk -> entity -> (entity[])
-registry.chunk_components -> chunk -> entity -> (any[])
+registry.entities -> chunk -> entity -> (entity[])
+registry.components -> chunk -> entity -> (any[])
 ```
 
-### Module `singles`
+### Instance `entity`
+
+```
+enity:is_alive -> (boolean)
+enity:destroy -> ()
+enity:get -> entity -> (any)
+enity:get_or -> entity -> any -> (any)
+enity:has -> entity -> (boolean)
+enity:has_all -> entity -> entity... -> (boolean)
+enity:has_any -> entity -> entity... -> (boolean)
+enity:assign -> entity -> any -> ()
+enity:insert -> entity -> any -> ()
+enity:remove -> entity -> ()
+```
+
+### Instance `query`
+
+```
+query:execute -> (() -> (chunk?))
+```
+
+### Instance `chunk`
+
+```
+chunk:entities -> entity -> (entity[])
+chunk:components -> entity -> (any[])
+```
+
+## Module `singles`
 
 ```
 singles.single -> any -> (entity)
@@ -43,7 +79,7 @@ singles.has -> entity -> (boolean)
 singles.assign -> entity -> any -> ()
 ```
 
-### Module `vectors`
+## Module `vectors`
 
 ```
 vectors.vector2 -> number -> number -> (vector2)

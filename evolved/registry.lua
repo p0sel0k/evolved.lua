@@ -495,7 +495,7 @@ end
 ---@param chunk evolved.chunk
 ---@return evolved.entity[]
 ---@nodiscard
-function registry.chunk_entities(chunk)
+function registry.entities(chunk)
     return chunk.__entities
 end
 
@@ -503,7 +503,7 @@ end
 ---@param fragment evolved.entity
 ---@return any[]
 ---@nodiscard
-function registry.chunk_components(chunk, fragment)
+function registry.components(chunk, fragment)
     local components = chunk.__components[fragment]
 
     if components == nil then
@@ -525,6 +525,17 @@ function evolved_entity_mt:__tostring()
     return string.format('[%d;%d]', index, version)
 end
 
+evolved_entity_mt.is_alive = registry.is_alive
+evolved_entity_mt.destroy = registry.destroy
+evolved_entity_mt.get = registry.get
+evolved_entity_mt.get_or = registry.get_or
+evolved_entity_mt.has = registry.has
+evolved_entity_mt.has_all = registry.has_all
+evolved_entity_mt.has_any = registry.has_any
+evolved_entity_mt.assign = registry.assign
+evolved_entity_mt.insert = registry.insert
+evolved_entity_mt.remove = registry.remove
+
 function evolved_query_mt:__tostring()
     local fragment_ids = ''
 
@@ -534,6 +545,8 @@ function evolved_query_mt:__tostring()
 
     return string.format('(%s)', fragment_ids)
 end
+
+evolved_query_mt.execute = registry.execute
 
 function evolved_chunk_mt:__tostring()
     local fragment_ids = ''
@@ -545,6 +558,9 @@ function evolved_chunk_mt:__tostring()
 
     return string.format('{%s}', fragment_ids)
 end
+
+evolved_chunk_mt.entities = registry.entities
+evolved_chunk_mt.components = registry.components
 
 ---
 ---

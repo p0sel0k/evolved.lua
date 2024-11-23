@@ -17,19 +17,17 @@ local queries = {
 
 do
     local entity = evo.registry.entity()
-    local position = evo.vectors.vector2(512, 50)
-    local velocity = evo.vectors.vector2(math.random(-20, 20), 20)
-    evo.registry.insert(entity, fragments.position, position)
-    evo.registry.insert(entity, fragments.velocity, velocity)
+    entity:insert(fragments.position, evo.vectors.vector2(512, 50))
+    entity:insert(fragments.velocity, evo.vectors.vector2(math.random(-20, 20), 20))
 end
 
 do
     local dt = evo.singles.get(singles.delta_time)
 
-    for chunk in evo.registry.execute(queries.bodies) do
-        local es = evo.registry.chunk_entities(chunk)
-        local ps = evo.registry.chunk_components(chunk, fragments.position)
-        local vs = evo.registry.chunk_components(chunk, fragments.velocity)
+    for chunk in queries.bodies:execute() do
+        local es = chunk:entities()
+        local ps = chunk:components(fragments.position)
+        local vs = chunk:components(fragments.velocity)
 
         for i = 1, #es do
             ps[i] = ps[i] + vs[i] * dt

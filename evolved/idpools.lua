@@ -1,6 +1,12 @@
 ---@class evolved.idpools
 local idpools = {}
 
+---
+---
+---
+---
+---
+
 ---@alias evolved.id integer
 
 ---@class evolved.idpool
@@ -8,6 +14,12 @@ local idpools = {}
 ---@field package __available_index integer
 local evolved_idpool_mt = {}
 evolved_idpool_mt.__index = evolved_idpool_mt
+
+---
+---
+---
+---
+---
 
 ---@return evolved.idpool
 function idpools.idpool()
@@ -90,5 +102,23 @@ function idpools.is_alive(idpool, id)
     local index = id % 0x100000
     return idpool.__freelist_ids[index] == id
 end
+
+---
+---
+---
+---
+---
+
+evolved_idpool_mt.pack = idpools.pack
+evolved_idpool_mt.unpack = idpools.unpack
+evolved_idpool_mt.acquire = idpools.acquire
+evolved_idpool_mt.release = idpools.release
+evolved_idpool_mt.is_alive = idpools.is_alive
+
+---
+---
+---
+---
+---
 
 return idpools
