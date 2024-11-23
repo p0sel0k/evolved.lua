@@ -142,8 +142,8 @@ for _ = 1, 100 do
         end
 
         assert(e1.chunk == e2.chunk)
-        assert(evo.registry.has_all(e1, unpack(insert_fragments)))
-        assert(evo.registry.has_all(e2, unpack(insert_fragments)))
+        assert(evo.registry.has_all(e1, evo.compat.unpack(insert_fragments)))
+        assert(evo.registry.has_all(e2, evo.compat.unpack(insert_fragments)))
 
         shuffle_array(remove_fragments)
         for _, f in ipairs(remove_fragments) do
@@ -160,8 +160,8 @@ for _ = 1, 100 do
         end
 
         assert(e1.chunk == e2.chunk)
-        assert(not evo.registry.has_any(e1, unpack(remove_fragments)))
-        assert(not evo.registry.has_any(e2, unpack(remove_fragments)))
+        assert(not evo.registry.has_any(e1, evo.compat.unpack(remove_fragments)))
+        assert(not evo.registry.has_any(e2, evo.compat.unpack(remove_fragments)))
 
         if e1.chunk ~= nil then
             for f, _ in pairs(e1.chunk.components) do

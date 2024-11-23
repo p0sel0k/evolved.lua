@@ -1,3 +1,4 @@
+local compat = require 'evolved.compat'
 local idpools = require 'evolved.idpools'
 
 ---@class evolved.registry
@@ -452,7 +453,7 @@ function registry.execute(query)
     local matched_chunk_stack = {}
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
-        if __chunk_has_all_fragments(main_fragment_chunk, unpack(query.fragments)) then
+        if __chunk_has_all_fragments(main_fragment_chunk, compat.unpack(query.fragments)) then
             matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
         end
     end
