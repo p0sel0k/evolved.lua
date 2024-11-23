@@ -250,7 +250,7 @@ end
 ---@return evolved.entity
 ---@nodiscard
 function registry.entity()
-    local guid = idpools.acquire_id(__guids)
+    local guid = idpools.acquire(__guids)
 
     ---@type evolved.entity
     local entity = {
@@ -266,7 +266,7 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.is_alive(entity)
-    return idpools.is_id_alive(__guids, entity.__guid)
+    return idpools.is_alive(__guids, entity.__guid)
 end
 
 ---@param entity evolved.entity
@@ -279,7 +279,7 @@ function registry.destroy(entity)
         __detach_entity(entity)
     end
 
-    idpools.release_id(__guids, entity.__guid)
+    idpools.release(__guids, entity.__guid)
 end
 
 ---@param entity evolved.entity
@@ -520,7 +520,7 @@ end
 ---
 
 function evolved_entity_mt:__tostring()
-    local index, version = idpools.unpack_id(self.__guid)
+    local index, version = idpools.unpack(self.__guid)
 
     return string.format('[%d;%d]', index, version)
 end

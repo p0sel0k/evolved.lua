@@ -2,6 +2,17 @@
 
 ## API Reference
 
+### Module `idpools`
+
+```
+idpools.idpool -> (idpool)
+idpools.pack -> integer -> integer -> (integer)
+idpools.unpack -> integer -> (integer, integer)
+idpools.acquire -> idpool -> (integer)
+idpools.release -> idpool -> integer -> ()
+idpools.is_alive -> idpool -> integer -> (boolean)
+```
+
 ### Module `registry`
 
 ```

@@ -17,10 +17,19 @@ function idpools.idpool()
     return setmetatable(idpool, evolved_idpool_mt)
 end
 
+---@param index integer
+---@param version integer
+---@return integer
+function idpools.pack(index, version)
+    assert(index >= 1 and index <= 0xFFFFF, 'id index out of range [1;0xFFFFF]')
+    assert(version >= 1 and version <= 0x7FF, 'id version out of range [1;0x7FF]')
+    return index + version * 0x100000
+end
+
 ---@param id integer
 ---@return integer index
 ---@return integer version
-function idpools.unpack_id(id)
+function idpools.unpack(id)
     local index = id % 0x100000
     local version = (id - index) / 0x100000
     return index, version
@@ -29,31 +38,33 @@ end
 ---@param idpool evolved.idpool
 ---@return integer
 ---@nodiscard
-function idpools.acquire_id(idpool)
+function idpools.acquire(idpool)
     if idpool.__available_index ~= 0 then
         local index = idpool.__available_index
         local available_id = idpool.__acquired_ids[index]
         idpool.__available_index = available_id % 0x100000
         local version = available_id - idpool.__available_index
+
+        local acquired_id = index + version
+        idpool.__acquired_ids[index] = acquired_id
+        return acquired_id
+    else
+        if #idpool.__acquired_ids == 0xFFFFF then
+            error('id index overflow', 2)
+        end
+
+        local index = #idpool.__acquired_ids + 1
+        local version = 0x100000
+
         local acquired_id = index + version
         idpool.__acquired_ids[index] = acquired_id
         return acquired_id
     end
-
-    if #idpool.__acquired_ids == 0xFFFFF then
-        error('id index overflow', 2)
-    end
-
-    local index = #idpool.__acquired_ids + 1
-    local version = 0x100000
-    local acquired_id = index + version
-    idpool.__acquired_ids[index] = acquired_id
-    return acquired_id
 end
 
 ---@param idpool evolved.idpool
 ---@param id integer
-function idpools.release_id(idpool, id)
+function idpools.release(idpool, id)
     local index = id % 0x100000
     local version = id - index
 
@@ -73,7 +84,7 @@ end
 ---@param id integer
 ---@return boolean
 ---@nodiscard
-function idpools.is_id_alive(idpool, id)
+function idpools.is_alive(idpool, id)
     local index = id % 0x100000
     return idpool.__acquired_ids[index] == id
 end
