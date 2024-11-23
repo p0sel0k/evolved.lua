@@ -1,3 +1,4 @@
+---@diagnostic disable: invisible
 local evo = require 'evolved.evolved'
 
 do

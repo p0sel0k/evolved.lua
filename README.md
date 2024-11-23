@@ -19,6 +19,8 @@ registry.remove -> entity -> entity -> ()
 registry.query -> entity -> entity... -> (query)
 registry.execute -> query -> (() -> (chunk?))
 registry.chunk -> entity -> entity... -> (chunk)
+registry.chunk_entities -> chunk -> entity -> (entity[])
+registry.chunk_components -> chunk -> entity -> (any[])
 ```
 
 ### Module `singles`

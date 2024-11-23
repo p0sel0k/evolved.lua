@@ -27,10 +27,11 @@ do
     local dt = evo.singles.get(singles.delta_time)
 
     for chunk in evo.registry.execute(queries.bodies) do
-        local ps = chunk.components[fragments.position]
-        local vs = chunk.components[fragments.velocity]
+        local es = evo.registry.chunk_entities(chunk)
+        local ps = evo.registry.chunk_components(chunk, fragments.position)
+        local vs = evo.registry.chunk_components(chunk, fragments.velocity)
 
-        for i = 1, #chunk.entities do
+        for i = 1, #es do
             ps[i] = ps[i] + vs[i] * dt
         end
     end

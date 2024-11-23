@@ -1,10 +1,11 @@
+---@diagnostic disable: invisible
 local evo = require 'evolved.evolved'
 
 do
     local f1, f2 = evo.registry.entity(), evo.registry.entity()
 
     local e = evo.registry.entity()
-    assert(e.chunk == nil)
+    assert(e.__chunk == nil)
 
     evo.registry.insert(e, f1)
     assert(evo.registry.has(e, f1))
@@ -57,45 +58,45 @@ do
 
     local e = evo.registry.entity()
 
-    evo.registry.insert(e, f1, f1.guid)
-    assert(e.chunk == evo.registry.chunk(f1))
+    evo.registry.insert(e, f1, f1.__guid)
+    assert(e.__chunk == evo.registry.chunk(f1))
 
     do
         local chunk_f1 = evo.registry.chunk(f1)
-        assert(#chunk_f1.entities == 1)
-        assert(#chunk_f1.components[f1] == 1)
+        assert(#chunk_f1.__entities == 1)
+        assert(#chunk_f1.__components[f1] == 1)
     end
 
-    evo.registry.insert(e, f2, f2.guid)
-    assert(e.chunk == evo.registry.chunk(f1, f2))
+    evo.registry.insert(e, f2, f2.__guid)
+    assert(e.__chunk == evo.registry.chunk(f1, f2))
 
     do
         local chunk_f1 = evo.registry.chunk(f1)
-        assert(#chunk_f1.entities == 0)
-        assert(#chunk_f1.components[f1] == 0)
+        assert(#chunk_f1.__entities == 0)
+        assert(#chunk_f1.__components[f1] == 0)
 
         local chunk_f1_f2 = evo.registry.chunk(f1, f2)
-        assert(#chunk_f1_f2.entities == 1)
-        assert(#chunk_f1_f2.components[f1] == 1)
-        assert(#chunk_f1_f2.components[f2] == 1)
+        assert(#chunk_f1_f2.__entities == 1)
+        assert(#chunk_f1_f2.__components[f1] == 1)
+        assert(#chunk_f1_f2.__components[f2] == 1)
     end
 
     evo.registry.remove(e, f1)
-    assert(e.chunk == evo.registry.chunk(f2))
+    assert(e.__chunk == evo.registry.chunk(f2))
 
     do
         local chunk_f1 = evo.registry.chunk(f1)
-        assert(#chunk_f1.entities == 0)
-        assert(#chunk_f1.components[f1] == 0)
+        assert(#chunk_f1.__entities == 0)
+        assert(#chunk_f1.__components[f1] == 0)
 
         local chunk_f2 = evo.registry.chunk(f2)
-        assert(#chunk_f2.entities == 1)
-        assert(#chunk_f2.components[f2] == 1)
+        assert(#chunk_f2.__entities == 1)
+        assert(#chunk_f2.__components[f2] == 1)
 
         local chunk_f1_f2 = evo.registry.chunk(f1, f2)
-        assert(#chunk_f1_f2.entities == 0)
-        assert(#chunk_f1_f2.components[f1] == 0)
-        assert(#chunk_f1_f2.components[f2] == 0)
+        assert(#chunk_f1_f2.__entities == 0)
+        assert(#chunk_f1_f2.__components[f1] == 0)
+        assert(#chunk_f1_f2.__components[f2] == 0)
     end
 end
 
@@ -133,15 +134,15 @@ for _ = 1, 100 do
 
         shuffle_array(insert_fragments)
         for _, f in ipairs(insert_fragments) do
-            evo.registry.insert(e1, f, f.guid)
+            evo.registry.insert(e1, f, f.__guid)
         end
 
         shuffle_array(insert_fragments)
         for _, f in ipairs(insert_fragments) do
-            evo.registry.insert(e2, f, f.guid)
+            evo.registry.insert(e2, f, f.__guid)
         end
 
-        assert(e1.chunk == e2.chunk)
+        assert(e1.__chunk == e2.__chunk)
         assert(evo.registry.has_all(e1, evo.compat.unpack(insert_fragments)))
         assert(evo.registry.has_all(e2, evo.compat.unpack(insert_fragments)))
 
@@ -159,14 +160,14 @@ for _ = 1, 100 do
             end
         end
 
-        assert(e1.chunk == e2.chunk)
+        assert(e1.__chunk == e2.__chunk)
         assert(not evo.registry.has_any(e1, evo.compat.unpack(remove_fragments)))
         assert(not evo.registry.has_any(e2, evo.compat.unpack(remove_fragments)))
 
-        if e1.chunk ~= nil then
-            for f, _ in pairs(e1.chunk.components) do
-                assert(evo.registry.get(e1, f) == f.guid)
-                assert(evo.registry.get(e2, f) == f.guid)
+        if e1.__chunk ~= nil then
+            for f, _ in pairs(e1.__chunk.__components) do
+                assert(evo.registry.get(e1, f) == f.__guid)
+                assert(evo.registry.get(e2, f) == f.__guid)
             end
         end
     end
@@ -216,7 +217,7 @@ do
     local function collect_query_entities(query)
         local entities = {} ---@type evolved.entity[]
         for chunk in evo.registry.execute(query) do
-            for _, e in ipairs(chunk.entities) do
+            for _, e in ipairs(chunk.__entities) do
                 table.insert(entities, e)
             end
         end
