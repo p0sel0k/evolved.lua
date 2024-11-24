@@ -349,6 +349,10 @@ end
 ---@param component any
 ---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return false
+    end
+
     component = component == nil and true or component
 
     local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
@@ -366,6 +370,10 @@ end
 ---@param component any
 ---@return boolean is_inserted
 function registry.insert(entity, fragment, component)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return false
+    end
+
     component = component == nil and true or component
 
     local old_chunk = entity.__chunk
@@ -402,6 +410,10 @@ end
 ---@param ... evolved.entity fragments
 ---@return boolean is_removed
 function registry.remove(entity, ...)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return false
+    end
+
     local old_chunk = entity.__chunk
     local new_chunk = entity.__chunk
 
@@ -442,6 +454,10 @@ end
 ---@param entity evolved.entity
 ---@return boolean is_cleared
 function registry.clear(entity)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return false
+    end
+
     if entity.__chunk == nil then
         return false
     end

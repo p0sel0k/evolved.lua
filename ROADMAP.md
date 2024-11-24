@@ -5,7 +5,7 @@
 - [x] add additional oop-like api
 - [ ] add blocklist of fragments for queries
 - [ ] add checks of prohibited changes while querying
-- [ ] add check inserts and removes after destroying entity
+- [x] add check inserts and removes after destroying entity
 - [x] add multi remove fragments function from entities
 - [ ] cache matched chunks in queries
 - [x] cache transitions between chunks

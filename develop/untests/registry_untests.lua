@@ -162,6 +162,38 @@ do
     end
 end
 
+do
+    local f1, f2 = evo.registry.entity(), evo.registry.entity()
+
+    local e = evo.registry.entity()
+    assert(e:insert(f1))
+    assert(e:is_alive())
+    assert(e.__chunk == evo.registry.chunk(f1))
+
+    assert(e:destroy())
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+
+    assert(not e:assign(f1, 42))
+    assert(not e:assign(f2, 42))
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+
+    assert(not e:insert(f1, 42))
+    assert(not e:insert(f2, 42))
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+
+    assert(not e:remove(f1, 42))
+    assert(not e:remove(f2, 42))
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+
+    assert(not e:clear())
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+end
+
 for _ = 1, 100 do
     local insert_fragments = {} ---@type evolved.entity[]
     local insert_fragment_count = math.random(0, 10)
