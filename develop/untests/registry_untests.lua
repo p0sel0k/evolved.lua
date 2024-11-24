@@ -32,6 +32,28 @@ do
 end
 
 do
+    local f1, f2 =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e = evo.registry.entity()
+
+    assert(e:insert(f1))
+    assert(e:insert(f2))
+
+    assert(e:is_alive())
+    assert(e.__chunk == evo.registry.chunk(f1, f2))
+
+    assert(e:destroy())
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+
+    assert(not e:destroy())
+    assert(not e:is_alive())
+    assert(e.__chunk == nil)
+end
+
+do
     local f1, f2, f3, f4, f5 =
         evo.registry.entity(),
         evo.registry.entity(),

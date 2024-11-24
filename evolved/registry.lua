@@ -288,9 +288,10 @@ function registry.is_alive(entity)
 end
 
 ---@param entity evolved.entity
+---@return boolean is_destroyed
 function registry.destroy(entity)
-    if not registry.is_alive(entity) then
-        error(string.format('entity %s is not alive', entity), 2)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return false
     end
 
     if entity.__chunk ~= nil then
@@ -298,6 +299,7 @@ function registry.destroy(entity)
     end
 
     idpools.release(__guids, entity.__guid)
+    return true
 end
 
 ---@param entity evolved.entity
