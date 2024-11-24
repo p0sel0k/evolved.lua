@@ -546,7 +546,6 @@ evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.is_alive = registry.is_alive
 evolved_entity_mt.destroy = registry.destroy
 evolved_entity_mt.get = registry.get
-evolved_entity_mt.get_or = registry.get_or
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
