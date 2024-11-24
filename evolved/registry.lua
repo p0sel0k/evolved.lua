@@ -29,7 +29,7 @@ local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
 
 ---@class evolved.query
----@field package __fragments evolved.entity[]
+---@field package __includes evolved.entity[]
 local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
@@ -52,7 +52,7 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 
 ---@param query evolved.query
 local function __on_new_query(query)
-    local main_fragment = query.__fragments[#query.__fragments]
+    local main_fragment = query.__includes[#query.__includes]
     local main_fragment_queries = __queries[main_fragment] or {}
     main_fragment_queries[#main_fragment_queries + 1] = query
     __queries[main_fragment] = main_fragment_queries
@@ -471,15 +471,24 @@ end
 ---@return evolved.query
 ---@nodiscard
 function registry.query(fragment, ...)
-    local fragments = { fragment, ... }
+    local fragment_set = { [fragment] = true }
+    local fragment_list = { fragment }
 
-    table.sort(fragments, function(a, b)
+    for i = 1, select('#', ...) do
+        local f = select(i, ...)
+        if not fragment_set[f] then
+            fragment_set[f] = true
+            fragment_list[#fragment_list + 1] = f
+        end
+    end
+
+    table.sort(fragment_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
     ---@type evolved.query
     local query = {
-        __fragments = fragments,
+        __includes = fragment_list,
     }
 
     setmetatable(query, evolved_query_mt)
@@ -492,14 +501,14 @@ end
 ---@return fun(): evolved.chunk?
 ---@nodiscard
 function registry.execute(query)
-    local main_fragment = query.__fragments[#query.__fragments]
+    local main_fragment = query.__includes[#query.__includes]
     local main_fragment_chunks = __chunks[main_fragment] or {}
 
     ---@type evolved.chunk[]
     local matched_chunk_stack = {}
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
-        if __chunk_has_all_fragments(main_fragment_chunk, compat.unpack(query.__fragments)) then
+        if __chunk_has_all_fragments(main_fragment_chunk, compat.unpack(query.__includes)) then
             matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
         end
     end
@@ -586,7 +595,7 @@ evolved_entity_mt.clear = registry.clear
 function evolved_query_mt:__tostring()
     local fragment_ids = ''
 
-    for _, fragment in ipairs(self.__fragments) do
+    for _, fragment in ipairs(self.__includes) do
         fragment_ids = string.format('%s%s', fragment_ids, fragment)
     end
 

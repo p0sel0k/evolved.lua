@@ -302,8 +302,8 @@ do
     end
 
     local q1 = evo.registry.query(f1)
-    local q2 = evo.registry.query(f1, f2)
-    local q3 = evo.registry.query(f1, f2, f3)
+    local q2 = evo.registry.query(f1, f2, f1)
+    local q3 = evo.registry.query(f1, f2, f3, f3)
 
     ---@param query evolved.query
     ---@return evolved.entity[]
@@ -333,6 +333,10 @@ do
         end
         return true
     end
+
+    assert(is_array_equal(q1.__includes, { f1 }))
+    assert(is_array_equal(q2.__includes, { f1, f2 }))
+    assert(is_array_equal(q3.__includes, { f1, f2, f3 }))
 
     assert(is_array_equal(collect_query_entities(q1), { e1, e2, e3 }))
     assert(is_array_equal(collect_query_entities(q2), { e2, e3 }))
