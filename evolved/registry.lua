@@ -107,16 +107,11 @@ local function __chunk_has_fragment(chunk, fragment)
 end
 
 ---@param chunk evolved.chunk
----@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_all_fragments(chunk, fragment, ...)
+local function __chunk_has_all_fragments(chunk, ...)
     local components = chunk.__components
-
-    if components[fragment] == nil then
-        return false
-    end
 
     for i = 1, select('#', ...) do
         if components[select(i, ...)] == nil then
@@ -128,16 +123,11 @@ local function __chunk_has_all_fragments(chunk, fragment, ...)
 end
 
 ---@param chunk evolved.chunk
----@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_any_fragments(chunk, fragment, ...)
+local function __chunk_has_any_fragments(chunk, ...)
     local components = chunk.__components
-
-    if components[fragment] ~= nil then
-        return true
-    end
 
     for i = 1, select('#', ...) do
         if components[select(i, ...)] ~= nil then
@@ -348,21 +338,21 @@ function registry.has(entity, fragment)
 end
 
 ---@param entity evolved.entity
----@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return boolean
 ---@nodiscard
-function registry.has_all(entity, fragment, ...)
-    return entity.__chunk ~= nil and __chunk_has_all_fragments(entity.__chunk, fragment, ...)
+function registry.has_all(entity, ...)
+    if entity.__chunk == nil then return select('#', ...) == 0 end
+    return __chunk_has_all_fragments(entity.__chunk, ...)
 end
 
 ---@param entity evolved.entity
----@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return boolean
 ---@nodiscard
-function registry.has_any(entity, fragment, ...)
-    return entity.__chunk ~= nil and __chunk_has_any_fragments(entity.__chunk, fragment, ...)
+function registry.has_any(entity, ...)
+    if entity.__chunk == nil then return false end
+    return __chunk_has_any_fragments(entity.__chunk, ...)
 end
 
 ---@param entity evolved.entity
