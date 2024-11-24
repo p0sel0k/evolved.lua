@@ -359,16 +359,15 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
+---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
     component = component == nil and true or component
 
     local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
-
-    if chunk_components == nil then
-        error(string.format('entity %s does not have fragment %s', entity, fragment), 2)
-    end
+    if chunk_components == nil then return false end
 
     chunk_components[entity.__index_in_chunk] = component
+    return true
 end
 
 ---@param entity evolved.entity
