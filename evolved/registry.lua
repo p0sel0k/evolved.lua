@@ -334,7 +334,8 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has(entity, fragment)
-    return entity.__chunk ~= nil and __chunk_has_fragment(entity.__chunk, fragment)
+    if entity.__chunk == nil then return false end
+    return __chunk_has_fragment(entity.__chunk, fragment)
 end
 
 ---@param entity evolved.entity
@@ -373,6 +374,7 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
+---@return boolean is_inserted
 function registry.insert(entity, fragment, component)
     component = component == nil and true or component
 
@@ -380,62 +382,71 @@ function registry.insert(entity, fragment, component)
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if old_chunk == new_chunk then
-        error(string.format('entity %s already has fragment %s', entity, fragment), 2)
+        local chunk_components = new_chunk.__components[fragment]
+        chunk_components[entity.__index_in_chunk] = component
+        return false
     end
 
     local old_index_in_chunk = entity.__index_in_chunk
-    local new_index_in_chunk = new_chunk and #new_chunk.__entities + 1 or 0
+    local new_index_in_chunk = #new_chunk.__entities + 1
 
-    if new_chunk ~= nil then
-        new_chunk.__entities[new_index_in_chunk] = entity
-        new_chunk.__components[fragment][new_index_in_chunk] = component
-
-        if old_chunk ~= nil then
-            for old_f, old_cs in pairs(old_chunk.__components) do
-                local new_cs = new_chunk.__components[old_f]
-                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
-            end
-        end
-    end
+    new_chunk.__entities[new_index_in_chunk] = entity
+    new_chunk.__components[fragment][new_index_in_chunk] = component
 
     if old_chunk ~= nil then
+        for old_f, old_cs in pairs(old_chunk.__components) do
+            local new_cs = new_chunk.__components[old_f]
+            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+        end
+
         __detach_entity(entity)
     end
 
     entity.__chunk = new_chunk
     entity.__index_in_chunk = new_index_in_chunk
+
+    return true
 end
 
 ---@param entity evolved.entity
----@param fragment evolved.entity
-function registry.remove(entity, fragment)
+---@param ... evolved.entity fragments
+---@return boolean is_removed
+function registry.remove(entity, ...)
     local old_chunk = entity.__chunk
-    local new_chunk = __chunk_without_fragment(old_chunk, fragment)
+    local new_chunk = entity.__chunk
+
+    for i = 1, select('#', ...) do
+        local fragment = select(i, ...)
+        new_chunk = __chunk_without_fragment(new_chunk, fragment)
+    end
 
     if old_chunk == new_chunk then
-        error(string.format('entity %s does not have fragment %s', entity, fragment), 2)
+        return false
+    end
+
+    if new_chunk == nil then
+        __detach_entity(entity)
+        return true
     end
 
     local old_index_in_chunk = entity.__index_in_chunk
-    local new_index_in_chunk = new_chunk and #new_chunk.__entities + 1 or 0
+    local new_index_in_chunk = #new_chunk.__entities + 1
 
-    if new_chunk ~= nil then
-        new_chunk.__entities[new_index_in_chunk] = entity
-
-        if old_chunk ~= nil then
-            for new_f, new_cs in pairs(new_chunk.__components) do
-                local old_cs = old_chunk.__components[new_f]
-                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
-            end
-        end
-    end
+    new_chunk.__entities[new_index_in_chunk] = entity
 
     if old_chunk ~= nil then
+        for new_f, new_cs in pairs(new_chunk.__components) do
+            local old_cs = old_chunk.__components[new_f]
+            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+        end
+
         __detach_entity(entity)
     end
 
     entity.__chunk = new_chunk
     entity.__index_in_chunk = new_index_in_chunk
+
+    return true
 end
 
 ---@param fragment evolved.entity

@@ -2,26 +2,53 @@
 local evo = require 'evolved.evolved'
 
 do
-    local f1, f2 = evo.registry.entity(), evo.registry.entity()
+    local f1, f2, f3 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
 
     local e = evo.registry.entity()
     assert(e.__chunk == nil)
 
-    e:insert(f1)
+    assert(e:insert(f1))
     assert(e:has(f1))
     assert(not e:has(f2))
 
-    e:insert(f2)
+    assert(e:insert(f2))
     assert(e:has(f1))
     assert(e:has(f2))
 
-    e:remove(f1)
+    assert(e:remove(f1))
     assert(not e:has(f1))
     assert(e:has(f2))
 
-    e:remove(f2)
+    assert(e:remove(f2))
     assert(not e:has(f1))
     assert(not e:has(f2))
+
+    assert(e:insert(f3))
+    assert(not e:remove(f2))
+    assert(not e:remove())
+end
+
+do
+    local f1, f2, f3, f4, f5 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e = evo.registry.entity()
+
+    assert(e:insert(f1, f1:guid()))
+    assert(e:insert(f2, f2:guid()))
+    assert(e:insert(f3, f3:guid()))
+    assert(e:insert(f4, f4:guid()))
+
+    assert(e:remove(f1, f2, f5))
+
+    assert(e.__chunk == evo.registry.chunk(f3, f4))
 end
 
 do
@@ -36,15 +63,14 @@ do
     assert(e:get_or(f) == nil)
     assert(e:get_or(f, 42) == 42)
 
-    e:insert(f, 84)
+    assert(e:insert(f, 84))
 
     assert(e:get(f) == 84)
     assert(e:get_or(f) == 84)
     assert(e:get_or(f, 42) == 84)
 
-    if not os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") then
-        assert(not pcall(e.insert, e, f, 42))
-    end
+    assert(not e:insert(f, 42))
+    assert(e:get(f) == 42)
 
     e:assign(f)
     assert(e:get(f) == true)
@@ -102,7 +128,7 @@ end
 
 for _ = 1, 100 do
     local insert_fragments = {} ---@type evolved.entity[]
-    local insert_fragment_count = math.random(1, 10)
+    local insert_fragment_count = math.random(0, 10)
 
     for _ = 1, insert_fragment_count do
         local fragment = evo.registry.entity()
@@ -110,7 +136,7 @@ for _ = 1, 100 do
     end
 
     local remove_fragments = {} ---@type evolved.entity[]
-    local remove_fragment_count = math.random(1, insert_fragment_count)
+    local remove_fragment_count = math.random(0, insert_fragment_count)
 
     for _ = 1, remove_fragment_count do
         local fragment = insert_fragments[math.random(1, #insert_fragments)]
