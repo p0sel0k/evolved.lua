@@ -55,20 +55,15 @@ do
     local f = evo.registry.entity()
     local e = evo.registry.entity()
 
-    if not os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") then
-        assert(not pcall(e.get, e, f))
-    end
-
     assert(not e:assign(f, 42))
 
-    assert(e:get_or(f) == nil)
-    assert(e:get_or(f, 42) == 42)
+    assert(e:get(f) == nil)
+    assert(e:get(f, 42) == 42)
 
     assert(e:insert(f, 84))
 
     assert(e:get(f) == 84)
-    assert(e:get_or(f) == 84)
-    assert(e:get_or(f, 42) == 84)
+    assert(e:get(f, 42) == 84)
 
     assert(not e:insert(f, 42))
     assert(e:get(f) == 42)

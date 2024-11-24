@@ -302,24 +302,10 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@return any
----@nodiscard
-function registry.get(entity, fragment)
-    local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
-
-    if chunk_components == nil then
-        error(string.format('entity %s does not have fragment %s', entity, fragment), 2)
-    end
-
-    return chunk_components[entity.__index_in_chunk]
-end
-
----@param entity evolved.entity
----@param fragment evolved.entity
 ---@param default any
 ---@return any
 ---@nodiscard
-function registry.get_or(entity, fragment, default)
+function registry.get(entity, fragment, default)
     local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
 
     if chunk_components == nil then
@@ -364,7 +350,10 @@ function registry.assign(entity, fragment, component)
     component = component == nil and true or component
 
     local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
-    if chunk_components == nil then return false end
+
+    if chunk_components == nil then
+        return false
+    end
 
     chunk_components[entity.__index_in_chunk] = component
     return true
