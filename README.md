@@ -25,6 +25,7 @@ idpool:is_alive -> id -> (boolean)
 
 ```
 registry.entity -> (entity)
+registry.guid -> entity -> (id)
 registry.is_alive -> entity -> (boolean)
 registry.destroy -> entity -> ()
 registry.get -> entity -> entity -> (any)
@@ -45,16 +46,17 @@ registry.components -> chunk -> entity -> (any[])
 ### Instance `entity`
 
 ```
-enity:is_alive -> (boolean)
-enity:destroy -> ()
-enity:get -> entity -> (any)
-enity:get_or -> entity -> any -> (any)
-enity:has -> entity -> (boolean)
-enity:has_all -> entity -> entity... -> (boolean)
-enity:has_any -> entity -> entity... -> (boolean)
-enity:assign -> entity -> any -> ()
-enity:insert -> entity -> any -> ()
-enity:remove -> entity -> ()
+entity:guid -> (id)
+entity:is_alive -> (boolean)
+entity:destroy -> ()
+entity:get -> entity -> (any)
+entity:get_or -> entity -> any -> (any)
+entity:has -> entity -> (boolean)
+entity:has_all -> entity -> entity... -> (boolean)
+entity:has_any -> entity -> entity... -> (boolean)
+entity:assign -> entity -> any -> ()
+entity:insert -> entity -> any -> ()
+entity:remove -> entity -> ()
 ```
 
 ### Instance `query`

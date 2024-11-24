@@ -22,7 +22,7 @@ local __queries = {} ---@type table<evolved.entity, evolved.query[]>
 ---
 
 ---@class evolved.entity
----@field package __guid integer
+---@field package __guid evolved.id
 ---@field package __chunk? evolved.chunk
 ---@field package __index_in_chunk integer
 local evolved_entity_mt = {}
@@ -281,6 +281,13 @@ function registry.entity()
     }
 
     return setmetatable(entity, evolved_entity_mt)
+end
+
+---@param entity evolved.entity
+---@return evolved.id
+---@nodiscard
+function registry.guid(entity)
+    return entity.__guid
 end
 
 ---@param entity evolved.entity
@@ -546,6 +553,7 @@ function evolved_entity_mt:__tostring()
     return string.format('[%d;%d]', index, version)
 end
 
+evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.is_alive = registry.is_alive
 evolved_entity_mt.destroy = registry.destroy
 evolved_entity_mt.get = registry.get
