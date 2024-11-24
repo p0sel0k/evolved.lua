@@ -78,23 +78,29 @@ do
     local e = evo.registry.entity()
 
     assert(not e:assign(f, 42))
-
+    assert(not e:has(f))
     assert(e:get(f) == nil)
     assert(e:get(f, 42) == 42)
 
     assert(e:insert(f, 84))
-
+    assert(e:has(f))
     assert(e:get(f) == 84)
     assert(e:get(f, 42) == 84)
 
-    assert(not e:insert(f, 42))
-    assert(e:get(f) == 42)
+    assert(not e:insert(f, 21))
+    assert(e:has(f))
+    assert(e:get(f) == 84)
+    assert(e:get(f, 42) == 84)
 
     assert(e:assign(f))
+    assert(e:has(f))
     assert(e:get(f) == true)
+    assert(e:get(f, 42) == true)
 
-    e:assign(f, 21)
+    assert(e:assign(f, 21))
+    assert(e:has(f))
     assert(e:get(f) == 21)
+    assert(e:get(f, 42) == 21)
 end
 
 do

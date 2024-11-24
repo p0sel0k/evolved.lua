@@ -380,8 +380,6 @@ function registry.insert(entity, fragment, component)
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if old_chunk == new_chunk then
-        local chunk_components = new_chunk.__components[fragment]
-        chunk_components[entity.__index_in_chunk] = component
         return false
     end
 
