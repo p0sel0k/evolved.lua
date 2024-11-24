@@ -35,6 +35,7 @@ registry.has_any -> entity -> entity... -> (boolean)
 registry.assign -> entity -> entity -> any -> (boolean)
 registry.insert -> entity -> entity -> any -> (boolean)
 registry.remove -> entity -> entity... -> (boolean)
+registry.clear -> entity -> (boolean)
 registry.query -> entity -> entity... -> (query)
 registry.execute -> query -> (() -> (chunk?))
 registry.chunk -> entity -> entity... -> (chunk)
@@ -55,6 +56,7 @@ entity:has_any -> entity... -> (boolean)
 entity:assign -> entity -> any -> (boolean)
 entity:insert -> entity -> any -> (boolean)
 entity:remove -> entity... -> (boolean)
+entity:clear -> (boolean)
 ```
 
 ### Instance `query`

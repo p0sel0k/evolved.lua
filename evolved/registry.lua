@@ -439,6 +439,17 @@ function registry.remove(entity, ...)
     return true
 end
 
+---@param entity evolved.entity
+---@return boolean is_cleared
+function registry.clear(entity)
+    if entity.__chunk == nil then
+        return false
+    end
+
+    __detach_entity(entity)
+    return true
+end
+
 ---@param fragment evolved.entity
 ---@param ... evolved.entity
 ---@return evolved.query
@@ -554,6 +565,7 @@ evolved_entity_mt.has_any = registry.has_any
 evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
 evolved_entity_mt.remove = registry.remove
+evolved_entity_mt.clear = registry.clear
 
 function evolved_query_mt:__tostring()
     local fragment_ids = ''
