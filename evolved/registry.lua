@@ -568,6 +568,22 @@ function registry.query(fragment, ...)
 end
 
 ---@param query evolved.query
+---@param ... evolved.entity fragments
+---@return evolved.query
+function registry.include(query, ...)
+    error('not impl yet', 2)
+    return query
+end
+
+---@param query evolved.query
+---@param ... evolved.entity fragments
+---@return evolved.query
+function registry.exclude(query, ...)
+    error('not impl yet', 2)
+    return query
+end
+
+---@param query evolved.query
 ---@return fun(): evolved.chunk?
 ---@nodiscard
 function registry.execute(query)
@@ -673,6 +689,8 @@ function evolved_query_mt:__tostring()
     return string.format('(%s)', fragment_ids)
 end
 
+evolved_query_mt.include = registry.include
+evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
 
 function evolved_chunk_mt:__tostring()

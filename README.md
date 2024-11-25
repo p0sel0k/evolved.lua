@@ -38,6 +38,8 @@ registry.insert -> entity -> entity -> any -> (boolean)
 registry.remove -> entity -> entity... -> (boolean)
 registry.clear -> entity -> (boolean)
 registry.query -> entity -> entity... -> (query)
+registry.include -> query -> entity... -> query
+registry.exclude -> query -> entity... -> query
 registry.execute -> query -> (() -> (chunk?))
 registry.chunk -> entity -> entity... -> (chunk)
 registry.entities -> chunk -> entity -> (entity[])
@@ -64,6 +66,8 @@ entity:clear -> (boolean)
 ### Instance `query`
 
 ```
+query:include -> entity... -> query
+query:exclude -> entity... -> query
 query:execute -> (() -> (chunk?))
 ```
 
