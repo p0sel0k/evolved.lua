@@ -40,10 +40,74 @@ do
     local e = evo.registry.entity()
     assert(e == e:set(f1):set(f2):set(f3))
     assert(e:has_all(f1, f2, f3))
-    assert(e == e:del(f1))
+    assert(e == e:del():del(f1))
     assert(not e:has(f1) and e:has_all(f2, f3))
     assert(e == e:del(f2, f3, f3))
     assert(not e:has_any(f1, f2, f3))
+end
+
+do
+    local f1, f2, f3, f4, f5 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e = evo.registry.entity()
+    assert(e == e:set(f1, 1):set(f2, 2))
+
+    do
+        assert(nil == e:get())
+
+        local c1 = e:get(f1)
+        assert(c1 == 1)
+
+        local c3 = e:get(f3)
+        assert(c3 == nil)
+
+        local c4, c5 = e:get(f4, f5)
+        assert(c4 == nil and c5 == nil)
+    end
+
+    do
+        local c1, c2 = e:get(f1, f2)
+        assert(c1 == 1 and c2 == 2)
+    end
+
+    do
+        local c2, c1 = e:get(f2, f1)
+        assert(c1 == 1 and c2 == 2)
+    end
+
+    do
+        local c3, c4, c1, c2 = e:get(f3, f4, f1, f2)
+        assert(c1 == 1 and c2 == 2 and c3 == nil and c4 == nil)
+    end
+
+    assert(e == e:set(f3, 3):set(f4, 4))
+
+    do
+        local c4, c3, c2 = e:get(f4, f3, f2)
+        assert(c2 == 2 and c3 == 3 and c4 == 4)
+    end
+
+    do
+        local c1, c2, c3, c4 = e:get(f1, f2, f3, f4)
+        assert(c1 == 1 and c2 == 2 and c3 == 3 and c4 == 4)
+    end
+
+    do
+        local c5, c1, c2, c3, c4 = e:get(f5, f1, f2, f3, f4)
+        assert(c1 == 1 and c2 == 2 and c3 == 3 and c4 == 4 and c5 == nil)
+    end
+
+    assert(e == e:set(f5, false))
+
+    do
+        local c5, c1, c2, c3, c4 = e:get(f5, f1, f2, f3, f4)
+        assert(c1 == 1 and c2 == 2 and c3 == 3 and c4 == 4 and c5 == false)
+    end
 end
 
 do
@@ -94,28 +158,28 @@ do
 
     assert(not e:assign(f, 42))
     assert(not e:has(f))
-    assert(e:get(f) == nil)
-    assert(e:get(f, 42) == 42)
+    assert(e:get_or(f) == nil)
+    assert(e:get_or(f, 42) == 42)
 
     assert(e:insert(f, 84))
     assert(e:has(f))
-    assert(e:get(f) == 84)
-    assert(e:get(f, 42) == 84)
+    assert(e:get_or(f) == 84)
+    assert(e:get_or(f, 42) == 84)
 
     assert(not e:insert(f, 21))
     assert(e:has(f))
-    assert(e:get(f) == 84)
-    assert(e:get(f, 42) == 84)
+    assert(e:get_or(f) == 84)
+    assert(e:get_or(f, 42) == 84)
 
     assert(e:assign(f))
     assert(e:has(f))
-    assert(e:get(f) == true)
-    assert(e:get(f, 42) == true)
+    assert(e:get_or(f) == true)
+    assert(e:get_or(f, 42) == true)
 
     assert(e:assign(f, 21))
     assert(e:has(f))
-    assert(e:get(f) == 21)
-    assert(e:get(f, 42) == 21)
+    assert(e:get_or(f) == 21)
+    assert(e:get_or(f, 42) == 21)
 end
 
 do
@@ -125,26 +189,26 @@ do
         local e = evo.registry.entity()
 
         assert(e == e:set(f, 42))
-        assert(e:get(f) == 42)
+        assert(e:get_or(f) == 42)
 
         assert(e == e:set(f, 21))
-        assert(e:get(f) == 21)
+        assert(e:get_or(f) == 21)
     end
 
     do
         local e = evo.registry.entity()
 
         assert(not e:assign(f, 42))
-        assert(e:get(f) == nil)
+        assert(e:get_or(f) == nil)
 
         assert(e:insert(f, 42))
-        assert(e:get(f) == 42)
+        assert(e:get_or(f) == 42)
 
         assert(e:assign(f, 21))
-        assert(e:get(f) == 21)
+        assert(e:get_or(f) == 21)
 
         assert(not e:insert(f, 42))
-        assert(e:get(f) == 21)
+        assert(e:get_or(f) == 21)
     end
 end
 
@@ -305,8 +369,8 @@ for _ = 1, 100 do
 
         if e1.__chunk ~= nil then
             for f, _ in pairs(e1.__chunk.__components) do
-                assert(e1:get(f) == f.__guid)
-                assert(e2:get(f) == f.__guid)
+                assert(e1:get_or(f) == f.__guid)
+                assert(e2:get_or(f) == f.__guid)
             end
         end
     end

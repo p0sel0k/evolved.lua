@@ -346,18 +346,57 @@ function registry.set(entity, fragment, component)
 end
 
 ---@param entity evolved.entity
+---@param ... evolved.entity fragments
+---@return any ... components
+---@nodiscard
+function registry.get(entity, ...)
+    local components = entity.__chunk and entity.__chunk.__components
+    if components == nil then return end
+
+    local fragment_count = select('#', ...)
+    if fragment_count == 0 then return end
+
+    local index_in_chunk = entity.__index_in_chunk
+
+    if fragment_count == 1 then
+        local f1 = ...
+        local cs1 = components[f1]
+        return cs1 and cs1[index_in_chunk]
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        local cs1, cs2 = components[f1], components[f2]
+        return cs1 and cs1[index_in_chunk], cs2 and cs2[index_in_chunk]
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
+        return cs1 and cs1[index_in_chunk], cs2 and cs2[index_in_chunk], cs3 and cs3[index_in_chunk]
+    end
+
+    do
+        local f1, f2, f3 = ...
+        local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
+        return cs1 and cs1[index_in_chunk], cs2 and cs2[index_in_chunk], cs3 and cs3[index_in_chunk],
+            registry.get(entity, select(4, ...))
+    end
+end
+
+---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param default any
 ---@return any
 ---@nodiscard
-function registry.get(entity, fragment, default)
-    local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
+function registry.get_or(entity, fragment, default)
+    local components = entity.__chunk and entity.__chunk.__components[fragment]
 
-    if chunk_components == nil then
+    if components == nil then
         return default
     end
 
-    return chunk_components[entity.__index_in_chunk]
+    return components[entity.__index_in_chunk]
 end
 
 ---@param entity evolved.entity
@@ -402,8 +441,8 @@ function registry.assign(entity, fragment, component)
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if old_chunk == new_chunk then
-        local chunk_components = new_chunk.__components[fragment]
-        chunk_components[entity.__index_in_chunk] = component
+        local components = new_chunk.__components[fragment]
+        components[entity.__index_in_chunk] = component
         return true
     end
 
@@ -680,6 +719,7 @@ evolved_entity_mt.destroy = registry.destroy
 evolved_entity_mt.del = registry.del
 evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
+evolved_entity_mt.get_or = registry.get_or
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
