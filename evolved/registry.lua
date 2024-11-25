@@ -522,18 +522,18 @@ function registry.remove(entity, ...)
 end
 
 ---@param entity evolved.entity
----@return boolean is_cleared
+---@return evolved.entity
 function registry.clear(entity)
     if not idpools.is_alive(__guids, entity.__guid) then
-        return false
+        return entity
     end
 
     if entity.__chunk == nil then
-        return false
+        return entity
     end
 
     __detach_entity(entity)
-    return true
+    return entity
 end
 
 ---@param fragment evolved.entity
