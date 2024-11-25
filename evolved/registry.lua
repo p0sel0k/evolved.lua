@@ -194,8 +194,10 @@ local function __chunk_with_fragment(chunk, fragment)
         local sibling_chunk = __chunk_with_fragment(
             __chunk_with_fragment(chunk.__parent, fragment),
             chunk.__fragment)
+
         chunk.__with_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__without_fragment_cache[fragment] = chunk
+
         return sibling_chunk
     end
 
@@ -217,7 +219,11 @@ local function __chunk_with_fragment(chunk, fragment)
     setmetatable(child_chunk, evolved_chunk_mt)
 
     do
-        table.insert(chunk.__children, child_chunk)
+        local chunk_children = chunk.__children
+        chunk_children[#chunk_children + 1] = child_chunk
+    end
+
+    do
         chunk.__with_fragment_cache[fragment] = child_chunk
         child_chunk.__without_fragment_cache[fragment] = chunk
     end
@@ -252,8 +258,10 @@ local function __chunk_without_fragment(chunk, fragment)
         local sibling_chunk = __chunk_with_fragment(
             __chunk_without_fragment(chunk.__parent, fragment),
             chunk.__fragment)
+
         chunk.__without_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__with_fragment_cache[fragment] = chunk
+
         return sibling_chunk
     end
 
