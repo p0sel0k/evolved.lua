@@ -38,7 +38,7 @@ registry.has_any -> entity -> entity... -> (boolean)
 registry.assign -> entity -> entity -> any -> (boolean)
 registry.insert -> entity -> entity -> any -> (boolean)
 registry.remove -> entity -> entity... -> (boolean)
-registry.clear -> entity -> (boolean)
+registry.detach -> entity -> (entity)
 registry.query -> entity -> entity... -> (query)
 registry.include -> query -> entity... -> query
 registry.exclude -> query -> entity... -> query
@@ -64,7 +64,7 @@ entity:has_any -> entity... -> (boolean)
 entity:assign -> entity -> any -> (boolean)
 entity:insert -> entity -> any -> (boolean)
 entity:remove -> entity... -> (boolean)
-entity:clear -> (boolean)
+entity:detach -> (entity)
 ```
 
 ### Instance `query`

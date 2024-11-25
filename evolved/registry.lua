@@ -530,7 +530,7 @@ end
 
 ---@param entity evolved.entity
 ---@return evolved.entity
-function registry.clear(entity)
+function registry.detach(entity)
     if not idpools.is_alive(__guids, entity.__guid) then
         return entity
     end
@@ -726,7 +726,13 @@ evolved_entity_mt.has_any = registry.has_any
 evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
 evolved_entity_mt.remove = registry.remove
-evolved_entity_mt.clear = registry.clear
+evolved_entity_mt.detach = registry.detach
+
+---
+---
+---
+---
+---
 
 function evolved_query_mt:__tostring()
     local str = ''
@@ -745,6 +751,12 @@ end
 evolved_query_mt.include = registry.include
 evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
+
+---
+---
+---
+---
+---
 
 function evolved_chunk_mt:__tostring()
     local str = ''
