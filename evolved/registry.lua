@@ -13,7 +13,6 @@ local registry = {}
 local __guids = idpools.idpool()
 local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
-local __queries = {} ---@type table<evolved.entity, evolved.query[]>
 
 ---
 ---
@@ -43,28 +42,6 @@ evolved_query_mt.__index = evolved_query_mt
 ---@field package __without_fragment_cache table<evolved.entity, evolved.chunk>
 local evolved_chunk_mt = {}
 evolved_chunk_mt.__index = evolved_chunk_mt
-
----
----
----
----
----
-
----@param query evolved.query
-local function __on_new_query(query)
-    local main_fragment = query.__includes[#query.__includes]
-    local main_fragment_queries = __queries[main_fragment] or {}
-    main_fragment_queries[#main_fragment_queries + 1] = query
-    __queries[main_fragment] = main_fragment_queries
-end
-
----@param chunk evolved.chunk
-local function __on_new_chunk(chunk)
-    local main_fragment = chunk.__fragment
-    local main_fragment_chunks = __chunks[main_fragment] or {}
-    main_fragment_chunks[#main_fragment_chunks + 1] = chunk
-    __chunks[main_fragment] = main_fragment_chunks
-end
 
 ---
 ---
@@ -164,7 +141,12 @@ local function __root_chunk(fragment)
         __roots[fragment] = root_chunk
     end
 
-    __on_new_chunk(root_chunk)
+    do
+        local fragment_chunks = __chunks[fragment] or {}
+        fragment_chunks[#fragment_chunks + 1] = root_chunk
+        __chunks[fragment] = fragment_chunks
+    end
+
     return root_chunk
 end
 
@@ -228,7 +210,12 @@ local function __chunk_with_fragment(chunk, fragment)
         child_chunk.__without_fragment_cache[fragment] = chunk
     end
 
-    __on_new_chunk(child_chunk)
+    do
+        local fragment_chunks = __chunks[fragment] or {}
+        fragment_chunks[#fragment_chunks + 1] = child_chunk
+        __chunks[fragment] = fragment_chunks
+    end
+
     return child_chunk
 end
 
@@ -561,10 +548,7 @@ function registry.query(fragment, ...)
         __includes = fragment_list,
     }
 
-    setmetatable(query, evolved_query_mt)
-
-    __on_new_query(query)
-    return query
+    return setmetatable(query, evolved_query_mt)
 end
 
 ---@param query evolved.query
