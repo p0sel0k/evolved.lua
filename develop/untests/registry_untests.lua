@@ -104,6 +104,36 @@ do
 end
 
 do
+    local f = evo.registry.entity()
+
+    do
+        local e = evo.registry.entity()
+
+        assert(e == e:set(f, 42))
+        assert(e:get(f) == 42)
+
+        assert(e == e:set(f, 21))
+        assert(e:get(f) == 21)
+    end
+
+    do
+        local e = evo.registry.entity()
+
+        assert(not e:assign(f, 42))
+        assert(e:get(f) == nil)
+
+        assert(e:insert(f, 42))
+        assert(e:get(f) == 42)
+
+        assert(e:assign(f, 21))
+        assert(e:get(f) == 21)
+
+        assert(not e:insert(f, 42))
+        assert(e:get(f) == 21)
+    end
+end
+
+do
     local f1, f2 = evo.registry.entity(), evo.registry.entity()
     local e = evo.registry.entity()
 
@@ -247,17 +277,11 @@ for _ = 1, 100 do
         assert(e2:has_all(evo.compat.unpack(insert_fragments)))
 
         shuffle_array(remove_fragments)
-        for _, f in ipairs(remove_fragments) do
-            if e1:has(f) then
-                e1:remove(f)
-            end
-        end
+        e1:remove(evo.compat.unpack(remove_fragments))
 
         shuffle_array(remove_fragments)
         for _, f in ipairs(remove_fragments) do
-            if e2:has(f) then
-                e2:remove(f)
-            end
+            e2:remove(f)
         end
 
         assert(e1.__chunk == e2.__chunk)

@@ -177,6 +177,10 @@ local function __chunk_with_fragment(chunk, fragment)
         return __root_chunk(fragment)
     end
 
+    if chunk.__components[fragment] ~= nil then
+        return chunk
+    end
+
     do
         local cached_chunk = chunk.__with_fragment_cache[fragment]
         if cached_chunk then return cached_chunk end
@@ -231,6 +235,10 @@ local function __chunk_without_fragment(chunk, fragment)
         return nil
     end
 
+    if chunk.__components[fragment] == nil then
+        return chunk
+    end
+
     do
         local cached_chunk = chunk.__without_fragment_cache[fragment]
         if cached_chunk then return cached_chunk end
@@ -247,6 +255,24 @@ local function __chunk_without_fragment(chunk, fragment)
         chunk.__without_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__with_fragment_cache[fragment] = chunk
         return sibling_chunk
+    end
+
+    return chunk
+end
+
+---@param chunk? evolved.chunk
+---@param ... evolved.entity fragments
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_without_fragments(chunk, ...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return chunk
+    end
+
+    for i = 1, fragment_count do
+        chunk = __chunk_without_fragment(chunk, select(i, ...))
     end
 
     return chunk
@@ -304,6 +330,47 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
+---@param component any
+---@return evolved.entity
+function registry.set(entity, fragment, component)
+    if not idpools.is_alive(__guids, entity.__guid) then
+        return entity
+    end
+
+    component = component == nil and true or component
+
+    local old_chunk = entity.__chunk
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+    if old_chunk == new_chunk then
+        local chunk_components = new_chunk.__components[fragment]
+        chunk_components[entity.__index_in_chunk] = component
+        return entity
+    end
+
+    local old_index_in_chunk = entity.__index_in_chunk
+    local new_index_in_chunk = #new_chunk.__entities + 1
+
+    new_chunk.__entities[new_index_in_chunk] = entity
+    new_chunk.__components[fragment][new_index_in_chunk] = component
+
+    if old_chunk ~= nil then
+        for old_f, old_cs in pairs(old_chunk.__components) do
+            local new_cs = new_chunk.__components[old_f]
+            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+        end
+
+        __detach_entity(entity)
+    end
+
+    entity.__chunk = new_chunk
+    entity.__index_in_chunk = new_index_in_chunk
+
+    return entity
+end
+
+---@param entity evolved.entity
+---@param fragment evolved.entity
 ---@param default any
 ---@return any
 ---@nodiscard
@@ -355,14 +422,16 @@ function registry.assign(entity, fragment, component)
 
     component = component == nil and true or component
 
-    local chunk_components = entity.__chunk and entity.__chunk.__components[fragment]
+    local old_chunk = entity.__chunk
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
-    if chunk_components == nil then
-        return false
+    if old_chunk == new_chunk then
+        local chunk_components = new_chunk.__components[fragment]
+        chunk_components[entity.__index_in_chunk] = component
+        return true
     end
 
-    chunk_components[entity.__index_in_chunk] = component
-    return true
+    return false
 end
 
 ---@param entity evolved.entity
@@ -413,12 +482,7 @@ function registry.remove(entity, ...)
     end
 
     local old_chunk = entity.__chunk
-    local new_chunk = entity.__chunk
-
-    for i = 1, select('#', ...) do
-        local fragment = select(i, ...)
-        new_chunk = __chunk_without_fragment(new_chunk, fragment)
-    end
+    local new_chunk = __chunk_without_fragments(old_chunk, ...)
 
     if old_chunk == new_chunk then
         return false
@@ -581,6 +645,7 @@ end
 evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.is_alive = registry.is_alive
 evolved_entity_mt.destroy = registry.destroy
+evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
