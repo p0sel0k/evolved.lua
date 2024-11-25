@@ -8,28 +8,28 @@ local singles = {}
 ---@nodiscard
 function singles.single(component)
     local single = registry.entity()
-    registry.insert(single, single, component)
-    return single
+    return single:set(single, component)
+end
+
+---@param single evolved.entity
+---@param component any
+---@return evolved.entity
+function singles.set(single, component)
+    return single:set(single, component)
 end
 
 ---@param single evolved.entity
 ---@return any
 ---@nodiscard
 function singles.get(single)
-    return registry.get(single, single)
+    return single:get(single)
 end
 
 ---@param single evolved.entity
 ---@return boolean
 ---@nodiscard
 function singles.has(single)
-    return registry.has(single, single)
-end
-
----@param single evolved.entity
----@param component any
-function singles.assign(single, component)
-    registry.assign(single, single, component)
+    return single:has(single)
 end
 
 return singles

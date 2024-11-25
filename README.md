@@ -86,9 +86,9 @@ chunk:components -> entity -> (any[])
 
 ```
 singles.single -> any -> (entity)
+singles.set -> entity -> any -> (entity)
 singles.get -> entity -> (any)
 singles.has -> entity -> (boolean)
-singles.assign -> entity -> any -> ()
 ```
 
 ## Module `vectors`
