@@ -298,38 +298,19 @@ for _ = 1, 100 do
 end
 
 do
-    local f1, f2, f3 = evo.registry.entity(), evo.registry.entity(), evo.registry.entity()
+    local f1, f2, f3, f4 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
 
-    local e1 = evo.registry.entity()
-    e1:insert(f1)
+    local e1 = evo.registry.entity():set(f1)
+    local e2 = evo.registry.entity():set(f1):set(f2)
+    local e3 = evo.registry.entity():set(f1):set(f2):set(f3)
 
-    local e2 = evo.registry.entity()
-    e2:insert(f1)
-    e2:insert(f2)
-
-    local e3 = evo.registry.entity()
-    e3:insert(f1)
-    e3:insert(f2)
-    e3:insert(f3)
-
-    do
-        local e = evo.registry.entity()
-
-        e:insert(f1)
-        e:remove(f1)
-
-        e:insert(f1)
-        e:insert(f2)
-        e:remove(f1)
-        e:remove(f2)
-
-        e:insert(f1)
-        e:insert(f2)
-        e:insert(f3)
-        e:remove(f1)
-        e:remove(f2)
-        e:remove(f3)
-    end
+    local e4 = evo.registry.entity():set(f1):set(f4)
+    local e5 = evo.registry.entity():set(f1):set(f2):set(f4)
+    local e6 = evo.registry.entity():set(f1):set(f2):set(f3):set(f4)
 
     local q1 = evo.registry.query(f1)
     local q2 = evo.registry.query(f1, f2, f1)
@@ -345,6 +326,9 @@ do
                 table.insert(entities, e)
             end
         end
+        table.sort(entities, function(a, b)
+            return a.__guid < b.__guid
+        end)
         return entities
     end
 
@@ -368,7 +352,51 @@ do
     assert(is_array_equal(q2.__includes, { f1, f2 }))
     assert(is_array_equal(q3.__includes, { f1, f2, f3 }))
 
-    assert(is_array_equal(collect_query_entities(q1), { e1, e2, e3 }))
-    assert(is_array_equal(collect_query_entities(q2), { e2, e3 }))
-    assert(is_array_equal(collect_query_entities(q3), { e3 }))
+    assert(is_array_equal(collect_query_entities(q1), { e1, e2, e3, e4, e5, e6 }))
+    assert(is_array_equal(collect_query_entities(q2), { e2, e3, e5, e6 }))
+    assert(is_array_equal(collect_query_entities(q3), { e3, e6 }))
+end
+
+do
+    local f1, f2, f3, f4, f5 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local query = evo.registry.query(f1, f1)
+    assert(query == query:include(f2, f3, f2))
+    assert(query == query:exclude(f4, f5, f5))
+
+    ---@param q evolved.query
+    ---@param f evolved.entity
+    ---@return boolean
+    ---@nodiscard
+    local function includes(q, f)
+        for _, qf in ipairs(q.__includes) do
+            if qf:guid() == f:guid() then
+                return true
+            end
+        end
+        return false
+    end
+
+    ---@param q evolved.query
+    ---@param f evolved.entity
+    ---@return boolean
+    ---@nodiscard
+    local function excludes(q, f)
+        for _, qf in ipairs(q.__excludes) do
+            if qf:guid() == f:guid() then
+                return true
+            end
+        end
+        return false
+    end
+
+    assert(includes(query, f1) and includes(query, f2) and includes(query, f3))
+    assert(not includes(query, f4) and not includes(query, f5))
+    assert(excludes(query, f4) and excludes(query, f5))
+    assert(not excludes(query, f1) and not excludes(query, f2) and not excludes(query, f3))
 end

@@ -29,6 +29,7 @@ evolved_entity_mt.__index = evolved_entity_mt
 
 ---@class evolved.query
 ---@field package __includes evolved.entity[]
+---@field package __excludes evolved.entity[]
 local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
@@ -546,6 +547,7 @@ function registry.query(fragment, ...)
     ---@type evolved.query
     local query = {
         __includes = fragment_list,
+        __excludes = {},
     }
 
     return setmetatable(query, evolved_query_mt)
@@ -555,7 +557,26 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.include(query, ...)
-    error('not impl yet', 2)
+    ---@type table<evolved.entity, boolean>
+    local fragment_set = {}
+    local fragment_list = query.__includes
+
+    for _, f in ipairs(fragment_list) do
+        fragment_set[f] = true
+    end
+
+    for i = 1, select('#', ...) do
+        local f = select(i, ...)
+        if not fragment_set[f] then
+            fragment_set[f] = true
+            fragment_list[#fragment_list + 1] = f
+        end
+    end
+
+    table.sort(fragment_list, function(a, b)
+        return a.__guid < b.__guid
+    end)
+
     return query
 end
 
@@ -563,7 +584,26 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.exclude(query, ...)
-    error('not impl yet', 2)
+    ---@type table<evolved.entity, boolean>
+    local fragment_set = {}
+    local fragment_list = query.__excludes
+
+    for _, f in ipairs(fragment_list) do
+        fragment_set[f] = true
+    end
+
+    for i = 1, select('#', ...) do
+        local f = select(i, ...)
+        if not fragment_set[f] then
+            fragment_set[f] = true
+            fragment_list[#fragment_list + 1] = f
+        end
+    end
+
+    table.sort(fragment_list, function(a, b)
+        return a.__guid < b.__guid
+    end)
+
     return query
 end
 
@@ -571,6 +611,10 @@ end
 ---@return fun(): evolved.chunk?
 ---@nodiscard
 function registry.execute(query)
+    if #query.__excludes > 0 then
+        error('excluding fragments is not supported yet', 2)
+    end
+
     local main_fragment = query.__includes[#query.__includes]
     local main_fragment_chunks = __chunks[main_fragment] or {}
 
@@ -664,13 +708,17 @@ evolved_entity_mt.remove = registry.remove
 evolved_entity_mt.clear = registry.clear
 
 function evolved_query_mt:__tostring()
-    local fragment_ids = ''
+    local str = ''
 
-    for _, fragment in ipairs(self.__includes) do
-        fragment_ids = string.format('%s%s', fragment_ids, fragment)
+    for i, f in ipairs(self.__includes) do
+        str = string.format('%s%s%s', str, i > 1 and '+' or '', f)
     end
 
-    return string.format('(%s)', fragment_ids)
+    for _, f in ipairs(self.__excludes) do
+        str = string.format('%s-%s', str, f)
+    end
+
+    return string.format('(%s)', str)
 end
 
 evolved_query_mt.include = registry.include
@@ -678,14 +726,14 @@ evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
 
 function evolved_chunk_mt:__tostring()
-    local fragment_ids = ''
+    local str = ''
 
     local chunk_iter = self; while chunk_iter do
-        fragment_ids = string.format('%s%s', chunk_iter.__fragment, fragment_ids)
+        str = string.format('%s%s', chunk_iter.__fragment, str)
         chunk_iter = chunk_iter.__parent
     end
 
-    return string.format('{%s}', fragment_ids)
+    return string.format('{%s}', str)
 end
 
 evolved_chunk_mt.entities = registry.entities
