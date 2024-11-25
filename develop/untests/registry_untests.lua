@@ -32,6 +32,21 @@ do
 end
 
 do
+    local f1, f2, f3 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e = evo.registry.entity()
+    assert(e == e:set(f1):set(f2):set(f3))
+    assert(e:has_all(f1, f2, f3))
+    assert(e == e:del(f1))
+    assert(not e:has(f1) and e:has_all(f2, f3))
+    assert(e == e:del(f2, f3, f3))
+    assert(not e:has_any(f1, f2, f3))
+end
+
+do
     local f1, f2 =
         evo.registry.entity(),
         evo.registry.entity()

@@ -325,43 +325,23 @@ function registry.destroy(entity)
 end
 
 ---@param entity evolved.entity
+---@param ... evolved.entity fragments
+---@return evolved.entity
+function registry.del(entity, ...)
+    registry.remove(entity, ...)
+    return entity
+end
+
+---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
 ---@return evolved.entity
 function registry.set(entity, fragment, component)
-    if not idpools.is_alive(__guids, entity.__guid) then
-        return entity
+    if registry.has(entity, fragment) then
+        registry.assign(entity, fragment, component)
+    else
+        registry.insert(entity, fragment, component)
     end
-
-    component = component == nil and true or component
-
-    local old_chunk = entity.__chunk
-    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
-
-    if old_chunk == new_chunk then
-        local chunk_components = new_chunk.__components[fragment]
-        chunk_components[entity.__index_in_chunk] = component
-        return entity
-    end
-
-    local old_index_in_chunk = entity.__index_in_chunk
-    local new_index_in_chunk = #new_chunk.__entities + 1
-
-    new_chunk.__entities[new_index_in_chunk] = entity
-    new_chunk.__components[fragment][new_index_in_chunk] = component
-
-    if old_chunk ~= nil then
-        for old_f, old_cs in pairs(old_chunk.__components) do
-            local new_cs = new_chunk.__components[old_f]
-            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
-        end
-
-        __detach_entity(entity)
-    end
-
-    entity.__chunk = new_chunk
-    entity.__index_in_chunk = new_index_in_chunk
-
     return entity
 end
 
@@ -697,6 +677,7 @@ end
 evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.is_alive = registry.is_alive
 evolved_entity_mt.destroy = registry.destroy
+evolved_entity_mt.del = registry.del
 evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
 evolved_entity_mt.has = registry.has
