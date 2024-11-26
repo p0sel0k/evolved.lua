@@ -576,31 +576,30 @@ function registry.detach(entity)
     return entity
 end
 
----@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return evolved.query
 ---@nodiscard
-function registry.query(fragment, ...)
-    local fragment_set = { [fragment] = true }
-    local fragment_list = { fragment }
+function registry.query(...)
+    local include_list = {}
+    local include_set = {}
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not fragment_set[f] then
-            fragment_set[f] = true
-            fragment_list[#fragment_list + 1] = f
+        if not include_set[f] then
+            include_set[f] = true
+            include_list[#include_list + 1] = f
         end
     end
 
-    table.sort(fragment_list, function(a, b)
+    table.sort(include_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
     ---@type evolved.query
     local query = {
-        __include_list = fragment_list,
+        __include_list = include_list,
         __exclude_list = {},
-        __include_set = fragment_set,
+        __include_set = include_set,
         __exclude_set = {},
     }
 
@@ -686,7 +685,7 @@ function registry.execute(query)
 end
 
 ---@param fragment evolved.entity
----@param ... evolved.entity
+---@param ... evolved.entity fragments
 ---@return evolved.chunk
 ---@nodiscard
 function registry.chunk(fragment, ...)

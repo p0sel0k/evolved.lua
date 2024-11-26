@@ -39,7 +39,7 @@ registry.assign -> entity -> entity -> any -> (boolean)
 registry.insert -> entity -> entity -> any -> (boolean)
 registry.remove -> entity -> entity... -> (boolean)
 registry.detach -> entity -> (entity)
-registry.query -> entity -> entity... -> (query)
+registry.query -> entity... -> (query)
 registry.include -> query -> entity... -> query
 registry.exclude -> query -> entity... -> query
 registry.execute -> query -> (() -> (chunk?))

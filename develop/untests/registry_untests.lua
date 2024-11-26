@@ -391,6 +391,7 @@ do
     local e5 = evo.registry.entity():set(f1):set(f2):set(f4)
     local e6 = evo.registry.entity():set(f1):set(f2):set(f3):set(f4)
 
+    local q0 = evo.registry.query()
     local q1 = evo.registry.query(f1)
     local q2 = evo.registry.query(f1, f2, f1)
     local q3 = evo.registry.query(f1, f2, f3, f3)
@@ -427,10 +428,12 @@ do
         return true
     end
 
+    assert(is_array_equal(q0.__include_list, {}))
     assert(is_array_equal(q1.__include_list, { f1 }))
     assert(is_array_equal(q2.__include_list, { f1, f2 }))
     assert(is_array_equal(q3.__include_list, { f1, f2, f3 }))
 
+    assert(is_array_equal(collect_entity_sorted_list(q0), {}))
     assert(is_array_equal(collect_entity_sorted_list(q1), { e1, e2, e3, e4, e5, e6 }))
     assert(is_array_equal(collect_entity_sorted_list(q2), { e2, e3, e5, e6 }))
     assert(is_array_equal(collect_entity_sorted_list(q3), { e3, e6 }))
@@ -523,9 +526,9 @@ for _ = 1, 100 do
 
     for _ = 1, 100 do
         shuffle_array(all_fragments)
-        local inc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(1, quarter_fragment_count)))
+        local inc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(0, quarter_fragment_count)))
         shuffle_array(all_fragments)
-        local exc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(1, quarter_fragment_count)))
+        local exc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(0, quarter_fragment_count)))
 
         local inc_q = evo.registry.query(evo.compat.unpack(inc_fs))
         local exc_q = evo.registry.query(evo.compat.unpack(inc_fs)):exclude(evo.compat.unpack(exc_fs))
