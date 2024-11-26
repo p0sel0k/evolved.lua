@@ -6,9 +6,9 @@
 idpools.idpool -> (idpool)
 idpools.pack -> integer -> integer -> (id)
 idpools.unpack -> id -> (integer, integer)
+idpools.alive -> idpool -> id -> (boolean)
 idpools.acquire -> idpool -> (id)
 idpools.release -> idpool -> id -> ()
-idpools.is_alive -> idpool -> id -> (boolean)
 ```
 
 ### Instance `idpool`
@@ -16,9 +16,9 @@ idpools.is_alive -> idpool -> id -> (boolean)
 ```
 idpool.pack -> integer -> integer -> (id)
 idpool.unpack -> id -> (integer, integer)
+idpool:alive -> id -> (boolean)
 idpool:acquire -> (id)
 idpool:release -> id -> ()
-idpool:is_alive -> id -> (boolean)
 ```
 
 ## Module `registry`
@@ -26,7 +26,7 @@ idpool:is_alive -> id -> (boolean)
 ```
 registry.entity -> (entity)
 registry.guid -> entity -> (id)
-registry.is_alive -> entity -> (boolean)
+registry.alive -> entity -> (boolean)
 registry.destroy -> entity -> ()
 registry.del -> entity -> entity... -> (entity)
 registry.set -> entity -> entity -> any -> (entity)
@@ -52,7 +52,7 @@ registry.components -> chunk -> entity -> (any[])
 
 ```
 entity:guid -> (id)
-entity:is_alive -> (boolean)
+entity:alive -> (boolean)
 entity:destroy -> ()
 entity:del -> entity... -> (entity)
 entity:set -> entity -> any -> (entity)

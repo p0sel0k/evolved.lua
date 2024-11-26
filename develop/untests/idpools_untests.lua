@@ -32,16 +32,16 @@ do
 
     local i1_1 = p:acquire()
     local i2_1 = p:acquire()
-    assert(p:is_alive(i1_1))
-    assert(p:is_alive(i2_1))
+    assert(p:alive(i1_1))
+    assert(p:alive(i2_1))
 
     p:release(i1_1)
-    assert(not p:is_alive(i1_1))
-    assert(p:is_alive(i2_1))
+    assert(not p:alive(i1_1))
+    assert(p:alive(i2_1))
 
     p:release(i2_1)
-    assert(not p:is_alive(i1_1))
-    assert(not p:is_alive(i2_1))
+    assert(not p:alive(i1_1))
+    assert(not p:alive(i2_1))
 
     local i2_2 = p:acquire()
     assert(i2_2 == 0x200002)
@@ -49,10 +49,10 @@ do
     local i1_2 = p:acquire()
     assert(i1_2 == 0x200001)
 
-    assert(not p:is_alive(i1_1))
-    assert(not p:is_alive(i2_1))
-    assert(p:is_alive(i1_2))
-    assert(p:is_alive(i2_2))
+    assert(not p:alive(i1_1))
+    assert(not p:alive(i2_1))
+    assert(p:alive(i1_2))
+    assert(p:alive(i2_2))
 end
 
 do

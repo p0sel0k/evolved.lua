@@ -120,15 +120,15 @@ do
     assert(e:insert(f1))
     assert(e:insert(f2))
 
-    assert(e:is_alive())
+    assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1, f2))
 
     assert(e:destroy())
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 
     assert(not e:destroy())
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 end
 
@@ -218,15 +218,15 @@ do
 
     assert(e:insert(f1))
     assert(e:insert(f2))
-    assert(e:is_alive())
+    assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1, f2))
 
     assert(e == e:detach())
-    assert(e:is_alive())
+    assert(e:alive())
     assert(e.__chunk == nil)
 
     assert(e == e:detach())
-    assert(e:is_alive())
+    assert(e:alive())
     assert(e.__chunk == nil)
 end
 
@@ -282,30 +282,30 @@ do
 
     local e = evo.registry.entity()
     assert(e:insert(f1))
-    assert(e:is_alive())
+    assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1))
 
     assert(e:destroy())
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 
     assert(not e:assign(f1, 42))
     assert(not e:assign(f2, 42))
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 
     assert(not e:insert(f1, 42))
     assert(not e:insert(f2, 42))
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 
     assert(not e:remove(f1, 42))
     assert(not e:remove(f2, 42))
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 
     assert(e == e:detach())
-    assert(not e:is_alive())
+    assert(not e:alive())
     assert(e.__chunk == nil)
 end
 

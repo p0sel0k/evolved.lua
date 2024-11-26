@@ -338,14 +338,14 @@ end
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
-function registry.is_alive(entity)
-    return idpools.is_alive(__guids, entity.__guid)
+function registry.alive(entity)
+    return idpools.alive(__guids, entity.__guid)
 end
 
 ---@param entity evolved.entity
 ---@return boolean is_destroyed
 function registry.destroy(entity)
-    if not idpools.is_alive(__guids, entity.__guid) then
+    if not idpools.alive(__guids, entity.__guid) then
         return false
     end
 
@@ -464,7 +464,7 @@ end
 ---@param component any
 ---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
-    if not idpools.is_alive(__guids, entity.__guid) then
+    if not idpools.alive(__guids, entity.__guid) then
         return false
     end
 
@@ -487,7 +487,7 @@ end
 ---@param component any
 ---@return boolean is_inserted
 function registry.insert(entity, fragment, component)
-    if not idpools.is_alive(__guids, entity.__guid) then
+    if not idpools.alive(__guids, entity.__guid) then
         return false
     end
 
@@ -525,7 +525,7 @@ end
 ---@param ... evolved.entity fragments
 ---@return boolean is_removed
 function registry.remove(entity, ...)
-    if not idpools.is_alive(__guids, entity.__guid) then
+    if not idpools.alive(__guids, entity.__guid) then
         return false
     end
 
@@ -564,7 +564,7 @@ end
 ---@param entity evolved.entity
 ---@return evolved.entity
 function registry.detach(entity)
-    if not idpools.is_alive(__guids, entity.__guid) then
+    if not idpools.alive(__guids, entity.__guid) then
         return entity
     end
 
@@ -738,7 +738,7 @@ function evolved_entity_mt:__tostring()
 end
 
 evolved_entity_mt.guid = registry.guid
-evolved_entity_mt.is_alive = registry.is_alive
+evolved_entity_mt.alive = registry.alive
 evolved_entity_mt.destroy = registry.destroy
 evolved_entity_mt.del = registry.del
 evolved_entity_mt.set = registry.set

@@ -50,6 +50,15 @@ function idpools.unpack(id)
 end
 
 ---@param idpool evolved.idpool
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function idpools.alive(idpool, id)
+    local index = id % 0x100000
+    return idpool.__freelist_ids[index] == id
+end
+
+---@param idpool evolved.idpool
 ---@return evolved.id
 ---@nodiscard
 function idpools.acquire(idpool)
@@ -94,15 +103,6 @@ function idpools.release(idpool, id)
     idpool.__available_index = index
 end
 
----@param idpool evolved.idpool
----@param id evolved.id
----@return boolean
----@nodiscard
-function idpools.is_alive(idpool, id)
-    local index = id % 0x100000
-    return idpool.__freelist_ids[index] == id
-end
-
 ---
 ---
 ---
@@ -111,9 +111,9 @@ end
 
 evolved_idpool_mt.pack = idpools.pack
 evolved_idpool_mt.unpack = idpools.unpack
+evolved_idpool_mt.alive = idpools.alive
 evolved_idpool_mt.acquire = idpools.acquire
 evolved_idpool_mt.release = idpools.release
-evolved_idpool_mt.is_alive = idpools.is_alive
 
 ---
 ---
