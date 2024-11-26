@@ -1,4 +1,3 @@
-local compat = require 'evolved.compat'
 local idpools = require 'evolved.idpools'
 
 ---@class evolved.registry
@@ -28,8 +27,10 @@ local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
 
 ---@class evolved.query
----@field package __includes evolved.entity[]
----@field package __excludes evolved.entity[]
+---@field package __include_list evolved.entity[]
+---@field package __exclude_list evolved.entity[]
+---@field package __include_set table<evolved.entity, boolean>
+---@field package __exclude_set table<evolved.entity, boolean>
 local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
@@ -101,6 +102,22 @@ local function __chunk_has_all_fragments(chunk, ...)
 end
 
 ---@param chunk evolved.chunk
+---@param fragment_list evolved.entity[]
+---@return boolean
+---@nodiscard
+local function __chunk_has_all_fragment_list(chunk, fragment_list)
+    local components = chunk.__components
+
+    for i = 1, #fragment_list do
+        if components[fragment_list[i]] == nil then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@param chunk evolved.chunk
 ---@param ... evolved.entity fragments
 ---@return boolean
 ---@nodiscard
@@ -109,6 +126,22 @@ local function __chunk_has_any_fragments(chunk, ...)
 
     for i = 1, select('#', ...) do
         if components[select(i, ...)] ~= nil then
+            return true
+        end
+    end
+
+    return false
+end
+
+---@param chunk evolved.chunk
+---@param fragment_list evolved.entity[]
+---@return boolean
+---@nodiscard
+local function __chunk_has_any_fragment_list(chunk, fragment_list)
+    local components = chunk.__components
+
+    for i = 1, #fragment_list do
+        if components[fragment_list[i]] ~= nil then
             return true
         end
     end
@@ -565,8 +598,10 @@ function registry.query(fragment, ...)
 
     ---@type evolved.query
     local query = {
-        __includes = fragment_list,
-        __excludes = {},
+        __include_list = fragment_list,
+        __exclude_list = {},
+        __include_set = fragment_set,
+        __exclude_set = {},
     }
 
     return setmetatable(query, evolved_query_mt)
@@ -576,23 +611,18 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.include(query, ...)
-    ---@type table<evolved.entity, boolean>
-    local fragment_set = {}
-    local fragment_list = query.__includes
-
-    for _, f in ipairs(fragment_list) do
-        fragment_set[f] = true
-    end
+    local include_list = query.__include_list
+    local include_set = query.__include_set
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not fragment_set[f] then
-            fragment_set[f] = true
-            fragment_list[#fragment_list + 1] = f
+        if not include_set[f] then
+            include_set[f] = true
+            include_list[#include_list + 1] = f
         end
     end
 
-    table.sort(fragment_list, function(a, b)
+    table.sort(include_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
@@ -603,23 +633,18 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.exclude(query, ...)
-    ---@type table<evolved.entity, boolean>
-    local fragment_set = {}
-    local fragment_list = query.__excludes
-
-    for _, f in ipairs(fragment_list) do
-        fragment_set[f] = true
-    end
+    local exclude_list = query.__exclude_list
+    local exclude_set = query.__exclude_set
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not fragment_set[f] then
-            fragment_set[f] = true
-            fragment_list[#fragment_list + 1] = f
+        if not exclude_set[f] then
+            exclude_set[f] = true
+            exclude_list[#exclude_list + 1] = f
         end
     end
 
-    table.sort(fragment_list, function(a, b)
+    table.sort(exclude_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
@@ -630,19 +655,17 @@ end
 ---@return fun(): evolved.chunk?
 ---@nodiscard
 function registry.execute(query)
-    if #query.__excludes > 0 then
-        error('excluding fragments is not supported yet', 2)
-    end
-
-    local main_fragment = query.__includes[#query.__includes]
+    local main_fragment = query.__include_list[#query.__include_list]
     local main_fragment_chunks = __chunks[main_fragment] or {}
 
     ---@type evolved.chunk[]
     local matched_chunk_stack = {}
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
-        if __chunk_has_all_fragments(main_fragment_chunk, compat.unpack(query.__includes)) then
-            matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
+        if __chunk_has_all_fragment_list(main_fragment_chunk, query.__include_list) then
+            if not __chunk_has_any_fragment_list(main_fragment_chunk, query.__exclude_list) then
+                matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
+            end
         end
     end
 
@@ -652,7 +675,9 @@ function registry.execute(query)
             matched_chunk_stack[#matched_chunk_stack] = nil
 
             for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-                matched_chunk_stack[#matched_chunk_stack + 1] = matched_chunk_child
+                if not query.__exclude_set[matched_chunk_child.__fragment] then
+                    matched_chunk_stack[#matched_chunk_stack + 1] = matched_chunk_child
+                end
             end
 
             return matched_chunk
@@ -737,11 +762,11 @@ evolved_entity_mt.detach = registry.detach
 function evolved_query_mt:__tostring()
     local str = ''
 
-    for i, f in ipairs(self.__includes) do
+    for i, f in ipairs(self.__include_list) do
         str = string.format('%s%s%s', str, i > 1 and '+' or '', f)
     end
 
-    for _, f in ipairs(self.__excludes) do
+    for _, f in ipairs(self.__exclude_list) do
         str = string.format('%s-%s', str, f)
     end
 

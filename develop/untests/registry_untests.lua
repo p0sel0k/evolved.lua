@@ -398,7 +398,7 @@ do
     ---@param query evolved.query
     ---@return evolved.entity[]
     ---@nodiscard
-    local function collect_query_entities(query)
+    local function collect_entity_sorted_list(query)
         local entities = {} ---@type evolved.entity[]
         for chunk in query:execute() do
             for _, e in ipairs(chunk:entities()) do
@@ -427,13 +427,13 @@ do
         return true
     end
 
-    assert(is_array_equal(q1.__includes, { f1 }))
-    assert(is_array_equal(q2.__includes, { f1, f2 }))
-    assert(is_array_equal(q3.__includes, { f1, f2, f3 }))
+    assert(is_array_equal(q1.__include_list, { f1 }))
+    assert(is_array_equal(q2.__include_list, { f1, f2 }))
+    assert(is_array_equal(q3.__include_list, { f1, f2, f3 }))
 
-    assert(is_array_equal(collect_query_entities(q1), { e1, e2, e3, e4, e5, e6 }))
-    assert(is_array_equal(collect_query_entities(q2), { e2, e3, e5, e6 }))
-    assert(is_array_equal(collect_query_entities(q3), { e3, e6 }))
+    assert(is_array_equal(collect_entity_sorted_list(q1), { e1, e2, e3, e4, e5, e6 }))
+    assert(is_array_equal(collect_entity_sorted_list(q2), { e2, e3, e5, e6 }))
+    assert(is_array_equal(collect_entity_sorted_list(q3), { e3, e6 }))
 end
 
 do
@@ -453,7 +453,7 @@ do
     ---@return boolean
     ---@nodiscard
     local function includes(q, f)
-        for _, qf in ipairs(q.__includes) do
+        for _, qf in ipairs(q.__include_list) do
             if qf:guid() == f:guid() then
                 return true
             end
@@ -466,7 +466,7 @@ do
     ---@return boolean
     ---@nodiscard
     local function excludes(q, f)
-        for _, qf in ipairs(q.__excludes) do
+        for _, qf in ipairs(q.__exclude_list) do
             if qf:guid() == f:guid() then
                 return true
             end
@@ -478,4 +478,70 @@ do
     assert(not includes(query, f4) and not includes(query, f5))
     assert(excludes(query, f4) and excludes(query, f5))
     assert(not excludes(query, f1) and not excludes(query, f2) and not excludes(query, f3))
+end
+
+for _ = 1, 100 do
+    local all_fragments = {} ---@type evolved.entity[]
+    local all_fragment_count = math.random(10, 20)
+
+    local half_fragment_count = math.floor(all_fragment_count / 2)
+    local quarter_fragment_count = math.floor(all_fragment_count / 4)
+
+    for _ = 1, all_fragment_count do
+        table.insert(all_fragments, evo.registry.entity())
+    end
+
+    ---@param array any[]
+    local function shuffle_array(array)
+        for i = #array, 2, -1 do
+            local j = math.random(i)
+            array[i], array[j] = array[j], array[i]
+        end
+    end
+
+    ---@param query evolved.query
+    ---@return table<evolved.entity, boolean>
+    ---@nodiscard
+    local function collect_entity_set(query)
+        local entities = {} ---@type table<evolved.entity, boolean>
+        for chunk in query:execute() do
+            for _, e in ipairs(chunk:entities()) do
+                entities[e] = true
+            end
+        end
+        return entities
+    end
+
+    for _ = 1, 100 do
+        shuffle_array(all_fragments)
+        local e = evo.registry.entity()
+        for i = 1, math.random(1, half_fragment_count) do
+            local f = all_fragments[i]
+            e:insert(f, f:guid())
+        end
+    end
+
+    for _ = 1, 100 do
+        shuffle_array(all_fragments)
+        local inc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(1, quarter_fragment_count)))
+        shuffle_array(all_fragments)
+        local exc_fs = evo.compat.pack(evo.compat.unpack(all_fragments, 1, math.random(1, quarter_fragment_count)))
+
+        local inc_q = evo.registry.query(evo.compat.unpack(inc_fs))
+        local exc_q = evo.registry.query(evo.compat.unpack(inc_fs)):exclude(evo.compat.unpack(exc_fs))
+
+        local inc_es = collect_entity_set(inc_q)
+        local exc_es = collect_entity_set(exc_q)
+
+        for e, _ in pairs(inc_es) do
+            assert(e:has_all(evo.compat.unpack(inc_fs)))
+            assert(not exc_es[e] == e:has_any(evo.compat.unpack(exc_fs)))
+        end
+
+        for e, _ in pairs(exc_es) do
+            assert(inc_es[e] ~= nil)
+            assert(e:has_all(evo.compat.unpack(inc_fs)))
+            assert(not e:has_any(evo.compat.unpack(exc_fs)))
+        end
+    end
 end
