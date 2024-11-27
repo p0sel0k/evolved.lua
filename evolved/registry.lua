@@ -12,6 +12,7 @@ local registry = {}
 local __guids = idpools.idpool()
 local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
+local __changes = 0 ---@type integer
 
 ---
 ---
@@ -27,6 +28,7 @@ local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
 
 ---@class evolved.query
+---@field package __changes integer
 ---@field package __include_list evolved.entity[]
 ---@field package __exclude_list evolved.entity[]
 ---@field package __include_set table<evolved.entity, boolean>
@@ -35,6 +37,7 @@ local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
 ---@class evolved.chunk
+---@field package __changes integer
 ---@field package __parent? evolved.chunk
 ---@field package __fragment evolved.entity
 ---@field package __children evolved.chunk[]
@@ -55,6 +58,9 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 local function __detach_entity(entity)
     local chunk = assert(entity.__chunk)
     local index_in_chunk = entity.__index_in_chunk
+
+    __changes = __changes + 1
+    chunk.__changes = chunk.__changes + 1
 
     if index_in_chunk == #chunk.__entities then
         chunk.__entities[index_in_chunk] = nil
@@ -160,6 +166,7 @@ local function __root_chunk(fragment)
 
     ---@type evolved.chunk
     local root_chunk = {
+        __changes = 0,
         __parent = nil,
         __fragment = fragment,
         __children = {},
@@ -179,6 +186,7 @@ local function __root_chunk(fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = root_chunk
         __chunks[fragment] = fragment_chunks
+        __changes = __changes + 1
     end
 
     return root_chunk
@@ -211,6 +219,9 @@ local function __chunk_with_fragment(chunk, fragment)
             __chunk_with_fragment(chunk.__parent, fragment),
             chunk.__fragment)
 
+        chunk.__changes = chunk.__changes + 1
+        sibling_chunk.__changes = sibling_chunk.__changes + 1
+
         chunk.__with_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__without_fragment_cache[fragment] = chunk
 
@@ -219,6 +230,7 @@ local function __chunk_with_fragment(chunk, fragment)
 
     ---@type evolved.chunk
     local child_chunk = {
+        __changes = 0,
         __parent = chunk,
         __fragment = fragment,
         __children = {},
@@ -240,6 +252,9 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
+        chunk.__changes = chunk.__changes + 1
+        child_chunk.__changes = child_chunk.__changes + 1
+
         chunk.__with_fragment_cache[fragment] = child_chunk
         child_chunk.__without_fragment_cache[fragment] = chunk
     end
@@ -248,6 +263,7 @@ local function __chunk_with_fragment(chunk, fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = child_chunk
         __chunks[fragment] = fragment_chunks
+        __changes = __changes + 1
     end
 
     return child_chunk
@@ -279,6 +295,9 @@ local function __chunk_without_fragment(chunk, fragment)
         local sibling_chunk = __chunk_with_fragment(
             __chunk_without_fragment(chunk.__parent, fragment),
             chunk.__fragment)
+
+        chunk.__changes = chunk.__changes + 1
+        sibling_chunk.__changes = sibling_chunk.__changes + 1
 
         chunk.__without_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__with_fragment_cache[fragment] = chunk
@@ -383,7 +402,10 @@ end
 ---@return any ... components
 ---@nodiscard
 function registry.get(entity, ...)
-    local components = entity.__chunk and entity.__chunk.__components
+    local chunk = entity.__chunk
+    if chunk == nil then return end
+
+    local components = chunk.__components
     if components == nil then return end
 
     local fragment_count = select('#', ...)
@@ -423,11 +445,11 @@ end
 ---@return any
 ---@nodiscard
 function registry.get_or(entity, fragment, default)
-    local components = entity.__chunk and entity.__chunk.__components[fragment]
+    local chunk = entity.__chunk
+    if chunk == nil then return default end
 
-    if components == nil then
-        return default
-    end
+    local components = chunk.__components[fragment]
+    if components == nil then return default end
 
     return components[entity.__index_in_chunk]
 end
@@ -437,8 +459,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has(entity, fragment)
-    if entity.__chunk == nil then return false end
-    return __chunk_has_fragment(entity.__chunk, fragment)
+    local cur_chunk = entity.__chunk
+    if cur_chunk == nil then return false end
+    return __chunk_has_fragment(cur_chunk, fragment)
 end
 
 ---@param entity evolved.entity
@@ -446,8 +469,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has_all(entity, ...)
-    if entity.__chunk == nil then return select('#', ...) == 0 end
-    return __chunk_has_all_fragments(entity.__chunk, ...)
+    local cur_chunk = entity.__chunk
+    if cur_chunk == nil then return select('#', ...) == 0 end
+    return __chunk_has_all_fragments(cur_chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -455,8 +479,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has_any(entity, ...)
-    if entity.__chunk == nil then return false end
-    return __chunk_has_any_fragments(entity.__chunk, ...)
+    local cur_chunk = entity.__chunk
+    if cur_chunk == nil then return false end
+    return __chunk_has_any_fragments(cur_chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -464,22 +489,20 @@ end
 ---@param component any
 ---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
+    component = component == nil and true or component
+
     if not idpools.alive(__guids, entity.__guid) then
         return false
     end
 
-    component = component == nil and true or component
+    local chunk = entity.__chunk
+    if chunk == nil then return false end
 
-    local old_chunk = entity.__chunk
-    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+    local components = chunk.__components[fragment]
+    if components == nil then return false end
 
-    if old_chunk == new_chunk then
-        local components = new_chunk.__components[fragment]
-        components[entity.__index_in_chunk] = component
-        return true
-    end
-
-    return false
+    components[entity.__index_in_chunk] = component
+    return true
 end
 
 ---@param entity evolved.entity
@@ -487,11 +510,11 @@ end
 ---@param component any
 ---@return boolean is_inserted
 function registry.insert(entity, fragment, component)
+    component = component == nil and true or component
+
     if not idpools.alive(__guids, entity.__guid) then
         return false
     end
-
-    component = component == nil and true or component
 
     local old_chunk = entity.__chunk
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
@@ -502,6 +525,9 @@ function registry.insert(entity, fragment, component)
 
     local old_index_in_chunk = entity.__index_in_chunk
     local new_index_in_chunk = #new_chunk.__entities + 1
+
+    __changes = __changes + 1
+    new_chunk.__changes = new_chunk.__changes + 1
 
     new_chunk.__entities[new_index_in_chunk] = entity
     new_chunk.__components[fragment][new_index_in_chunk] = component
@@ -543,6 +569,9 @@ function registry.remove(entity, ...)
 
     local old_index_in_chunk = entity.__index_in_chunk
     local new_index_in_chunk = #new_chunk.__entities + 1
+
+    __changes = __changes + 1
+    new_chunk.__changes = new_chunk.__changes + 1
 
     new_chunk.__entities[new_index_in_chunk] = entity
 
@@ -597,6 +626,7 @@ function registry.query(...)
 
     ---@type evolved.query
     local query = {
+        __changes = 0,
         __include_list = include_list,
         __exclude_list = {},
         __include_set = include_set,
@@ -621,6 +651,8 @@ function registry.include(query, ...)
         end
     end
 
+    query.__changes = query.__changes + 1
+
     table.sort(include_list, function(a, b)
         return a.__guid < b.__guid
     end)
@@ -642,6 +674,8 @@ function registry.exclude(query, ...)
             exclude_list[#exclude_list + 1] = f
         end
     end
+
+    query.__changes = query.__changes + 1
 
     table.sort(exclude_list, function(a, b)
         return a.__guid < b.__guid
@@ -679,7 +713,18 @@ function registry.execute(query)
         end
     end
 
+    local chunk_changes = __changes
+    local query_changes = query.__changes
+
     return function()
+        if chunk_changes ~= __changes then
+            error('chunks have been modified during query execution', 2)
+        end
+
+        if query_changes ~= query.__changes then
+            error('query has been modified during query execution', 2)
+        end
+
         while #matched_chunk_stack > 0 do
             local matched_chunk = matched_chunk_stack[#matched_chunk_stack]
             matched_chunk_stack[#matched_chunk_stack] = nil

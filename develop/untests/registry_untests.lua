@@ -489,7 +489,7 @@ do
         evo.registry.entity(),
         evo.registry.entity()
 
-    local e1 = evo.registry.entity():set(f2):set(f1)
+    evo.registry.entity():set(f2):set(f1)
 
     local q0 = evo.registry.query()
     local q1 = evo.registry.query(f3)
@@ -561,5 +561,43 @@ for _ = 1, 100 do
             assert(e:has_all(evo.compat.unpack(inc_fs)))
             assert(not e:has_any(evo.compat.unpack(exc_fs)))
         end
+    end
+end
+
+do
+    local f1, f2, f3, f4 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    evo.registry.entity():set(f1)
+    evo.registry.entity():set(f1):set(f2)
+
+    if not os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") then
+        assert(not pcall(function()
+            local q = evo.registry.query(f1)
+            for chunk in q:execute() do
+                for _, e in ipairs(chunk:entities()) do
+                    assert(e:insert(f2))
+                end
+            end
+        end))
+        assert(not pcall(function()
+            local q = evo.registry.query(f1, f2)
+            for chunk in q:execute() do
+                for _, e in ipairs(chunk:entities()) do
+                    assert(e:insert(f3))
+                end
+            end
+        end))
+        assert(pcall(function()
+            local q = evo.registry.query(f1)
+            for chunk in q:execute() do
+                for _, e in ipairs(chunk:entities()) do
+                    assert(not e:assign(f4))
+                end
+            end
+        end))
     end
 end
