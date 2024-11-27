@@ -10,15 +10,13 @@ local fragments = {
 }
 
 local queries = {
-    bodies = evo.registry.query(
-        fragments.position,
-        fragments.velocity),
+    bodies = evo.registry.query(fragments.position, fragments.velocity),
 }
 
 do
-    local entity = evo.registry.entity()
-    entity:insert(fragments.position, evo.vectors.vector2(512, 50))
-    entity:insert(fragments.velocity, evo.vectors.vector2(math.random(-20, 20), 20))
+    evo.registry.entity()
+        :set(fragments.position, evo.vectors.vector2(512, 50))
+        :set(fragments.velocity, evo.vectors.vector2(math.random(-20, 20), 20))
 end
 
 do
