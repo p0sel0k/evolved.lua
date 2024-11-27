@@ -11,3 +11,4 @@
 - [x] cache transitions between chunks
 - [x] chunk's children should be stored in an array instead of a table
 - [x] support queries without fragments
+- [ ] add assertions for input arguments

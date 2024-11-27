@@ -654,15 +654,26 @@ end
 ---@return fun(): evolved.chunk?
 ---@nodiscard
 function registry.execute(query)
-    local main_fragment = query.__include_list[#query.__include_list]
-    local main_fragment_chunks = __chunks[main_fragment] or {}
+    local include_list, exclude_list, exclude_set =
+        query.__include_list, query.__exclude_list, query.__exclude_set
+
+    if #include_list == 0 then
+        return function() end
+    end
+
+    local main_fragment = include_list[#include_list]
+    local main_fragment_chunks = __chunks[main_fragment]
+
+    if main_fragment_chunks == nil or #main_fragment_chunks == 0 then
+        return function() end
+    end
 
     ---@type evolved.chunk[]
     local matched_chunk_stack = {}
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
-        if __chunk_has_all_fragment_list(main_fragment_chunk, query.__include_list) then
-            if not __chunk_has_any_fragment_list(main_fragment_chunk, query.__exclude_list) then
+        if __chunk_has_all_fragment_list(main_fragment_chunk, include_list) then
+            if not __chunk_has_any_fragment_list(main_fragment_chunk, exclude_list) then
                 matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
             end
         end
@@ -674,7 +685,7 @@ function registry.execute(query)
             matched_chunk_stack[#matched_chunk_stack] = nil
 
             for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-                if not query.__exclude_set[matched_chunk_child.__fragment] then
+                if not exclude_set[matched_chunk_child.__fragment] then
                     matched_chunk_stack[#matched_chunk_stack + 1] = matched_chunk_child
                 end
             end

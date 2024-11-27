@@ -483,6 +483,21 @@ do
     assert(not excludes(query, f1) and not excludes(query, f2) and not excludes(query, f3))
 end
 
+do
+    local f1, f2, f3 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e1 = evo.registry.entity():set(f2):set(f1)
+
+    local q0 = evo.registry.query()
+    local q1 = evo.registry.query(f3)
+
+    assert(q0:execute())
+    assert(q1:execute())
+end
+
 for _ = 1, 100 do
     local all_fragments = {} ---@type evolved.entity[]
     local all_fragment_count = math.random(10, 20)
