@@ -213,6 +213,62 @@ do
 end
 
 do
+    local f1, f2, f3, f4, f5 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local chunk = evo.registry.chunk(f1, f2, f3, f4)
+
+    do
+        evo.registry.entity():set(f1, 1)
+        evo.registry.entity():set(f1, 1):set(f2, 2)
+        evo.registry.entity():set(f1, 1):set(f2, 2):set(f3, 3)
+        evo.registry.entity():set(f1, 1):set(f2, 2):set(f3, 3):set(f4, 4)
+    end
+
+    do
+        assert(chunk:components() == nil)
+    end
+
+    do
+        local fs1 = chunk:components(f1)
+        assert(fs1 and fs1[1] == 1)
+    end
+
+    do
+        local fs1, fs2 = chunk:components(f1, f2)
+        assert(fs1 and fs1[1] == 1)
+        assert(fs2 and fs2[1] == 2)
+    end
+
+    do
+        local fs1, fs2, fs3 = chunk:components(f1, f2, f3)
+        assert(fs1 and fs1[1] == 1)
+        assert(fs2 and fs2[1] == 2)
+        assert(fs3 and fs3[1] == 3)
+    end
+
+    do
+        local fs1, fs2, fs3, fs4 = chunk:components(f1, f2, f3, f4)
+        assert(fs1 and fs1[1] == 1)
+        assert(fs2 and fs2[1] == 2)
+        assert(fs3 and fs3[1] == 3)
+        assert(fs4 and fs4[1] == 4)
+    end
+
+    do
+        local a, fs1, b, fs2, c, fs3, d, fs4, e = chunk:components(f5, f1, f5, f2, f5, f3, f5, f4, f5)
+        assert(fs1 and fs1[1] == 1)
+        assert(fs2 and fs2[1] == 2)
+        assert(fs3 and fs3[1] == 3)
+        assert(fs4 and fs4[1] == 4)
+        assert(a == nil and b == nil and c == nil and d == nil and e == nil)
+    end
+end
+
+do
     local f1, f2 = evo.registry.entity(), evo.registry.entity()
     local e = evo.registry.entity()
 

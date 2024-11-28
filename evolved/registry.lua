@@ -768,17 +768,35 @@ function registry.entities(chunk)
 end
 
 ---@param chunk evolved.chunk
----@param fragment evolved.entity
----@return any[]
+---@param ... evolved.entity fragments
+---@return any[] ... components
 ---@nodiscard
-function registry.components(chunk, fragment)
-    local components = chunk.__components[fragment]
+function registry.components(chunk, ...)
+    local components = chunk.__components
 
-    if components == nil then
-        error(string.format('chunk %s does not have fragment %s', chunk, fragment), 2)
+    local fragment_count = select('#', ...)
+    if fragment_count == 0 then return end
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return components[f1]
     end
 
-    return components
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return components[f1], components[f2]
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return components[f1], components[f2], components[f3]
+    end
+
+    do
+        local f1, f2, f3 = ...
+        return components[f1], components[f2], components[f3],
+            registry.components(chunk, select(4, ...))
+    end
 end
 
 ---

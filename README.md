@@ -45,7 +45,7 @@ registry.exclude -> query -> entity... -> query
 registry.execute -> query -> (() -> (chunk?))
 registry.chunk -> entity -> entity... -> (chunk)
 registry.entities -> chunk -> entity -> (entity[])
-registry.components -> chunk -> entity -> (any[])
+registry.components -> chunk -> entity... -> (any[]...)
 ```
 
 ### Instance `entity`
@@ -79,7 +79,7 @@ query:execute -> (() -> (chunk?))
 
 ```
 chunk:entities -> entity -> (entity[])
-chunk:components -> entity -> (any[])
+chunk:components -> entity... -> (any[]...)
 ```
 
 ## Module `singles`

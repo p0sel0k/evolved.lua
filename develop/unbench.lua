@@ -103,24 +103,21 @@ end)
 
 describe('Simple Iteration', function(a, b, c, d, e, AB, CD, CE)
     for chunk in AB:execute() do
-        local as = chunk:components(a)
-        local bs = chunk:components(b)
+        local as, bs = chunk:components(a, b)
         for i = 1, #chunk:entities() do
             as[i], bs[i] = bs[i], as[i]
         end
     end
 
     for chunk in CD:execute() do
-        local cs = chunk:components(c)
-        local ds = chunk:components(d)
+        local cs, ds = chunk:components(c, d)
         for i = 1, #chunk:entities() do
             cs[i], ds[i] = ds[i], cs[i]
         end
     end
 
     for chunk in CE:execute() do
-        local cs = chunk:components(c)
-        local es = chunk:components(e)
+        local cs, es = chunk:components(c, e)
         for i = 1, #chunk:entities() do
             cs[i], es[i] = es[i], cs[i]
         end
