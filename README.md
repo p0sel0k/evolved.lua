@@ -38,7 +38,7 @@ registry.has_any -> entity -> entity... -> (boolean)
 registry.assign -> entity -> entity -> any -> (boolean)
 registry.insert -> entity -> entity -> any -> (boolean)
 registry.remove -> entity -> entity... -> (boolean)
-registry.detach -> entity -> (entity)
+registry.detach -> entity -> (boolean)
 registry.query -> entity... -> (query)
 registry.include -> query -> entity... -> query
 registry.exclude -> query -> entity... -> query

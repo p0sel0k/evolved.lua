@@ -591,18 +591,18 @@ function registry.remove(entity, ...)
 end
 
 ---@param entity evolved.entity
----@return evolved.entity
+---@return boolean is_detached
 function registry.detach(entity)
     if not idpools.alive(__guids, entity.__guid) then
-        return entity
+        return false
     end
 
     if entity.__chunk == nil then
-        return entity
+        return false
     end
 
     __detach_entity(entity)
-    return entity
+    return true
 end
 
 ---@param ... evolved.entity fragments

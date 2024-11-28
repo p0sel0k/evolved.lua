@@ -277,11 +277,11 @@ do
     assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1, f2))
 
-    assert(e == e:detach())
+    assert(e:detach())
     assert(e:alive())
     assert(e.__chunk == nil)
 
-    assert(e == e:detach())
+    assert(not e:detach())
     assert(e:alive())
     assert(e.__chunk == nil)
 end
@@ -360,7 +360,7 @@ do
     assert(not e:alive())
     assert(e.__chunk == nil)
 
-    assert(e == e:detach())
+    assert(not e:detach())
     assert(not e:alive())
     assert(e.__chunk == nil)
 end
