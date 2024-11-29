@@ -1159,6 +1159,12 @@ end
 evolved_query_mt.include = registry.include
 evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
+evolved_query_mt.batch_destroy = registry.batch_destroy
+evolved_query_mt.batch_apply = registry.batch_apply
+evolved_query_mt.batch_assign = registry.batch_assign
+evolved_query_mt.batch_insert = registry.batch_insert
+evolved_query_mt.batch_remove = registry.batch_remove
+evolved_query_mt.batch_detach = registry.batch_detach
 
 ---
 ---

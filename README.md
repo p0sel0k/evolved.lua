@@ -81,6 +81,12 @@ entity:detach -> (entity)
 query:include -> entity... -> query
 query:exclude -> entity... -> query
 query:execute -> (() -> (chunk?))
+query:batch_destroy -> (integer)
+query:batch_apply -> (any -> any) -> entity -> (integer)
+query:batch_assign -> entity -> any -> (integer)
+query:batch_insert -> entity -> any -> (integer)
+query:batch_remove -> entity... -> (integer)
+query:batch_detach -> (integer)
 ```
 
 ### Instance `chunk`
