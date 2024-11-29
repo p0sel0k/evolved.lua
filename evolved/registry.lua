@@ -575,7 +575,31 @@ end
 ---@param component any
 ---@return integer assigned_count
 function registry.batch_assign(query, fragment, component)
-    error('not impl yet', 2)
+    component = component == nil and true or component
+
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        if chunk.__components[fragment] ~= nil then
+            chunks[#chunks + 1] = chunk
+        end
+    end
+
+    local assigned_count = 0
+
+    for _, chunk in ipairs(chunks) do
+        local components = chunk.__components[fragment]
+        local component_count = #components
+
+        assigned_count = assigned_count + component_count
+
+        for i = 1, component_count do
+            components[i] = component
+        end
+    end
+
+    return assigned_count
 end
 
 ---@param entity evolved.entity

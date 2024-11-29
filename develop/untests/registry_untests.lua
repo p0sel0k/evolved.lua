@@ -418,6 +418,50 @@ end
 do
     local f1, f2 = evo.registry.entity(), evo.registry.entity()
 
+    local e1 = evo.registry.entity():set(f1, 10)
+    local e2 = evo.registry.entity():set(f1, 15)
+    local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+    local e4 = evo.registry.entity():set(f1, 25):set(f2, 45)
+
+    do
+        local q = evo.registry.query(f2)
+        assert(2 == evo.registry.batch_assign(q, f1, 42))
+        assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 42 and e4:get(f1) == 42)
+        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+
+    do
+        local q = evo.registry.query(f1)
+        assert(4 == evo.registry.batch_assign(q, f1, 21))
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == 21 and e4:get(f1) == 21)
+        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+
+    do
+        local q = evo.registry.query(f1, f2)
+        assert(2 == evo.registry.batch_assign(q, f1, nil))
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == true and e4:get(f1) == true)
+        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+
+    do
+        local q = evo.registry.query(f1)
+        assert(2 == evo.registry.batch_assign(q, f2, 42))
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == true and e4:get(f1) == true)
+        assert(e3:get(f2) == 42 and e4:get(f2) == 42)
+    end
+
+    do
+        local q = evo.registry.query(f1):exclude(f2)
+        assert(2 == evo.registry.batch_assign(q, f1, 84))
+        assert(e1:get(f1) == 84 and e2:get(f1) == 84 and e3:get(f1) == true and e4:get(f1) == true)
+        assert(e3:get(f2) == 42 and e4:get(f2) == 42)
+    end
+end
+
+do
+    local f1, f2 = evo.registry.entity(), evo.registry.entity()
+
     local function mul2(v) return v * 2 end
     local function null(_) end
 
