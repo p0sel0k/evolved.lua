@@ -519,7 +519,34 @@ end
 ---@param transform fun(any): any
 ---@return integer applied_count
 function registry.batch_apply(query, fragment, transform)
-    error('not impl yet', 2)
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        if chunk.__components[fragment] ~= nil then
+            chunks[#chunks + 1] = chunk
+        end
+    end
+
+    local applied_count = 0
+
+    for _, chunk in ipairs(chunks) do
+        local components = chunk.__components[fragment]
+        local component_count = #components
+
+        applied_count = applied_count + component_count
+
+        for i = 1, component_count do
+            local component = components[i]
+
+            component = transform(components[i])
+            component = component == nil and true or component
+
+            components[i] = component
+        end
+    end
+
+    return applied_count
 end
 
 ---@param entity evolved.entity
