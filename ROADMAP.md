@@ -14,4 +14,4 @@
 - [ ] add assertions for input arguments
 - [x] registry.assign should not change chunks' tree
 - [ ] add deferred changes api
-- [ ] add multi batch_apply
+- [ ] add multi apply/batch_apply

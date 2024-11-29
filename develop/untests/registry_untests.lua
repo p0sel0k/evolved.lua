@@ -373,29 +373,29 @@ do
     local function null(_) end
 
     do
-        assert(not e:apply(f1, mul2))
+        assert(not e:apply(mul2, f1))
         assert(e.__chunk == nil)
-        assert(not e:apply(f1, null))
+        assert(not e:apply(null, f1))
         assert(e.__chunk == nil)
 
         assert(e:insert(f1, 21))
         assert(e:get(f1) == 21)
         assert(e.__chunk == evo.registry.chunk(f1))
 
-        assert(e:apply(f1, mul2))
+        assert(e:apply(mul2, f1))
         assert(e:get(f1) == 42)
         assert(e.__chunk == evo.registry.chunk(f1))
 
-        assert(e:apply(f1, null))
+        assert(e:apply(null, f1))
         assert(e:get(f1) == true)
         assert(e.__chunk == evo.registry.chunk(f1))
     end
 
     do
-        assert(not e:apply(f2, mul2))
+        assert(not e:apply(mul2, f2))
         assert(e:get(f1) == true)
         assert(e.__chunk == evo.registry.chunk(f1))
-        assert(not e:apply(f2, null))
+        assert(not e:apply(null, f2))
         assert(e:get(f1) == true)
         assert(e.__chunk == evo.registry.chunk(f1))
 
@@ -403,12 +403,12 @@ do
         assert(e:get(f2) == 4)
         assert(e.__chunk == evo.registry.chunk(f1, f2))
 
-        assert(e:apply(f2, mul2))
+        assert(e:apply(mul2, f2))
         assert(e:get(f1) == true)
         assert(e:get(f2) == 8)
         assert(e.__chunk == evo.registry.chunk(f1, f2))
 
-        assert(e:apply(f2, null))
+        assert(e:apply(null, f2))
         assert(e:get(f1) == true)
         assert(e:get(f2) == true)
         assert(e.__chunk == evo.registry.chunk(f1, f2))
@@ -472,35 +472,35 @@ do
 
     do
         local q = evo.registry.query(f2)
-        assert(2 == evo.registry.batch_apply(q, f1, mul2))
+        assert(2 == evo.registry.batch_apply(q, mul2, f1))
         assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 40 and e4:get(f1) == 50)
         assert(e3:get(f2) == 40 and e4:get(f2) == 45)
     end
 
     do
         local q = evo.registry.query(f1)
-        assert(4 == evo.registry.batch_apply(q, f1, mul2))
+        assert(4 == evo.registry.batch_apply(q, mul2, f1))
         assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == 80 and e4:get(f1) == 100)
         assert(e3:get(f2) == 40 and e4:get(f2) == 45)
     end
 
     do
         local q = evo.registry.query(f1, f2)
-        assert(2 == evo.registry.batch_apply(q, f1, null))
+        assert(2 == evo.registry.batch_apply(q, null, f1))
         assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == true and e4:get(f1) == true)
         assert(e3:get(f2) == 40 and e4:get(f2) == 45)
     end
 
     do
         local q = evo.registry.query(f1)
-        assert(2 == evo.registry.batch_apply(q, f2, mul2))
+        assert(2 == evo.registry.batch_apply(q, mul2, f2))
         assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == true and e4:get(f1) == true)
         assert(e3:get(f2) == 80 and e4:get(f2) == 90)
     end
 
     do
         local q = evo.registry.query(f1):exclude(f2)
-        assert(2 == evo.registry.batch_apply(q, f1, mul2))
+        assert(2 == evo.registry.batch_apply(q, mul2, f1))
         assert(e1:get(f1) == 40 and e2:get(f1) == 60 and e3:get(f1) == true and e4:get(f1) == true)
         assert(e3:get(f2) == 80 and e4:get(f2) == 90)
     end

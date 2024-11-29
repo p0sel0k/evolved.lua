@@ -525,10 +525,10 @@ function registry.has_any(entity, ...)
 end
 
 ---@param entity evolved.entity
+---@param apply fun(any): any
 ---@param fragment evolved.entity
----@param transform fun(any): any
 ---@return boolean is_applied
-function registry.apply(entity, fragment, transform)
+function registry.apply(entity, apply, fragment)
     if not idpools.alive(__guids, entity.__guid) then
         return false
     end
@@ -541,7 +541,7 @@ function registry.apply(entity, fragment, transform)
 
     local component = components[entity.__index_in_chunk]
 
-    component = transform(component)
+    component = apply(component)
     component = component == nil and true or component
 
     components[entity.__index_in_chunk] = component
@@ -549,10 +549,10 @@ function registry.apply(entity, fragment, transform)
 end
 
 ---@param query evolved.query
+---@param apply fun(any): any
 ---@param fragment evolved.entity
----@param transform fun(any): any
 ---@return integer applied_count
-function registry.batch_apply(query, fragment, transform)
+function registry.batch_apply(query, apply, fragment)
     ---@type evolved.chunk[]
     local chunks = {}
 
@@ -573,7 +573,7 @@ function registry.batch_apply(query, fragment, transform)
         for i = 1, component_count do
             local component = components[i]
 
-            component = transform(components[i])
+            component = apply(components[i])
             component = component == nil and true or component
 
             components[i] = component
@@ -694,7 +694,7 @@ function registry.batch_insert(query, fragment, component)
     local chunks = {}
 
     for chunk in registry.execute(query) do
-        if not __chunk_has_fragment(chunk, fragment) then
+        if chunk.__components[fragment] == nil then
             chunks[#chunks + 1] = chunk
         end
     end
