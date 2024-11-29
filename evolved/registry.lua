@@ -376,6 +376,12 @@ function registry.destroy(entity)
     return true
 end
 
+---@param query evolved.query
+---@return integer destroyed_count
+function registry.batch_destroy(query)
+    error('not impl yet', 2)
+end
+
 ---@param entity evolved.entity
 ---@param ... evolved.entity fragments
 ---@return evolved.entity
@@ -505,6 +511,14 @@ function registry.assign(entity, fragment, component)
     return true
 end
 
+---@param query evolved.query
+---@param fragment evolved.entity
+---@param component any
+---@return integer assigned_count
+function registry.batch_assign(query, fragment, component)
+    error('not impl yet', 2)
+end
+
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
@@ -546,6 +560,15 @@ function registry.insert(entity, fragment, component)
 
     return true
 end
+
+---@param query evolved.query
+---@param fragment evolved.entity
+---@param component any
+---@return integer inserted_count
+function registry.batch_insert(query, fragment, component)
+    error('not impl yet', 2)
+end
+
 
 ---@param entity evolved.entity
 ---@param ... evolved.entity fragments
@@ -590,6 +613,13 @@ function registry.remove(entity, ...)
     return true
 end
 
+---@param query evolved.query
+---@param ... evolved.entity fragments
+---@return boolean removed_count
+function registry.batch_remove(query, ...)
+    error('not impl yet', 2)
+end
+
 ---@param entity evolved.entity
 ---@return boolean is_detached
 function registry.detach(entity)
@@ -603,6 +633,12 @@ function registry.detach(entity)
 
     __detach_entity(entity)
     return true
+end
+
+---@param query evolved.query
+---@return boolean detached_count
+function registry.batch_detach(query)
+    error('not impl yet', 2)
 end
 
 ---@param ... evolved.entity fragments
