@@ -41,11 +41,11 @@ end
 ---@param d evolved.entity
 ---@param e evolved.entity
 ---@param A evolved.query
----@param AB evolved.query
----@param ABC evolved.query
----@param ABCD evolved.query
----@param ABCDE evolved.query
-describe('Packed Iteration', function(a, b, c, d, e, A, AB, ABC, ABCD, ABCDE)
+---@param B evolved.query
+---@param C evolved.query
+---@param D evolved.query
+---@param E evolved.query
+describe('Packed Iteration', function(a, b, c, d, e, A, B, C, D, E)
     for chunk in A:execute() do
         local as = chunk:components(a)
         for i = 1, #chunk:entities() do
@@ -53,28 +53,28 @@ describe('Packed Iteration', function(a, b, c, d, e, A, AB, ABC, ABCD, ABCDE)
         end
     end
 
-    for chunk in AB:execute() do
+    for chunk in B:execute() do
         local bs = chunk:components(b)
         for i = 1, #chunk:entities() do
             bs[i] = bs[i] * 2
         end
     end
 
-    for chunk in ABC:execute() do
+    for chunk in C:execute() do
         local cs = chunk:components(c)
         for i = 1, #chunk:entities() do
             cs[i] = cs[i] * 2
         end
     end
 
-    for chunk in ABCD:execute() do
+    for chunk in D:execute() do
         local ds = chunk:components(d)
         for i = 1, #chunk:entities() do
             ds[i] = ds[i] * 2
         end
     end
 
-    for chunk in ABCDE:execute() do
+    for chunk in E:execute() do
         local es = chunk:components(e)
         for i = 1, #chunk:entities() do
             es[i] = es[i] * 2
@@ -89,16 +89,21 @@ end, function()
         evo.registry.entity()
 
     for _ = 1, 1000 do
-        evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(D, 0):set(E, 0)
+        evo.registry.entity()
+            :set(A, 0)
+            :set(B, 0)
+            :set(C, 0)
+            :set(D, 0)
+            :set(E, 0)
     end
 
     return
         A, B, C, D, E,
         evo.registry.query(A),
-        evo.registry.query(A, B),
-        evo.registry.query(A, B, C),
-        evo.registry.query(A, B, C, D),
-        evo.registry.query(A, B, C, D, E)
+        evo.registry.query(B),
+        evo.registry.query(C),
+        evo.registry.query(D),
+        evo.registry.query(E)
 end)
 
 describe('Simple Iteration', function(a, b, c, d, e, AB, CD, CE)
