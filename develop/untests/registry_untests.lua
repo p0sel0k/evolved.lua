@@ -365,6 +365,56 @@ do
     assert(e.__chunk == nil)
 end
 
+do
+    local f1, f2 = evo.registry.entity(), evo.registry.entity()
+    local e = evo.registry.entity()
+
+    local function mul2(v) return v * 2 end
+    local function null(_) end
+
+    do
+        assert(not e:apply(f1, mul2))
+        assert(e.__chunk == nil)
+        assert(not e:apply(f1, null))
+        assert(e.__chunk == nil)
+
+        assert(e:insert(f1, 21))
+        assert(e:get(f1) == 21)
+        assert(e.__chunk == evo.registry.chunk(f1))
+
+        assert(e:apply(f1, mul2))
+        assert(e:get(f1) == 42)
+        assert(e.__chunk == evo.registry.chunk(f1))
+
+        assert(e:apply(f1, null))
+        assert(e:get(f1) == true)
+        assert(e.__chunk == evo.registry.chunk(f1))
+    end
+
+    do
+        assert(not e:apply(f2, mul2))
+        assert(e:get(f1) == true)
+        assert(e.__chunk == evo.registry.chunk(f1))
+        assert(not e:apply(f2, null))
+        assert(e:get(f1) == true)
+        assert(e.__chunk == evo.registry.chunk(f1))
+
+        assert(e:insert(f2, 4))
+        assert(e:get(f2) == 4)
+        assert(e.__chunk == evo.registry.chunk(f1, f2))
+
+        assert(e:apply(f2, mul2))
+        assert(e:get(f1) == true)
+        assert(e:get(f2) == 8)
+        assert(e.__chunk == evo.registry.chunk(f1, f2))
+
+        assert(e:apply(f2, null))
+        assert(e:get(f1) == true)
+        assert(e:get(f2) == true)
+        assert(e.__chunk == evo.registry.chunk(f1, f2))
+    end
+end
+
 for _ = 1, 100 do
     local insert_fragments = {} ---@type evolved.entity[]
     local insert_fragment_count = math.random(0, 10)

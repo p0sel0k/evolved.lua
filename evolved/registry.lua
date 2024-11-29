@@ -465,9 +465,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has(entity, fragment)
-    local cur_chunk = entity.__chunk
-    if cur_chunk == nil then return false end
-    return __chunk_has_fragment(cur_chunk, fragment)
+    local chunk = entity.__chunk
+    if chunk == nil then return false end
+    return __chunk_has_fragment(chunk, fragment)
 end
 
 ---@param entity evolved.entity
@@ -475,9 +475,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has_all(entity, ...)
-    local cur_chunk = entity.__chunk
-    if cur_chunk == nil then return select('#', ...) == 0 end
-    return __chunk_has_all_fragments(cur_chunk, ...)
+    local chunk = entity.__chunk
+    if chunk == nil then return select('#', ...) == 0 end
+    return __chunk_has_all_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -485,9 +485,9 @@ end
 ---@return boolean
 ---@nodiscard
 function registry.has_any(entity, ...)
-    local cur_chunk = entity.__chunk
-    if cur_chunk == nil then return false end
-    return __chunk_has_any_fragments(cur_chunk, ...)
+    local chunk = entity.__chunk
+    if chunk == nil then return false end
+    return __chunk_has_any_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -495,7 +495,23 @@ end
 ---@param transform fun(any): any
 ---@return boolean is_applied
 function registry.apply(entity, fragment, transform)
-    error('not impl yet', 2)
+    if not idpools.alive(__guids, entity.__guid) then
+        return false
+    end
+
+    local chunk = entity.__chunk
+    if chunk == nil then return false end
+
+    local components = chunk.__components[fragment]
+    if components == nil then return false end
+
+    local component = components[entity.__index_in_chunk]
+
+    component = transform(component)
+    component = component == nil and true or component
+
+    components[entity.__index_in_chunk] = component
+    return true
 end
 
 ---@param query evolved.query
