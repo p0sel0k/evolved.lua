@@ -1,0 +1,178 @@
+local common = require 'develop.unbench.common_unbench'
+
+local evo = require 'evolved.evolved'
+
+---@param a evolved.entity
+---@param b evolved.entity
+---@param c evolved.entity
+---@param d evolved.entity
+---@param e evolved.entity
+---@param A evolved.query
+---@param B evolved.query
+---@param C evolved.query
+---@param D evolved.query
+---@param E evolved.query
+common.describe('Evolved Packed Iteration', function(a, b, c, d, e, A, B, C, D, E)
+    for chunk in A:execute() do
+        local as = chunk:components(a)
+        for i = 1, #chunk:entities() do as[i] = as[i] * 2 end
+    end
+
+    for chunk in B:execute() do
+        local bs = chunk:components(b)
+        for i = 1, #chunk:entities() do bs[i] = bs[i] * 2 end
+    end
+
+    for chunk in C:execute() do
+        local cs = chunk:components(c)
+        for i = 1, #chunk:entities() do cs[i] = cs[i] * 2 end
+    end
+
+    for chunk in D:execute() do
+        local ds = chunk:components(d)
+        for i = 1, #chunk:entities() do ds[i] = ds[i] * 2 end
+    end
+
+    for chunk in E:execute() do
+        local es = chunk:components(e)
+        for i = 1, #chunk:entities() do es[i] = es[i] * 2 end
+    end
+end, function()
+    local A, B, C, D, E =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 1000 do
+        evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(D, 0):set(E, 0)
+    end
+
+    return
+        A, B, C, D, E,
+        evo.registry.query(A),
+        evo.registry.query(B),
+        evo.registry.query(C),
+        evo.registry.query(D),
+        evo.registry.query(E)
+end)
+
+common.describe('Evolved Simple Iteration', function(a, b, c, d, e, AB, CD, CE)
+    for chunk in AB:execute() do
+        local as, bs = chunk:components(a, b)
+        for i = 1, #chunk:entities() do as[i], bs[i] = bs[i], as[i] end
+    end
+
+    for chunk in CD:execute() do
+        local cs, ds = chunk:components(c, d)
+        for i = 1, #chunk:entities() do cs[i], ds[i] = ds[i], cs[i] end
+    end
+
+    for chunk in CE:execute() do
+        local cs, es = chunk:components(c, e)
+        for i = 1, #chunk:entities() do cs[i], es[i] = es[i], cs[i] end
+    end
+end, function()
+    local A, B, C, D, E =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 1000 do
+        evo.registry.entity():set(A, 0):set(B, 0)
+        evo.registry.entity():set(A, 0):set(B, 0):set(C, 0)
+        evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(D, 0)
+        evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(E, 0)
+    end
+
+    return A, B, C, D, E,
+        evo.registry.query(A, B),
+        evo.registry.query(C, D),
+        evo.registry.query(C, E)
+end)
+
+---@param d evolved.entity
+---@param z evolved.entity
+---@param Data evolved.query
+---@param Z evolved.query
+common.describe('Evolved Fragmented Iteration', function(d, z, Data, Z)
+    for chunk in Data:execute() do
+        local ds = chunk:components(d)
+        for i = 1, #chunk:entities() do ds[i] = ds[i] * 2 end
+    end
+
+    for chunk in Z:execute() do
+        local zs = chunk:components(z)
+        for i = 1, #chunk:entities() do zs[i] = zs[i] * 2 end
+    end
+end, function()
+    local chars, data = {}, evo.registry.entity()
+    for i = 1, 26 do chars[i] = evo.registry.entity() end
+
+    for i = 1, #chars do
+        for _ = 1, 100 do
+            evo.registry.entity():set(chars[i], 0):set(data, 0)
+        end
+    end
+
+    return data, chars[#chars],
+        evo.registry.query(data),
+        evo.registry.query(chars[#chars])
+end)
+
+---@param a evolved.entity
+---@param b evolved.entity
+---@param A evolved.query
+---@param B evolved.query
+common.describe('Evolved Entity Cycle', function(a, b, A, B)
+    ---@type any[]
+    local to_create = {}
+
+    for chunk in A:execute() do
+        local as = chunk:components(a)
+        for i = 1, #chunk:entities() do
+            to_create[#to_create + 1] = as[i]
+        end
+    end
+
+    for i = 1, #to_create do
+        evo.registry.entity():set(b, to_create[i])
+    end
+
+    assert(1000 == evo.registry.batch_destroy(B))
+end, function()
+    local a, b =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 1000 do
+        evo.registry.entity():set(a, 0)
+    end
+
+    return a, b,
+        evo.registry.query(a),
+        evo.registry.query(b)
+end)
+
+---@param b evolved.entity
+---@param A evolved.query
+---@param AB evolved.query
+common.describe('Evolved Add / Remove', function(b, A, AB)
+    assert(1000 == evo.registry.batch_insert(A, b))
+    assert(1000 == evo.registry.batch_remove(AB, b))
+end, function()
+    local a, b =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 1000 do
+        evo.registry.entity():set(a)
+    end
+
+    return b,
+        evo.registry.query(a),
+        evo.registry.query(b)
+end)
