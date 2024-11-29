@@ -200,19 +200,7 @@ describe('Entity Cycle', function(a, b, A, B)
         evo.registry.entity():set(b, to_create[i])
     end
 
-    ---@type evolved.entity[]
-    local to_destroy = {}
-
-    for chunk in B:execute() do
-        local es = chunk:entities()
-        for i = 1, #es do
-            to_destroy[#to_destroy + 1] = es[i]
-        end
-    end
-
-    for i = 1, #to_destroy do
-        evo.registry.destroy(to_destroy[i])
-    end
+    assert(1000 == evo.registry.batch_destroy(B))
 end, function()
     local a, b =
         evo.registry.entity(),
@@ -227,38 +215,12 @@ end, function()
         evo.registry.query(b)
 end)
 
----@param a evolved.entity
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param AB evolved.query
-describe('Add / Remove', function(a, b, A, AB)
-    ---@type evolved.entity[]
-    local to_change = {}
-
-    for chunk in A:execute() do
-        local es = chunk:entities()
-        for i = 1, #es do
-            to_change[#to_change + 1] = es[i]
-        end
-    end
-
-    for i = 1, #to_change do
-        to_change[i]:set(b)
-    end
-
-    ---@type evolved.entity[]
-    local to_remove = {}
-
-    for chunk in AB:execute() do
-        local es = chunk:entities()
-        for i = 1, #es do
-            to_remove[#to_remove + 1] = es[i]
-        end
-    end
-
-    for i = 1, #to_remove do
-        to_remove[i]:remove(b)
-    end
+describe('Add / Remove', function(b, A, AB)
+    assert(1000 == evo.registry.batch_insert(A, b))
+    assert(1000 == evo.registry.batch_remove(AB, b))
 end, function()
     local a, b =
         evo.registry.entity(),
@@ -268,7 +230,7 @@ end, function()
         evo.registry.entity():set(a)
     end
 
-    return a, b,
+    return b,
         evo.registry.query(a),
         evo.registry.query(b)
 end)
