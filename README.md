@@ -27,8 +27,6 @@ idpool:release -> id -> ()
 registry.entity -> (entity)
 registry.guid -> entity -> (id)
 registry.alive -> entity -> (boolean)
-registry.destroy -> entity -> (boolean)
-registry.batch_destroy -> query -> (integer)
 registry.del -> entity -> entity... -> (entity)
 registry.set -> entity -> entity -> any -> (entity)
 registry.get -> entity -> entity... -> (any...)
@@ -46,6 +44,8 @@ registry.remove -> entity -> entity... -> (boolean)
 registry.batch_remove -> query -> entity... -> (integer)
 registry.detach -> entity -> (boolean)
 registry.batch_detach -> query -> (integer)
+registry.destroy -> entity -> (boolean)
+registry.batch_destroy -> query -> (integer)
 registry.query -> entity... -> (query)
 registry.include -> query -> entity... -> query
 registry.exclude -> query -> entity... -> query
@@ -60,7 +60,6 @@ registry.components -> chunk -> entity... -> (any[]...)
 ```
 entity:guid -> (id)
 entity:alive -> (boolean)
-entity:destroy -> (boolean)
 entity:del -> entity... -> (entity)
 entity:set -> entity -> any -> (entity)
 entity:get -> entity... -> (any...)
@@ -73,6 +72,7 @@ entity:assign -> entity -> any -> (boolean)
 entity:insert -> entity -> any -> (boolean)
 entity:remove -> entity... -> (boolean)
 entity:detach -> (entity)
+entity:destroy -> (boolean)
 ```
 
 ### Instance `query`
@@ -81,12 +81,12 @@ entity:detach -> (entity)
 query:include -> entity... -> query
 query:exclude -> entity... -> query
 query:execute -> (() -> (chunk?))
-query:batch_destroy -> (integer)
 query:batch_apply -> (any -> any) -> entity -> (integer)
 query:batch_assign -> entity -> any -> (integer)
 query:batch_insert -> entity -> any -> (integer)
 query:batch_remove -> entity... -> (integer)
 query:batch_detach -> (integer)
+query:batch_destroy -> (integer)
 ```
 
 ### Instance `chunk`

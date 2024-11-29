@@ -362,61 +362,6 @@ function registry.alive(entity)
 end
 
 ---@param entity evolved.entity
----@return boolean is_destroyed
-function registry.destroy(entity)
-    if not idpools.alive(__guids, entity.__guid) then
-        return false
-    end
-
-    if entity.__chunk ~= nil then
-        __detach_entity(entity)
-    end
-
-    idpools.release(__guids, entity.__guid)
-    return true
-end
-
----@param query evolved.query
----@return integer destroyed_count
-function registry.batch_destroy(query)
-    ---@type evolved.chunk[]
-    local chunks = {}
-
-    for chunk in registry.execute(query) do
-        chunks[#chunks + 1] = chunk
-    end
-
-    local destroyed_count = 0
-
-    for _, chunk in ipairs(chunks) do
-        do
-            local changes = #chunk.__entities
-
-            __changes = __changes + changes
-            destroyed_count = destroyed_count + changes
-
-            chunk.__changes = chunk.__changes + changes
-        end
-
-        for _, entity in ipairs(chunk.__entities) do
-            entity.__chunk = nil
-            entity.__index_in_chunk = 0
-            idpools.release(__guids, entity.__guid)
-        end
-
-        do
-            chunk.__entities = {}
-
-            for f, _ in pairs(chunk.__components) do
-                chunk.__components[f] = {}
-            end
-        end
-    end
-
-    return destroyed_count
-end
-
----@param entity evolved.entity
 ---@param ... evolved.entity fragments
 ---@return evolved.entity
 function registry.del(entity, ...)
@@ -912,6 +857,61 @@ function registry.batch_detach(query)
     return detached_count
 end
 
+---@param entity evolved.entity
+---@return boolean is_destroyed
+function registry.destroy(entity)
+    if not idpools.alive(__guids, entity.__guid) then
+        return false
+    end
+
+    if entity.__chunk ~= nil then
+        __detach_entity(entity)
+    end
+
+    idpools.release(__guids, entity.__guid)
+    return true
+end
+
+---@param query evolved.query
+---@return integer destroyed_count
+function registry.batch_destroy(query)
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        chunks[#chunks + 1] = chunk
+    end
+
+    local destroyed_count = 0
+
+    for _, chunk in ipairs(chunks) do
+        do
+            local changes = #chunk.__entities
+
+            __changes = __changes + changes
+            destroyed_count = destroyed_count + changes
+
+            chunk.__changes = chunk.__changes + changes
+        end
+
+        for _, entity in ipairs(chunk.__entities) do
+            entity.__chunk = nil
+            entity.__index_in_chunk = 0
+            idpools.release(__guids, entity.__guid)
+        end
+
+        do
+            chunk.__entities = {}
+
+            for f, _ in pairs(chunk.__components) do
+                chunk.__components[f] = {}
+            end
+        end
+    end
+
+    return destroyed_count
+end
+
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 ---@nodiscard
@@ -1122,7 +1122,6 @@ end
 
 evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.alive = registry.alive
-evolved_entity_mt.destroy = registry.destroy
 evolved_entity_mt.del = registry.del
 evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
@@ -1135,6 +1134,7 @@ evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
 evolved_entity_mt.remove = registry.remove
 evolved_entity_mt.detach = registry.detach
+evolved_entity_mt.destroy = registry.destroy
 
 ---
 ---
@@ -1159,12 +1159,12 @@ end
 evolved_query_mt.include = registry.include
 evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
-evolved_query_mt.batch_destroy = registry.batch_destroy
 evolved_query_mt.batch_apply = registry.batch_apply
 evolved_query_mt.batch_assign = registry.batch_assign
 evolved_query_mt.batch_insert = registry.batch_insert
 evolved_query_mt.batch_remove = registry.batch_remove
 evolved_query_mt.batch_detach = registry.batch_detach
+evolved_query_mt.batch_destroy = registry.batch_destroy
 
 ---
 ---
