@@ -379,7 +379,41 @@ end
 ---@param query evolved.query
 ---@return integer destroyed_count
 function registry.batch_destroy(query)
-    error('not impl yet', 2)
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        chunks[#chunks + 1] = chunk
+    end
+
+    local destroyed_count = 0
+
+    for _, chunk in ipairs(chunks) do
+        do
+            local changes = #chunk.__entities
+
+            __changes = __changes + changes
+            destroyed_count = destroyed_count + changes
+
+            chunk.__changes = chunk.__changes + changes
+        end
+
+        for _, entity in ipairs(chunk.__entities) do
+            entity.__chunk = nil
+            entity.__index_in_chunk = 0
+            idpools.release(__guids, entity.__guid)
+        end
+
+        do
+            chunk.__entities = {}
+
+            for f, _ in pairs(chunk.__components) do
+                chunk.__components[f] = {}
+            end
+        end
+    end
+
+    return destroyed_count
 end
 
 ---@param entity evolved.entity
@@ -842,7 +876,40 @@ end
 ---@param query evolved.query
 ---@return integer detached_count
 function registry.batch_detach(query)
-    error('not impl yet', 2)
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        chunks[#chunks + 1] = chunk
+    end
+
+    local detached_count = 0
+
+    for _, chunk in ipairs(chunks) do
+        do
+            local changes = #chunk.__entities
+
+            __changes = __changes + changes
+            detached_count = detached_count + changes
+
+            chunk.__changes = chunk.__changes + changes
+        end
+
+        for _, entity in ipairs(chunk.__entities) do
+            entity.__chunk = nil
+            entity.__index_in_chunk = 0
+        end
+
+        do
+            chunk.__entities = {}
+
+            for f, _ in pairs(chunk.__components) do
+                chunk.__components[f] = {}
+            end
+        end
+    end
+
+    return detached_count
 end
 
 ---@param ... evolved.entity fragments

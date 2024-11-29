@@ -564,6 +564,80 @@ do
     end
 end
 
+do
+    local f1, f2, f3 = evo.registry.entity(), evo.registry.entity(), evo.registry.entity()
+
+    do
+        local e1 = evo.registry.entity():set(f1, 10)
+        local e2 = evo.registry.entity():set(f1, 15)
+        local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+        local e4 = evo.registry.entity():set(f1, 25):set(f2, 45):set(f3, 55)
+        local e5 = evo.registry.entity():set(f3, 65)
+
+        do
+            local q = evo.registry.query(f2):exclude(f3)
+            assert(1 == evo.registry.batch_detach(q))
+            assert(e1.__chunk == evo.registry.chunk(f1))
+            assert(e2.__chunk == evo.registry.chunk(f1))
+            assert(e3.__chunk == nil)
+            assert(e4.__chunk == evo.registry.chunk(f1, f2, f3))
+            assert(e5.__chunk == evo.registry.chunk(f3))
+            assert(#evo.registry.chunk(f1, f2):entities() == 0)
+            assert(#evo.registry.chunk(f1, f2):components(f1) == 0)
+            assert(#evo.registry.chunk(f1, f2):components(f2) == 0)
+            assert(e1:alive() and e2:alive() and e3:alive() and e4:alive() and e5:alive())
+        end
+
+        do
+            local q = evo.registry.query(f1)
+            assert(3 == evo.registry.batch_detach(q))
+            assert(e1.__chunk == nil)
+            assert(e2.__chunk == nil)
+            assert(e3.__chunk == nil)
+            assert(e4.__chunk == nil)
+            assert(e5.__chunk == evo.registry.chunk(f3))
+            assert(e1:alive() and e2:alive() and e3:alive() and e4:alive() and e5:alive())
+        end
+    end
+end
+
+do
+    local f1, f2, f3 = evo.registry.entity(), evo.registry.entity(), evo.registry.entity()
+
+    do
+        local e1 = evo.registry.entity():set(f1, 10)
+        local e2 = evo.registry.entity():set(f1, 15)
+        local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+        local e4 = evo.registry.entity():set(f1, 25):set(f2, 45):set(f3, 55)
+        local e5 = evo.registry.entity():set(f3, 65)
+
+        do
+            local q = evo.registry.query(f2):exclude(f3)
+            assert(1 == evo.registry.batch_destroy(q))
+            assert(e1.__chunk == evo.registry.chunk(f1))
+            assert(e2.__chunk == evo.registry.chunk(f1))
+            assert(e3.__chunk == nil)
+            assert(e4.__chunk == evo.registry.chunk(f1, f2, f3))
+            assert(e5.__chunk == evo.registry.chunk(f3))
+            assert(#evo.registry.chunk(f1, f2):entities() == 0)
+            assert(#evo.registry.chunk(f1, f2):components(f1) == 0)
+            assert(#evo.registry.chunk(f1, f2):components(f2) == 0)
+            assert(e1:alive() and e2:alive() and not e3:alive() and e4:alive() and e5:alive())
+        end
+
+        do
+            local q = evo.registry.query(f1)
+            assert(3 == evo.registry.batch_destroy(q))
+            assert(e1.__chunk == nil)
+            assert(e2.__chunk == nil)
+            assert(e3.__chunk == nil)
+            assert(e4.__chunk == nil)
+            assert(e5.__chunk == evo.registry.chunk(f3))
+            assert(not e1:alive() and not e2:alive() and not e3:alive() and not e4:alive() and e5:alive())
+        end
+    end
+end
+
 for _ = 1, 100 do
     local insert_fragments = {} ---@type evolved.entity[]
     local insert_fragment_count = math.random(0, 10)
