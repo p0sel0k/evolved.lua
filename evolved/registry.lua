@@ -620,26 +620,31 @@ function registry.insert(entity, fragment, component)
         return false
     end
 
-    local old_index_in_chunk = entity.__index_in_chunk
-    local new_index_in_chunk = #new_chunk.__entities + 1
-
-    __changes = __changes + 1
-    new_chunk.__changes = new_chunk.__changes + 1
-
-    new_chunk.__entities[new_index_in_chunk] = entity
-    new_chunk.__components[fragment][new_index_in_chunk] = component
-
-    if old_chunk ~= nil then
-        for old_f, old_cs in pairs(old_chunk.__components) do
-            local new_cs = new_chunk.__components[old_f]
-            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
-        end
-
-        __detach_entity(entity)
+    do
+        __changes = __changes + 1
     end
 
-    entity.__chunk = new_chunk
-    entity.__index_in_chunk = new_index_in_chunk
+    if new_chunk ~= nil then
+        local old_index_in_chunk = entity.__index_in_chunk
+        local new_index_in_chunk = #new_chunk.__entities + 1
+
+        new_chunk.__changes = new_chunk.__changes + 1
+        new_chunk.__entities[new_index_in_chunk] = entity
+        new_chunk.__components[fragment][new_index_in_chunk] = component
+
+        if old_chunk ~= nil then
+            for old_f, old_cs in pairs(old_chunk.__components) do
+                local new_cs = new_chunk.__components[old_f]
+                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+            end
+            __detach_entity(entity)
+        end
+
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+    else
+        __detach_entity(entity)
+    end
 
     return true
 end
@@ -649,9 +654,68 @@ end
 ---@param component any
 ---@return integer inserted_count
 function registry.batch_insert(query, fragment, component)
-    error('not impl yet', 2)
-end
+    component = component == nil and true or component
 
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        if not __chunk_has_fragment(chunk, fragment) then
+            chunks[#chunks + 1] = chunk
+        end
+    end
+
+    local inserted_count = 0
+
+    for _, old_chunk in ipairs(chunks) do
+        local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+        do
+            local changes = #old_chunk.__entities
+
+            __changes = __changes + changes
+            inserted_count = inserted_count + changes
+
+            old_chunk.__changes = old_chunk.__changes + changes
+
+            if new_chunk ~= nil then
+                new_chunk.__changes = new_chunk.__changes + changes
+            end
+        end
+
+        if new_chunk ~= nil then
+            for _, entity in ipairs(old_chunk.__entities) do
+                local new_index_in_chunk = #new_chunk.__entities + 1
+
+                new_chunk.__entities[new_index_in_chunk] = entity
+                new_chunk.__components[fragment][new_index_in_chunk] = component
+
+                entity.__chunk = new_chunk
+                entity.__index_in_chunk = new_index_in_chunk
+            end
+
+            for old_f, old_cs in pairs(old_chunk.__components) do
+                local new_cs = new_chunk.__components[old_f]
+                for i = 1, #old_cs do new_cs[#new_cs + 1] = old_cs[i] end
+            end
+        else
+            for _, entity in ipairs(old_chunk.__entities) do
+                entity.__chunk = nil
+                entity.__index_in_chunk = 0
+            end
+        end
+
+        do
+            old_chunk.__entities = {}
+
+            for old_f, _ in pairs(old_chunk.__components) do
+                old_chunk.__components[old_f] = {}
+            end
+        end
+    end
+
+    return inserted_count
+end
 
 ---@param entity evolved.entity
 ---@param ... evolved.entity fragments
@@ -668,39 +732,96 @@ function registry.remove(entity, ...)
         return false
     end
 
-    if new_chunk == nil then
-        __detach_entity(entity)
-        return true
+    do
+        __changes = __changes + 1
     end
 
-    local old_index_in_chunk = entity.__index_in_chunk
-    local new_index_in_chunk = #new_chunk.__entities + 1
+    if new_chunk ~= nil then
+        local old_index_in_chunk = entity.__index_in_chunk
+        local new_index_in_chunk = #new_chunk.__entities + 1
 
-    __changes = __changes + 1
-    new_chunk.__changes = new_chunk.__changes + 1
+        new_chunk.__changes = new_chunk.__changes + 1
+        new_chunk.__entities[new_index_in_chunk] = entity
 
-    new_chunk.__entities[new_index_in_chunk] = entity
-
-    if old_chunk ~= nil then
-        for new_f, new_cs in pairs(new_chunk.__components) do
-            local old_cs = old_chunk.__components[new_f]
-            new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+        if old_chunk ~= nil then
+            for new_f, new_cs in pairs(new_chunk.__components) do
+                local old_cs = old_chunk.__components[new_f]
+                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+            end
+            __detach_entity(entity)
         end
 
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+    else
         __detach_entity(entity)
     end
-
-    entity.__chunk = new_chunk
-    entity.__index_in_chunk = new_index_in_chunk
 
     return true
 end
 
 ---@param query evolved.query
 ---@param ... evolved.entity fragments
----@return boolean removed_count
+---@return integer removed_count
 function registry.batch_remove(query, ...)
-    error('not impl yet', 2)
+    ---@type evolved.chunk[]
+    local chunks = {}
+
+    for chunk in registry.execute(query) do
+        if __chunk_has_any_fragments(chunk, ...) then
+            chunks[#chunks + 1] = chunk
+        end
+    end
+
+    local removed_count = 0
+
+    for _, old_chunk in ipairs(chunks) do
+        local new_chunk = __chunk_without_fragments(old_chunk, ...)
+
+        do
+            local changes = #old_chunk.__entities
+
+            __changes = __changes + changes
+            removed_count = removed_count + changes
+
+            old_chunk.__changes = old_chunk.__changes + changes
+
+            if new_chunk ~= nil then
+                new_chunk.__changes = new_chunk.__changes + changes
+            end
+        end
+
+        if new_chunk ~= nil then
+            for _, entity in ipairs(old_chunk.__entities) do
+                local new_index_in_chunk = #new_chunk.__entities + 1
+
+                new_chunk.__entities[new_index_in_chunk] = entity
+
+                entity.__chunk = new_chunk
+                entity.__index_in_chunk = new_index_in_chunk
+            end
+
+            for new_f, new_cs in pairs(new_chunk.__components) do
+                local old_cs = old_chunk.__components[new_f]
+                for i = 1, #old_cs do new_cs[#new_cs + 1] = old_cs[i] end
+            end
+        else
+            for _, entity in ipairs(old_chunk.__entities) do
+                entity.__chunk = nil
+                entity.__index_in_chunk = 0
+            end
+        end
+
+        do
+            old_chunk.__entities = {}
+
+            for old_f, _ in pairs(old_chunk.__components) do
+                old_chunk.__components[old_f] = {}
+            end
+        end
+    end
+
+    return removed_count
 end
 
 ---@param entity evolved.entity
@@ -719,7 +840,7 @@ function registry.detach(entity)
 end
 
 ---@param query evolved.query
----@return boolean detached_count
+---@return integer detached_count
 function registry.batch_detach(query)
     error('not impl yet', 2)
 end
@@ -854,7 +975,9 @@ function registry.execute(query)
                 end
             end
 
-            return matched_chunk
+            if #matched_chunk.__entities > 0 then
+                return matched_chunk
+            end
         end
     end
 end
