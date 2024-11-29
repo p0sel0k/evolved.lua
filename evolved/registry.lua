@@ -492,6 +492,22 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
+---@param transform fun(any): any
+---@return boolean is_applied
+function registry.apply(entity, fragment, transform)
+    error('not impl yet', 2)
+end
+
+---@param query evolved.query
+---@param fragment evolved.entity
+---@param transform fun(any): any
+---@return integer applied_count
+function registry.batch_apply(query, fragment, transform)
+    error('not impl yet', 2)
+end
+
+---@param entity evolved.entity
+---@param fragment evolved.entity
 ---@param component any
 ---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
@@ -857,6 +873,7 @@ evolved_entity_mt.get_or = registry.get_or
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
+evolved_entity_mt.apply = registry.apply
 evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
 evolved_entity_mt.remove = registry.remove
