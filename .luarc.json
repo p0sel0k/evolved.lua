@@ -6,5 +6,11 @@
     "runtime": {
         "version": "LuaJIT",
         "pathStrict": true
+    },
+    "workspace": {
+        "ignoreDir": [
+            ".vscode",
+            "develop/3rdparty"
+        ]
     }
 }
