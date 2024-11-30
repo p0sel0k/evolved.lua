@@ -17,7 +17,7 @@ function common.describe(name, loop, init)
     local start_kb = collectgarbage('count')
 
     local success, result = pcall(function()
-        while os.clock() - start_s < 1.0 do
+        while os.clock() - start_s < 0.2 do
             iters = iters + 1
             loop(evo.compat.unpack(state))
         end

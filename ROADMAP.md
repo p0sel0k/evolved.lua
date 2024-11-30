@@ -15,3 +15,5 @@
 - [x] registry.assign should not change chunks' tree
 - [ ] add deferred changes api
 - [ ] add multi apply/batch_apply
+- [ ] add batch vector operations
+- [ ] add inplace vector operations

@@ -7,14 +7,16 @@ local singles = {
 }
 
 local fragments = {
+    disabled = evo.registry.entity(),
     position = evo.registry.entity(),
     velocity = evo.registry.entity(),
 }
 
 local queries = {
     bodies = evo.registry.query(
-        fragments.position,
-        fragments.velocity),
+            fragments.position,
+            fragments.velocity)
+        :exclude(fragments.disabled)
 }
 
 do
