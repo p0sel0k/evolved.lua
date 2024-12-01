@@ -10,9 +10,16 @@ local registry = {}
 ---
 
 local __guids = idpools.idpool()
+
 local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
 local __changes = 0 ---@type integer
+
+---@alias evolved.execution_stack evolved.chunk[]
+---@alias evolved.execution_state [evolved.query, evolved.execution_stack, integer, integer]
+---@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
+
+local __execution_state_cache = {} ---@type evolved.execution_state[]
 
 ---
 ---
@@ -325,6 +332,62 @@ local function __chunk_without_fragments(chunk, ...)
 
     return chunk
 end
+
+---@param query evolved.query
+---@return evolved.execution_state
+---@nodiscard
+local function __execution_state_acquire(query)
+    local state_cache = __execution_state_cache
+    if #state_cache == 0 then return { query, {}, __changes, query.__changes } end
+
+    local state = state_cache[#state_cache]
+    state_cache[#state_cache] = nil
+
+    state[1], state[3], state[4] = query, __changes, query.__changes
+
+    return state
+end
+
+---@param state evolved.execution_state
+local function __execution_state_release(state)
+    state[1] = nil -- release query for garbage collection
+    assert(#state[2] == 0, 'execution stack should be empty')
+    __execution_state_cache[#__execution_state_cache + 1] = state
+end
+
+---@type evolved.execution_iterator
+local function __execute_iterator(execution_state)
+    if execution_state == nil then return nil end
+
+    local query, execution_stack = execution_state[1], execution_state[2]
+    local chunk_changes, query_changes = execution_state[3], execution_state[4]
+
+    if chunk_changes ~= __changes then
+        error('chunks have been modified during query execution', 2)
+    end
+
+    if query_changes ~= query.__changes then
+        error('query has been modified during query execution', 2)
+    end
+
+    while #execution_stack > 0 do
+        local matched_chunk = execution_stack[#execution_stack]
+        execution_stack[#execution_stack] = nil
+
+        for _, matched_chunk_child in ipairs(matched_chunk.__children) do
+            if not query.__exclude_set[matched_chunk_child.__fragment] then
+                execution_stack[#execution_stack + 1] = matched_chunk_child
+            end
+        end
+
+        if #matched_chunk.__entities > 0 then
+            return matched_chunk
+        end
+    end
+
+    __execution_state_release(execution_state)
+end
+
 
 ---
 ---
@@ -992,61 +1055,36 @@ function registry.exclude(query, ...)
 end
 
 ---@param query evolved.query
----@return fun(): evolved.chunk?
+---@return evolved.execution_iterator
+---@return evolved.execution_state?
 ---@nodiscard
 function registry.execute(query)
-    local include_list, exclude_list, exclude_set =
-        query.__include_list, query.__exclude_list, query.__exclude_set
+    local include_list, exclude_list =
+        query.__include_list, query.__exclude_list
 
     if #include_list == 0 then
-        return function() end
+        return __execute_iterator
     end
 
     local main_fragment = include_list[#include_list]
     local main_fragment_chunks = __chunks[main_fragment]
 
     if main_fragment_chunks == nil or #main_fragment_chunks == 0 then
-        return function() end
+        return __execute_iterator
     end
 
-    ---@type evolved.chunk[]
-    local matched_chunk_stack = {}
+    local execution_state = __execution_state_acquire(query)
+    local execution_stack = execution_state[2]
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
         if __chunk_has_all_fragment_list(main_fragment_chunk, include_list) then
             if not __chunk_has_any_fragment_list(main_fragment_chunk, exclude_list) then
-                matched_chunk_stack[#matched_chunk_stack + 1] = main_fragment_chunk
+                execution_stack[#execution_stack + 1] = main_fragment_chunk
             end
         end
     end
 
-    local chunk_changes = __changes
-    local query_changes = query.__changes
-
-    return function()
-        if chunk_changes ~= __changes then
-            error('chunks have been modified during query execution', 2)
-        end
-
-        if query_changes ~= query.__changes then
-            error('query has been modified during query execution', 2)
-        end
-
-        while #matched_chunk_stack > 0 do
-            local matched_chunk = matched_chunk_stack[#matched_chunk_stack]
-            matched_chunk_stack[#matched_chunk_stack] = nil
-
-            for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-                if not exclude_set[matched_chunk_child.__fragment] then
-                    matched_chunk_stack[#matched_chunk_stack + 1] = matched_chunk_child
-                end
-            end
-
-            if #matched_chunk.__entities > 0 then
-                return matched_chunk
-            end
-        end
-    end
+    return __execute_iterator, execution_state
 end
 
 ---@param fragment evolved.entity
