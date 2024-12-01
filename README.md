@@ -1,5 +1,32 @@
 # evolved.lua
 
+## Module `defers`
+
+```
+defers.defer -> (defer)
+defers.set -> defer -> entity -> entity -> any -> (defer)
+defers.apply -> defer -> entity -> {any -> any} -> entity -> (defer)
+defers.assign -> defer -> entity -> entity -> any -> (defer)
+defers.insert -> defer -> entity -> entity -> any -> (defer)
+defers.remove -> defer -> entity -> entity... -> (defer)
+defers.detach -> defer -> entity -> (defer)
+defers.destroy -> defer -> entity -> (defer)
+defers.playback -> defer -> (defer)
+```
+
+### Instance `defer`
+
+```
+defer:set -> entity -> entity -> any -> (defer)
+defer:apply -> entity -> {any -> any} -> entity -> (defer)
+defer:assign -> entity -> entity -> any -> (defer)
+defer:insert -> entity -> entity -> any -> (defer)
+defer:remove -> entity -> entity... -> (defer)
+defer:detach -> entity -> (defer)
+defer:destroy -> entity -> (defer)
+defer:playback -> (defer)
+```
+
 ## Module `idpools`
 
 ```
@@ -71,7 +98,7 @@ entity:apply -> {any -> any} -> entity -> (boolean)
 entity:assign -> entity -> any -> (boolean)
 entity:insert -> entity -> any -> (boolean)
 entity:remove -> entity... -> (boolean)
-entity:detach -> (entity)
+entity:detach -> (boolean)
 entity:destroy -> (boolean)
 ```
 
