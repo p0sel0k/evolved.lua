@@ -13,12 +13,12 @@ local __guids = idpools.idpool()
 
 local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
-local __changes = 0 ---@type integer
 
 ---@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [evolved.query, evolved.execution_stack, integer, integer]
+---@alias evolved.execution_state [integer, integer, evolved.execution_stack, evolved.query]
 ---@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
 
+local __structural_changes = 0 ---@type integer
 local __execution_state_cache = {} ---@type evolved.execution_state[]
 
 ---
@@ -66,8 +66,8 @@ local function __detach_entity(entity)
     local chunk = assert(entity.__chunk)
     local index_in_chunk = entity.__index_in_chunk
 
-    __changes = __changes + 1
     chunk.__changes = chunk.__changes + 1
+    __structural_changes = __structural_changes + 1
 
     if index_in_chunk == #chunk.__entities then
         chunk.__entities[index_in_chunk] = nil
@@ -193,7 +193,7 @@ local function __root_chunk(fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = root_chunk
         __chunks[fragment] = fragment_chunks
-        __changes = __changes + 1
+        __structural_changes = __structural_changes + 1
     end
 
     return root_chunk
@@ -270,7 +270,7 @@ local function __chunk_with_fragment(chunk, fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = child_chunk
         __chunks[fragment] = fragment_chunks
-        __changes = __changes + 1
+        __structural_changes = __structural_changes + 1
     end
 
     return child_chunk
@@ -338,20 +338,23 @@ end
 ---@nodiscard
 local function __execution_state_acquire(query)
     local state_cache = __execution_state_cache
-    if #state_cache == 0 then return { query, {}, __changes, query.__changes } end
+
+    if #state_cache == 0 then
+        return { query.__changes, __structural_changes, {}, query }
+    end
 
     local state = state_cache[#state_cache]
     state_cache[#state_cache] = nil
 
-    state[1], state[3], state[4] = query, __changes, query.__changes
+    state[1], state[2], state[4] = query.__changes, __structural_changes, query
 
     return state
 end
 
 ---@param state evolved.execution_state
 local function __execution_state_release(state)
-    state[1] = nil -- release query for garbage collection
-    assert(#state[2] == 0, 'execution stack should be empty')
+    assert(#state[3] == 0, 'execution stack should be empty')
+    state[4] = nil -- release a query for garbage collection
     __execution_state_cache[#__execution_state_cache + 1] = state
 end
 
@@ -359,15 +362,15 @@ end
 local function __execute_iterator(execution_state)
     if execution_state == nil then return nil end
 
-    local query, execution_stack = execution_state[1], execution_state[2]
-    local chunk_changes, query_changes = execution_state[3], execution_state[4]
-
-    if chunk_changes ~= __changes then
-        error('chunks have been modified during query execution', 2)
-    end
+    local query_changes, structural_changes = execution_state[1], execution_state[2]
+    local execution_stack, query = execution_state[3], execution_state[4]
 
     if query_changes ~= query.__changes then
         error('query has been modified during query execution', 2)
+    end
+
+    if structural_changes ~= __structural_changes then
+        error('chunks have been modified during query execution', 2)
     end
 
     while #execution_stack > 0 do
@@ -662,15 +665,13 @@ function registry.insert(entity, fragment, component)
         return false
     end
 
-    do
-        __changes = __changes + 1
-    end
-
     if new_chunk ~= nil then
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
         new_chunk.__changes = new_chunk.__changes + 1
+        __structural_changes = __structural_changes + 1
+
         new_chunk.__entities[new_index_in_chunk] = entity
         new_chunk.__components[fragment][new_index_in_chunk] = component
 
@@ -715,8 +716,8 @@ function registry.batch_insert(query, fragment, component)
         do
             local changes = #old_chunk.__entities
 
-            __changes = __changes + changes
             inserted_count = inserted_count + changes
+            __structural_changes = __structural_changes + changes
 
             old_chunk.__changes = old_chunk.__changes + changes
 
@@ -774,15 +775,13 @@ function registry.remove(entity, ...)
         return false
     end
 
-    do
-        __changes = __changes + 1
-    end
-
     if new_chunk ~= nil then
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
         new_chunk.__changes = new_chunk.__changes + 1
+        __structural_changes = __structural_changes + 1
+
         new_chunk.__entities[new_index_in_chunk] = entity
 
         if old_chunk ~= nil then
@@ -823,8 +822,8 @@ function registry.batch_remove(query, ...)
         do
             local changes = #old_chunk.__entities
 
-            __changes = __changes + changes
             removed_count = removed_count + changes
+            __structural_changes = __structural_changes + changes
 
             old_chunk.__changes = old_chunk.__changes + changes
 
@@ -893,26 +892,26 @@ function registry.batch_detach(query)
 
     local detached_count = 0
 
-    for _, chunk in ipairs(chunks) do
+    for _, old_chunk in ipairs(chunks) do
         do
-            local changes = #chunk.__entities
+            local changes = #old_chunk.__entities
 
-            __changes = __changes + changes
             detached_count = detached_count + changes
+            __structural_changes = __structural_changes + changes
 
-            chunk.__changes = chunk.__changes + changes
+            old_chunk.__changes = old_chunk.__changes + changes
         end
 
-        for _, entity in ipairs(chunk.__entities) do
+        for _, entity in ipairs(old_chunk.__entities) do
             entity.__chunk = nil
             entity.__index_in_chunk = 0
         end
 
         do
-            chunk.__entities = {}
+            old_chunk.__entities = {}
 
-            for f, _ in pairs(chunk.__components) do
-                chunk.__components[f] = {}
+            for f, _ in pairs(old_chunk.__components) do
+                old_chunk.__components[f] = {}
             end
         end
     end
@@ -947,27 +946,27 @@ function registry.batch_destroy(query)
 
     local destroyed_count = 0
 
-    for _, chunk in ipairs(chunks) do
+    for _, old_chunk in ipairs(chunks) do
         do
-            local changes = #chunk.__entities
+            local changes = #old_chunk.__entities
 
-            __changes = __changes + changes
             destroyed_count = destroyed_count + changes
+            __structural_changes = __structural_changes + changes
 
-            chunk.__changes = chunk.__changes + changes
+            old_chunk.__changes = old_chunk.__changes + changes
         end
 
-        for _, entity in ipairs(chunk.__entities) do
+        for _, entity in ipairs(old_chunk.__entities) do
             entity.__chunk = nil
             entity.__index_in_chunk = 0
             idpools.release(__guids, entity.__guid)
         end
 
         do
-            chunk.__entities = {}
+            old_chunk.__entities = {}
 
-            for f, _ in pairs(chunk.__components) do
-                chunk.__components[f] = {}
+            for f, _ in pairs(old_chunk.__components) do
+                old_chunk.__components[f] = {}
             end
         end
     end
@@ -1074,7 +1073,7 @@ function registry.execute(query)
     end
 
     local execution_state = __execution_state_acquire(query)
-    local execution_stack = execution_state[2]
+    local execution_stack = execution_state[3]
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
         if __chunk_has_all_fragment_list(main_fragment_chunk, include_list) then
