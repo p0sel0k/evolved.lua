@@ -1009,22 +1009,31 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.include(query, ...)
-    local include_list = query.__include_list
-    local include_set = query.__include_set
+    -- we create a new include list/set instead of modifying the old one
+    -- to prevent problems modifying the query while iterating over it
+    local new_include_list, new_include_set = {}, {}
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not include_set[f] then
-            include_set[f] = true
-            include_list[#include_list + 1] = f
+        if not new_include_set[f] then
+            new_include_set[f] = true
+            new_include_list[#new_include_list + 1] = f
         end
     end
 
-    query.__changes = query.__changes + 1
+    for _, f in ipairs(query.__include_list) do
+        if not new_include_set[f] then
+            new_include_set[f] = true
+            new_include_list[#new_include_list + 1] = f
+        end
+    end
 
-    table.sort(include_list, function(a, b)
+    table.sort(new_include_list, function(a, b)
         return a.__guid < b.__guid
     end)
+
+    query.__include_list = new_include_list
+    query.__include_set = new_include_set
 
     return query
 end
@@ -1033,22 +1042,31 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 function registry.exclude(query, ...)
-    local exclude_list = query.__exclude_list
-    local exclude_set = query.__exclude_set
+    -- we create a new exclude list/set instead of modifying the old one
+    -- to prevent problems modifying the query while iterating over it
+    local new_exclude_list, new_exclude_set = {}, {}
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not exclude_set[f] then
-            exclude_set[f] = true
-            exclude_list[#exclude_list + 1] = f
+        if not new_exclude_set[f] then
+            new_exclude_set[f] = true
+            new_exclude_list[#new_exclude_list + 1] = f
         end
     end
 
-    query.__changes = query.__changes + 1
+    for _, f in ipairs(query.__exclude_list) do
+        if not new_exclude_set[f] then
+            new_exclude_set[f] = true
+            new_exclude_list[#new_exclude_list + 1] = f
+        end
+    end
 
-    table.sort(exclude_list, function(a, b)
+    table.sort(new_exclude_list, function(a, b)
         return a.__guid < b.__guid
     end)
+
+    query.__exclude_list = new_exclude_list
+    query.__exclude_set = new_exclude_set
 
     return query
 end

@@ -13,7 +13,7 @@
 - [x] support queries without fragments
 - [ ] add assertions for input arguments
 - [x] registry.assign should not change chunks' tree
-- [ ] add deferred changes api
+- [x] add deferred changes api
 - [ ] add multi apply/batch_apply
 - [ ] add batch vector operations
 - [ ] add inplace vector operations
