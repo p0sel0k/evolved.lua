@@ -9,14 +9,14 @@ local registry = {}
 ---
 ---
 
+---@alias evolved.execution_stack evolved.chunk[]
+---@alias evolved.execution_state [table<evolved.entity, boolean>, integer, evolved.execution_stack]
+---@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
+
 local __guids = idpools.idpool()
 
 local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
-
----@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [table<evolved.entity, boolean>, integer, evolved.execution_stack]
----@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
 
 local __structural_changes = 0 ---@type integer
 local __execution_state_cache = {} ---@type evolved.execution_state[]
