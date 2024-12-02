@@ -15,7 +15,7 @@ local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
 
 ---@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, integer, evolved.execution_stack, evolved.query]
+---@alias evolved.execution_state [table<evolved.entity, boolean>, integer, evolved.execution_stack]
 ---@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
 
 local __structural_changes = 0 ---@type integer
@@ -35,7 +35,6 @@ local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
 
 ---@class evolved.query
----@field package __changes integer
 ---@field package __include_list evolved.entity[]
 ---@field package __exclude_list evolved.entity[]
 ---@field package __include_set table<evolved.entity, boolean>
@@ -335,26 +334,31 @@ end
 
 ---@param query evolved.query
 ---@return evolved.execution_state
+---@return evolved.execution_stack
 ---@nodiscard
 local function __execution_state_acquire(query)
     local state_cache = __execution_state_cache
 
     if #state_cache == 0 then
-        return { query.__changes, __structural_changes, {}, query }
+        ---@type evolved.execution_stack
+        local stack = {}
+        ---@type evolved.execution_state
+        local state = { query.__exclude_set, __structural_changes, stack, }
+        return state, stack
     end
 
     local state = state_cache[#state_cache]
     state_cache[#state_cache] = nil
 
-    state[1], state[2], state[4] = query.__changes, __structural_changes, query
+    state[1], state[2] = query.__exclude_set, __structural_changes
+    assert(#state[3] == 0, 'execution stack should be empty')
 
-    return state
+    return state, state[3]
 end
 
 ---@param state evolved.execution_state
 local function __execution_state_release(state)
     assert(#state[3] == 0, 'execution stack should be empty')
-    state[4] = nil -- release a query for garbage collection
     __execution_state_cache[#__execution_state_cache + 1] = state
 end
 
@@ -362,12 +366,8 @@ end
 local function __execute_iterator(execution_state)
     if execution_state == nil then return nil end
 
-    local query_changes, structural_changes = execution_state[1], execution_state[2]
-    local execution_stack, query = execution_state[3], execution_state[4]
-
-    if query_changes ~= query.__changes then
-        error('query has been modified during query execution', 2)
-    end
+    local exclude_set, structural_changes, execution_stack =
+        execution_state[1], execution_state[2], execution_state[3]
 
     if structural_changes ~= __structural_changes then
         error('chunks have been modified during query execution', 2)
@@ -378,7 +378,7 @@ local function __execute_iterator(execution_state)
         execution_stack[#execution_stack] = nil
 
         for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-            if not query.__exclude_set[matched_chunk_child.__fragment] then
+            if not exclude_set[matched_chunk_child.__fragment] then
                 execution_stack[#execution_stack + 1] = matched_chunk_child
             end
         end
@@ -995,7 +995,6 @@ function registry.query(...)
 
     ---@type evolved.query
     local query = {
-        __changes = 0,
         __include_list = include_list,
         __exclude_list = {},
         __include_set = include_set,
@@ -1008,67 +1007,77 @@ end
 ---@param query evolved.query
 ---@param ... evolved.entity fragments
 ---@return evolved.query
+---@nodiscard
 function registry.include(query, ...)
-    -- we create a new include list/set instead of modifying the old one
-    -- to prevent problems modifying the query while iterating over it
-    local new_include_list, new_include_set = {}, {}
+    local include_list = {}
+    local include_set = {}
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not new_include_set[f] then
-            new_include_set[f] = true
-            new_include_list[#new_include_list + 1] = f
+        if not include_set[f] then
+            include_set[f] = true
+            include_list[#include_list + 1] = f
         end
     end
 
     for _, f in ipairs(query.__include_list) do
-        if not new_include_set[f] then
-            new_include_set[f] = true
-            new_include_list[#new_include_list + 1] = f
+        if not include_set[f] then
+            include_set[f] = true
+            include_list[#include_list + 1] = f
         end
     end
 
-    table.sort(new_include_list, function(a, b)
+    table.sort(include_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
-    query.__include_list = new_include_list
-    query.__include_set = new_include_set
+    ---@type evolved.query
+    local new_query = {
+        __include_list = include_list,
+        __exclude_list = query.__exclude_list,
+        __include_set = include_set,
+        __exclude_set = query.__exclude_set,
+    }
 
-    return query
+    return setmetatable(new_query, evolved_query_mt)
 end
 
 ---@param query evolved.query
 ---@param ... evolved.entity fragments
 ---@return evolved.query
+---@nodiscard
 function registry.exclude(query, ...)
-    -- we create a new exclude list/set instead of modifying the old one
-    -- to prevent problems modifying the query while iterating over it
-    local new_exclude_list, new_exclude_set = {}, {}
+    local exclude_list = {}
+    local exclude_set = {}
 
     for i = 1, select('#', ...) do
         local f = select(i, ...)
-        if not new_exclude_set[f] then
-            new_exclude_set[f] = true
-            new_exclude_list[#new_exclude_list + 1] = f
+        if not exclude_set[f] then
+            exclude_set[f] = true
+            exclude_list[#exclude_list + 1] = f
         end
     end
 
     for _, f in ipairs(query.__exclude_list) do
-        if not new_exclude_set[f] then
-            new_exclude_set[f] = true
-            new_exclude_list[#new_exclude_list + 1] = f
+        if not exclude_set[f] then
+            exclude_set[f] = true
+            exclude_list[#exclude_list + 1] = f
         end
     end
 
-    table.sort(new_exclude_list, function(a, b)
+    table.sort(exclude_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
-    query.__exclude_list = new_exclude_list
-    query.__exclude_set = new_exclude_set
+    ---@type evolved.query
+    local new_query = {
+        __include_list = query.__include_list,
+        __exclude_list = exclude_list,
+        __include_set = query.__include_set,
+        __exclude_set = exclude_set,
+    }
 
-    return query
+    return setmetatable(new_query, evolved_query_mt)
 end
 
 ---@param query evolved.query
@@ -1090,8 +1099,7 @@ function registry.execute(query)
         return __execute_iterator
     end
 
-    local execution_state = __execution_state_acquire(query)
-    local execution_stack = execution_state[3]
+    local execution_state, execution_stack = __execution_state_acquire(query)
 
     for _, main_fragment_chunk in ipairs(main_fragment_chunks) do
         if __chunk_has_all_fragment_list(main_fragment_chunk, include_list) then

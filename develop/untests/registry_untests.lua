@@ -780,10 +780,6 @@ do
         evo.registry.entity(),
         evo.registry.entity()
 
-    local query = evo.registry.query(f1, f1)
-    assert(query == query:include(f2, f3, f2))
-    assert(query == query:exclude(f4, f5, f5))
-
     ---@param q evolved.query
     ---@param f evolved.entity
     ---@return boolean
@@ -810,10 +806,25 @@ do
         return false
     end
 
-    assert(includes(query, f1) and includes(query, f2) and includes(query, f3))
-    assert(not includes(query, f4) and not includes(query, f5))
-    assert(excludes(query, f4) and excludes(query, f5))
-    assert(not excludes(query, f1) and not excludes(query, f2) and not excludes(query, f3))
+    local query1 = evo.registry.query(f1, f1)
+    local query2 = query1:include(f2, f3, f2)
+    local query3 = query2:exclude(f4, f5, f5)
+
+    assert(query1 ~= query2)
+    assert(query2 ~= query3)
+
+    assert(includes(query1, f1) and not includes(query1, f2) and not includes(query1, f3))
+    assert(includes(query2, f1) and includes(query2, f2) and includes(query2, f3))
+    assert(includes(query3, f1) and includes(query3, f2) and includes(query3, f3))
+
+    assert(not excludes(query1, f4) and not excludes(query1, f5))
+    assert(not excludes(query2, f4) and not excludes(query2, f5))
+    assert(excludes(query3, f4) and excludes(query3, f5))
+
+    assert(includes(query3, f1) and includes(query3, f2) and includes(query3, f3))
+    assert(not includes(query3, f4) and not includes(query3, f5))
+    assert(excludes(query3, f4) and excludes(query3, f5))
+    assert(not excludes(query3, f1) and not excludes(query3, f2) and not excludes(query3, f3))
 end
 
 do
