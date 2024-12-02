@@ -19,6 +19,7 @@ local __roots = {} ---@type table<evolved.entity, evolved.chunk>
 local __chunks = {} ---@type table<evolved.entity, evolved.chunk[]>
 
 local __structural_changes = 0 ---@type integer
+local __execution_stack_cache = {} ---@type evolved.execution_stack[]
 local __execution_state_cache = {} ---@type evolved.execution_state[]
 
 ---
@@ -319,6 +320,27 @@ local function __chunk_without_fragments(chunk, ...)
     return chunk
 end
 
+---@return evolved.execution_stack
+---@nodiscard
+local function __execution_stack_acquire()
+    local stack_cache = __execution_stack_cache
+
+    if #stack_cache == 0 then
+        return {}
+    end
+
+    local stack = stack_cache[#stack_cache]
+    stack_cache[#stack_cache] = nil
+
+    return stack
+end
+
+---@param stack evolved.execution_stack
+local function __execution_stack_release(stack)
+    for i = #stack, 1, -1 do stack[i] = nil end
+    __execution_stack_cache[#__execution_stack_cache + 1] = stack
+end
+
 ---@param query evolved.query
 ---@return evolved.execution_state
 ---@return evolved.execution_stack
@@ -327,9 +349,7 @@ local function __execution_state_acquire(query)
     local state_cache = __execution_state_cache
 
     if #state_cache == 0 then
-        ---@type evolved.execution_stack
-        local stack = {}
-        ---@type evolved.execution_state
+        local stack = __execution_stack_acquire()
         local state = { query.__exclude_set, __structural_changes, stack, }
         return state, stack
     end
@@ -337,15 +357,14 @@ local function __execution_state_acquire(query)
     local state = state_cache[#state_cache]
     state_cache[#state_cache] = nil
 
-    state[1], state[2] = query.__exclude_set, __structural_changes
-    assert(#state[3] == 0, 'execution stack should be empty')
-
-    return state, state[3]
+    local stack = __execution_stack_acquire()
+    state[1], state[2], state[3] = query.__exclude_set, __structural_changes, stack
+    return state, stack
 end
 
 ---@param state evolved.execution_state
 local function __execution_state_release(state)
-    assert(#state[3] == 0, 'execution stack should be empty')
+    __execution_stack_release(state[3]); state[3] = nil
     __execution_state_cache[#__execution_state_cache + 1] = state
 end
 
@@ -551,8 +570,7 @@ end
 ---@param fragment evolved.entity
 ---@return integer applied_count
 function registry.batch_apply(query, apply, fragment)
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         if chunk.__components[fragment] ~= nil then
@@ -578,6 +596,7 @@ function registry.batch_apply(query, apply, fragment)
         end
     end
 
+    __execution_stack_release(chunks)
     return applied_count
 end
 
@@ -609,8 +628,7 @@ end
 function registry.batch_assign(query, fragment, component)
     component = component == nil and true or component
 
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         if chunk.__components[fragment] ~= nil then
@@ -631,6 +649,7 @@ function registry.batch_assign(query, fragment, component)
         end
     end
 
+    __execution_stack_release(chunks)
     return assigned_count
 end
 
@@ -685,8 +704,7 @@ end
 function registry.batch_insert(query, fragment, component)
     component = component == nil and true or component
 
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         if chunk.__components[fragment] == nil then
@@ -737,6 +755,7 @@ function registry.batch_insert(query, fragment, component)
         end
     end
 
+    __execution_stack_release(chunks)
     return inserted_count
 end
 
@@ -784,8 +803,7 @@ end
 ---@param ... evolved.entity fragments
 ---@return integer removed_count
 function registry.batch_remove(query, ...)
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         if __chunk_has_any_fragments(chunk, ...) then
@@ -835,6 +853,7 @@ function registry.batch_remove(query, ...)
         end
     end
 
+    __execution_stack_release(chunks)
     return removed_count
 end
 
@@ -856,8 +875,7 @@ end
 ---@param query evolved.query
 ---@return integer detached_count
 function registry.batch_detach(query)
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         chunks[#chunks + 1] = chunk
@@ -887,6 +905,7 @@ function registry.batch_detach(query)
         end
     end
 
+    __execution_stack_release(chunks)
     return detached_count
 end
 
@@ -908,8 +927,7 @@ end
 ---@param query evolved.query
 ---@return integer destroyed_count
 function registry.batch_destroy(query)
-    ---@type evolved.chunk[]
-    local chunks = {}
+    local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
         chunks[#chunks + 1] = chunk
@@ -940,6 +958,7 @@ function registry.batch_destroy(query)
         end
     end
 
+    __execution_stack_release(chunks)
     return destroyed_count
 end
 

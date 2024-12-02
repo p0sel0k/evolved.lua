@@ -17,4 +17,4 @@
 - [ ] add multi apply/batch_apply
 - [ ] add batch vector operations
 - [ ] add inplace vector operations
-- [ ] cache chunk lists in batch operations
+- [x] cache chunk lists in batch operations
