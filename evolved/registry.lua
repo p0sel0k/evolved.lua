@@ -43,7 +43,6 @@ local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
 ---@class evolved.chunk
----@field package __changes integer
 ---@field package __parent? evolved.chunk
 ---@field package __fragment evolved.entity
 ---@field package __children evolved.chunk[]
@@ -65,7 +64,6 @@ local function __detach_entity(entity)
     local chunk = assert(entity.__chunk)
     local index_in_chunk = entity.__index_in_chunk
 
-    chunk.__changes = chunk.__changes + 1
     __structural_changes = __structural_changes + 1
 
     if index_in_chunk == #chunk.__entities then
@@ -172,7 +170,6 @@ local function __root_chunk(fragment)
 
     ---@type evolved.chunk
     local root_chunk = {
-        __changes = 0,
         __parent = nil,
         __fragment = fragment,
         __children = {},
@@ -225,9 +222,6 @@ local function __chunk_with_fragment(chunk, fragment)
             __chunk_with_fragment(chunk.__parent, fragment),
             chunk.__fragment)
 
-        chunk.__changes = chunk.__changes + 1
-        sibling_chunk.__changes = sibling_chunk.__changes + 1
-
         chunk.__with_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__without_fragment_cache[fragment] = chunk
 
@@ -236,7 +230,6 @@ local function __chunk_with_fragment(chunk, fragment)
 
     ---@type evolved.chunk
     local child_chunk = {
-        __changes = 0,
         __parent = chunk,
         __fragment = fragment,
         __children = {},
@@ -258,9 +251,6 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
-        chunk.__changes = chunk.__changes + 1
-        child_chunk.__changes = child_chunk.__changes + 1
-
         chunk.__with_fragment_cache[fragment] = child_chunk
         child_chunk.__without_fragment_cache[fragment] = chunk
     end
@@ -301,9 +291,6 @@ local function __chunk_without_fragment(chunk, fragment)
         local sibling_chunk = __chunk_with_fragment(
             __chunk_without_fragment(chunk.__parent, fragment),
             chunk.__fragment)
-
-        chunk.__changes = chunk.__changes + 1
-        sibling_chunk.__changes = sibling_chunk.__changes + 1
 
         chunk.__without_fragment_cache[fragment] = sibling_chunk
         sibling_chunk.__with_fragment_cache[fragment] = chunk
@@ -669,7 +656,6 @@ function registry.insert(entity, fragment, component)
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
-        new_chunk.__changes = new_chunk.__changes + 1
         __structural_changes = __structural_changes + 1
 
         new_chunk.__entities[new_index_in_chunk] = entity
@@ -718,12 +704,6 @@ function registry.batch_insert(query, fragment, component)
 
             inserted_count = inserted_count + changes
             __structural_changes = __structural_changes + changes
-
-            old_chunk.__changes = old_chunk.__changes + changes
-
-            if new_chunk ~= nil then
-                new_chunk.__changes = new_chunk.__changes + changes
-            end
         end
 
         if new_chunk ~= nil then
@@ -779,7 +759,6 @@ function registry.remove(entity, ...)
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
-        new_chunk.__changes = new_chunk.__changes + 1
         __structural_changes = __structural_changes + 1
 
         new_chunk.__entities[new_index_in_chunk] = entity
@@ -824,12 +803,6 @@ function registry.batch_remove(query, ...)
 
             removed_count = removed_count + changes
             __structural_changes = __structural_changes + changes
-
-            old_chunk.__changes = old_chunk.__changes + changes
-
-            if new_chunk ~= nil then
-                new_chunk.__changes = new_chunk.__changes + changes
-            end
         end
 
         if new_chunk ~= nil then
@@ -898,8 +871,6 @@ function registry.batch_detach(query)
 
             detached_count = detached_count + changes
             __structural_changes = __structural_changes + changes
-
-            old_chunk.__changes = old_chunk.__changes + changes
         end
 
         for _, entity in ipairs(old_chunk.__entities) do
@@ -952,8 +923,6 @@ function registry.batch_destroy(query)
 
             destroyed_count = destroyed_count + changes
             __structural_changes = __structural_changes + changes
-
-            old_chunk.__changes = old_chunk.__changes + changes
         end
 
         for _, entity in ipairs(old_chunk.__entities) do
