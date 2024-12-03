@@ -32,21 +32,6 @@ do
 end
 
 do
-    local f1, f2, f3 =
-        evo.registry.entity(),
-        evo.registry.entity(),
-        evo.registry.entity()
-
-    local e = evo.registry.entity()
-    assert(e == e:set(f1):set(f2):set(f3))
-    assert(e:has_all(f1, f2, f3))
-    assert(e == e:del():del(f1))
-    assert(not e:has(f1) and e:has_all(f2, f3))
-    assert(e == e:del(f2, f3, f3))
-    assert(not e:has_any(f1, f2, f3))
-end
-
-do
     local f1, f2, f3, f4, f5 =
         evo.registry.entity(),
         evo.registry.entity(),
@@ -158,28 +143,23 @@ do
 
     assert(not e:assign(f, 42))
     assert(not e:has(f))
-    assert(e:get_or(f) == nil)
-    assert(e:get_or(f, 42) == 42)
+    assert(e:get(f) == nil)
 
     assert(e:insert(f, 84))
     assert(e:has(f))
-    assert(e:get_or(f) == 84)
-    assert(e:get_or(f, 42) == 84)
+    assert(e:get(f) == 84)
 
     assert(not e:insert(f, 21))
     assert(e:has(f))
-    assert(e:get_or(f) == 84)
-    assert(e:get_or(f, 42) == 84)
+    assert(e:get(f) == 84)
 
     assert(e:assign(f))
     assert(e:has(f))
-    assert(e:get_or(f) == true)
-    assert(e:get_or(f, 42) == true)
+    assert(e:get(f) == true)
 
     assert(e:assign(f, 21))
     assert(e:has(f))
-    assert(e:get_or(f) == 21)
-    assert(e:get_or(f, 42) == 21)
+    assert(e:get(f) == 21)
 end
 
 do
@@ -189,26 +169,26 @@ do
         local e = evo.registry.entity()
 
         assert(e == e:set(f, 42))
-        assert(e:get_or(f) == 42)
+        assert(e:get(f) == 42)
 
         assert(e == e:set(f, 21))
-        assert(e:get_or(f) == 21)
+        assert(e:get(f) == 21)
     end
 
     do
         local e = evo.registry.entity()
 
         assert(not e:assign(f, 42))
-        assert(e:get_or(f) == nil)
+        assert(e:get(f) == nil)
 
         assert(e:insert(f, 42))
-        assert(e:get_or(f) == 42)
+        assert(e:get(f) == 42)
 
         assert(e:assign(f, 21))
-        assert(e:get_or(f) == 21)
+        assert(e:get(f) == 21)
 
         assert(not e:insert(f, 42))
-        assert(e:get_or(f) == 21)
+        assert(e:get(f) == 21)
     end
 end
 
@@ -702,8 +682,8 @@ for _ = 1, 100 do
 
         if e1.__chunk ~= nil then
             for f, _ in pairs(e1.__chunk.__components) do
-                assert(e1:get_or(f) == f.__guid)
-                assert(e2:get_or(f) == f.__guid)
+                assert(e1:get(f) == f.__guid)
+                assert(e2:get(f) == f.__guid)
             end
         end
     end

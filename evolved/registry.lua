@@ -435,14 +435,6 @@ function registry.alive(entity)
 end
 
 ---@param entity evolved.entity
----@param ... evolved.entity fragments
----@return evolved.entity
-function registry.del(entity, ...)
-    registry.remove(entity, ...)
-    return entity
-end
-
----@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
 ---@return evolved.entity
@@ -495,21 +487,6 @@ function registry.get(entity, ...)
         return cs1 and cs1[index_in_chunk], cs2 and cs2[index_in_chunk], cs3 and cs3[index_in_chunk],
             registry.get(entity, select(4, ...))
     end
-end
-
----@param entity evolved.entity
----@param fragment evolved.entity
----@param default any
----@return any
----@nodiscard
-function registry.get_or(entity, fragment, default)
-    local chunk = entity.__chunk
-    if chunk == nil then return default end
-
-    local components = chunk.__components[fragment]
-    if components == nil then return default end
-
-    return components[entity.__index_in_chunk]
 end
 
 ---@param entity evolved.entity
@@ -1184,10 +1161,8 @@ end
 
 evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.alive = registry.alive
-evolved_entity_mt.del = registry.del
 evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
-evolved_entity_mt.get_or = registry.get_or
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
