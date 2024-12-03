@@ -64,29 +64,33 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 ---@param entity evolved.entity
 local function __detach_entity(entity)
     local chunk = assert(entity.__chunk)
+
+    local chunk_entities = chunk.__entities
+    local chunk_entity_count = #chunk_entities
+
     local index_in_chunk = entity.__index_in_chunk
 
-    __structural_changes = __structural_changes + 1
-
-    if index_in_chunk == #chunk.__entities then
-        chunk.__entities[index_in_chunk] = nil
+    if index_in_chunk == chunk_entity_count then
+        chunk_entities[index_in_chunk] = nil
 
         for _, cs in pairs(chunk.__components) do
             cs[index_in_chunk] = nil
         end
     else
-        chunk.__entities[index_in_chunk] = chunk.__entities[#chunk.__entities]
-        chunk.__entities[index_in_chunk].__index_in_chunk = index_in_chunk
-        chunk.__entities[#chunk.__entities] = nil
+        chunk_entities[index_in_chunk] = chunk_entities[chunk_entity_count]
+        chunk_entities[index_in_chunk].__index_in_chunk = index_in_chunk
+        chunk_entities[chunk_entity_count] = nil
 
         for _, cs in pairs(chunk.__components) do
-            cs[index_in_chunk] = cs[#cs]
-            cs[#cs] = nil
+            cs[index_in_chunk] = cs[chunk_entity_count]
+            cs[chunk_entity_count] = nil
         end
     end
 
     entity.__chunk = nil
     entity.__index_in_chunk = 0
+
+    __structural_changes = __structural_changes + 1
 end
 
 ---@param chunk evolved.chunk
@@ -191,9 +195,9 @@ local function __root_chunk(fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = root_chunk
         __chunks[fragment] = fragment_chunks
-        __structural_changes = __structural_changes + 1
     end
 
+    __structural_changes = __structural_changes + 1
     return root_chunk
 end
 
@@ -261,9 +265,9 @@ local function __chunk_with_fragment(chunk, fragment)
         local fragment_chunks = __chunks[fragment] or {}
         fragment_chunks[#fragment_chunks + 1] = child_chunk
         __chunks[fragment] = fragment_chunks
-        __structural_changes = __structural_changes + 1
     end
 
+    __structural_changes = __structural_changes + 1
     return child_chunk
 end
 
@@ -382,34 +386,39 @@ local function __batch_insert(chunks, fragment, component)
         local new_chunk = __chunk_with_fragment(old_chunk, fragment)
         assert(old_chunk ~= new_chunk)
 
-        local old_entities = old_chunk.__entities
-        local old_entity_count = #old_entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_entity_count = #old_chunk_entities
 
-        inserted_count = inserted_count + old_entity_count
+        local old_chunk_components = old_chunk.__components
+
+        inserted_count = inserted_count + old_chunk_entity_count
 
         if new_chunk ~= nil then
-            for old_index_in_chunk = 1, old_entity_count do
-                local entity = old_entities[old_index_in_chunk]
-                local new_index_in_chunk = #new_chunk.__entities + 1
+            local new_chunk_entities = new_chunk.__entities
+            local new_chunk_components = new_chunk.__components
 
-                new_chunk.__entities[new_index_in_chunk] = entity
-                new_chunk.__components[fragment][new_index_in_chunk] = component
+            for old_index_in_chunk = 1, old_chunk_entity_count do
+                local entity = old_chunk_entities[old_index_in_chunk]
+                local new_index_in_chunk = #new_chunk_entities + 1
+
+                new_chunk_entities[new_index_in_chunk] = entity
+                new_chunk_components[fragment][new_index_in_chunk] = component
 
                 entity.__chunk = new_chunk
                 entity.__index_in_chunk = new_index_in_chunk
             end
 
-            for old_f, old_cs in pairs(old_chunk.__components) do
-                local new_cs = new_chunk.__components[old_f]
+            for old_f, old_cs in pairs(old_chunk_components) do
+                local new_cs = new_chunk_components[old_f]
                 if #new_cs == 0 then
-                    new_chunk.__components[old_f] = old_cs
+                    new_chunk_components[old_f] = old_cs
                 else
                     compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
                 end
             end
         else
-            for old_index_in_chunk = 1, old_entity_count do
-                local entity = old_entities[old_index_in_chunk]
+            for old_index_in_chunk = 1, old_chunk_entity_count do
+                local entity = old_chunk_entities[old_index_in_chunk]
                 entity.__chunk = nil
                 entity.__index_in_chunk = 0
             end
@@ -417,8 +426,8 @@ local function __batch_insert(chunks, fragment, component)
 
         old_chunk.__entities = {}
 
-        for old_f, _ in pairs(old_chunk.__components) do
-            old_chunk.__components[old_f] = {}
+        for old_f, _ in pairs(old_chunk_components) do
+            old_chunk_components[old_f] = {}
         end
     end
 
@@ -437,33 +446,38 @@ local function __batch_remove(chunks, ...)
         local new_chunk = __chunk_without_fragments(old_chunk, ...)
         assert(old_chunk ~= new_chunk)
 
-        local old_entities = old_chunk.__entities
-        local old_entity_count = #old_entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_entity_count = #old_chunk_entities
 
-        removed_count = removed_count + old_entity_count
+        local old_chunk_components = old_chunk.__components
+
+        removed_count = removed_count + old_chunk_entity_count
 
         if new_chunk ~= nil then
-            for old_index_in_chunk = 1, old_entity_count do
-                local entity = old_entities[old_index_in_chunk]
-                local new_index_in_chunk = #new_chunk.__entities + 1
+            local new_chunk_entities = new_chunk.__entities
+            local new_chunk_components = new_chunk.__components
 
-                new_chunk.__entities[new_index_in_chunk] = entity
+            for old_index_in_chunk = 1, old_chunk_entity_count do
+                local entity = old_chunk_entities[old_index_in_chunk]
+                local new_index_in_chunk = #new_chunk_entities + 1
+
+                new_chunk_entities[new_index_in_chunk] = entity
 
                 entity.__chunk = new_chunk
                 entity.__index_in_chunk = new_index_in_chunk
             end
 
-            for new_f, new_cs in pairs(new_chunk.__components) do
-                local old_cs = old_chunk.__components[new_f]
+            for new_f, new_cs in pairs(new_chunk_components) do
+                local old_cs = old_chunk_components[new_f]
                 if #new_cs == 0 then
-                    new_chunk.__components[new_f] = old_cs
+                    new_chunk_components[new_f] = old_cs
                 else
                     compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
                 end
             end
         else
-            for old_index_in_chunk = 1, old_entity_count do
-                local entity = old_entities[old_index_in_chunk]
+            for old_index_in_chunk = 1, old_chunk_entity_count do
+                local entity = old_chunk_entities[old_index_in_chunk]
                 entity.__chunk = nil
                 entity.__index_in_chunk = 0
             end
@@ -471,8 +485,8 @@ local function __batch_remove(chunks, ...)
 
         old_chunk.__entities = {}
 
-        for old_f, _ in pairs(old_chunk.__components) do
-            old_chunk.__components[old_f] = {}
+        for old_f, _ in pairs(old_chunk_components) do
+            old_chunk_components[old_f] = {}
         end
     end
 
@@ -487,21 +501,23 @@ local function __batch_detach(chunks)
     local detached_count = 0
 
     for _, old_chunk in ipairs(chunks) do
-        local old_entities = old_chunk.__entities
-        local old_entity_count = #old_entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_entity_count = #old_chunk_entities
 
-        detached_count = detached_count + old_entity_count
+        local old_chunk_components = old_chunk.__components
 
-        for old_index_in_chunk = 1, old_entity_count do
-            local entity = old_entities[old_index_in_chunk]
+        detached_count = detached_count + old_chunk_entity_count
+
+        for old_index_in_chunk = 1, old_chunk_entity_count do
+            local entity = old_chunk_entities[old_index_in_chunk]
             entity.__chunk = nil
             entity.__index_in_chunk = 0
         end
 
         old_chunk.__entities = {}
 
-        for old_f, _ in pairs(old_chunk.__components) do
-            old_chunk.__components[old_f] = {}
+        for old_f, _ in pairs(old_chunk_components) do
+            old_chunk_components[old_f] = {}
         end
     end
 
@@ -516,13 +532,15 @@ local function __batch_destroy(chunks)
     local destroyed_count = 0
 
     for _, old_chunk in ipairs(chunks) do
-        local old_entities = old_chunk.__entities
-        local old_entity_count = #old_entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_entity_count = #old_chunk_entities
 
-        destroyed_count = destroyed_count + old_entity_count
+        local old_chunk_components = old_chunk.__components
 
-        for old_index_in_chunk = 1, old_entity_count do
-            local entity = old_entities[old_index_in_chunk]
+        destroyed_count = destroyed_count + old_chunk_entity_count
+
+        for old_index_in_chunk = 1, old_chunk_entity_count do
+            local entity = old_chunk_entities[old_index_in_chunk]
             entity.__chunk = nil
             entity.__index_in_chunk = 0
             idpools.release(__guids, entity.__guid)
@@ -530,8 +548,8 @@ local function __batch_destroy(chunks)
 
         old_chunk.__entities = {}
 
-        for old_f, _ in pairs(old_chunk.__components) do
-            old_chunk.__components[old_f] = {}
+        for old_f, _ in pairs(old_chunk_components) do
+            old_chunk_components[old_f] = {}
         end
     end
 
@@ -672,17 +690,19 @@ function registry.set(entity, fragment, component)
     end
 
     if new_chunk ~= nil then
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
         local old_index_in_chunk = entity.__index_in_chunk
-        local new_index_in_chunk = #new_chunk.__entities + 1
+        local new_index_in_chunk = #new_chunk_entities + 1
 
-        __structural_changes = __structural_changes + 1
-
-        new_chunk.__entities[new_index_in_chunk] = entity
-        new_chunk.__components[fragment][new_index_in_chunk] = component
+        new_chunk_entities[new_index_in_chunk] = entity
+        new_chunk_components[fragment][new_index_in_chunk] = component
 
         if old_chunk ~= nil then
-            for old_f, old_cs in pairs(old_chunk.__components) do
-                local new_cs = new_chunk.__components[old_f]
+            local old_chunk_components = old_chunk.__components
+            for old_f, old_cs in pairs(old_chunk_components) do
+                local new_cs = new_chunk_components[old_f]
                 new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
             end
             __detach_entity(entity)
@@ -690,6 +710,8 @@ function registry.set(entity, fragment, component)
 
         entity.__chunk = new_chunk
         entity.__index_in_chunk = new_index_in_chunk
+
+        __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
     end
@@ -898,17 +920,19 @@ function registry.insert(entity, fragment, component)
     end
 
     if new_chunk ~= nil then
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
-        __structural_changes = __structural_changes + 1
-
-        new_chunk.__entities[new_index_in_chunk] = entity
-        new_chunk.__components[fragment][new_index_in_chunk] = component
+        new_chunk_entities[new_index_in_chunk] = entity
+        new_chunk_components[fragment][new_index_in_chunk] = component
 
         if old_chunk ~= nil then
-            for old_f, old_cs in pairs(old_chunk.__components) do
-                local new_cs = new_chunk.__components[old_f]
+            local old_chunk_components = old_chunk.__components
+            for old_f, old_cs in pairs(old_chunk_components) do
+                local new_cs = new_chunk_components[old_f]
                 new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
             end
             __detach_entity(entity)
@@ -916,6 +940,8 @@ function registry.insert(entity, fragment, component)
 
         entity.__chunk = new_chunk
         entity.__index_in_chunk = new_index_in_chunk
+
+        __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
     end
@@ -960,16 +986,18 @@ function registry.remove(entity, ...)
     end
 
     if new_chunk ~= nil then
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
         local old_index_in_chunk = entity.__index_in_chunk
         local new_index_in_chunk = #new_chunk.__entities + 1
 
-        __structural_changes = __structural_changes + 1
-
-        new_chunk.__entities[new_index_in_chunk] = entity
+        new_chunk_entities[new_index_in_chunk] = entity
 
         if old_chunk ~= nil then
-            for new_f, new_cs in pairs(new_chunk.__components) do
-                local old_cs = old_chunk.__components[new_f]
+            local old_chunk_components = old_chunk.__components
+            for new_f, new_cs in pairs(new_chunk_components) do
+                local old_cs = old_chunk_components[new_f]
                 new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
             end
             __detach_entity(entity)
@@ -977,6 +1005,8 @@ function registry.remove(entity, ...)
 
         entity.__chunk = new_chunk
         entity.__index_in_chunk = new_index_in_chunk
+
+        __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
     end
