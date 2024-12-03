@@ -396,6 +396,48 @@ do
 end
 
 do
+    local f1, f2, f3 = evo.registry.entity(), evo.registry.entity(), evo.registry.entity()
+
+    local e1 = evo.registry.entity():set(f1, 10)
+    local e2 = evo.registry.entity():set(f1, 15)
+    local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+    local e4 = evo.registry.entity():set(f1, 25):set(f2, 45)
+
+    do
+        local q = evo.registry.query(f2)
+        local assigned, inserted = q:batch_set(f1, 42)
+        assert(assigned == 2 and inserted == 0)
+        assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 42 and e4:get(f1) == 42)
+        assert(e1:get(f2) == nil and e2:get(f2) == nil and e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+
+    do
+        local q = evo.registry.query(f1)
+        local assigned, inserted = q:batch_set(f1, 21)
+        assert(assigned == 4 and inserted == 0)
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == 21 and e4:get(f1) == 21)
+        assert(e1:get(f2) == nil and e2:get(f2) == nil and e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+
+    do
+        local q = evo.registry.query(f1)
+        local assigned, inserted = q:batch_set(f2, 84)
+        assert(assigned == 2 and inserted == 2)
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == 21 and e4:get(f1) == 21)
+        assert(e1:get(f2) == 84 and e2:get(f2) == 84 and e3:get(f2) == 84 and e4:get(f2) == 84)
+    end
+
+    do
+        local q = evo.registry.query(f1, f2)
+        local assigned, inserted = q:batch_set(f3, 22)
+        assert(assigned == 0 and inserted == 4)
+        assert(e1:get(f1) == 21 and e2:get(f1) == 21 and e3:get(f1) == 21 and e4:get(f1) == 21)
+        assert(e1:get(f2) == 84 and e2:get(f2) == 84 and e3:get(f2) == 84 and e4:get(f2) == 84)
+        assert(e1:get(f3) == 22 and e2:get(f3) == 22 and e3:get(f3) == 22 and e4:get(f3) == 22)
+    end
+end
+
+do
     local f1, f2 = evo.registry.entity(), evo.registry.entity()
 
     local e1 = evo.registry.entity():set(f1, 10)

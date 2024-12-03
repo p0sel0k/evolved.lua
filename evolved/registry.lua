@@ -698,6 +698,31 @@ function registry.set(entity, fragment, component)
     return entity
 end
 
+---@param query evolved.query
+---@param fragment evolved.entity
+---@param component any
+---@return integer assigned_count
+---@return integer inserted_count
+function registry.batch_set(query, fragment, component)
+    local to_assign_chunks = __execution_stack_acquire()
+    local to_insert_chunks = __execution_stack_acquire()
+
+    for chunk in registry.execute(query) do
+        if chunk.__components[fragment] ~= nil then
+            to_assign_chunks[#to_assign_chunks + 1] = chunk
+        else
+            to_insert_chunks[#to_insert_chunks + 1] = chunk
+        end
+    end
+
+    local assigned_count = __batch_assign(to_assign_chunks, fragment, component)
+    local inserted_count = __batch_insert(to_insert_chunks, fragment, component)
+
+    __execution_stack_release(to_assign_chunks)
+    __execution_stack_release(to_insert_chunks)
+    return assigned_count, inserted_count
+end
+
 ---@param entity evolved.entity
 ---@param ... evolved.entity fragments
 ---@return any ... components
@@ -1284,6 +1309,7 @@ end
 evolved_query_mt.include = registry.include
 evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
+evolved_query_mt.batch_set = registry.batch_set
 evolved_query_mt.batch_apply = registry.batch_apply
 evolved_query_mt.batch_assign = registry.batch_assign
 evolved_query_mt.batch_insert = registry.batch_insert

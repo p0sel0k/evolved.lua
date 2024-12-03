@@ -19,4 +19,4 @@
 - [ ] add inplace vector operations
 - [x] cache chunk lists in batch operations
 - [ ] impl compat.move for 5.1 vanilla lua
-- [ ] add registry.batch_set
+- [x] add registry.batch_set
