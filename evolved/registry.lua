@@ -439,11 +439,44 @@ end
 ---@param component any
 ---@return evolved.entity
 function registry.set(entity, fragment, component)
-    if registry.has(entity, fragment) then
-        registry.assign(entity, fragment, component)
-    else
-        registry.insert(entity, fragment, component)
+    component = component == nil and true or component
+
+    if not idpools.alive(__guids, entity.__guid) then
+        return entity
     end
+
+    local old_chunk = entity.__chunk
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+    if old_chunk == new_chunk then
+        local components = new_chunk.__components[fragment]
+        components[entity.__index_in_chunk] = component
+        return entity
+    end
+
+    if new_chunk ~= nil then
+        local old_index_in_chunk = entity.__index_in_chunk
+        local new_index_in_chunk = #new_chunk.__entities + 1
+
+        __structural_changes = __structural_changes + 1
+
+        new_chunk.__entities[new_index_in_chunk] = entity
+        new_chunk.__components[fragment][new_index_in_chunk] = component
+
+        if old_chunk ~= nil then
+            for old_f, old_cs in pairs(old_chunk.__components) do
+                local new_cs = new_chunk.__components[old_f]
+                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+            end
+            __detach_entity(entity)
+        end
+
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+    else
+        __detach_entity(entity)
+    end
+
     return entity
 end
 
