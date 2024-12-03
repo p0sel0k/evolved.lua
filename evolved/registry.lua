@@ -380,45 +380,45 @@ local function __batch_insert(chunks, fragment, component)
 
     for _, old_chunk in ipairs(chunks) do
         local new_chunk = __chunk_with_fragment(old_chunk, fragment)
-        if old_chunk ~= new_chunk then
-            local old_entities = old_chunk.__entities
-            local old_entity_count = #old_entities
+        assert(old_chunk ~= new_chunk)
 
-            inserted_count = inserted_count + old_entity_count
+        local old_entities = old_chunk.__entities
+        local old_entity_count = #old_entities
 
-            if new_chunk ~= nil then
-                for old_index_in_chunk = 1, old_entity_count do
-                    local entity = old_entities[old_index_in_chunk]
-                    local new_index_in_chunk = #new_chunk.__entities + 1
+        inserted_count = inserted_count + old_entity_count
 
-                    new_chunk.__entities[new_index_in_chunk] = entity
-                    new_chunk.__components[fragment][new_index_in_chunk] = component
+        if new_chunk ~= nil then
+            for old_index_in_chunk = 1, old_entity_count do
+                local entity = old_entities[old_index_in_chunk]
+                local new_index_in_chunk = #new_chunk.__entities + 1
 
-                    entity.__chunk = new_chunk
-                    entity.__index_in_chunk = new_index_in_chunk
-                end
+                new_chunk.__entities[new_index_in_chunk] = entity
+                new_chunk.__components[fragment][new_index_in_chunk] = component
 
-                for old_f, old_cs in pairs(old_chunk.__components) do
-                    local new_cs = new_chunk.__components[old_f]
-                    if #new_cs == 0 then
-                        new_chunk.__components[old_f] = old_cs
-                    else
-                        compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
-                    end
-                end
-            else
-                for old_index_in_chunk = 1, old_entity_count do
-                    local entity = old_entities[old_index_in_chunk]
-                    entity.__chunk = nil
-                    entity.__index_in_chunk = 0
-                end
+                entity.__chunk = new_chunk
+                entity.__index_in_chunk = new_index_in_chunk
             end
 
-            old_chunk.__entities = {}
-
-            for old_f, _ in pairs(old_chunk.__components) do
-                old_chunk.__components[old_f] = {}
+            for old_f, old_cs in pairs(old_chunk.__components) do
+                local new_cs = new_chunk.__components[old_f]
+                if #new_cs == 0 then
+                    new_chunk.__components[old_f] = old_cs
+                else
+                    compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
+                end
             end
+        else
+            for old_index_in_chunk = 1, old_entity_count do
+                local entity = old_entities[old_index_in_chunk]
+                entity.__chunk = nil
+                entity.__index_in_chunk = 0
+            end
+        end
+
+        old_chunk.__entities = {}
+
+        for old_f, _ in pairs(old_chunk.__components) do
+            old_chunk.__components[old_f] = {}
         end
     end
 
@@ -435,37 +435,37 @@ local function __batch_remove(chunks, ...)
 
     for _, old_chunk in ipairs(chunks) do
         local new_chunk = __chunk_without_fragments(old_chunk, ...)
-        if old_chunk ~= new_chunk then
-            local old_entities = old_chunk.__entities
-            local old_entity_count = #old_entities
+        assert(old_chunk ~= new_chunk)
 
-            removed_count = removed_count + old_entity_count
+        local old_entities = old_chunk.__entities
+        local old_entity_count = #old_entities
 
-            if new_chunk ~= nil then
-                for old_index_in_chunk = 1, old_entity_count do
-                    local entity = old_entities[old_index_in_chunk]
-                    local new_index_in_chunk = #new_chunk.__entities + 1
+        removed_count = removed_count + old_entity_count
 
-                    new_chunk.__entities[new_index_in_chunk] = entity
+        if new_chunk ~= nil then
+            for old_index_in_chunk = 1, old_entity_count do
+                local entity = old_entities[old_index_in_chunk]
+                local new_index_in_chunk = #new_chunk.__entities + 1
 
-                    entity.__chunk = new_chunk
-                    entity.__index_in_chunk = new_index_in_chunk
+                new_chunk.__entities[new_index_in_chunk] = entity
+
+                entity.__chunk = new_chunk
+                entity.__index_in_chunk = new_index_in_chunk
+            end
+
+            for new_f, new_cs in pairs(new_chunk.__components) do
+                local old_cs = old_chunk.__components[new_f]
+                if #new_cs == 0 then
+                    new_chunk.__components[new_f] = old_cs
+                else
+                    compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
                 end
-
-                for new_f, new_cs in pairs(new_chunk.__components) do
-                    local old_cs = old_chunk.__components[new_f]
-                    if #new_cs == 0 then
-                        new_chunk.__components[new_f] = old_cs
-                    else
-                        compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
-                    end
-                end
-            else
-                for old_index_in_chunk = 1, old_entity_count do
-                    local entity = old_entities[old_index_in_chunk]
-                    entity.__chunk = nil
-                    entity.__index_in_chunk = 0
-                end
+            end
+        else
+            for old_index_in_chunk = 1, old_entity_count do
+                local entity = old_entities[old_index_in_chunk]
+                entity.__chunk = nil
+                entity.__index_in_chunk = 0
             end
         end
 
@@ -615,7 +615,6 @@ local function __execute_iterator(execution_state)
 
     __execution_state_release(execution_state)
 end
-
 
 ---
 ---
