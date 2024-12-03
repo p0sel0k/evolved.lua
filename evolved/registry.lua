@@ -1,3 +1,4 @@
+local compat = require 'evolved.compat'
 local idpools = require 'evolved.idpools'
 
 ---@class evolved.registry
@@ -737,7 +738,12 @@ function registry.batch_insert(query, fragment, component)
 
             for old_f, old_cs in pairs(old_chunk.__components) do
                 local new_cs = new_chunk.__components[old_f]
-                for i = 1, #old_cs do new_cs[#new_cs + 1] = old_cs[i] end
+
+                if #new_cs == 0 then
+                    new_chunk.__components[old_f] = old_cs
+                else
+                    compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
+                end
             end
         else
             for _, entity in ipairs(old_chunk.__entities) do
@@ -835,7 +841,12 @@ function registry.batch_remove(query, ...)
 
             for new_f, new_cs in pairs(new_chunk.__components) do
                 local old_cs = old_chunk.__components[new_f]
-                for i = 1, #old_cs do new_cs[#new_cs + 1] = old_cs[i] end
+
+                if #new_cs == 0 then
+                    new_chunk.__components[new_f] = old_cs
+                else
+                    compat.move(old_cs, 1, #old_cs, #new_cs + 1, new_cs)
+                end
             end
         else
             for _, entity in ipairs(old_chunk.__entities) do
