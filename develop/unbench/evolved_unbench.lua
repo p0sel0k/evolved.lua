@@ -2,6 +2,10 @@ local common = require 'develop.unbench.common_unbench'
 
 local evo = require 'evolved.evolved'
 
+print '*******************'
+print '***** evolved *****'
+print '*******************'
+
 ---@param a evolved.entity
 ---@param b evolved.entity
 ---@param c evolved.entity
@@ -45,7 +49,7 @@ end, function()
         evo.registry.entity(),
         evo.registry.entity()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(D, 0):set(E, 0)
     end
 
@@ -81,7 +85,7 @@ end, function()
         evo.registry.entity(),
         evo.registry.entity()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         evo.registry.entity():set(A, 0):set(B, 0)
         evo.registry.entity():set(A, 0):set(B, 0):set(C, 0)
         evo.registry.entity():set(A, 0):set(B, 0):set(C, 0):set(D, 0)
@@ -113,7 +117,7 @@ end, function()
     for i = 1, 26 do chars[i] = evo.registry.entity() end
 
     for i = 1, #chars do
-        for _ = 1, 100 do
+        for _ = 1, 10000 do
             evo.registry.entity():set(chars[i], 0):set(data, 0)
         end
     end

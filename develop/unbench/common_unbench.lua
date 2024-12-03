@@ -17,10 +17,10 @@ function common.describe(name, loop, init)
     local start_kb = collectgarbage('count')
 
     local success, result = pcall(function()
-        while os.clock() - start_s < 0.2 do
+        repeat
             iters = iters + 1
             loop(evo.compat.unpack(state))
-        end
+        until os.clock() - start_s > 0.2
     end)
 
     local finish_s = os.clock()
@@ -35,6 +35,7 @@ function common.describe(name, loop, init)
     if not success then print('    ' .. result) end
 
     collectgarbage('restart')
+    collectgarbage('collect')
 end
 
 return common

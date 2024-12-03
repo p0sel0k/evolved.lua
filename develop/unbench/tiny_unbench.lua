@@ -2,12 +2,16 @@ local common = require 'develop.unbench.common_unbench'
 
 local tiny = require 'develop.3rdparty.tiny'
 
+print '********************'
+print '***** tiny-ecs *****'
+print '********************'
+
 common.describe('Tiny Packed Iteration', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         tiny.addEntity(w, { a = 0, b = 0, c = 0, d = 0, e = 0 })
     end
 
@@ -45,7 +49,7 @@ common.describe('Tiny Simple Iteration', function(w)
 end, function()
     local w = tiny.world()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         tiny.addEntity(w, { a = 0, b = 0 })
         tiny.addEntity(w, { a = 0, b = 0, c = 0 })
         tiny.addEntity(w, { a = 0, b = 0, c = 0, d = 0 })
@@ -77,7 +81,7 @@ end, function()
     local w = tiny.world()
 
     for i = 1, 26 do
-        for _ = 1, 100 do
+        for _ = 1, 10000 do
             local char = string.char(string.byte('a') + i - 1)
             tiny.addEntity(w, { [char] = 0, data = 0 })
         end
