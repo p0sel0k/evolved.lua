@@ -146,7 +146,7 @@ common.describe('Entity Cycle', function(a, b, A, B)
         evo.registry.entity():set(b, to_create[i])
     end
 
-    assert(1000 == evo.registry.batch_destroy(B))
+    assert(1000 == evo.registry.query_destroy(B))
 end, function()
     local a, b =
         evo.registry.entity(),
@@ -165,8 +165,8 @@ end)
 ---@param A evolved.query
 ---@param AB evolved.query
 common.describe('Add / Remove', function(b, A, AB)
-    assert(10000 == evo.registry.batch_insert(A, b))
-    assert(10000 == evo.registry.batch_remove(AB, b))
+    assert(10000 == evo.registry.query_insert(A, b))
+    assert(10000 == evo.registry.query_remove(AB, b))
 end, function()
     local a, b =
         evo.registry.entity(),

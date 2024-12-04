@@ -605,91 +605,6 @@ function registry.alive(entity)
 end
 
 ---@param entity evolved.entity
----@param fragment evolved.entity
----@param component any
----@return evolved.entity
-function registry.set(entity, fragment, component)
-    component = component == nil and true or component
-
-    if not idpools.alive(__guids, entity.__guid) then
-        return entity
-    end
-
-    local old_chunk = entity.__chunk
-    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
-
-    if old_chunk == new_chunk then
-        local components = new_chunk.__components[fragment]
-        components[entity.__index_in_chunk] = component
-        return entity
-    end
-
-    if new_chunk ~= nil then
-        local new_chunk_entities = new_chunk.__entities
-        local new_chunk_components = new_chunk.__components
-
-        local old_index_in_chunk = entity.__index_in_chunk
-        local new_index_in_chunk = #new_chunk_entities + 1
-
-        new_chunk_entities[new_index_in_chunk] = entity
-        new_chunk_components[fragment][new_index_in_chunk] = component
-
-        if old_chunk ~= nil then
-            local old_chunk_components = old_chunk.__components
-            for old_f, old_cs in pairs(old_chunk_components) do
-                local new_cs = new_chunk_components[old_f]
-                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
-            end
-            __detach_entity(entity)
-        end
-
-        entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
-        __structural_changes = __structural_changes + 1
-    else
-        __detach_entity(entity)
-    end
-
-    return entity
-end
-
----@param query evolved.query
----@param fragment evolved.entity
----@param component any
----@return integer assigned_count
----@return integer inserted_count
-function registry.batch_set(query, fragment, component)
-    local to_assign_chunks = __execution_stack_acquire()
-    local to_insert_chunks = __execution_stack_acquire()
-
-    for chunk in registry.execute(query) do
-        if chunk.__components[fragment] ~= nil then
-            to_assign_chunks[#to_assign_chunks + 1] = chunk
-        else
-            to_insert_chunks[#to_insert_chunks + 1] = chunk
-        end
-    end
-
-    local assigned_count = 0
-    local inserted_count = 0
-
-    for i = 1, #to_assign_chunks do
-        local chunk = to_assign_chunks[i]
-        assigned_count = assigned_count + #chunk.__entities
-        __chunk_assign(chunk, fragment, component)
-    end
-
-    for i = 1, #to_insert_chunks do
-        local chunk = to_insert_chunks[i]
-        inserted_count = inserted_count + #chunk.__entities
-        __chunk_insert(chunk, fragment, component)
-    end
-
-    __execution_stack_release(to_assign_chunks)
-    __execution_stack_release(to_insert_chunks)
-    return assigned_count, inserted_count
-end
-
----@param entity evolved.entity
 ---@param ... evolved.entity fragments
 ---@return any ... components
 ---@nodiscard
@@ -762,6 +677,91 @@ function registry.has_any(entity, ...)
 end
 
 ---@param entity evolved.entity
+---@param fragment evolved.entity
+---@param component any
+---@return evolved.entity
+function registry.set(entity, fragment, component)
+    component = component == nil and true or component
+
+    if not idpools.alive(__guids, entity.__guid) then
+        return entity
+    end
+
+    local old_chunk = entity.__chunk
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+    if old_chunk == new_chunk then
+        local components = new_chunk.__components[fragment]
+        components[entity.__index_in_chunk] = component
+        return entity
+    end
+
+    if new_chunk ~= nil then
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
+        local old_index_in_chunk = entity.__index_in_chunk
+        local new_index_in_chunk = #new_chunk_entities + 1
+
+        new_chunk_entities[new_index_in_chunk] = entity
+        new_chunk_components[fragment][new_index_in_chunk] = component
+
+        if old_chunk ~= nil then
+            local old_chunk_components = old_chunk.__components
+            for old_f, old_cs in pairs(old_chunk_components) do
+                local new_cs = new_chunk_components[old_f]
+                new_cs[new_index_in_chunk] = old_cs[old_index_in_chunk]
+            end
+            __detach_entity(entity)
+        end
+
+        entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        __structural_changes = __structural_changes + 1
+    else
+        __detach_entity(entity)
+    end
+
+    return entity
+end
+
+---@param query evolved.query
+---@param fragment evolved.entity
+---@param component any
+---@return integer assigned_count
+---@return integer inserted_count
+function registry.query_set(query, fragment, component)
+    local to_assign_chunks = __execution_stack_acquire()
+    local to_insert_chunks = __execution_stack_acquire()
+
+    for chunk in registry.execute(query) do
+        if chunk.__components[fragment] ~= nil then
+            to_assign_chunks[#to_assign_chunks + 1] = chunk
+        else
+            to_insert_chunks[#to_insert_chunks + 1] = chunk
+        end
+    end
+
+    local assigned_count = 0
+    local inserted_count = 0
+
+    for i = 1, #to_assign_chunks do
+        local chunk = to_assign_chunks[i]
+        assigned_count = assigned_count + #chunk.__entities
+        __chunk_assign(chunk, fragment, component)
+    end
+
+    for i = 1, #to_insert_chunks do
+        local chunk = to_insert_chunks[i]
+        inserted_count = inserted_count + #chunk.__entities
+        __chunk_insert(chunk, fragment, component)
+    end
+
+    __execution_stack_release(to_assign_chunks)
+    __execution_stack_release(to_insert_chunks)
+    return assigned_count, inserted_count
+end
+
+---@param entity evolved.entity
 ---@param apply fun(any): any
 ---@param fragment evolved.entity
 ---@return boolean is_applied
@@ -789,7 +789,7 @@ end
 ---@param apply fun(any): any
 ---@param fragment evolved.entity
 ---@return integer applied_count
-function registry.batch_apply(query, apply, fragment)
+function registry.query_apply(query, apply, fragment)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
@@ -835,7 +835,7 @@ end
 ---@param fragment evolved.entity
 ---@param component any
 ---@return integer assigned_count
-function registry.batch_assign(query, fragment, component)
+function registry.query_assign(query, fragment, component)
     component = component == nil and true or component
 
     local chunks = __execution_stack_acquire()
@@ -908,7 +908,7 @@ end
 ---@param fragment evolved.entity
 ---@param component any
 ---@return integer inserted_count
-function registry.batch_insert(query, fragment, component)
+function registry.query_insert(query, fragment, component)
     component = component == nil and true or component
 
     local chunks = __execution_stack_acquire()
@@ -976,7 +976,7 @@ end
 ---@param query evolved.query
 ---@param ... evolved.entity fragments
 ---@return integer removed_count
-function registry.batch_remove(query, ...)
+function registry.query_remove(query, ...)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
@@ -1014,7 +1014,7 @@ end
 
 ---@param query evolved.query
 ---@return integer detached_count
-function registry.batch_detach(query)
+function registry.query_detach(query)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
@@ -1050,7 +1050,7 @@ end
 
 ---@param query evolved.query
 ---@return integer destroyed_count
-function registry.batch_destroy(query)
+function registry.query_destroy(query)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
@@ -1280,11 +1280,12 @@ end
 
 evolved_entity_mt.guid = registry.guid
 evolved_entity_mt.alive = registry.alive
-evolved_entity_mt.set = registry.set
 evolved_entity_mt.get = registry.get
 evolved_entity_mt.has = registry.has
 evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
+
+evolved_entity_mt.set = registry.set
 evolved_entity_mt.apply = registry.apply
 evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
@@ -1315,13 +1316,14 @@ end
 evolved_query_mt.include = registry.include
 evolved_query_mt.exclude = registry.exclude
 evolved_query_mt.execute = registry.execute
-evolved_query_mt.batch_set = registry.batch_set
-evolved_query_mt.batch_apply = registry.batch_apply
-evolved_query_mt.batch_assign = registry.batch_assign
-evolved_query_mt.batch_insert = registry.batch_insert
-evolved_query_mt.batch_remove = registry.batch_remove
-evolved_query_mt.batch_detach = registry.batch_detach
-evolved_query_mt.batch_destroy = registry.batch_destroy
+
+evolved_query_mt.set = registry.query_set
+evolved_query_mt.apply = registry.query_apply
+evolved_query_mt.assign = registry.query_assign
+evolved_query_mt.insert = registry.query_insert
+evolved_query_mt.remove = registry.query_remove
+evolved_query_mt.detach = registry.query_detach
+evolved_query_mt.destroy = registry.query_destroy
 
 ---
 ---
