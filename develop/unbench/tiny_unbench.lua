@@ -6,7 +6,7 @@ print '********************'
 print '***** tiny-ecs *****'
 print '********************'
 
-common.describe('Tiny Packed Iteration', function(w)
+common.describe('Packed Iteration', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -44,7 +44,7 @@ end, function()
     return w
 end)
 
-common.describe('Tiny Simple Iteration', function(w)
+common.describe('Simple Iteration', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -75,7 +75,7 @@ end, function()
     return w
 end)
 
-common.describe('Tiny Fragmented Iteration', function(w)
+common.describe('Fragmented Iteration', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -101,7 +101,7 @@ end, function()
     return w
 end)
 
-common.describe('Tiny Entity Cycle', function(w)
+common.describe('Entity Cycle', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -126,12 +126,12 @@ end, function()
     return w
 end)
 
-common.describe('Tiny Add / Remove', function(w)
+common.describe('Add / Remove', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         tiny.addEntity(w, { a = 0 })
     end
 

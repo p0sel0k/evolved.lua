@@ -16,7 +16,7 @@ print '*******************'
 ---@param C evolved.query
 ---@param D evolved.query
 ---@param E evolved.query
-common.describe('Evolved Packed Iteration', function(a, b, c, d, e, A, B, C, D, E)
+common.describe('Packed Iteration', function(a, b, c, d, e, A, B, C, D, E)
     for chunk in A:execute() do
         local as = chunk:components(a)
         for i = 1, #chunk:entities() do as[i] = as[i] * 2 end
@@ -62,7 +62,7 @@ end, function()
         evo.registry.query(E)
 end)
 
-common.describe('Evolved Simple Iteration', function(a, b, c, d, e, AB, CD, CE)
+common.describe('Simple Iteration', function(a, b, c, d, e, AB, CD, CE)
     for chunk in AB:execute() do
         local as, bs = chunk:components(a, b)
         for i = 1, #chunk:entities() do as[i], bs[i] = bs[i], as[i] end
@@ -102,7 +102,7 @@ end)
 ---@param z evolved.entity
 ---@param Data evolved.query
 ---@param Z evolved.query
-common.describe('Evolved Fragmented Iteration', function(d, z, Data, Z)
+common.describe('Fragmented Iteration', function(d, z, Data, Z)
     for chunk in Data:execute() do
         local ds = chunk:components(d)
         for i = 1, #chunk:entities() do ds[i] = ds[i] * 2 end
@@ -131,7 +131,7 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param B evolved.query
-common.describe('Evolved Entity Cycle', function(a, b, A, B)
+common.describe('Entity Cycle', function(a, b, A, B)
     ---@type any[]
     local to_create = {}
 
@@ -164,15 +164,15 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param AB evolved.query
-common.describe('Evolved Add / Remove', function(b, A, AB)
-    assert(1000 == evo.registry.batch_insert(A, b))
-    assert(1000 == evo.registry.batch_remove(AB, b))
+common.describe('Add / Remove', function(b, A, AB)
+    assert(10000 == evo.registry.batch_insert(A, b))
+    assert(10000 == evo.registry.batch_remove(AB, b))
 end, function()
     local a, b =
         evo.registry.entity(),
         evo.registry.entity()
 
-    for _ = 1, 1000 do
+    for _ = 1, 10000 do
         evo.registry.entity():set(a)
     end
 
