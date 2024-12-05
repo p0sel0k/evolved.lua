@@ -1,6 +1,6 @@
 local common = require 'develop.unbench.common_unbench'
 
-local tiny = require 'develop.3rdparty.tiny'
+local tiny = require 'develop.3rdparty.tinyecs'
 
 print '********************'
 print '***** tiny-ecs *****'
