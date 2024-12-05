@@ -80,12 +80,12 @@ registry.destroy -> entity -> (entity)
 registry.chunk_destroy -> chunk -> (integer)
 registry.query_destroy -> query -> (integer)
 registry.query -> entity... -> (query)
-registry.include -> query -> entity... -> query
-registry.exclude -> query -> entity... -> query
-registry.execute -> query -> ({execution_state? -> chunk?}, execution_state?)
+registry.query_include -> query -> entity... -> query
+registry.query_exclude -> query -> entity... -> query
+registry.query_execute -> query -> ({execution_state? -> chunk?}, execution_state?)
 registry.chunk -> entity -> entity... -> (chunk)
-registry.entities -> chunk -> (entity[])
-registry.components -> chunk -> entity... -> (any[]...)
+registry.chunk_entities -> chunk -> (entity[])
+registry.chunk_components -> chunk -> entity... -> (any[]...)
 ```
 
 ### Instance `entity`
@@ -110,10 +110,6 @@ entity:destroy -> (entity)
 ### Instance `query`
 
 ```
-query:include -> entity... -> query
-query:exclude -> entity... -> query
-query:execute -> ({execution_state? -> chunk?}, execution_state?)
-
 query:set -> entity -> any -> (integer, integer)
 query:apply -> {any -> any} -> entity -> (integer)
 query:assign -> entity -> any -> (integer)
@@ -121,14 +117,15 @@ query:insert -> entity -> any -> (integer)
 query:remove -> entity... -> (integer)
 query:detach -> (integer)
 query:destroy -> (integer)
+
+query:include -> entity... -> query
+query:exclude -> entity... -> query
+query:execute -> ({execution_state? -> chunk?}, execution_state?)
 ```
 
 ### Instance `chunk`
 
 ```
-chunk:entities -> (entity[])
-chunk:components -> entity... -> (any[]...)
-
 chunk:set -> entity -> any -> (integer, integer)
 chunk:apply -> {any -> any} -> entity -> (integer)
 chunk:assign -> entity -> any -> (integer)
@@ -136,6 +133,9 @@ chunk:insert -> entity -> any -> (integer)
 chunk:remove -> entity... -> (integer)
 chunk:detach -> (integer)
 chunk:destroy -> (integer)
+
+chunk:entities -> (entity[])
+chunk:components -> entity... -> (any[]...)
 ```
 
 ## Module `singles`

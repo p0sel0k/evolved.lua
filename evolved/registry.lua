@@ -585,7 +585,7 @@ function registry.query_set(query, fragment, component)
     local assign_chunks = __execution_stack_acquire()
     local insert_chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         if __chunk_has_fragment(chunk, fragment) then
             assign_chunks[#assign_chunks + 1] = chunk
         else
@@ -672,7 +672,7 @@ end
 function registry.query_apply(query, apply, fragment)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -740,7 +740,7 @@ end
 function registry.query_assign(query, fragment, component)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -888,7 +888,7 @@ end
 function registry.query_insert(query, fragment, component)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -1023,7 +1023,7 @@ end
 function registry.query_remove(query, ...)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -1086,7 +1086,7 @@ end
 function registry.query_detach(query)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -1152,7 +1152,7 @@ end
 function registry.query_destroy(query)
     local chunks = __execution_stack_acquire()
 
-    for chunk in registry.execute(query) do
+    for chunk in registry.query_execute(query) do
         chunks[#chunks + 1] = chunk
     end
 
@@ -1201,7 +1201,7 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 ---@nodiscard
-function registry.include(query, ...)
+function registry.query_include(query, ...)
     local include_list = {}
     local include_set = {}
 
@@ -1239,7 +1239,7 @@ end
 ---@param ... evolved.entity fragments
 ---@return evolved.query
 ---@nodiscard
-function registry.exclude(query, ...)
+function registry.query_exclude(query, ...)
     local exclude_list = {}
     local exclude_set = {}
 
@@ -1277,7 +1277,7 @@ end
 ---@return evolved.execution_iterator
 ---@return evolved.execution_state?
 ---@nodiscard
-function registry.execute(query)
+function registry.query_execute(query)
     local include_list, exclude_list =
         query.__include_list, query.__exclude_list
 
@@ -1337,7 +1337,7 @@ end
 ---@param chunk evolved.chunk
 ---@return evolved.entity[]
 ---@nodiscard
-function registry.entities(chunk)
+function registry.chunk_entities(chunk)
     return chunk.__entities
 end
 
@@ -1345,7 +1345,7 @@ end
 ---@param ... evolved.entity fragments
 ---@return any[] ... components
 ---@nodiscard
-function registry.components(chunk, ...)
+function registry.chunk_components(chunk, ...)
     local components = chunk.__components
 
     local fragment_count = select('#', ...)
@@ -1369,7 +1369,7 @@ function registry.components(chunk, ...)
     do
         local f1, f2, f3 = ...
         return components[f1], components[f2], components[f3],
-            registry.components(chunk, select(4, ...))
+            registry.chunk_components(chunk, select(4, ...))
     end
 end
 
@@ -1420,10 +1420,6 @@ function evolved_query_mt:__tostring()
     return string.format('(%s)', str)
 end
 
-evolved_query_mt.include = registry.include
-evolved_query_mt.exclude = registry.exclude
-evolved_query_mt.execute = registry.execute
-
 evolved_query_mt.set = registry.query_set
 evolved_query_mt.apply = registry.query_apply
 evolved_query_mt.assign = registry.query_assign
@@ -1431,6 +1427,10 @@ evolved_query_mt.insert = registry.query_insert
 evolved_query_mt.remove = registry.query_remove
 evolved_query_mt.detach = registry.query_detach
 evolved_query_mt.destroy = registry.query_destroy
+
+evolved_query_mt.include = registry.query_include
+evolved_query_mt.exclude = registry.query_exclude
+evolved_query_mt.execute = registry.query_execute
 
 ---
 ---
@@ -1449,9 +1449,6 @@ function evolved_chunk_mt:__tostring()
     return string.format('{%s}', str)
 end
 
-evolved_chunk_mt.entities = registry.entities
-evolved_chunk_mt.components = registry.components
-
 evolved_chunk_mt.set = registry.chunk_set
 evolved_chunk_mt.apply = registry.chunk_apply
 evolved_chunk_mt.assign = registry.chunk_assign
@@ -1459,6 +1456,9 @@ evolved_chunk_mt.insert = registry.chunk_insert
 evolved_chunk_mt.remove = registry.chunk_remove
 evolved_chunk_mt.detach = registry.chunk_detach
 evolved_chunk_mt.destroy = registry.chunk_destroy
+
+evolved_chunk_mt.entities = registry.chunk_entities
+evolved_chunk_mt.components = registry.chunk_components
 
 ---
 ---

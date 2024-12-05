@@ -20,5 +20,5 @@
 - [x] cache chunk lists in batch operations
 - [ ] impl compat.move for 5.1 vanilla lua
 - [x] add registry.batch_set
-- [ ] rename include/exclude/execute to query_include/exclude/execute
-- [ ] rename entities/components to chunk_entities/components
+- [x] rename include/exclude/execute to query_include/exclude/execute
+- [x] rename entities/components to chunk_entities/components
