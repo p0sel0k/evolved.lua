@@ -104,7 +104,7 @@ end, function()
     return w
 end)
 
-common.describe('Entity Cycle', function(w)
+common.describe('Entity Cycle (Cache)', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -130,7 +130,35 @@ end, function()
     return w
 end)
 
-common.describe('Add / Remove', function(w)
+common.describe('Entity Cycle (No Cache)', function(w)
+    tiny.update(w, 0.016)
+end, function()
+    local w = tiny.world()
+
+    for _ = 1, 1000 do
+        tiny.addEntity(w, { a = 0 })
+    end
+
+    local A = tiny.processingSystem()
+    A.nocache = true
+    A.filter = tiny.requireAll('a')
+    A.process = function(_, e) tiny.addEntity(w, { b = e.a }) end
+    A.postProcess = function(_) tiny.refresh(w) end
+
+    local B = tiny.processingSystem()
+    B.nocache = true
+    B.filter = tiny.requireAll('b')
+    B.process = function(_, e) tiny.removeEntity(w, e) end
+    B.postProcess = function(_) tiny.refresh(w) end
+
+    tiny.addSystem(w, A)
+    tiny.addSystem(w, B)
+
+    tiny.refresh(w)
+    return w
+end)
+
+common.describe('Add / Remove (Cache)', function(w)
     tiny.update(w, 0.016)
 end, function()
     local w = tiny.world()
@@ -148,6 +176,40 @@ end, function()
     A.postProcess = function(_) tiny.refresh(w) end
 
     local AB = tiny.processingSystem()
+    AB.filter = tiny.requireAll('a', 'b')
+    AB.process = function(_, e)
+        e.b = nil
+        tiny.addEntity(w, e)
+    end
+    AB.postProcess = function(_) tiny.refresh(w) end
+
+    tiny.addSystem(w, A)
+    tiny.addSystem(w, AB)
+
+    tiny.refresh(w)
+    return w
+end)
+
+common.describe('Add / Remove (No Cache)', function(w)
+    tiny.update(w, 0.016)
+end, function()
+    local w = tiny.world()
+
+    for _ = 1, 10000 do
+        tiny.addEntity(w, { a = 0 })
+    end
+
+    local A = tiny.processingSystem()
+    A.nocache = true
+    A.filter = tiny.requireAll('a')
+    A.process = function(_, e)
+        e.b = 0
+        tiny.addEntity(w, e)
+    end
+    A.postProcess = function(_) tiny.refresh(w) end
+
+    local AB = tiny.processingSystem()
+    AB.nocache = true
     AB.filter = tiny.requireAll('a', 'b')
     AB.process = function(_, e)
         e.b = nil

@@ -131,7 +131,7 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param B evolved.query
-common.describe('Entity Cycle Simple', function(a, b, A, B)
+common.describe('Entity Cycle (Simple)', function(a, b, A, B)
     ---@type any[]
     local to_create = {}
 
@@ -177,7 +177,7 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param B evolved.query
-common.describe('Entity Cycle Batched', function(a, b, A, B)
+common.describe('Entity Cycle (Batched)', function(a, b, A, B)
     ---@type any[]
     local to_create = {}
 
@@ -210,7 +210,7 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param AB evolved.query
-common.describe('Add / Remove Simple', function(b, A, AB)
+common.describe('Add / Remove (Simple)', function(b, A, AB)
     ---@type evolved.entity[]
     local to_insert = {}
 
@@ -255,7 +255,7 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param AB evolved.query
-common.describe('Add / Remove Batched', function(b, A, AB)
+common.describe('Add / Remove (Batched)', function(b, A, AB)
     assert(10000 == evo.registry.query_insert(A, b))
     assert(10000 == evo.registry.query_remove(AB, b))
 end, function()
