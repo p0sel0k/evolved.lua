@@ -41,6 +41,7 @@ end, function()
     tiny.addSystem(w, D)
     tiny.addSystem(w, E)
 
+    tiny.refresh(w)
     return w
 end)
 
@@ -72,6 +73,7 @@ end, function()
     tiny.addSystem(w, CD)
     tiny.addSystem(w, CE)
 
+    tiny.refresh(w)
     return w
 end)
 
@@ -98,6 +100,7 @@ end, function()
     tiny.addSystem(w, Data)
     tiny.addSystem(w, Z)
 
+    tiny.refresh(w)
     return w
 end)
 
@@ -123,6 +126,7 @@ end, function()
     tiny.addSystem(w, A)
     tiny.addSystem(w, B)
 
+    tiny.refresh(w)
     return w
 end)
 
@@ -154,5 +158,6 @@ end, function()
     tiny.addSystem(w, A)
     tiny.addSystem(w, AB)
 
+    tiny.refresh(w)
     return w
 end)
