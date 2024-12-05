@@ -131,7 +131,53 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param B evolved.query
-common.describe('Entity Cycle', function(a, b, A, B)
+common.describe('Entity Cycle Simple', function(a, b, A, B)
+    ---@type any[]
+    local to_create = {}
+
+    for chunk in A:execute() do
+        local as = chunk:components(a)
+        for i = 1, #chunk:entities() do
+            to_create[#to_create + 1] = as[i]
+        end
+    end
+
+    for i = 1, #to_create do
+        evo.registry.entity():set(b, to_create[i])
+    end
+
+    ---@type evolved.entity[]
+    local to_destroy = {}
+
+    for chunk in B:execute() do
+        local es = chunk:entities()
+        for i = 1, #chunk:entities() do
+            to_destroy[#to_destroy + 1] = es[i]
+        end
+    end
+
+    for i = 1, #to_destroy do
+        evo.registry.destroy(to_destroy[i])
+    end
+end, function()
+    local a, b =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 1000 do
+        evo.registry.entity():set(a, 0)
+    end
+
+    return a, b,
+        evo.registry.query(a),
+        evo.registry.query(b)
+end)
+
+---@param a evolved.entity
+---@param b evolved.entity
+---@param A evolved.query
+---@param B evolved.query
+common.describe('Entity Cycle Batched', function(a, b, A, B)
     ---@type any[]
     local to_create = {}
 
@@ -164,7 +210,52 @@ end)
 ---@param b evolved.entity
 ---@param A evolved.query
 ---@param AB evolved.query
-common.describe('Add / Remove', function(b, A, AB)
+common.describe('Add / Remove Simple', function(b, A, AB)
+    ---@type evolved.entity[]
+    local to_insert = {}
+
+    for chunk in A:execute() do
+        local es = chunk:entities()
+        for i = 1, #chunk:entities() do
+            to_insert[#to_insert + 1] = es[i]
+        end
+    end
+
+    for i = 1, #to_insert do
+        evo.registry.insert(to_insert[i], b)
+    end
+
+    ---@type evolved.entity[]
+    local to_remove = {}
+
+    for chunk in AB:execute() do
+        local es = chunk:entities()
+        for i = 1, #chunk:entities() do
+            to_remove[#to_remove + 1] = es[i]
+        end
+    end
+
+    for i = 1, #to_remove do
+        evo.registry.remove(to_remove[i], b)
+    end
+end, function()
+    local a, b =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    for _ = 1, 10000 do
+        evo.registry.entity():set(a)
+    end
+
+    return b,
+        evo.registry.query(a),
+        evo.registry.query(b)
+end)
+
+---@param b evolved.entity
+---@param A evolved.query
+---@param AB evolved.query
+common.describe('Add / Remove Batched', function(b, A, AB)
     assert(10000 == evo.registry.query_insert(A, b))
     assert(10000 == evo.registry.query_remove(AB, b))
 end, function()
