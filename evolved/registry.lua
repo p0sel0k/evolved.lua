@@ -919,11 +919,12 @@ function registry.remove(entity, ...)
     end
 
     if new_chunk ~= nil then
+        local new_chunk_size = #new_chunk.__entities
         local new_chunk_entities = new_chunk.__entities
         local new_chunk_components = new_chunk.__components
 
         local old_index_in_chunk = entity.__index_in_chunk
-        local new_index_in_chunk = #new_chunk.__entities + 1
+        local new_index_in_chunk = new_chunk_size + 1
 
         new_chunk_entities[new_index_in_chunk] = entity
 
