@@ -63,7 +63,8 @@ evolved_chunk_mt.__index = evolved_chunk_mt
 
 ---@param entity evolved.entity
 local function __detach_entity(entity)
-    local chunk = assert(entity.__chunk)
+    local chunk = entity.__chunk
+    if chunk == nil then return end
 
     local chunk_size = #chunk.__entities
     local chunk_entities = chunk.__entities
@@ -88,7 +89,9 @@ local function __detach_entity(entity)
         end
     end
 
-    entity.__chunk, entity.__index_in_chunk = nil, 0
+    entity.__chunk = nil
+    entity.__index_in_chunk = 0
+
     __structural_changes = __structural_changes + 1
 end
 
@@ -324,174 +327,6 @@ local function __chunk_without_fragments(chunk, ...)
     return chunk
 end
 
----@param chunk evolved.chunk
----@param apply fun(any): any
----@param fragment evolved.entity
-local function __chunk_apply(chunk, apply, fragment)
-    local chunk_size = #chunk.__entities
-    local chunk_components = chunk.__components
-    local chunk_fragment_components = chunk_components[fragment]
-
-    for i = 1, chunk_size do
-        local component = apply(chunk_fragment_components[i])
-        chunk_fragment_components[i] = component == nil and true or component
-    end
-end
-
----@param chunk evolved.chunk
----@param fragment evolved.entity
----@param component any
-local function __chunk_assign(chunk, fragment, component)
-    local chunk_size = #chunk.__entities
-    local chunk_components = chunk.__components
-    local chunk_fragment_components = chunk_components[fragment]
-
-    for i = 1, chunk_size do
-        chunk_fragment_components[i] = component == nil and true or component
-    end
-end
-
----@param chunk evolved.chunk
----@param fragment evolved.entity
----@param component any
-local function __chunk_insert(chunk, fragment, component)
-    local new_chunk = __chunk_with_fragment(chunk, fragment)
-    assert(chunk ~= new_chunk)
-
-    local chunk_size = #chunk.__entities
-    local chunk_entities = chunk.__entities
-    local chunk_components = chunk.__components
-
-    if new_chunk then
-        local new_chunk_size = #new_chunk.__entities
-        local new_chunk_entities = new_chunk.__entities
-        local new_chunk_components = new_chunk.__components
-        local new_chunk_fragment_components = new_chunk_components[fragment]
-
-        compat.move(chunk_entities, 1, chunk_size, new_chunk_size + 1, new_chunk_entities)
-
-        for f, cs in pairs(chunk_components) do
-            local new_cs = new_chunk_components[f]
-            compat.move(cs, 1, chunk_size, new_chunk_size + 1, new_cs)
-        end
-
-        for index_in_chunk = 1, chunk_size do
-            local new_index_in_chunk = index_in_chunk + new_chunk_size
-
-            local entity = new_chunk_entities[new_index_in_chunk]
-            entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
-
-            new_chunk_fragment_components[new_index_in_chunk] = component == nil and true or component
-        end
-    else
-        for index_in_chunk = 1, chunk_size do
-            local entity = chunk_entities[index_in_chunk]
-            entity.__chunk, entity.__index_in_chunk = nil, 0
-        end
-    end
-
-    do
-        chunk.__entities = {}
-
-        for f, _ in pairs(chunk_components) do
-            chunk_components[f] = {}
-        end
-    end
-
-    __structural_changes = __structural_changes + chunk_size
-end
-
----@param chunk evolved.chunk
----@param ... evolved.entity fragments
-local function __chunk_remove(chunk, ...)
-    local new_chunk = __chunk_without_fragments(chunk, ...)
-    assert(chunk ~= new_chunk)
-
-    local chunk_size = #chunk.__entities
-    local chunk_entities = chunk.__entities
-    local chunk_components = chunk.__components
-
-    if new_chunk then
-        local new_chunk_size = #new_chunk.__entities
-        local new_chunk_entities = new_chunk.__entities
-        local new_chunk_components = new_chunk.__components
-
-        compat.move(chunk_entities, 1, chunk_size, new_chunk_size + 1, new_chunk_entities)
-
-        for new_f, new_cs in pairs(new_chunk_components) do
-            local cs = chunk_components[new_f]
-            compat.move(cs, 1, chunk_size, new_chunk_size + 1, new_cs)
-        end
-
-        for index_in_chunk = 1, chunk_size do
-            local new_index_in_chunk = index_in_chunk + new_chunk_size
-
-            local entity = new_chunk_entities[new_index_in_chunk]
-            entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
-        end
-    else
-        for index_in_chunk = 1, chunk_size do
-            local entity = chunk_entities[index_in_chunk]
-            entity.__chunk, entity.__index_in_chunk = nil, 0
-        end
-    end
-
-    do
-        chunk.__entities = {}
-
-        for f, _ in pairs(chunk_components) do
-            chunk_components[f] = {}
-        end
-    end
-
-    __structural_changes = __structural_changes + chunk_size
-end
-
----@param chunk evolved.chunk
-local function __chunk_detach(chunk)
-    local chunk_size = #chunk.__entities
-    local chunk_entities = chunk.__entities
-    local chunk_components = chunk.__components
-
-    for index_in_chunk = 1, chunk_size do
-        local entity = chunk_entities[index_in_chunk]
-        entity.__chunk, entity.__index_in_chunk = nil, 0
-    end
-
-    do
-        chunk.__entities = {}
-
-        for f, _ in pairs(chunk_components) do
-            chunk_components[f] = {}
-        end
-    end
-
-    __structural_changes = __structural_changes + chunk_size
-end
-
----@param chunk evolved.chunk
-local function __chunk_destroy(chunk)
-    local chunk_size = #chunk.__entities
-    local chunk_entities = chunk.__entities
-    local chunk_components = chunk.__components
-
-    for index_in_chunk = 1, chunk_size do
-        local entity = chunk_entities[index_in_chunk]
-        entity.__chunk, entity.__index_in_chunk = nil, 0
-        idpools.release(__guids, entity.__guid)
-    end
-
-    do
-        chunk.__entities = {}
-
-        for f, _ in pairs(chunk_components) do
-            chunk_components[f] = {}
-        end
-    end
-
-    __structural_changes = __structural_changes + chunk_size
-end
-
 ---@return evolved.execution_stack
 ---@nodiscard
 local function __execution_stack_acquire()
@@ -715,7 +550,9 @@ function registry.set(entity, fragment, component)
             __detach_entity(entity)
         end
 
-        entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+
         __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
@@ -724,40 +561,55 @@ function registry.set(entity, fragment, component)
     return entity
 end
 
+---@param chunk evolved.chunk
+---@param fragment evolved.entity
+---@param component any
+---@return integer assigned_count
+---@return integer inserted_count
+function registry.chunk_set(chunk, fragment, component)
+    if __chunk_has_fragment(chunk, fragment) then
+        local assigned = registry.chunk_assign(chunk, fragment, component)
+        return assigned, 0
+    else
+        local inserted = registry.chunk_insert(chunk, fragment, component)
+        return 0, inserted
+    end
+end
+
 ---@param query evolved.query
 ---@param fragment evolved.entity
 ---@param component any
 ---@return integer assigned_count
 ---@return integer inserted_count
 function registry.query_set(query, fragment, component)
-    local to_assign_chunks = __execution_stack_acquire()
-    local to_insert_chunks = __execution_stack_acquire()
+    local assign_chunks = __execution_stack_acquire()
+    local insert_chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
-        if chunk.__components[fragment] ~= nil then
-            to_assign_chunks[#to_assign_chunks + 1] = chunk
+        if __chunk_has_fragment(chunk, fragment) then
+            assign_chunks[#assign_chunks + 1] = chunk
         else
-            to_insert_chunks[#to_insert_chunks + 1] = chunk
+            insert_chunks[#insert_chunks + 1] = chunk
         end
     end
 
     local assigned_count = 0
     local inserted_count = 0
 
-    for i = 1, #to_assign_chunks do
-        local chunk = to_assign_chunks[i]
-        assigned_count = assigned_count + #chunk.__entities
-        __chunk_assign(chunk, fragment, component)
+    for i = 1, #assign_chunks do
+        local assigned, inserted = registry.chunk_set(assign_chunks[i], fragment, component)
+        assigned_count = assigned_count + assigned
+        inserted_count = inserted_count + inserted
     end
 
-    for i = 1, #to_insert_chunks do
-        local chunk = to_insert_chunks[i]
-        inserted_count = inserted_count + #chunk.__entities
-        __chunk_insert(chunk, fragment, component)
+    for i = 1, #insert_chunks do
+        local assigned, inserted = registry.chunk_set(insert_chunks[i], fragment, component)
+        assigned_count = assigned_count + assigned
+        inserted_count = inserted_count + inserted
     end
 
-    __execution_stack_release(to_assign_chunks)
-    __execution_stack_release(to_insert_chunks)
+    __execution_stack_release(assign_chunks)
+    __execution_stack_release(insert_chunks)
     return assigned_count, inserted_count
 end
 
@@ -776,13 +628,41 @@ function registry.apply(entity, apply, fragment)
     local components = chunk.__components[fragment]
     if components == nil then return false end
 
-    local component = components[entity.__index_in_chunk]
+    do
+        local component = components[entity.__index_in_chunk]
 
-    component = apply(component)
-    component = component == nil and true or component
+        component = apply(component)
+        component = component == nil and true or component
 
-    components[entity.__index_in_chunk] = component
+        components[entity.__index_in_chunk] = component
+    end
+
     return true
+end
+
+---@param chunk evolved.chunk
+---@param apply fun(any): any
+---@param fragment evolved.entity
+---@return integer applied_count
+function registry.chunk_apply(chunk, apply, fragment)
+    local chunk_size = #chunk.__entities
+    local chunk_components = chunk.__components
+    local chunk_fragment_components = chunk_components[fragment]
+
+    if chunk_size == 0 or chunk_fragment_components == nil then
+        return 0
+    end
+
+    for i = 1, chunk_size do
+        local component = chunk_fragment_components[i]
+
+        component = apply(component)
+        component = component == nil and true or component
+
+        chunk_fragment_components[i] = component
+    end
+
+    return chunk_size
 end
 
 ---@param query evolved.query
@@ -793,17 +673,14 @@ function registry.query_apply(query, apply, fragment)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
-        if chunk.__components[fragment] ~= nil then
-            chunks[#chunks + 1] = chunk
-        end
+        chunks[#chunks + 1] = chunk
     end
 
     local applied_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        applied_count = applied_count + #chunk.__entities
-        __chunk_apply(chunk, apply, fragment)
+        local applied = registry.chunk_apply(chunks[i], apply, fragment)
+        applied_count = applied_count + applied
     end
 
     __execution_stack_release(chunks)
@@ -827,8 +704,33 @@ function registry.assign(entity, fragment, component)
     local components = chunk.__components[fragment]
     if components == nil then return false end
 
-    components[entity.__index_in_chunk] = component
+    do
+        components[entity.__index_in_chunk] = component
+    end
+
     return true
+end
+
+---@param chunk evolved.chunk
+---@param fragment evolved.entity
+---@param component any
+---@return integer assigned_count
+function registry.chunk_assign(chunk, fragment, component)
+    component = component == nil and true or component
+
+    local chunk_size = #chunk.__entities
+    local chunk_components = chunk.__components
+    local chunk_fragment_components = chunk_components[fragment]
+
+    if chunk_size == 0 or chunk_fragment_components == nil then
+        return 0
+    end
+
+    for i = 1, chunk_size do
+        chunk_fragment_components[i] = component
+    end
+
+    return chunk_size
 end
 
 ---@param query evolved.query
@@ -836,22 +738,17 @@ end
 ---@param component any
 ---@return integer assigned_count
 function registry.query_assign(query, fragment, component)
-    component = component == nil and true or component
-
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
-        if chunk.__components[fragment] ~= nil then
-            chunks[#chunks + 1] = chunk
-        end
+        chunks[#chunks + 1] = chunk
     end
 
     local assigned_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        assigned_count = assigned_count + #chunk.__entities
-        __chunk_assign(chunk, fragment, component)
+        local assigned = registry.chunk_assign(chunks[i], fragment, component)
+        assigned_count = assigned_count + assigned
     end
 
     __execution_stack_release(chunks)
@@ -895,7 +792,9 @@ function registry.insert(entity, fragment, component)
             __detach_entity(entity)
         end
 
-        entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+
         __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
@@ -904,27 +803,100 @@ function registry.insert(entity, fragment, component)
     return true
 end
 
+---@param chunk evolved.chunk
+---@param fragment evolved.entity
+---@param component any
+---@return integer inserted_count
+function registry.chunk_insert(chunk, fragment, component)
+    component = component == nil and true or component
+
+    local old_chunk = chunk
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+    if old_chunk == new_chunk then
+        return 0
+    end
+
+    local old_chunk_size = #old_chunk.__entities
+    local old_chunk_entities = old_chunk.__entities
+    local old_chunk_components = old_chunk.__components
+
+    if new_chunk ~= nil then
+        local new_chunk_size = #new_chunk.__entities
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
+        if new_chunk_size == 0 then
+            new_chunk.__entities, old_chunk.__entities = old_chunk_entities, new_chunk_entities
+            new_chunk_entities, old_chunk_entities = old_chunk_entities, new_chunk_entities
+
+            new_chunk.__components, old_chunk.__components = old_chunk_components, new_chunk_components
+            new_chunk_components, old_chunk_components = old_chunk_components, new_chunk_components
+
+            if old_chunk_components[fragment] ~= nil then
+                new_chunk_components[fragment] = {}
+                old_chunk_components[fragment] = nil
+            end
+        else
+            compat.move(
+                old_chunk_entities, 1, old_chunk_size,
+                new_chunk_size + 1, new_chunk_entities)
+
+            for old_f, old_cs in pairs(old_chunk_components) do
+                local new_cs = new_chunk_components[old_f]
+                compat.move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
+            end
+        end
+
+        do
+            local new_chunk_fragment_components = new_chunk_components[fragment]
+
+            for new_index_in_chunk = new_chunk_size + 1, new_chunk_size + old_chunk_size do
+                new_chunk_fragment_components[new_index_in_chunk] = component
+            end
+        end
+
+        for new_index_in_chunk = new_chunk_size + 1, new_chunk_size + old_chunk_size do
+            local entity = new_chunk_entities[new_index_in_chunk]
+            entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        end
+    else
+        for old_index_in_chunk = 1, old_chunk_size do
+            local entity = old_chunk_entities[old_index_in_chunk]
+            entity.__chunk, entity.__index_in_chunk = nil, 0
+        end
+    end
+
+    if #old_chunk_entities ~= 0 then
+        old_chunk.__entities = {}
+    end
+
+    for old_f, old_cs in pairs(old_chunk_components) do
+        if #old_cs ~= 0 then
+            old_chunk_components[old_f] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + old_chunk_size
+    return old_chunk_size
+end
+
 ---@param query evolved.query
 ---@param fragment evolved.entity
 ---@param component any
 ---@return integer inserted_count
 function registry.query_insert(query, fragment, component)
-    component = component == nil and true or component
-
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
-        if chunk.__components[fragment] == nil then
-            chunks[#chunks + 1] = chunk
-        end
+        chunks[#chunks + 1] = chunk
     end
 
     local inserted_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        inserted_count = inserted_count + #chunk.__entities
-        __chunk_insert(chunks[i], fragment, component)
+        local inserted = registry.chunk_insert(chunks[i], fragment, component)
+        inserted_count = inserted_count + inserted
     end
 
     __execution_stack_release(chunks)
@@ -964,13 +936,85 @@ function registry.remove(entity, ...)
             __detach_entity(entity)
         end
 
-        entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        entity.__chunk = new_chunk
+        entity.__index_in_chunk = new_index_in_chunk
+
         __structural_changes = __structural_changes + 1
     else
         __detach_entity(entity)
     end
 
     return true
+end
+
+---@param chunk evolved.chunk
+---@param ... evolved.entity fragments
+---@return integer removed_count
+function registry.chunk_remove(chunk, ...)
+    local old_chunk = chunk
+    local new_chunk = __chunk_without_fragments(old_chunk, ...)
+
+    if old_chunk == new_chunk then
+        return 0
+    end
+
+    local old_chunk_size = #old_chunk.__entities
+    local old_chunk_entities = old_chunk.__entities
+    local old_chunk_components = old_chunk.__components
+
+    if new_chunk ~= nil then
+        local new_chunk_size = #new_chunk.__entities
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
+        if new_chunk_size == 0 then
+            new_chunk.__entities, old_chunk.__entities = old_chunk_entities, new_chunk_entities
+            new_chunk_entities, old_chunk_entities = old_chunk_entities, new_chunk_entities
+
+            new_chunk.__components, old_chunk.__components = old_chunk_components, new_chunk_components
+            new_chunk_components, old_chunk_components = old_chunk_components, new_chunk_components
+
+            for i = 1, select('#', ...) do
+                local fragment = select(i, ...)
+                if new_chunk_components[fragment] ~= nil then
+                    old_chunk_components[fragment] = {}
+                    new_chunk_components[fragment] = nil
+                end
+            end
+        else
+            compat.move(
+                old_chunk_entities, 1, old_chunk_size,
+                new_chunk_size + 1, new_chunk_entities)
+
+            for new_f, new_cs in pairs(new_chunk_components) do
+                local old_cs = old_chunk_components[new_f]
+                compat.move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
+            end
+        end
+
+        for new_index_in_chunk = new_chunk_size + 1, new_chunk_size + old_chunk_size do
+            local entity = new_chunk_entities[new_index_in_chunk]
+            entity.__chunk, entity.__index_in_chunk = new_chunk, new_index_in_chunk
+        end
+    else
+        for old_index_in_chunk = 1, old_chunk_size do
+            local entity = old_chunk_entities[old_index_in_chunk]
+            entity.__chunk, entity.__index_in_chunk = nil, 0
+        end
+    end
+
+    if #old_chunk_entities ~= 0 then
+        old_chunk.__entities = {}
+    end
+
+    for old_f, old_cs in pairs(old_chunk_components) do
+        if #old_cs ~= 0 then
+            old_chunk_components[old_f] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + old_chunk_size
+    return old_chunk_size
 end
 
 ---@param query evolved.query
@@ -980,17 +1024,14 @@ function registry.query_remove(query, ...)
     local chunks = __execution_stack_acquire()
 
     for chunk in registry.execute(query) do
-        if __chunk_has_any_fragments(chunk, ...) then
-            chunks[#chunks + 1] = chunk
-        end
+        chunks[#chunks + 1] = chunk
     end
 
     local removed_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        removed_count = removed_count + #chunk.__entities
-        __chunk_remove(chunk, ...)
+        local removed = registry.chunk_remove(chunks[i], ...)
+        removed_count = removed_count + removed
     end
 
     __execution_stack_release(chunks)
@@ -998,18 +1039,46 @@ function registry.query_remove(query, ...)
 end
 
 ---@param entity evolved.entity
----@return boolean is_detached
+---@return evolved.entity
 function registry.detach(entity)
     if not idpools.alive(__guids, entity.__guid) then
-        return false
+        return entity
     end
 
-    if entity.__chunk == nil then
-        return false
+    if entity.__chunk ~= nil then
+        __detach_entity(entity)
     end
 
-    __detach_entity(entity)
-    return true
+    return entity
+end
+
+---@param chunk evolved.chunk
+---@return integer detached_count
+function registry.chunk_detach(chunk)
+    local chunk_size = #chunk.__entities
+    local chunk_entities = chunk.__entities
+    local chunk_components = chunk.__components
+
+    if chunk_size == 0 then
+        return 0
+    end
+
+    for index_in_chunk = 1, chunk_size do
+        local entity = chunk_entities[index_in_chunk]
+        entity.__chunk = nil
+        entity.__index_in_chunk = 0
+    end
+
+    do
+        chunk.__entities = {}
+
+        for f, _ in pairs(chunk_components) do
+            chunk_components[f] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + chunk_size
+    return chunk_size
 end
 
 ---@param query evolved.query
@@ -1024,9 +1093,8 @@ function registry.query_detach(query)
     local detached_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        detached_count = detached_count + #chunk.__entities
-        __chunk_detach(chunk)
+        local detached = registry.chunk_detach(chunks[i])
+        detached_count = detached_count + detached
     end
 
     __execution_stack_release(chunks)
@@ -1034,10 +1102,10 @@ function registry.query_detach(query)
 end
 
 ---@param entity evolved.entity
----@return boolean is_destroyed
+---@return evolved.entity
 function registry.destroy(entity)
     if not idpools.alive(__guids, entity.__guid) then
-        return false
+        return entity
     end
 
     if entity.__chunk ~= nil then
@@ -1045,7 +1113,38 @@ function registry.destroy(entity)
     end
 
     idpools.release(__guids, entity.__guid)
-    return true
+
+    return entity
+end
+
+---@param chunk evolved.chunk
+---@return integer destroyed_count
+function registry.chunk_destroy(chunk)
+    local chunk_size = #chunk.__entities
+    local chunk_entities = chunk.__entities
+    local chunk_components = chunk.__components
+
+    if chunk_size == 0 then
+        return 0
+    end
+
+    for index_in_chunk = 1, chunk_size do
+        local entity = chunk_entities[index_in_chunk]
+        entity.__chunk = nil
+        entity.__index_in_chunk = 0
+        idpools.release(__guids, entity.__guid)
+    end
+
+    do
+        chunk.__entities = {}
+
+        for f, _ in pairs(chunk_components) do
+            chunk_components[f] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + chunk_size
+    return chunk_size
 end
 
 ---@param query evolved.query
@@ -1060,9 +1159,8 @@ function registry.query_destroy(query)
     local destroyed_count = 0
 
     for i = 1, #chunks do
-        local chunk = chunks[i]
-        destroyed_count = destroyed_count + #chunk.__entities
-        __chunk_destroy(chunks[i])
+        local destroyed = registry.chunk_destroy(chunks[i])
+        destroyed_count = destroyed_count + destroyed
     end
 
     __execution_stack_release(chunks)
@@ -1212,16 +1310,25 @@ end
 ---@return evolved.chunk
 ---@nodiscard
 function registry.chunk(fragment, ...)
-    local fragments = { fragment, ... }
+    local fragment_list = { fragment }
+    local fragment_set = { [fragment] = true }
 
-    table.sort(fragments, function(a, b)
+    for i = 1, select('#', ...) do
+        local f = select(i, ...)
+        if not fragment_set[f] then
+            fragment_set[f] = true
+            fragment_list[#fragment_list + 1] = f
+        end
+    end
+
+    table.sort(fragment_list, function(a, b)
         return a.__guid < b.__guid
     end)
 
-    local chunk = __root_chunk(fragments[1])
+    local chunk = __root_chunk(fragment_list[1])
 
-    for i = 2, #fragments do
-        chunk = __chunk_with_fragment(chunk, fragments[i])
+    for i = 2, #fragment_list do
+        chunk = __chunk_with_fragment(chunk, fragment_list[i])
     end
 
     return chunk
@@ -1344,6 +1451,14 @@ end
 
 evolved_chunk_mt.entities = registry.entities
 evolved_chunk_mt.components = registry.components
+
+evolved_chunk_mt.set = registry.chunk_set
+evolved_chunk_mt.apply = registry.chunk_apply
+evolved_chunk_mt.assign = registry.chunk_assign
+evolved_chunk_mt.insert = registry.chunk_insert
+evolved_chunk_mt.remove = registry.chunk_remove
+evolved_chunk_mt.detach = registry.chunk_detach
+evolved_chunk_mt.destroy = registry.chunk_destroy
 
 ---
 ---

@@ -108,11 +108,11 @@ do
     assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1, f2))
 
-    assert(e:destroy())
+    assert(e == e:destroy())
     assert(not e:alive())
     assert(e.__chunk == nil)
 
-    assert(not e:destroy())
+    assert(e == e:destroy())
     assert(not e:alive())
     assert(e.__chunk == nil)
 end
@@ -257,11 +257,11 @@ do
     assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1, f2))
 
-    assert(e:detach())
+    assert(e == e:detach())
     assert(e:alive())
     assert(e.__chunk == nil)
 
-    assert(not e:detach())
+    assert(e == e:detach())
     assert(e:alive())
     assert(e.__chunk == nil)
 end
@@ -321,7 +321,7 @@ do
     assert(e:alive())
     assert(e.__chunk == evo.registry.chunk(f1))
 
-    assert(e:destroy())
+    assert(e == e:destroy())
     assert(not e:alive())
     assert(e.__chunk == nil)
 
@@ -340,7 +340,7 @@ do
     assert(not e:alive())
     assert(e.__chunk == nil)
 
-    assert(not e:detach())
+    assert(e == e:detach())
     assert(not e:alive())
     assert(e.__chunk == nil)
 end
@@ -542,6 +542,153 @@ do
         assert(2 == q:insert(f2, 42))
         assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 20 and e4:get(f1) == 25)
         assert(e1:get(f2) == 42 and e2:get(f2) == 42 and e3:get(f2) == 40 and e4:get(f2) == 45)
+    end
+end
+
+do
+    local f1, f2 =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e1 = evo.registry.entity():set(f1, 10)
+    local e2 = evo.registry.entity():set(f1, 15)
+    local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+    local e4 = evo.registry.entity():set(f1, 25):set(f2, 45)
+
+    local c_f1 = evo.registry.chunk(f1)
+    local c_f1_f2 = evo.registry.chunk(f1, f2)
+
+    do
+        local q = evo.registry.query(f1)
+
+        assert(2 == q:insert(f2, 42))
+
+        assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 20 and e4:get(f1) == 25)
+        assert(e1:get(f2) == 42 and e2:get(f2) == 42 and e3:get(f2) == 40 and e4:get(f2) == 45)
+
+        assert(#c_f1:entities() == 0)
+        assert(#c_f1:components(f1) == 0)
+        assert(c_f1:components(f2) == nil)
+
+        assert(#c_f1_f2:entities() == 4)
+        assert(#c_f1_f2:components(f1) == 4)
+        assert(#c_f1_f2:components(f2) == 4)
+    end
+end
+
+do
+    local f1, f2 =
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    local e1 = evo.registry.entity():set(f1, 10)
+    local e2 = evo.registry.entity():set(f1, 15)
+    local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
+    local e4 = evo.registry.entity():set(f1, 25):set(f2, 45)
+
+    local c_f1 = evo.registry.chunk(f1)
+    local c_f1_f2 = evo.registry.chunk(f1, f2)
+
+    do
+        local q = evo.registry.query(f2)
+
+        assert(2 == q:remove(f2))
+
+        assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 20 and e4:get(f1) == 25)
+        assert(e1:get(f2) == nil and e2:get(f2) == nil and e3:get(f2) == nil and e4:get(f2) == nil)
+
+        assert(#c_f1:entities() == 4)
+        assert(#c_f1:components(f1) == 4)
+        assert(c_f1:components(f2) == nil)
+
+        assert(#c_f1_f2:entities() == 0)
+        assert(#c_f1_f2:components(f1) == 0)
+        assert(#c_f1_f2:components(f2) == 0)
+    end
+end
+
+do
+    local f1, f2, f3 =
+        evo.registry.entity(),
+        evo.registry.entity(),
+        evo.registry.entity()
+
+    do
+        local e1 = evo.registry.entity():set(f1, 10)
+        local e2 = evo.registry.entity():set(f1, 15)
+
+        local c_f1 = evo.registry.chunk(f1)
+        local c_f2 = evo.registry.chunk(f2)
+        local c_f1_f2 = evo.registry.chunk(f1, f2)
+
+        do
+            local q = evo.registry.query(f1)
+
+            assert(2 == q:insert(f2, 42))
+
+            assert(e1:get(f1) == 10 and e2:get(f1) == 15)
+            assert(e1:get(f2) == 42 and e2:get(f2) == 42)
+
+            assert(#c_f1:entities() == 0)
+            assert(#c_f1:components(f1) == 0)
+            assert(c_f1:components(f2) == nil)
+
+            assert(#c_f2:entities() == 0)
+            assert(c_f2:components(f1) == nil)
+            assert(#c_f2:components(f2) == 0)
+
+            assert(#c_f1_f2:entities() == 2)
+            assert(#c_f1_f2:components(f1) == 2)
+            assert(#c_f1_f2:components(f2) == 2)
+        end
+
+        do
+            local q = evo.registry.query(f1)
+
+            assert(2 == q:remove(f1, f3))
+
+            assert(e1:get(f1) == nil and e2:get(f1) == nil)
+            assert(e1:get(f2) == 42 and e2:get(f2) == 42)
+
+            assert(#c_f1:entities() == 0)
+            assert(#c_f1:components(f1) == 0)
+            assert(c_f1:components(f2) == nil)
+            assert(c_f1:components(f3) == nil)
+
+            assert(#c_f2:entities() == 2)
+            assert(c_f2:components(f1) == nil)
+            assert(#c_f2:components(f2) == 2)
+            assert(c_f2:components(f3) == nil)
+
+            assert(#c_f1_f2:entities() == 0)
+            assert(#c_f1_f2:components(f1) == 0)
+            assert(#c_f1_f2:components(f2) == 0)
+            assert(c_f1_f2:components(f3) == nil)
+        end
+
+        do
+            local q = evo.registry.query(f2)
+
+            assert(2 == q:remove(f2, f3))
+
+            assert(e1:get(f1) == nil and e2:get(f1) == nil)
+            assert(e1:get(f2) == nil and e2:get(f2) == nil)
+
+            assert(#c_f1:entities() == 0)
+            assert(#c_f1:components(f1) == 0)
+            assert(c_f1:components(f2) == nil)
+            assert(c_f1:components(f3) == nil)
+
+            assert(#c_f2:entities() == 0)
+            assert(c_f2:components(f1) == nil)
+            assert(#c_f2:components(f2) == 0)
+            assert(c_f2:components(f3) == nil)
+
+            assert(#c_f1_f2:entities() == 0)
+            assert(#c_f1_f2:components(f1) == 0)
+            assert(#c_f1_f2:components(f2) == 0)
+            assert(c_f1_f2:components(f3) == nil)
+        end
     end
 end
 
