@@ -29,22 +29,26 @@ local __execution_state_cache = {} ---@type evolved.execution_state[]
 ---
 ---
 
----@class evolved.entity
+---@class (exact) evolved.__entity
 ---@field package __guid evolved.id
 ---@field package __chunk? evolved.chunk
 ---@field package __index_in_chunk integer
+
+---@class evolved.entity : evolved.__entity
 local evolved_entity_mt = {}
 evolved_entity_mt.__index = evolved_entity_mt
 
----@class evolved.query
+---@class (exact) evolved.__query
 ---@field package __include_list evolved.entity[]
 ---@field package __exclude_list evolved.entity[]
 ---@field package __include_set table<evolved.entity, boolean>
 ---@field package __exclude_set table<evolved.entity, boolean>
+
+---@class evolved.query : evolved.__query
 local evolved_query_mt = {}
 evolved_query_mt.__index = evolved_query_mt
 
----@class evolved.chunk
+---@class (exact) evolved.__chunk
 ---@field package __parent? evolved.chunk
 ---@field package __fragment evolved.entity
 ---@field package __children evolved.chunk[]
@@ -52,6 +56,8 @@ evolved_query_mt.__index = evolved_query_mt
 ---@field package __components table<evolved.entity, any[]>
 ---@field package __with_fragment_cache table<evolved.entity, evolved.chunk>
 ---@field package __without_fragment_cache table<evolved.entity, evolved.chunk>
+
+---@class evolved.chunk : evolved.__chunk
 local evolved_chunk_mt = {}
 evolved_chunk_mt.__index = evolved_chunk_mt
 
@@ -176,7 +182,7 @@ local function __root_chunk(fragment)
         if root_chunk then return root_chunk end
     end
 
-    ---@type evolved.chunk
+    ---@type evolved.__chunk
     local root_chunk = {
         __parent = nil,
         __fragment = fragment,
@@ -187,6 +193,7 @@ local function __root_chunk(fragment)
         __without_fragment_cache = {},
     }
 
+    ---@cast root_chunk evolved.chunk
     setmetatable(root_chunk, evolved_chunk_mt)
 
     do
@@ -236,7 +243,7 @@ local function __chunk_with_fragment(chunk, fragment)
         return sibling_chunk
     end
 
-    ---@type evolved.chunk
+    ---@type evolved.__chunk
     local child_chunk = {
         __parent = chunk,
         __fragment = fragment,
@@ -251,6 +258,7 @@ local function __chunk_with_fragment(chunk, fragment)
         child_chunk.__components[f] = {}
     end
 
+    ---@cast child_chunk evolved.chunk
     setmetatable(child_chunk, evolved_chunk_mt)
 
     do
@@ -415,13 +423,14 @@ end
 function registry.entity()
     local guid = idpools.acquire(__guids)
 
-    ---@type evolved.entity
+    ---@type evolved.__entity
     local entity = {
         __guid = guid,
         __chunk = nil,
         __index_in_chunk = 0,
     }
 
+    ---@cast entity evolved.entity
     return setmetatable(entity, evolved_entity_mt)
 end
 
@@ -1187,7 +1196,7 @@ function registry.query(...)
         return a.__guid < b.__guid
     end)
 
-    ---@type evolved.query
+    ---@type evolved.__query
     local query = {
         __include_list = include_list,
         __exclude_list = {},
@@ -1195,6 +1204,7 @@ function registry.query(...)
         __exclude_set = {},
     }
 
+    ---@cast query evolved.query
     return setmetatable(query, evolved_query_mt)
 end
 
@@ -1225,7 +1235,7 @@ function registry.query_include(query, ...)
         return a.__guid < b.__guid
     end)
 
-    ---@type evolved.query
+    ---@type evolved.__query
     local new_query = {
         __include_list = include_list,
         __exclude_list = query.__exclude_list,
@@ -1233,6 +1243,7 @@ function registry.query_include(query, ...)
         __exclude_set = query.__exclude_set,
     }
 
+    ---@cast new_query evolved.query
     return setmetatable(new_query, evolved_query_mt)
 end
 
@@ -1263,7 +1274,7 @@ function registry.query_exclude(query, ...)
         return a.__guid < b.__guid
     end)
 
-    ---@type evolved.query
+    ---@type evolved.__query
     local new_query = {
         __include_list = query.__include_list,
         __exclude_list = exclude_list,
@@ -1271,6 +1282,7 @@ function registry.query_exclude(query, ...)
         __exclude_set = exclude_set,
     }
 
+    ---@cast new_query evolved.query
     return setmetatable(new_query, evolved_query_mt)
 end
 

@@ -21,9 +21,11 @@ local evolved_defer_op = {
     destroy = 7,
 }
 
----@class evolved.defer
+---@class (exact) evolved.__defer
 ---@field operations any[]
 ---@field operation_count integer
+
+---@class evolved.defer : evolved.__defer
 local evolved_defer_mt = {}
 evolved_defer_mt.__index = evolved_defer_mt
 
@@ -90,11 +92,12 @@ local __operation_processors = {
 ---@return evolved.defer
 ---@nodiscard
 function defers.defer()
-    ---@type evolved.defer
+    ---@type evolved.__defer
     local defer = {
         operations = {},
         operation_count = 0,
     }
+    ---@cast defer evolved.defer
     return setmetatable(defer, evolved_defer_mt)
 end
 

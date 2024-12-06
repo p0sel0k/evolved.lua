@@ -1,9 +1,11 @@
 ---@class evolved.vectors
 local vectors = {}
 
----@class evolved.vector2
+---@class (exact) evolved.__vector2
 ---@field x number
 ---@field y number
+
+---@class evolved.vector2 : evolved.__vector2
 local evolved_vector2_mt = {}
 evolved_vector2_mt.__index = evolved_vector2_mt
 
@@ -12,8 +14,9 @@ evolved_vector2_mt.__index = evolved_vector2_mt
 ---@return evolved.vector2
 ---@nodiscard
 local function vector2(x, y)
-    ---@type evolved.vector2
+    ---@type evolved.__vector2
     local v = { x = x, y = y }
+    ---@cast v evolved.vector2
     return setmetatable(v, evolved_vector2_mt)
 end
 

@@ -9,9 +9,11 @@ local idpools = {}
 
 ---@alias evolved.id integer
 
----@class evolved.idpool
+---@class (exact) evolved.__idpool
 ---@field package __freelist_ids evolved.id[]
 ---@field package __available_index integer
+
+---@class evolved.idpool : evolved.__idpool
 local evolved_idpool_mt = {}
 evolved_idpool_mt.__index = evolved_idpool_mt
 
@@ -23,11 +25,12 @@ evolved_idpool_mt.__index = evolved_idpool_mt
 
 ---@return evolved.idpool
 function idpools.idpool()
-    ---@type evolved.idpool
+    ---@type evolved.__idpool
     local idpool = {
         __freelist_ids = {},
         __available_index = 0,
     }
+    ---@cast idpool evolved.idpool
     return setmetatable(idpool, evolved_idpool_mt)
 end
 
