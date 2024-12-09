@@ -14,7 +14,6 @@
 - [ ] add assertions for input arguments
 - [x] registry.assign should not change chunks' tree
 - [x] add deferred changes api
-- [ ] add multi apply/batch_apply
 - [ ] add batch vector operations
 - [ ] add inplace vector operations
 - [x] cache chunk lists in batch operations
@@ -22,7 +21,7 @@
 - [x] add registry.batch_set
 - [x] rename include/exclude/execute to query_include/exclude/execute
 - [x] rename entities/components to chunk_entities/components
-- [ ] remove registry.apply to avoid encouraging incorrect patterns
+- [x] remove registry.apply to avoid encouraging incorrect patterns
 - [ ] add on_set, on_assign, on_insert, on_remove callbacks
 - [ ] add initial component fragment
 - [ ] add constructor component fragment

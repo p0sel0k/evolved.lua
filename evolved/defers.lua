@@ -13,12 +13,11 @@ local defers = {}
 ---@enum evolved.defer_op
 local evolved_defer_op = {
     set = 1,
-    apply = 2,
-    assign = 3,
-    insert = 4,
-    remove = 5,
-    detach = 6,
-    destroy = 7,
+    assign = 2,
+    insert = 3,
+    remove = 4,
+    detach = 5,
+    destroy = 6,
 }
 
 ---@class (exact) evolved.__defer
@@ -42,13 +41,6 @@ local __operation_processors = {
         local fragment = ops[idx + 2]
         local component = ops[idx + 3]
         registry.set(entity, fragment, component)
-        return 4
-    end,
-    [evolved_defer_op.apply] = function(ops, idx)
-        local entity = ops[idx + 1]
-        local apply = ops[idx + 2]
-        local fragment = ops[idx + 3]
-        registry.apply(entity, apply, fragment)
         return 4
     end,
     [evolved_defer_op.assign] = function(ops, idx)
@@ -114,24 +106,6 @@ function defers.set(defer, entity, fragment, component)
     operations[operation_count + 2] = entity
     operations[operation_count + 3] = fragment
     operations[operation_count + 4] = component
-
-    defer.operation_count = operation_count + 4
-    return defer
-end
-
----@param defer evolved.defer
----@param entity evolved.entity
----@param apply fun(any): any
----@param fragment evolved.entity
----@return evolved.defer
-function defers.apply(defer, entity, apply, fragment)
-    local operations = defer.operations
-    local operation_count = defer.operation_count
-
-    operations[operation_count + 1] = evolved_defer_op.apply
-    operations[operation_count + 2] = entity
-    operations[operation_count + 3] = apply
-    operations[operation_count + 4] = fragment
 
     defer.operation_count = operation_count + 4
     return defer
@@ -246,7 +220,6 @@ end
 ---
 
 evolved_defer_mt.set = defers.set
-evolved_defer_mt.apply = defers.apply
 evolved_defer_mt.assign = defers.assign
 evolved_defer_mt.insert = defers.insert
 evolved_defer_mt.remove = defers.remove

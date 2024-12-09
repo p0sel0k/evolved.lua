@@ -346,56 +346,6 @@ do
 end
 
 do
-    local f1, f2 = evo.registry.entity(), evo.registry.entity()
-    local e = evo.registry.entity()
-
-    local function mul2(v) return v * 2 end
-    local function null(_) end
-
-    do
-        assert(not e:apply(mul2, f1))
-        assert(e.__chunk == nil)
-        assert(not e:apply(null, f1))
-        assert(e.__chunk == nil)
-
-        assert(e:insert(f1, 21))
-        assert(e:get(f1) == 21)
-        assert(e.__chunk == evo.registry.chunk(f1))
-
-        assert(e:apply(mul2, f1))
-        assert(e:get(f1) == 42)
-        assert(e.__chunk == evo.registry.chunk(f1))
-
-        assert(e:apply(null, f1))
-        assert(e:get(f1) == true)
-        assert(e.__chunk == evo.registry.chunk(f1))
-    end
-
-    do
-        assert(not e:apply(mul2, f2))
-        assert(e:get(f1) == true)
-        assert(e.__chunk == evo.registry.chunk(f1))
-        assert(not e:apply(null, f2))
-        assert(e:get(f1) == true)
-        assert(e.__chunk == evo.registry.chunk(f1))
-
-        assert(e:insert(f2, 4))
-        assert(e:get(f2) == 4)
-        assert(e.__chunk == evo.registry.chunk(f1, f2))
-
-        assert(e:apply(mul2, f2))
-        assert(e:get(f1) == true)
-        assert(e:get(f2) == 8)
-        assert(e.__chunk == evo.registry.chunk(f1, f2))
-
-        assert(e:apply(null, f2))
-        assert(e:get(f1) == true)
-        assert(e:get(f2) == true)
-        assert(e.__chunk == evo.registry.chunk(f1, f2))
-    end
-end
-
-do
     local f1, f2, f3 = evo.registry.entity(), evo.registry.entity(), evo.registry.entity()
 
     local e1 = evo.registry.entity():set(f1, 10)
@@ -478,53 +428,6 @@ do
         assert(2 == q:assign(f1, 84))
         assert(e1:get(f1) == 84 and e2:get(f1) == 84 and e3:get(f1) == true and e4:get(f1) == true)
         assert(e3:get(f2) == 42 and e4:get(f2) == 42)
-    end
-end
-
-do
-    local f1, f2 = evo.registry.entity(), evo.registry.entity()
-
-    local function mul2(v) return v * 2 end
-    local function null(_) end
-
-    local e1 = evo.registry.entity():set(f1, 10)
-    local e2 = evo.registry.entity():set(f1, 15)
-    local e3 = evo.registry.entity():set(f1, 20):set(f2, 40)
-    local e4 = evo.registry.entity():set(f1, 25):set(f2, 45)
-
-    do
-        local q = evo.registry.query(f2)
-        assert(2 == q:apply(mul2, f1))
-        assert(e1:get(f1) == 10 and e2:get(f1) == 15 and e3:get(f1) == 40 and e4:get(f1) == 50)
-        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
-    end
-
-    do
-        local q = evo.registry.query(f1)
-        assert(4 == q:apply(mul2, f1))
-        assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == 80 and e4:get(f1) == 100)
-        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
-    end
-
-    do
-        local q = evo.registry.query(f1, f2)
-        assert(2 == q:apply(null, f1))
-        assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == true and e4:get(f1) == true)
-        assert(e3:get(f2) == 40 and e4:get(f2) == 45)
-    end
-
-    do
-        local q = evo.registry.query(f1)
-        assert(2 == q:apply(mul2, f2))
-        assert(e1:get(f1) == 20 and e2:get(f1) == 30 and e3:get(f1) == true and e4:get(f1) == true)
-        assert(e3:get(f2) == 80 and e4:get(f2) == 90)
-    end
-
-    do
-        local q = evo.registry.query(f1):exclude(f2)
-        assert(2 == q:apply(mul2, f1))
-        assert(e1:get(f1) == 40 and e2:get(f1) == 60 and e3:get(f1) == true and e4:get(f1) == true)
-        assert(e3:get(f2) == 80 and e4:get(f2) == 90)
     end
 end
 

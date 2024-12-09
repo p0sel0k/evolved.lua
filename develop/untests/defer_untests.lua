@@ -14,32 +14,6 @@ do
 end
 
 do
-    local mul2 = function(v) return v * 2 end
-
-    local f1, f2 = evo.registry.entity(), evo.registry.entity()
-    local e = evo.registry.entity():set(f1, 21)
-    local d = evo.defers.defer():apply(e, mul2, f1)
-    assert(e:get(f1) == 21)
-    assert(d == d:playback())
-    assert(e:get(f1) == 42)
-
-    evo.defers.defer():apply(e, mul2, f2):playback()
-    assert(not e:has(f2) and e:get(f1) == 42)
-end
-
-do
-    local mul2 = function(v) return v * 2 end
-    local mul3 = function(v) return v * 3 end
-
-    local f1, f2 = evo.registry.entity(), evo.registry.entity()
-    local e = evo.registry.entity():set(f1, 21):set(f2, 42)
-    local d = evo.defers.defer():apply(e, mul2, f1):apply(e, mul3, f2)
-    assert(e:get(f1) == 21 and e:get(f2) == 42)
-    assert(d == d:playback())
-    assert(e:get(f1) == 42 and e:get(f2) == 126)
-end
-
-do
     local f = evo.registry.entity()
     local e = evo.registry.entity():set(f, 21)
     local d = evo.defers.defer():assign(e, f, 42)

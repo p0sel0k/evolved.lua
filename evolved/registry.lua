@@ -623,80 +623,6 @@ function registry.query_set(query, fragment, component)
 end
 
 ---@param entity evolved.entity
----@param apply fun(any): any
----@param fragment evolved.entity
----@return boolean is_applied
-function registry.apply(entity, apply, fragment)
-    if not idpools.alive(__guids, entity.__guid) then
-        return false
-    end
-
-    local chunk = entity.__chunk
-    if chunk == nil then return false end
-
-    local components = chunk.__components[fragment]
-    if components == nil then return false end
-
-    do
-        local component = components[entity.__index_in_chunk]
-
-        component = apply(component)
-        component = component == nil and true or component
-
-        components[entity.__index_in_chunk] = component
-    end
-
-    return true
-end
-
----@param chunk evolved.chunk
----@param apply fun(any): any
----@param fragment evolved.entity
----@return integer applied_count
-function registry.chunk_apply(chunk, apply, fragment)
-    local chunk_size = #chunk.__entities
-    local chunk_components = chunk.__components
-    local chunk_fragment_components = chunk_components[fragment]
-
-    if chunk_size == 0 or chunk_fragment_components == nil then
-        return 0
-    end
-
-    for i = 1, chunk_size do
-        local component = chunk_fragment_components[i]
-
-        component = apply(component)
-        component = component == nil and true or component
-
-        chunk_fragment_components[i] = component
-    end
-
-    return chunk_size
-end
-
----@param query evolved.query
----@param apply fun(any): any
----@param fragment evolved.entity
----@return integer applied_count
-function registry.query_apply(query, apply, fragment)
-    local chunks = __execution_stack_acquire()
-
-    for chunk in registry.query_execute(query) do
-        chunks[#chunks + 1] = chunk
-    end
-
-    local applied_count = 0
-
-    for i = 1, #chunks do
-        local applied = registry.chunk_apply(chunks[i], apply, fragment)
-        applied_count = applied_count + applied
-    end
-
-    __execution_stack_release(chunks)
-    return applied_count
-end
-
----@param entity evolved.entity
 ---@param fragment evolved.entity
 ---@param component any
 ---@return boolean is_assigned
@@ -1406,7 +1332,6 @@ evolved_entity_mt.has_all = registry.has_all
 evolved_entity_mt.has_any = registry.has_any
 
 evolved_entity_mt.set = registry.set
-evolved_entity_mt.apply = registry.apply
 evolved_entity_mt.assign = registry.assign
 evolved_entity_mt.insert = registry.insert
 evolved_entity_mt.remove = registry.remove
@@ -1434,7 +1359,6 @@ function evolved_query_mt:__tostring()
 end
 
 evolved_query_mt.set = registry.query_set
-evolved_query_mt.apply = registry.query_apply
 evolved_query_mt.assign = registry.query_assign
 evolved_query_mt.insert = registry.query_insert
 evolved_query_mt.remove = registry.query_remove
@@ -1463,7 +1387,6 @@ function evolved_chunk_mt:__tostring()
 end
 
 evolved_chunk_mt.set = registry.chunk_set
-evolved_chunk_mt.apply = registry.chunk_apply
 evolved_chunk_mt.assign = registry.chunk_assign
 evolved_chunk_mt.insert = registry.chunk_insert
 evolved_chunk_mt.remove = registry.chunk_remove
