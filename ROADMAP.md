@@ -22,3 +22,7 @@
 - [x] add registry.batch_set
 - [x] rename include/exclude/execute to query_include/exclude/execute
 - [x] rename entities/components to chunk_entities/components
+- [ ] remove registry.apply to avoid encouraging incorrect patterns
+- [ ] add on_set, on_assign, on_insert, on_remove callbacks
+- [ ] add initial component fragment
+- [ ] add constructor component fragment
