@@ -132,7 +132,7 @@ end)
 ---@param A evolved.query
 ---@param B evolved.query
 common.describe('Entity Cycle (Simple)', function(a, b, A, B)
-    ---@type any[]
+    ---@type evolved.component[]
     local to_create = {}
 
     for chunk in A:execute() do
@@ -178,7 +178,7 @@ end)
 ---@param A evolved.query
 ---@param B evolved.query
 common.describe('Entity Cycle (Batched)', function(a, b, A, B)
-    ---@type any[]
+    ---@type evolved.component[]
     local to_create = {}
 
     for chunk in A:execute() do

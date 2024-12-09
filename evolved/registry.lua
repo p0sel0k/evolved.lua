@@ -10,6 +10,8 @@ local registry = {}
 ---
 ---
 
+---@alias evolved.component any
+
 ---@alias evolved.execution_stack evolved.chunk[]
 ---@alias evolved.execution_state [table<evolved.entity, boolean>, integer, evolved.execution_stack]
 ---@alias evolved.execution_iterator fun(execute_state: evolved.execution_state?): evolved.chunk?
@@ -53,7 +55,7 @@ evolved_query_mt.__index = evolved_query_mt
 ---@field package __fragment evolved.entity
 ---@field package __children evolved.chunk[]
 ---@field package __entities evolved.entity[]
----@field package __components table<evolved.entity, any[]>
+---@field package __components table<evolved.entity, evolved.component[]>
 ---@field package __with_fragment_cache table<evolved.entity, evolved.chunk>
 ---@field package __without_fragment_cache table<evolved.entity, evolved.chunk>
 
@@ -450,7 +452,7 @@ end
 
 ---@param entity evolved.entity
 ---@param ... evolved.entity fragments
----@return any ... components
+---@return evolved.component ... components
 ---@nodiscard
 function registry.get(entity, ...)
     local chunk = entity.__chunk
@@ -522,7 +524,7 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return evolved.entity
 function registry.set(entity, fragment, component)
     component = component == nil and true or component
@@ -572,7 +574,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer assigned_count
 ---@return integer inserted_count
 function registry.chunk_set(chunk, fragment, component)
@@ -587,7 +589,7 @@ end
 
 ---@param query evolved.query
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer assigned_count
 ---@return integer inserted_count
 function registry.query_set(query, fragment, component)
@@ -624,7 +626,7 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return boolean is_assigned
 function registry.assign(entity, fragment, component)
     component = component == nil and true or component
@@ -648,7 +650,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer assigned_count
 function registry.chunk_assign(chunk, fragment, component)
     component = component == nil and true or component
@@ -670,7 +672,7 @@ end
 
 ---@param query evolved.query
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer assigned_count
 function registry.query_assign(query, fragment, component)
     local chunks = __execution_stack_acquire()
@@ -692,7 +694,7 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return boolean is_inserted
 function registry.insert(entity, fragment, component)
     component = component == nil and true or component
@@ -740,7 +742,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer inserted_count
 function registry.chunk_insert(chunk, fragment, component)
     component = component == nil and true or component
@@ -818,7 +820,7 @@ end
 
 ---@param query evolved.query
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return integer inserted_count
 function registry.query_insert(query, fragment, component)
     local chunks = __execution_stack_acquire()
@@ -1282,7 +1284,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param ... evolved.entity fragments
----@return any[] ... components
+---@return evolved.component[] ... components
 ---@nodiscard
 function registry.chunk_components(chunk, ...)
     local components = chunk.__components

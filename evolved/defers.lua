@@ -96,7 +96,7 @@ end
 ---@param defer evolved.defer
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return evolved.defer
 function defers.set(defer, entity, fragment, component)
     local operations = defer.operations
@@ -114,7 +114,7 @@ end
 ---@param defer evolved.defer
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return evolved.defer
 function defers.assign(defer, entity, fragment, component)
     local operations = defer.operations
@@ -132,7 +132,7 @@ end
 ---@param defer evolved.defer
 ---@param entity evolved.entity
 ---@param fragment evolved.entity
----@param component any
+---@param component evolved.component
 ---@return evolved.defer
 function defers.insert(defer, entity, fragment, component)
     local operations = defer.operations

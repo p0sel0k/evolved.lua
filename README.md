@@ -4,9 +4,9 @@
 
 ```
 defers.defer -> (defer)
-defers.set -> defer -> entity -> entity -> any -> (defer)
-defers.assign -> defer -> entity -> entity -> any -> (defer)
-defers.insert -> defer -> entity -> entity -> any -> (defer)
+defers.set -> defer -> entity -> entity -> component -> (defer)
+defers.assign -> defer -> entity -> entity -> component -> (defer)
+defers.insert -> defer -> entity -> entity -> component -> (defer)
 defers.remove -> defer -> entity -> entity... -> (defer)
 defers.detach -> defer -> entity -> (defer)
 defers.destroy -> defer -> entity -> (defer)
@@ -16,9 +16,9 @@ defers.playback -> defer -> (defer)
 ### Instance `defer`
 
 ```
-defer:set -> entity -> entity -> any -> (defer)
-defer:assign -> entity -> entity -> any -> (defer)
-defer:insert -> entity -> entity -> any -> (defer)
+defer:set -> entity -> entity -> component -> (defer)
+defer:assign -> entity -> entity -> component -> (defer)
+defer:insert -> entity -> entity -> component -> (defer)
 defer:remove -> entity -> entity... -> (defer)
 defer:detach -> entity -> (defer)
 defer:destroy -> entity -> (defer)
@@ -52,19 +52,19 @@ idpool:release -> id -> ()
 registry.entity -> (entity)
 registry.guid -> entity -> (id)
 registry.alive -> entity -> (boolean)
-registry.get -> entity -> entity... -> (any...)
+registry.get -> entity -> entity... -> (component...)
 registry.has -> entity -> entity -> (boolean)
 registry.has_all -> entity -> entity... -> (boolean)
 registry.has_any -> entity -> entity... -> (boolean)
-registry.set -> entity -> entity -> any -> (entity)
-registry.chunk_set -> chunk -> entity -> any -> (integer, integer)
-registry.query_set -> query -> entity -> any -> (integer, integer)
-registry.assign -> entity -> entity -> any -> (boolean)
-registry.chunk_assign -> chunk -> entity -> any -> (integer)
-registry.query_assign -> query -> entity -> any -> (integer)
-registry.insert -> entity -> entity -> any -> (boolean)
-registry.chunk_insert -> chunk -> entity -> any -> (integer)
-registry.query_insert -> query -> entity -> any -> (integer)
+registry.set -> entity -> entity -> component -> (entity)
+registry.chunk_set -> chunk -> entity -> component -> (integer, integer)
+registry.query_set -> query -> entity -> component -> (integer, integer)
+registry.assign -> entity -> entity -> component -> (boolean)
+registry.chunk_assign -> chunk -> entity -> component -> (integer)
+registry.query_assign -> query -> entity -> component -> (integer)
+registry.insert -> entity -> entity -> component -> (boolean)
+registry.chunk_insert -> chunk -> entity -> component -> (integer)
+registry.query_insert -> query -> entity -> component -> (integer)
 registry.remove -> entity -> entity... -> (boolean)
 registry.chunk_remove -> chunk -> entity... -> (integer)
 registry.query_remove -> query -> entity... -> (integer)
@@ -80,7 +80,7 @@ registry.query_exclude -> query -> entity... -> query
 registry.query_execute -> query -> ({execution_state? -> chunk?}, execution_state?)
 registry.chunk -> entity -> entity... -> (chunk)
 registry.chunk_entities -> chunk -> (entity[])
-registry.chunk_components -> chunk -> entity... -> (any[]...)
+registry.chunk_components -> chunk -> entity... -> (component[]...)
 ```
 
 ### Instance `entity`
@@ -88,14 +88,13 @@ registry.chunk_components -> chunk -> entity... -> (any[]...)
 ```
 entity:guid -> (id)
 entity:alive -> (boolean)
-entity:get -> entity... -> (any...)
+entity:get -> entity... -> (component...)
 entity:has -> entity -> (boolean)
 entity:has_all -> entity... -> (boolean)
 entity:has_any -> entity... -> (boolean)
-
-entity:set -> entity -> any -> (entity)
-entity:assign -> entity -> any -> (boolean)
-entity:insert -> entity -> any -> (boolean)
+entity:set -> entity -> component -> (entity)
+entity:assign -> entity -> component -> (boolean)
+entity:insert -> entity -> component -> (boolean)
 entity:remove -> entity... -> (boolean)
 entity:detach -> (entity)
 entity:destroy -> (entity)
@@ -104,13 +103,12 @@ entity:destroy -> (entity)
 ### Instance `query`
 
 ```
-query:set -> entity -> any -> (integer, integer)
-query:assign -> entity -> any -> (integer)
-query:insert -> entity -> any -> (integer)
+query:set -> entity -> component -> (integer, integer)
+query:assign -> entity -> component -> (integer)
+query:insert -> entity -> component -> (integer)
 query:remove -> entity... -> (integer)
 query:detach -> (integer)
 query:destroy -> (integer)
-
 query:include -> entity... -> query
 query:exclude -> entity... -> query
 query:execute -> ({execution_state? -> chunk?}, execution_state?)
@@ -119,24 +117,23 @@ query:execute -> ({execution_state? -> chunk?}, execution_state?)
 ### Instance `chunk`
 
 ```
-chunk:set -> entity -> any -> (integer, integer)
-chunk:assign -> entity -> any -> (integer)
-chunk:insert -> entity -> any -> (integer)
+chunk:set -> entity -> component -> (integer, integer)
+chunk:assign -> entity -> component -> (integer)
+chunk:insert -> entity -> component -> (integer)
 chunk:remove -> entity... -> (integer)
 chunk:detach -> (integer)
 chunk:destroy -> (integer)
-
 chunk:entities -> (entity[])
-chunk:components -> entity... -> (any[]...)
+chunk:components -> entity... -> (component[]...)
 ```
 
 ## Module `singles`
 
 ```
-singles.single -> any -> (entity)
-singles.set -> entity -> any -> (entity)
-singles.get -> entity -> (any)
+singles.single -> component -> (entity)
+singles.get -> entity -> (component)
 singles.has -> entity -> (boolean)
+singles.set -> entity -> component -> (entity)
 ```
 
 ## Module `vectors`

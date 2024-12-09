@@ -3,7 +3,7 @@ local registry = require 'evolved.registry'
 ---@class evolved.singles
 local singles = {}
 
----@param component any
+---@param component evolved.component
 ---@return evolved.entity
 ---@nodiscard
 function singles.single(component)
@@ -12,14 +12,7 @@ function singles.single(component)
 end
 
 ---@param single evolved.entity
----@param component any
----@return evolved.entity
-function singles.set(single, component)
-    return single:set(single, component)
-end
-
----@param single evolved.entity
----@return any
+---@return evolved.component
 ---@nodiscard
 function singles.get(single)
     return single:get(single)
@@ -30,6 +23,13 @@ end
 ---@nodiscard
 function singles.has(single)
     return single:has(single)
+end
+
+---@param single evolved.entity
+---@param component evolved.component
+---@return evolved.entity
+function singles.set(single, component)
+    return single:set(single, component)
 end
 
 return singles
