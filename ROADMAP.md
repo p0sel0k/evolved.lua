@@ -1,27 +1,3 @@
 # Roadmap
 
 ## Backlog
-
-- [x] add additional oop-like api
-- [x] add blocklist of fragments for queries
-- [x] add checks of prohibited changes while querying
-- [x] add check inserts and removes after destroying entity
-- [x] add multi remove fragments function from entities
-- [ ] cache matched chunks in queries
-- [x] cache transitions between chunks
-- [x] chunk's children should be stored in an array instead of a table
-- [x] support queries without fragments
-- [ ] add assertions for input arguments
-- [x] registry.assign should not change chunks' tree
-- [x] add deferred changes api
-- [ ] add batch vector operations
-- [ ] add inplace vector operations
-- [x] cache chunk lists in batch operations
-- [x] impl compat.move for 5.1 vanilla lua
-- [x] add registry.batch_set
-- [x] rename include/exclude/execute to query_include/exclude/execute
-- [x] rename entities/components to chunk_entities/components
-- [x] remove registry.apply to avoid encouraging incorrect patterns
-- [ ] add on_set, on_assign, on_insert, on_remove callbacks
-- [ ] add initial component fragment
-- [ ] add constructor component fragment
