@@ -2,6 +2,8 @@
 
 ```
 id :: id
+pack :: integer, integer -> id
+unpack :: id -> integer, integer
 alive :: id -> boolean
 destroy :: id -> ()
 get :: entity, fragment...  -> component...

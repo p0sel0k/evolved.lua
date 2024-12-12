@@ -10,6 +10,18 @@ local evolved = {}
 ---@nodiscard
 function evolved.id() end
 
+---@param index integer
+---@param version integer
+---@return evolved.id
+---@nodiscard
+function evolved.pack(index, version) end
+
+---@param id evolved.id
+---@return integer index
+---@return integer version
+---@nodiscard
+function evolved.unpack(id) end
+
 ---@param id evolved.id
 ---@return boolean
 ---@nodiscard
