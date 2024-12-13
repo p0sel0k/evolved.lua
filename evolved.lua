@@ -6,6 +6,9 @@ local evolved = {}
 ---@alias evolved.fragment evolved.id
 ---@alias evolved.component any
 
+---@class (exact) evolved.chunk
+---@field __fragments table<evolved.fragment, boolean>
+
 ---
 ---
 ---
@@ -14,6 +17,8 @@ local evolved = {}
 
 local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
+
+local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 
 ---
 ---
@@ -98,6 +103,84 @@ end
 ---
 ---
 
+---@param chunk evolved.chunk
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+local function __chunk_has_fragment(chunk, fragment)
+    return chunk.__fragments[fragment]
+end
+
+---@param chunk evolved.chunk
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+local function __chunk_has_all_fragments(chunk, ...)
+    local fragments = chunk.__fragments
+
+    for i = 1, select('#', ...) do
+        if not fragments[select(i, ...)] then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@param chunk evolved.chunk
+---@param fragment_list evolved.fragment[]
+---@return boolean
+---@nodiscard
+local function __chunk_has_all_fragment_list(chunk, fragment_list)
+    local fragments = chunk.__fragments
+
+    for i = 1, #fragment_list do
+        if not fragments[fragment_list[i]] then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@param chunk evolved.chunk
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+local function __chunk_has_any_fragments(chunk, ...)
+    local fragments = chunk.__fragments
+
+    for i = 1, select('#', ...) do
+        if fragments[select(i, ...)] then
+            return true
+        end
+    end
+
+    return false
+end
+
+---@param chunk evolved.chunk
+---@param fragment_list evolved.fragment[]
+---@return boolean
+---@nodiscard
+local function __chunk_has_any_fragment_list(chunk, fragment_list)
+    local fragments = chunk.__fragments
+
+    for i = 1, #fragment_list do
+        if fragments[fragment_list[i]] then
+            return true
+        end
+    end
+
+    return false
+end
+
+---
+---
+---
+---
+---
+
 ---@return evolved.id
 ---@nodiscard
 function evolved.id()
@@ -144,19 +227,58 @@ function evolved.get(entity, ...) end
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-function evolved.has(entity, fragment) end
+function evolved.has(entity, fragment)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local entity_index = __unpack_id(entity)
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
+        return false
+    end
+
+    return __chunk_has_fragment(entity_chunk, fragment)
+end
 
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function evolved.has_all(entity, ...) end
+function evolved.has_all(entity, ...)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local entity_index = __unpack_id(entity)
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
+        return select('#', ...) == 0
+    end
+
+    return __chunk_has_all_fragments(entity_chunk, ...)
+end
 
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function evolved.has_any(entity, ...) end
+function evolved.has_any(entity, ...)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local entity_index = __unpack_id(entity)
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
+        return false
+    end
+
+    return __chunk_has_any_fragments(entity_chunk, ...)
+end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
