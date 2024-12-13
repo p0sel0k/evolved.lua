@@ -8,6 +8,7 @@ local evolved = {}
 
 ---@class (exact) evolved.chunk
 ---@field __fragments table<evolved.fragment, boolean>
+---@field __components table<evolved.fragment, evolved.component[]>
 
 ---
 ---
@@ -19,6 +20,7 @@ local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
+local __entity_chunk_indices = {} ---@type table<integer, integer>
 
 ---
 ---
@@ -175,6 +177,46 @@ local function __chunk_has_any_fragment_list(chunk, fragment_list)
     return false
 end
 
+---@param chunk evolved.chunk
+---@param chunk_index integer
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+---@nodiscard
+local function __chunk_get_components(chunk, chunk_index, ...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local components = chunk.__components
+
+    if fragment_count == 1 then
+        local f1 = ...
+        local cs1 = components[f1]
+        return cs1 and cs1[chunk_index]
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        local cs1, cs2 = components[f1], components[f2]
+        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index]
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
+        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index], cs3 and cs3[chunk_index]
+    end
+
+    do
+        local f1, f2, f3 = ...
+        local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
+        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index], cs3 and cs3[chunk_index],
+            __chunk_get_components(chunk, chunk_index, select(4, ...))
+    end
+end
+
 ---
 ---
 ---
@@ -221,7 +263,21 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-function evolved.get(entity, ...) end
+function evolved.get(entity, ...)
+    if not __alive_id(entity) then
+        return
+    end
+
+    local entity_index = __unpack_id(entity)
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
+        return
+    end
+
+    local entity_chunk_index = __entity_chunk_indices[entity_index]
+    return __chunk_get_components(entity_chunk, entity_chunk_index, ...)
+end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
