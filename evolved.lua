@@ -7,8 +7,14 @@ local evolved = {}
 ---@alias evolved.component any
 
 ---@class (exact) evolved.chunk
+---@field __parent? evolved.chunk
+---@field __children evolved.chunk[]
+---@field __fragment evolved.fragment
+---@field __entities evolved.entity[]
 ---@field __fragments table<evolved.fragment, boolean>
 ---@field __components table<evolved.fragment, evolved.component[]>
+---@field __with_fragment_cache table<evolved.fragment, evolved.chunk>
+---@field __without_fragment_cache table<evolved.fragment, evolved.chunk>
 
 ---
 ---
@@ -19,8 +25,13 @@ local evolved = {}
 local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
 
+local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
+local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
+
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_chunk_indices = {} ---@type table<integer, integer>
+
+local __structural_changes = 0 ---@type integer
 
 ---
 ---
@@ -97,6 +108,171 @@ local function __release_id(id)
 
     __freelist_ids[index] = __available_idx + version
     __available_idx = index
+end
+
+---
+---
+---
+---
+---
+
+---@param fragment evolved.fragment
+---@return evolved.chunk
+---@nodiscard
+local function __root_chunk(fragment)
+    do
+        local root_chunk = __root_chunks[fragment]
+        if root_chunk then return root_chunk end
+    end
+
+    ---@type evolved.chunk
+    local root_chunk = {
+        __parent = nil,
+        __children = {},
+        __fragment = fragment,
+        __entities = {},
+        __fragments = { [fragment] = true },
+        __components = { [fragment] = {} },
+        __with_fragment_cache = {},
+        __without_fragment_cache = {},
+    }
+
+    do
+        __root_chunks[fragment] = root_chunk
+    end
+
+    do
+        local major_chunks = __major_chunks[fragment] or {}
+        major_chunks[#major_chunks + 1] = root_chunk
+        __major_chunks[fragment] = major_chunks
+    end
+
+    __structural_changes = __structural_changes + 1
+    return root_chunk
+end
+
+---@param chunk? evolved.chunk
+---@param fragment evolved.fragment
+---@return evolved.chunk
+---@nodiscard
+local function __chunk_with_fragment(chunk, fragment)
+    if chunk == nil then
+        return __root_chunk(fragment)
+    end
+
+    if chunk.__fragments[fragment] then
+        return chunk
+    end
+
+    do
+        local cached_chunk = chunk.__with_fragment_cache[fragment]
+        if cached_chunk then return cached_chunk end
+    end
+
+    if fragment == chunk.__fragment then
+        return chunk
+    end
+
+    if fragment < chunk.__fragment then
+        local sibling_chunk = __chunk_with_fragment(
+            __chunk_with_fragment(chunk.__parent, fragment),
+            chunk.__fragment)
+
+        chunk.__with_fragment_cache[fragment] = sibling_chunk
+        sibling_chunk.__without_fragment_cache[fragment] = chunk
+
+        return sibling_chunk
+    end
+
+    ---@type evolved.chunk
+    local child_chunk = {
+        __parent = chunk,
+        __children = {},
+        __fragment = fragment,
+        __entities = {},
+        __fragments = { [fragment] = true },
+        __components = { [fragment] = {} },
+        __with_fragment_cache = {},
+        __without_fragment_cache = {},
+    }
+
+    for f, _ in pairs(chunk.__components) do
+        child_chunk.__fragments[f] = true
+        child_chunk.__components[f] = {}
+    end
+
+    do
+        local chunk_children = chunk.__children
+        chunk_children[#chunk_children + 1] = child_chunk
+    end
+
+    do
+        chunk.__with_fragment_cache[fragment] = child_chunk
+        child_chunk.__without_fragment_cache[fragment] = chunk
+    end
+
+    do
+        local fragment_chunks = __major_chunks[fragment] or {}
+        fragment_chunks[#fragment_chunks + 1] = child_chunk
+        __major_chunks[fragment] = fragment_chunks
+    end
+
+    __structural_changes = __structural_changes + 1
+    return child_chunk
+end
+
+---@param chunk? evolved.chunk
+---@param fragment evolved.fragment
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_without_fragment(chunk, fragment)
+    if chunk == nil then
+        return nil
+    end
+
+    if not chunk.__fragments[fragment] then
+        return chunk
+    end
+
+    do
+        local cached_chunk = chunk.__without_fragment_cache[fragment]
+        if cached_chunk then return cached_chunk end
+    end
+
+    if fragment == chunk.__fragment then
+        return chunk.__parent
+    end
+
+    if fragment < chunk.__fragment then
+        local sibling_chunk = __chunk_with_fragment(
+            __chunk_without_fragment(chunk.__parent, fragment),
+            chunk.__fragment)
+
+        chunk.__without_fragment_cache[fragment] = sibling_chunk
+        sibling_chunk.__with_fragment_cache[fragment] = chunk
+
+        return sibling_chunk
+    end
+
+    return chunk
+end
+
+---@param chunk? evolved.chunk
+---@param ... evolved.fragment fragments
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_without_fragments(chunk, ...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return chunk
+    end
+
+    for i = 1, fragment_count do
+        chunk = __chunk_without_fragment(chunk, select(i, ...))
+    end
+
+    return chunk
 end
 
 ---
