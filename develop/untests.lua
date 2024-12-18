@@ -386,3 +386,74 @@ do
     assert(evo.get(e, f1) == 42)
     assert(evo.get(e, f2) == false)
 end
+
+do
+    local f = evo.id()
+    local e = evo.id()
+
+    local set_count = 0
+    local assign_count = 0
+    local insert_count = 0
+
+    local last_set_component = nil
+    local last_assign_component = nil
+    local last_insert_component = nil
+
+    evo.set(f, evo.ON_SET, function(entity, fragment, component)
+        assert(entity == e)
+        assert(fragment == f)
+        set_count = set_count + 1
+        last_set_component = component
+    end)
+
+    evo.set(f, evo.ON_ASSIGN, function(entity, fragment, component)
+        assert(entity == e)
+        assert(fragment == f)
+        assign_count = assign_count + 1
+        last_assign_component = component
+    end)
+
+    evo.set(f, evo.ON_INSERT, function(entity, fragment, component)
+        assert(entity == e)
+        assert(fragment == f)
+        insert_count = insert_count + 1
+        last_insert_component = component
+    end)
+
+    assert(evo.insert(e, f, 21))
+    assert(set_count == 1)
+    assert(assign_count == 0)
+    assert(insert_count == 1)
+    assert(last_insert_component == 21)
+
+    assert(evo.assign(e, f, 42))
+    assert(set_count == 2)
+    assert(assign_count == 1)
+    assert(insert_count == 1)
+    assert(last_assign_component == 42)
+
+    assert(evo.assign(e, f, 43))
+    assert(set_count == 3)
+    assert(assign_count == 2)
+    assert(insert_count == 1)
+    assert(last_assign_component == 43)
+
+    evo.clear(e)
+    assert(set_count == 3)
+    assert(assign_count == 2)
+    assert(insert_count == 1)
+
+    evo.set(e, f, 44)
+    assert(set_count == 4)
+    assert(assign_count == 2)
+    assert(insert_count == 2)
+    assert(last_set_component == 44)
+    assert(last_insert_component == 44)
+
+    evo.set(e, f, 45)
+    assert(set_count == 5)
+    assert(assign_count == 3)
+    assert(insert_count == 2)
+    assert(last_set_component == 45)
+    assert(last_assign_component == 45)
+end

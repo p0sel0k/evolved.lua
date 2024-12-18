@@ -119,6 +119,10 @@ end
 evolved.DEFAULT = __acquire_id()
 evolved.CONSTRUCT = __acquire_id()
 
+evolved.ON_SET = __acquire_id()
+evolved.ON_ASSIGN = __acquire_id()
+evolved.ON_INSERT = __acquire_id()
+
 ---
 ---
 ---
@@ -131,17 +135,28 @@ evolved.CONSTRUCT = __acquire_id()
 ---@param ... any construct additional parameters
 ---@return evolved.component
 local function __construct(entity, fragment, component, ...)
-    local construct = evolved.get(fragment, evolved.CONSTRUCT)
-
-    if construct ~= nil then
-        component = construct(entity, component, ...)
-    end
-
-    if component == nil then
-        component = evolved.get(fragment, evolved.DEFAULT)
-    end
-
+    local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+    if construct ~= nil then component = construct(entity, component, ...) end
+    if component == nil then component = default end
     return component == nil and true or component
+end
+
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+local function __on_assign(entity, fragment, component)
+    local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+    if on_set then on_set(entity, fragment, component) end
+    if on_assign then on_assign(entity, fragment, component) end
+end
+
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+local function __on_insert(entity, fragment, component)
+    local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+    if on_set then on_set(entity, fragment, component) end
+    if on_insert then on_insert(entity, fragment, component) end
 end
 
 ---
@@ -590,6 +605,7 @@ function evolved.set(entity, fragment, component, ...)
     if old_chunk == new_chunk then
         local old_chunk_fragment_components = old_chunk.__components[fragment]
         old_chunk_fragment_components[old_place] = component
+        __on_assign(entity, fragment, component)
         return true
     end
 
@@ -635,6 +651,7 @@ function evolved.set(entity, fragment, component, ...)
 
     __structural_changes = __structural_changes + 1
 
+    __on_insert(entity, fragment, component)
     return true
 end
 
@@ -667,6 +684,7 @@ function evolved.assign(entity, fragment, component, ...)
 
     chunk_fragment_components[place] = component
 
+    __on_assign(entity, fragment, component)
     return true
 end
 
@@ -736,6 +754,7 @@ function evolved.insert(entity, fragment, component, ...)
 
     __structural_changes = __structural_changes + 1
 
+    __on_insert(entity, fragment, component)
     return true
 end
 
