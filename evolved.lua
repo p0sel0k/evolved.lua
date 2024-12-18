@@ -29,7 +29,7 @@ local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
-local __entity_chunk_indices = {} ---@type table<integer, integer>
+local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
@@ -354,11 +354,11 @@ local function __chunk_has_any_fragment_list(chunk, fragment_list)
 end
 
 ---@param chunk evolved.chunk
----@param chunk_index integer
+---@param place integer
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-local function __chunk_get_components(chunk, chunk_index, ...)
+local function __chunk_get_components(chunk, place, ...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -370,26 +370,26 @@ local function __chunk_get_components(chunk, chunk_index, ...)
     if fragment_count == 1 then
         local f1 = ...
         local cs1 = components[f1]
-        return cs1 and cs1[chunk_index]
+        return cs1 and cs1[place]
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
         local cs1, cs2 = components[f1], components[f2]
-        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index]
+        return cs1 and cs1[place], cs2 and cs2[place]
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
         local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
-        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index], cs3 and cs3[chunk_index]
+        return cs1 and cs1[place], cs2 and cs2[place], cs3 and cs3[place]
     end
 
     do
         local f1, f2, f3 = ...
         local cs1, cs2, cs3 = components[f1], components[f2], components[f3]
-        return cs1 and cs1[chunk_index], cs2 and cs2[chunk_index], cs3 and cs3[chunk_index],
-            __chunk_get_components(chunk, chunk_index, select(4, ...))
+        return cs1 and cs1[place], cs2 and cs2[place], cs3 and cs3[place],
+            __chunk_get_components(chunk, place, select(4, ...))
     end
 end
 
@@ -451,8 +451,8 @@ function evolved.get(entity, ...)
         return
     end
 
-    local entity_chunk_index = __entity_chunk_indices[entity_index]
-    return __chunk_get_components(entity_chunk, entity_chunk_index, ...)
+    local entity_place = __entity_places[entity_index]
+    return __chunk_get_components(entity_chunk, entity_place, ...)
 end
 
 ---@param entity evolved.entity
