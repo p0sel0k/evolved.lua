@@ -116,6 +116,40 @@ end
 ---
 ---
 
+evolved.DEFAULT = __acquire_id()
+evolved.CONSTRUCT = __acquire_id()
+
+---
+---
+---
+---
+---
+
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+---@param ... any construct additional parameters
+---@return evolved.component
+local function __construct(entity, fragment, component, ...)
+    local construct = evolved.get(fragment, evolved.CONSTRUCT)
+
+    if construct ~= nil then
+        component = construct(entity, component, ...)
+    end
+
+    if component == nil then
+        component = evolved.get(fragment, evolved.DEFAULT)
+    end
+
+    return component == nil and true or component
+end
+
+---
+---
+---
+---
+---
+
 ---@param fragment evolved.fragment
 ---@return evolved.chunk
 ---@nodiscard
@@ -515,7 +549,10 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param component evolved.component
-function evolved.set(entity, fragment, component)
+---@param ... any construct additional parameters
+function evolved.set(entity, fragment, component, ...)
+    component = __construct(entity, fragment, component, ...)
+
     if not __alive_id(entity) then
         return false
     end
@@ -582,8 +619,11 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param component evolved.component
+---@param ... any construct additional parameters
 ---@return boolean is_assigned
-function evolved.assign(entity, fragment, component)
+function evolved.assign(entity, fragment, component, ...)
+    component = __construct(entity, fragment, component, ...)
+
     if not __alive_id(entity) then
         return false
     end
@@ -611,8 +651,11 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param component evolved.component
+---@param ... any construct additional parameters
 ---@return boolean is_inserted
-function evolved.insert(entity, fragment, component)
+function evolved.insert(entity, fragment, component, ...)
+    component = __construct(entity, fragment, component, ...)
+
     if not __alive_id(entity) then
         return false
     end
