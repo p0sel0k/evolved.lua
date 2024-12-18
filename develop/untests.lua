@@ -224,3 +224,52 @@ do
     assert(evo.assign(e, f2, 44))
     assert(evo.get(e, f2) == 44)
 end
+
+do
+    local f1, f2 = evo.id(), evo.id()
+
+    local e = evo.id()
+
+    evo.set(e, f1, 41)
+    assert(evo.get(e, f1) == 41)
+    assert(evo.get(e, f2) == nil)
+
+    evo.set(e, f1, 43)
+    assert(evo.get(e, f1) == 43)
+    assert(evo.get(e, f2) == nil)
+
+    evo.set(e, f2, 42)
+    assert(evo.get(e, f1) == 43)
+    assert(evo.get(e, f2) == 42)
+
+    evo.set(e, f2, 44)
+    assert(evo.get(e, f1) == 43)
+    assert(evo.get(e, f2) == 44)
+end
+
+do
+    local f1, f2 = evo.id(), evo.id()
+    local e1, e2 = evo.id(), evo.id()
+
+    evo.set(e1, f1, 41)
+    evo.set(e2, f1, 42)
+
+    do
+        assert(evo.get(e1, f1) == 41 and evo.get(e1, f2) == nil)
+        assert(evo.get(e2, f1) == 42 and evo.get(e2, f2) == nil)
+    end
+
+    evo.set(e1, f2, 43)
+
+    do
+        assert(evo.get(e1, f1) == 41 and evo.get(e1, f2) == 43)
+        assert(evo.get(e2, f1) == 42 and evo.get(e2, f2) == nil)
+    end
+
+    evo.set(e2, f2, 44)
+
+    do
+        assert(evo.get(e1, f1) == 41 and evo.get(e1, f2) == 43)
+        assert(evo.get(e2, f1) == 42 and evo.get(e2, f2) == 44)
+    end
+end

@@ -515,7 +515,69 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param component evolved.component
-function evolved.set(entity, fragment, component) end
+function evolved.set(entity, fragment, component)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local index = __unpack_id(entity)
+
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
+
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+    local new_place = #new_chunk.__entities + 1
+
+    if old_chunk == new_chunk then
+        local old_chunk_fragment_components = old_chunk.__components[fragment]
+        old_chunk_fragment_components[old_place] = component
+        return true
+    end
+
+    local new_chunk_entities = new_chunk.__entities
+    local new_chunk_components = new_chunk.__components
+
+    new_chunk_entities[new_place] = entity
+    new_chunk_components[fragment][new_place] = component
+
+    if old_chunk then
+        local old_chunk_size = #old_chunk.__entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_components = old_chunk.__components
+
+        for old_f, old_cs in pairs(old_chunk_components) do
+            local new_cs = new_chunk_components[old_f]
+            new_cs[new_place] = old_cs[old_place]
+        end
+
+        if old_place == old_chunk_size then
+            old_chunk_entities[old_place] = nil
+
+            for _, cs in pairs(old_chunk_components) do
+                cs[old_place] = nil
+            end
+        else
+            local last_chunk_entity = old_chunk_entities[old_chunk_size]
+            __entity_places[__unpack_id(last_chunk_entity)] = old_place
+
+            old_chunk_entities[old_place] = last_chunk_entity
+            old_chunk_entities[old_chunk_size] = nil
+
+            for _, cs in pairs(old_chunk_components) do
+                local old_chunk_component = cs[old_chunk_size]
+                cs[old_place] = old_chunk_component
+                cs[old_chunk_size] = nil
+            end
+        end
+    end
+
+    __entity_chunks[index] = new_chunk
+    __entity_places[index] = new_place
+
+    __structural_changes = __structural_changes + 1
+
+    return true
+end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
