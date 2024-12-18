@@ -459,6 +459,49 @@ do
 end
 
 do
+    local f1, f2 = evo.id(2)
+    local e = evo.id()
+
+    local remove_count = 0
+    local last_removed_component = nil
+
+    evo.set(f1, evo.ON_REMOVE, function(entity, fragment, component)
+        assert(entity == e)
+        assert(fragment == f1)
+        remove_count = remove_count + 1
+        last_removed_component = component
+    end)
+
+    evo.set(f2, evo.ON_REMOVE, function(entity, fragment, component)
+        assert(entity == e)
+        assert(fragment == f2)
+        remove_count = remove_count + 1
+        last_removed_component = component
+    end)
+
+    assert(evo.insert(e, f1, 42))
+    evo.remove(e, f1, f2)
+    assert(remove_count == 1)
+    assert(last_removed_component == 42)
+
+    assert(evo.insert(e, f1, 42))
+    assert(evo.insert(e, f2, 43))
+    evo.remove(e, f1, f2)
+    assert(remove_count == 3)
+    assert(last_removed_component == 43)
+
+    assert(evo.insert(e, f1, 44))
+    assert(evo.insert(e, f2, 45))
+    evo.clear(e)
+    assert(remove_count == 5)
+
+    assert(evo.insert(e, f1, 46))
+    assert(evo.insert(e, f2, 47))
+    evo.destroy(e)
+    assert(remove_count == 7)
+end
+
+do
     local f = evo.id()
     local e = evo.id()
 

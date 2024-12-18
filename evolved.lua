@@ -122,6 +122,7 @@ evolved.CONSTRUCT = __acquire_id()
 evolved.ON_SET = __acquire_id()
 evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
+evolved.ON_REMOVE = __acquire_id()
 
 ---
 ---
@@ -157,6 +158,14 @@ local function __on_insert(entity, fragment, component)
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
     if on_set then on_set(entity, fragment, component) end
     if on_insert then on_insert(entity, fragment, component) end
+end
+
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+local function __on_remove(entity, fragment, component)
+    local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+    if on_remove then on_remove(entity, fragment, component) end
 end
 
 ---
@@ -787,7 +796,20 @@ function evolved.remove(entity, ...)
 
     local old_chunk_size = #old_chunk.__entities
     local old_chunk_entities = old_chunk.__entities
+    local old_chunk_fragments = old_chunk.__fragments
     local old_chunk_components = old_chunk.__components
+
+    for i = 1, select('#', ...) do
+        local old_f = select(i, ...)
+        if old_chunk_fragments[old_f] then
+            local old_cs = old_chunk_components[old_f]
+            __on_remove(entity, old_f, old_cs[old_place])
+        end
+    end
+
+    if old_chunk ~= __entity_chunks[index] then
+        error('entity structural changes are prohibited in ON_REMOVE hooks', 2)
+    end
 
     if new_chunk and assert(new_place) then
         local new_chunk_entities = new_chunk.__entities
@@ -844,7 +866,17 @@ function evolved.clear(entity)
 
     local chunk_size = #chunk.__entities
     local chunk_entities = chunk.__entities
+    local chunk_fragments = chunk.__fragments
     local chunk_components = chunk.__components
+
+    for f, _ in pairs(chunk_fragments) do
+        local cs = chunk_components[f]
+        __on_remove(entity, f, cs[place])
+    end
+
+    if chunk ~= __entity_chunks[index] then
+        error('entity structural changes are prohibited in ON_REMOVE hooks', 2)
+    end
 
     if place == chunk_size then
         chunk_entities[place] = nil
