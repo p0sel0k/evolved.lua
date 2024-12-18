@@ -444,15 +444,15 @@ function evolved.get(entity, ...)
         return
     end
 
-    local entity_index = __unpack_id(entity)
-    local entity_chunk = __entity_chunks[entity_index]
+    local index = __unpack_id(entity)
+    local chunk = __entity_chunks[index]
 
-    if not entity_chunk then
+    if not chunk then
         return
     end
 
-    local entity_place = __entity_places[entity_index]
-    return __chunk_get_components(entity_chunk, entity_place, ...)
+    local place = __entity_places[index]
+    return __chunk_get_components(chunk, place, ...)
 end
 
 ---@param entity evolved.entity
@@ -464,14 +464,14 @@ function evolved.has(entity, fragment)
         return false
     end
 
-    local entity_index = __unpack_id(entity)
-    local entity_chunk = __entity_chunks[entity_index]
+    local index = __unpack_id(entity)
+    local chunk = __entity_chunks[index]
 
-    if not entity_chunk then
+    if not chunk then
         return false
     end
 
-    return __chunk_has_fragment(entity_chunk, fragment)
+    return __chunk_has_fragment(chunk, fragment)
 end
 
 ---@param entity evolved.entity
@@ -483,14 +483,14 @@ function evolved.has_all(entity, ...)
         return false
     end
 
-    local entity_index = __unpack_id(entity)
-    local entity_chunk = __entity_chunks[entity_index]
+    local index = __unpack_id(entity)
+    local chunk = __entity_chunks[index]
 
-    if not entity_chunk then
+    if not chunk then
         return select('#', ...) == 0
     end
 
-    return __chunk_has_all_fragments(entity_chunk, ...)
+    return __chunk_has_all_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -502,14 +502,14 @@ function evolved.has_any(entity, ...)
         return false
     end
 
-    local entity_index = __unpack_id(entity)
-    local entity_chunk = __entity_chunks[entity_index]
+    local index = __unpack_id(entity)
+    local chunk = __entity_chunks[index]
 
-    if not entity_chunk then
+    if not chunk then
         return false
     end
 
-    return __chunk_has_any_fragments(entity_chunk, ...)
+    return __chunk_has_any_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -527,13 +527,172 @@ function evolved.assign(entity, fragment, component) end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 ---@return boolean is_inserted
-function evolved.insert(entity, fragment, component) end
+function evolved.insert(entity, fragment, component)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local index = __unpack_id(entity)
+
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
+
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+    local new_place = #new_chunk.__entities + 1
+
+    if old_chunk == new_chunk then
+        return false
+    end
+
+    local new_chunk_entities = new_chunk.__entities
+    local new_chunk_components = new_chunk.__components
+
+    new_chunk_entities[new_place] = entity
+    new_chunk_components[fragment][new_place] = component
+
+    if old_chunk then
+        local old_chunk_size = #old_chunk.__entities
+        local old_chunk_entities = old_chunk.__entities
+        local old_chunk_components = old_chunk.__components
+
+        for old_f, old_cs in pairs(old_chunk_components) do
+            local new_cs = new_chunk_components[old_f]
+            new_cs[new_place] = old_cs[old_place]
+        end
+
+        if old_place == old_chunk_size then
+            old_chunk_entities[old_place] = nil
+
+            for _, cs in pairs(old_chunk_components) do
+                cs[old_place] = nil
+            end
+        else
+            local last_chunk_entity = old_chunk_entities[old_chunk_size]
+            __entity_places[__unpack_id(last_chunk_entity)] = old_place
+
+            old_chunk_entities[old_place] = last_chunk_entity
+            old_chunk_entities[old_chunk_size] = nil
+
+            for _, cs in pairs(old_chunk_components) do
+                local old_chunk_component = cs[old_chunk_size]
+                cs[old_place] = old_chunk_component
+                cs[old_chunk_size] = nil
+            end
+        end
+    end
+
+    __entity_chunks[index] = new_chunk
+    __entity_places[index] = new_place
+
+    __structural_changes = __structural_changes + 1
+
+    return true
+end
 
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
-function evolved.remove(entity, ...) end
+function evolved.remove(entity, ...)
+    if not __alive_id(entity) then
+        return
+    end
+
+    local index = __unpack_id(entity)
+
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
+
+    local new_chunk = __chunk_without_fragments(old_chunk, ...)
+    local new_place = new_chunk and #new_chunk.__entities + 1
+
+    if old_chunk == new_chunk then
+        return
+    end
+
+    local old_chunk_size = #old_chunk.__entities
+    local old_chunk_entities = old_chunk.__entities
+    local old_chunk_components = old_chunk.__components
+
+    if new_chunk and assert(new_place) then
+        local new_chunk_entities = new_chunk.__entities
+        local new_chunk_components = new_chunk.__components
+
+        new_chunk_entities[new_place] = entity
+
+        for new_f, new_cs in pairs(new_chunk_components) do
+            local old_cs = old_chunk_components[new_f]
+            new_cs[new_place] = old_cs[old_place]
+        end
+    end
+
+    if old_place == old_chunk_size then
+        old_chunk_entities[old_place] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            cs[old_place] = nil
+        end
+    else
+        local last_chunk_entity = old_chunk_entities[old_chunk_size]
+        __entity_places[__unpack_id(last_chunk_entity)] = old_place
+
+        old_chunk_entities[old_place] = last_chunk_entity
+        old_chunk_entities[old_chunk_size] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            local old_chunk_component = cs[old_chunk_size]
+            cs[old_place] = old_chunk_component
+            cs[old_chunk_size] = nil
+        end
+    end
+
+    __entity_chunks[index] = new_chunk
+    __entity_places[index] = new_place
+
+    __structural_changes = __structural_changes + 1
+end
 
 ---@param entity evolved.entity
-function evolved.clear(entity) end
+function evolved.clear(entity)
+    if not __alive_id(entity) then
+        return
+    end
+
+    local index = __unpack_id(entity)
+
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
+
+    if not old_chunk then
+        return
+    end
+
+    local old_chunk_size = #old_chunk.__entities
+    local old_chunk_entities = old_chunk.__entities
+    local old_chunk_components = old_chunk.__components
+
+    if old_place == old_chunk_size then
+        old_chunk_entities[old_place] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            cs[old_place] = nil
+        end
+    else
+        local last_chunk_entity = old_chunk_entities[old_chunk_size]
+        __entity_places[__unpack_id(last_chunk_entity)] = old_place
+
+        old_chunk_entities[old_place] = last_chunk_entity
+        old_chunk_entities[old_chunk_size] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            local last_chunk_component = cs[old_chunk_size]
+            cs[old_place] = last_chunk_component
+            cs[old_chunk_size] = nil
+        end
+    end
+
+    __entity_chunks[index] = nil
+    __entity_places[index] = nil
+
+    __structural_changes = __structural_changes + 1
+end
 
 return evolved
