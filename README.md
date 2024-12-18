@@ -10,9 +10,9 @@ get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean
 has_all :: entity, fragment... -> boolean
 has_any :: entity, fragment... -> boolean
-set :: entity, fragment, component -> ()
-assign :: entity, fragment, component -> boolean
-insert :: entity, fragment, component -> boolean
+set :: entity, fragment, component, any... -> ()
+assign :: entity, fragment, component, any... -> boolean
+insert :: entity, fragment, component, any... -> boolean
 remove :: entity, fragment... -> ()
 clear :: entity -> ()
 ```
