@@ -501,9 +501,17 @@ end
 
 ---@param id evolved.id
 function evolved.destroy(id)
-    if __alive_id(id) then
-        __release_id(id)
+    if not __alive_id(id) then
+        return
     end
+
+    local index = __unpack_id(id)
+
+    while __entity_chunks[index] do
+        evolved.clear(id)
+    end
+
+    __release_id(id)
 end
 
 ---@param entity evolved.entity

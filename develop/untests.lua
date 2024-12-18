@@ -457,3 +457,16 @@ do
     assert(last_set_component == 45)
     assert(last_assign_component == 45)
 end
+
+do
+    local f = evo.id()
+    local e = evo.id()
+
+    assert(evo.insert(e, f, 42))
+    assert(evo.has(e, f))
+    assert(evo.alive(e))
+
+    evo.destroy(e)
+    assert(not evo.has(e, f))
+    assert(not evo.alive(e))
+end
