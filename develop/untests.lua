@@ -204,3 +204,23 @@ do
         assert(evo.get(e2, f2) == nil and evo.get(e2, f1) == nil)
     end
 end
+
+do
+    local f1, f2 = evo.id(), evo.id()
+
+    local e = evo.id()
+
+    assert(not evo.assign(e, f1, 41))
+    assert(evo.get(e, f1) == nil)
+
+    assert(evo.insert(e, f1, 41))
+    assert(evo.assign(e, f1, 42))
+    assert(evo.get(e, f1) == 42)
+
+    assert(not evo.assign(e, f2, 43))
+    assert(evo.get(e, f2) == nil)
+
+    assert(evo.insert(e, f2, 43))
+    assert(evo.assign(e, f2, 44))
+    assert(evo.get(e, f2) == 44)
+end

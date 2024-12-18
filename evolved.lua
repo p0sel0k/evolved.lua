@@ -521,7 +521,30 @@ function evolved.set(entity, fragment, component) end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 ---@return boolean is_assigned
-function evolved.assign(entity, fragment, component) end
+function evolved.assign(entity, fragment, component)
+    if not __alive_id(entity) then
+        return false
+    end
+
+    local index = __unpack_id(entity)
+
+    local chunk = __entity_chunks[index]
+    local place = __entity_places[index]
+
+    if not chunk then
+        return false
+    end
+
+    local chunk_fragment_components = chunk.__components[fragment]
+
+    if not chunk_fragment_components then
+        return false
+    end
+
+    chunk_fragment_components[place] = component
+
+    return true
+end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
@@ -658,34 +681,34 @@ function evolved.clear(entity)
 
     local index = __unpack_id(entity)
 
-    local old_chunk = __entity_chunks[index]
-    local old_place = __entity_places[index]
+    local chunk = __entity_chunks[index]
+    local place = __entity_places[index]
 
-    if not old_chunk then
+    if not chunk then
         return
     end
 
-    local old_chunk_size = #old_chunk.__entities
-    local old_chunk_entities = old_chunk.__entities
-    local old_chunk_components = old_chunk.__components
+    local chunk_size = #chunk.__entities
+    local chunk_entities = chunk.__entities
+    local chunk_components = chunk.__components
 
-    if old_place == old_chunk_size then
-        old_chunk_entities[old_place] = nil
+    if place == chunk_size then
+        chunk_entities[place] = nil
 
-        for _, cs in pairs(old_chunk_components) do
-            cs[old_place] = nil
+        for _, cs in pairs(chunk_components) do
+            cs[place] = nil
         end
     else
-        local last_chunk_entity = old_chunk_entities[old_chunk_size]
-        __entity_places[__unpack_id(last_chunk_entity)] = old_place
+        local last_chunk_entity = chunk_entities[chunk_size]
+        __entity_places[__unpack_id(last_chunk_entity)] = place
 
-        old_chunk_entities[old_place] = last_chunk_entity
-        old_chunk_entities[old_chunk_size] = nil
+        chunk_entities[place] = last_chunk_entity
+        chunk_entities[chunk_size] = nil
 
-        for _, cs in pairs(old_chunk_components) do
-            local last_chunk_component = cs[old_chunk_size]
-            cs[old_place] = last_chunk_component
-            cs[old_chunk_size] = nil
+        for _, cs in pairs(chunk_components) do
+            local last_chunk_component = cs[chunk_size]
+            cs[place] = last_chunk_component
+            cs[chunk_size] = nil
         end
     end
 
