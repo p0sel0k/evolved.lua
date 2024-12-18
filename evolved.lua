@@ -433,10 +433,32 @@ end
 ---
 ---
 
----@return evolved.id
+---@param count? integer
+---@return evolved.id ...
 ---@nodiscard
-function evolved.id()
-    return __acquire_id()
+function evolved.id(count)
+    count = count or 1
+
+    if count == 0 then
+        return
+    end
+
+    if count == 1 then
+        return __acquire_id()
+    end
+
+    if count == 2 then
+        return __acquire_id(), __acquire_id()
+    end
+
+    if count == 3 then
+        return __acquire_id(), __acquire_id(), __acquire_id()
+    end
+
+    do
+        return __acquire_id(), __acquire_id(), __acquire_id(),
+            evolved.id(count - 3)
+    end
 end
 
 ---@param index integer

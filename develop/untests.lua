@@ -6,7 +6,45 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    do
+        local i0 = evo.id(0)
+        assert(type(i0) == 'nil')
+    end
+    do
+        local i1, i2 = evo.id()
+        assert(type(i1) == 'number')
+        assert(type(i2) == 'nil')
+    end
+    do
+        local i1, i2 = evo.id(1)
+        assert(type(i1) == 'number')
+        assert(type(i2) == 'nil')
+    end
+    do
+        local i1, i2, i3 = evo.id(2)
+        assert(type(i1) == 'number')
+        assert(type(i2) == 'number')
+        assert(type(i3) == 'nil')
+    end
+    do
+        local i1, i2, i3, i4 = evo.id(3)
+        assert(type(i1) == 'number')
+        assert(type(i2) == 'number')
+        assert(type(i3) == 'number')
+        assert(type(i4) == 'nil')
+    end
+    do
+        local i1, i2, i3, i4, i5 = evo.id(4)
+        assert(type(i1) == 'number')
+        assert(type(i2) == 'number')
+        assert(type(i3) == 'number')
+        assert(type(i4) == 'number')
+        assert(type(i5) == 'nil')
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
     local e = evo.id()
 
     do
@@ -60,7 +98,7 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
     local e = evo.id()
 
     assert(evo.insert(e, f1, 41))
@@ -78,7 +116,7 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
 
     do
         local e = evo.id()
@@ -123,8 +161,8 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
-    local e1, e2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
+    local e1, e2 = evo.id(2)
 
     assert(evo.insert(e1, f1, 41))
     assert(evo.insert(e2, f2, 42))
@@ -150,10 +188,10 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
 
     do
-        local e1, e2 = evo.id(), evo.id()
+        local e1, e2 = evo.id(2)
 
         assert(evo.insert(e1, f1, 41))
         assert(evo.insert(e1, f2, 43))
@@ -182,8 +220,8 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
-    local e1, e2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
+    local e1, e2 = evo.id(2)
 
     assert(evo.insert(e1, f1, 41))
     assert(evo.insert(e1, f2, 43))
@@ -206,7 +244,7 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
 
     local e = evo.id()
 
@@ -226,7 +264,7 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
 
     local e = evo.id()
 
@@ -248,8 +286,8 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
-    local e1, e2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
+    local e1, e2 = evo.id(2)
 
     evo.set(e1, f1, 41)
     evo.set(e2, f1, 42)
@@ -275,7 +313,7 @@ do
 end
 
 do
-    local f1, f2, f3, f4 = evo.id(), evo.id(), evo.id(), evo.id()
+    local f1, f2, f3, f4 = evo.id(4)
     evo.set(f1, evo.DEFAULT, 42)
     evo.set(f2, evo.DEFAULT, false)
 
@@ -293,7 +331,7 @@ do
 end
 
 do
-    local f1, f2, f3, f4, f5 = evo.id(), evo.id(), evo.id(), evo.id(), evo.id()
+    local f1, f2, f3, f4, f5 = evo.id(5)
     evo.set(f1, evo.CONSTRUCT, function(_, a, b) return a - b end)
     evo.set(f2, evo.CONSTRUCT, function(_, c) return c end)
     evo.set(f3, evo.CONSTRUCT, function() return nil end)
@@ -328,7 +366,7 @@ do
 end
 
 do
-    local f1, f2 = evo.id(), evo.id()
+    local f1, f2 = evo.id(2)
     evo.set(f1, evo.DEFAULT, 42)
     evo.set(f1, evo.CONSTRUCT, function() return nil end)
     evo.set(f2, evo.DEFAULT, 42)
