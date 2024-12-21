@@ -26,7 +26,7 @@ local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
-local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
+local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
@@ -214,9 +214,14 @@ local function __root_chunk(fragment)
     end
 
     do
-        local major_chunks = __major_chunks[fragment] or {}
-        major_chunks[#major_chunks + 1] = root_chunk
-        __major_chunks[fragment] = major_chunks
+        local fragment_chunks = __major_chunks[fragment]
+
+        if not fragment_chunks then
+            fragment_chunks = {}
+            __major_chunks[fragment] = fragment_chunks
+        end
+
+        fragment_chunks[#fragment_chunks + 1] = root_chunk
     end
 
     __structural_changes = __structural_changes + 1
@@ -284,9 +289,14 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
-        local fragment_chunks = __major_chunks[fragment] or {}
+        local fragment_chunks = __major_chunks[fragment]
+
+        if not fragment_chunks then
+            fragment_chunks = {}
+            __major_chunks[fragment] = fragment_chunks
+        end
+
         fragment_chunks[#fragment_chunks + 1] = child_chunk
-        __major_chunks[fragment] = fragment_chunks
     end
 
     __structural_changes = __structural_changes + 1
