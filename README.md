@@ -20,12 +20,12 @@ destroy :: entity -> ()
 ```
 defer :: defer
 
-defer:set :: id, fragment, component, any... -> defer
-defer:assign :: id, fragment, component, any... -> defer
-defer:insert :: id, fragment, component, any... -> defer
-defer:remove :: id, fragment... -> defer
-defer:clear :: id -> defer
-defer:destroy :: id -> defer
+defer:set :: entity, fragment, component, any... -> defer
+defer:assign :: entity, fragment, component, any... -> defer
+defer:insert :: entity, fragment, component, any... -> defer
+defer:remove :: entity, fragment... -> defer
+defer:clear :: entity -> defer
+defer:destroy :: entity -> defer
 defer:playback :: ()
 ```
 
