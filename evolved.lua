@@ -13,8 +13,8 @@ local evolved = {}
 ---@field __entities evolved.entity[]
 ---@field __fragments table<evolved.fragment, boolean>
 ---@field __components table<evolved.fragment, evolved.component[]>
----@field __with_fragment_cache table<evolved.fragment, evolved.chunk>
----@field __without_fragment_cache table<evolved.fragment, evolved.chunk>
+---@field __with_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
 ---
 ---
@@ -191,8 +191,8 @@ local function __root_chunk(fragment)
         __entities = {},
         __fragments = { [fragment] = true },
         __components = { [fragment] = {} },
-        __with_fragment_cache = {},
-        __without_fragment_cache = {},
+        __with_fragment_edges = {},
+        __without_fragment_edges = {},
     }
 
     do
@@ -223,8 +223,8 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
-        local cached_chunk = chunk.__with_fragment_cache[fragment]
-        if cached_chunk then return cached_chunk end
+        local with_fragment_chunk = chunk.__with_fragment_edges[fragment]
+        if with_fragment_chunk then return with_fragment_chunk end
     end
 
     if fragment == chunk.__fragment then
@@ -236,8 +236,8 @@ local function __chunk_with_fragment(chunk, fragment)
             __chunk_with_fragment(chunk.__parent, fragment),
             chunk.__fragment)
 
-        chunk.__with_fragment_cache[fragment] = sibling_chunk
-        sibling_chunk.__without_fragment_cache[fragment] = chunk
+        chunk.__with_fragment_edges[fragment] = sibling_chunk
+        sibling_chunk.__without_fragment_edges[fragment] = chunk
 
         return sibling_chunk
     end
@@ -250,8 +250,8 @@ local function __chunk_with_fragment(chunk, fragment)
         __entities = {},
         __fragments = { [fragment] = true },
         __components = { [fragment] = {} },
-        __with_fragment_cache = {},
-        __without_fragment_cache = {},
+        __with_fragment_edges = {},
+        __without_fragment_edges = {},
     }
 
     for f, _ in pairs(chunk.__components) do
@@ -265,8 +265,8 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
-        chunk.__with_fragment_cache[fragment] = child_chunk
-        child_chunk.__without_fragment_cache[fragment] = chunk
+        chunk.__with_fragment_edges[fragment] = child_chunk
+        child_chunk.__without_fragment_edges[fragment] = chunk
     end
 
     do
@@ -293,8 +293,8 @@ local function __chunk_without_fragment(chunk, fragment)
     end
 
     do
-        local cached_chunk = chunk.__without_fragment_cache[fragment]
-        if cached_chunk then return cached_chunk end
+        local without_fragment_edge = chunk.__without_fragment_edges[fragment]
+        if without_fragment_edge then return without_fragment_edge end
     end
 
     if fragment == chunk.__fragment then
@@ -306,8 +306,8 @@ local function __chunk_without_fragment(chunk, fragment)
             __chunk_without_fragment(chunk.__parent, fragment),
             chunk.__fragment)
 
-        chunk.__without_fragment_cache[fragment] = sibling_chunk
-        sibling_chunk.__with_fragment_cache[fragment] = chunk
+        chunk.__without_fragment_edges[fragment] = sibling_chunk
+        sibling_chunk.__with_fragment_edges[fragment] = chunk
 
         return sibling_chunk
     end
