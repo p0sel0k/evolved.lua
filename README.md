@@ -5,7 +5,6 @@ id :: id
 pack :: integer, integer -> id
 unpack :: id -> integer, integer
 alive :: id -> boolean
-destroy :: id -> ()
 get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean
 has_all :: entity, fragment... -> boolean
@@ -15,6 +14,7 @@ assign :: entity, fragment, component, any... -> boolean
 insert :: entity, fragment, component, any... -> boolean
 remove :: entity, fragment... -> ()
 clear :: entity -> ()
+destroy :: entity -> ()
 ```
 
 ```
