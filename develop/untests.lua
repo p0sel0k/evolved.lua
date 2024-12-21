@@ -513,3 +513,46 @@ do
     assert(not evo.has(e, f))
     assert(not evo.alive(e))
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    local e1, e2, e3, e4 = evo.id(4)
+
+    local d = evo.defer()
+        :set(e1, f1, 42)
+        :set(e1, f2, 43)
+        :remove(e2, f1, f2)
+        :assign(e2, f3, 48)
+        :clear(e3)
+        :insert(e3, f1, 48)
+        :insert(e3, f1, 49)
+        :destroy(e4)
+
+    assert(evo.insert(e1, f3, 44))
+    assert(not evo.has_any(e1, f1, f2))
+
+    assert(evo.insert(e2, f1, 45))
+    assert(evo.insert(e2, f2, 46))
+    assert(evo.insert(e2, f3, 47))
+
+    assert(evo.insert(e3, f1, 45))
+    assert(evo.insert(e3, f2, 46))
+    assert(evo.insert(e3, f3, 47))
+
+    assert(d == d:playback())
+
+    assert(evo.get(e1, f1) == 42)
+    assert(evo.get(e1, f2) == 43)
+    assert(evo.get(e1, f3) == 44)
+
+    assert(evo.get(e2, f1) == nil)
+    assert(evo.get(e2, f2) == nil)
+    assert(evo.get(e2, f3) == 48)
+
+    assert(evo.get(e3, f1) == 48)
+    assert(evo.get(e3, f2) == nil)
+    assert(evo.get(e3, f3) == nil)
+
+    assert(not evo.alive(e4))
+end

@@ -17,4 +17,16 @@ remove :: entity, fragment... -> ()
 clear :: entity -> ()
 ```
 
+```
+defer :: defer
+
+defer:set :: id, fragment, component, any... -> defer
+defer:assign :: id, fragment, component, any... -> defer
+defer:insert :: id, fragment, component, any... -> defer
+defer:remove :: id, fragment... -> defer
+defer:clear :: id -> defer
+defer:destroy :: id -> defer
+defer:playback :: ()
+```
+
 ## [License (MIT)](./LICENSE.md)

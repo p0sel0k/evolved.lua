@@ -39,6 +39,20 @@ local __structural_changes = 0 ---@type integer
 ---
 ---
 
+local __lua_pack = table.pack or function(...)
+    return { n = select('#', ...), ... }
+end
+
+local __lua_unpack = table.unpack or function(list, i, j)
+    return unpack(list, i, j)
+end
+
+---
+---
+---
+---
+---
+
 ---@param index integer
 ---@param version integer
 ---@return evolved.id
@@ -903,5 +917,219 @@ function evolved.clear(entity)
 
     __structural_changes = __structural_changes + 1
 end
+
+---
+---
+---
+---
+---
+
+---@enum evolved.defer_op
+local evolved_defer_op = {
+    set = 1,
+    assign = 2,
+    insert = 3,
+    remove = 4,
+    clear = 5,
+    destroy = 6,
+}
+
+---@class (exact) evolved.__defer
+---@field __bytecodes table<evolved.id, any[]>
+
+---@class evolved.defer : evolved.__defer
+local evolved_defer_mt = {}
+evolved_defer_mt.__index = evolved_defer_mt
+
+---@return evolved.defer
+---@nodiscard
+function evolved.defer()
+    ---@type evolved.__defer
+    local defer = {
+        __bytecodes = {},
+    }
+    ---@cast defer evolved.defer
+    return setmetatable(defer, evolved_defer_mt)
+end
+
+---@param id evolved.id
+---@param fragment evolved.fragment
+---@param component evolved.component
+---@param ... any construct additional parameters
+---@return evolved.defer
+function evolved_defer_mt:set(id, fragment, component, ...)
+    component = __construct(id, fragment, component, ...)
+
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.set
+    bytecode[bytecode_size + 2] = fragment
+    bytecode[bytecode_size + 3] = component
+
+    return self
+end
+
+---@param id evolved.id
+---@param fragment evolved.fragment
+---@param component evolved.component
+---@param ... any construct additional parameters
+---@return evolved.defer
+function evolved_defer_mt:assign(id, fragment, component, ...)
+    component = __construct(id, fragment, component, ...)
+
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.assign
+    bytecode[bytecode_size + 2] = fragment
+    bytecode[bytecode_size + 3] = component
+
+    return self
+end
+
+---@param id evolved.id
+---@param fragment evolved.fragment
+---@param component evolved.component
+---@param ... any construct additional parameters
+---@return evolved.defer
+function evolved_defer_mt:insert(id, fragment, component, ...)
+    component = __construct(id, fragment, component, ...)
+
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.insert
+    bytecode[bytecode_size + 2] = fragment
+    bytecode[bytecode_size + 3] = component
+
+    return self
+end
+
+---@param id evolved.id
+---@param ... evolved.fragment fragments
+---@return evolved.defer
+function evolved_defer_mt:remove(id, ...)
+    local fragment_count = select('#', ...)
+    if fragment_count == 0 then return self end
+
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.remove
+    bytecode[bytecode_size + 2] = fragment_count
+
+    for i = 1, fragment_count do
+        bytecode[bytecode_size + 2 + i] = select(i, ...)
+    end
+
+    return self
+end
+
+---@param id evolved.id
+---@return evolved.defer
+function evolved_defer_mt:clear(id)
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.clear
+
+    return self
+end
+
+---@param id evolved.id
+---@return evolved.defer
+function evolved_defer_mt:destroy(id)
+    local bytecode = self.__bytecodes[id]
+
+    if not bytecode then
+        bytecode = {}
+        self.__bytecodes[id] = bytecode
+    end
+
+    local bytecode_size = #bytecode
+
+    bytecode[bytecode_size + 1] = evolved_defer_op.destroy
+
+    return self
+end
+
+---@return evolved.defer
+function evolved_defer_mt:playback()
+    local bytecodes = self.__bytecodes
+    self.__bytecodes = {}
+
+    for id, bytecode in pairs(bytecodes) do
+        local bytecode_index = 1
+        local bytecode_size = #bytecode
+        while bytecode_index <= bytecode_size do
+            local bytecode_op = bytecode[bytecode_index]
+            if bytecode_op == evolved_defer_op.set then
+                local fragment = bytecode[bytecode_index + 1]
+                local component = bytecode[bytecode_index + 2]
+                bytecode_index = bytecode_index + 3
+                evolved.set(id, fragment, component)
+            elseif bytecode_op == evolved_defer_op.assign then
+                local fragment = bytecode[bytecode_index + 1]
+                local component = bytecode[bytecode_index + 2]
+                bytecode_index = bytecode_index + 3
+                evolved.assign(id, fragment, component)
+            elseif bytecode_op == evolved_defer_op.insert then
+                local fragment = bytecode[bytecode_index + 1]
+                local component = bytecode[bytecode_index + 2]
+                bytecode_index = bytecode_index + 3
+                evolved.insert(id, fragment, component)
+            elseif bytecode_op == evolved_defer_op.remove then
+                local fragment_count = bytecode[bytecode_index + 1]
+                bytecode_index = bytecode_index + 2 + fragment_count
+                evolved.remove(id, __lua_unpack(bytecode, bytecode_index - fragment_count, bytecode_index - 1))
+            elseif bytecode_op == evolved_defer_op.clear then
+                bytecode_index = bytecode_index + 1
+                evolved.clear(id)
+            elseif bytecode_op == evolved_defer_op.destroy then
+                bytecode_index = bytecode_index + 1
+                evolved.destroy(id)
+            end
+        end
+    end
+
+    return self
+end
+
+---
+---
+---
+---
+---
 
 return evolved

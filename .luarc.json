@@ -3,6 +3,23 @@
     "completion": {
         "autoRequire": false
     },
+    "diagnostics": {
+        "groupSeverity": {
+            "ambiguity": "Warning",
+            "await": "Warning",
+            "codestyle": "Warning",
+            "conventions": "Warning",
+            "duplicate": "Warning",
+            "global": "Warning",
+            "luadoc": "Warning",
+            "redefined": "Warning",
+            "strict": "Warning",
+            "strong": "Warning",
+            "type-check": "Warning",
+            "unbalanced": "Warning",
+            "unused": "Warning"
+        }
+    },
     "runtime": {
         "version": "LuaJIT",
         "pathStrict": true
