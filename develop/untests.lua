@@ -556,3 +556,58 @@ do
 
     assert(not evo.alive(e4))
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    ---@param entity evolved.entity
+    ---@param fragment evolved.fragment
+    ---@param component evolved.component
+    evo.set(f1, evo.ON_INSERT, function(entity, fragment, component)
+        assert(fragment == f1)
+        evo.insert(entity, f2, component * 2)
+    end)
+
+    ---@param entity evolved.entity
+    ---@param fragment evolved.fragment
+    ---@param component evolved.component
+    evo.set(f1, evo.ON_REMOVE, function(entity, fragment, component)
+        assert(fragment == f1)
+        assert(evo.get(entity, f2) == component * 2)
+        evo.remove(entity, f2)
+    end)
+
+    do
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 21))
+        assert(evo.get(e, f1) == 21)
+        assert(evo.get(e, f2) == 42)
+
+        evo.remove(e, f1)
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+    end
+    do
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 21))
+        assert(evo.get(e, f1) == 21)
+        assert(evo.get(e, f2) == 42)
+
+        evo.clear(e)
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+    end
+    do
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 21))
+        assert(evo.get(e, f1) == 21)
+        assert(evo.get(e, f2) == 42)
+
+        evo.destroy(e)
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+    end
+end

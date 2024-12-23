@@ -18,6 +18,11 @@ destroy :: entity -> ()
 ```
 
 ```
+defer_begin :: ()
+defer_end :: ()
+```
+
+```
 defer :: defer
 
 defer:set :: entity, fragment, component, any... -> defer

@@ -25,6 +25,9 @@ local evolved = {}
 local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
 
+local __defer_depth = 0 ---@type integer
+local __global_defer = nil ---@type evolved.defer
+
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 
@@ -481,6 +484,54 @@ end
 ---
 ---
 
+---@param entity evolved.entity
+local function __detach_entity(entity)
+    local index = __unpack_id(entity)
+
+    local old_chunk = __entity_chunks[index]
+
+    if not old_chunk then
+        return
+    end
+
+    local old_chunk_entities = old_chunk.__entities
+    local old_chunk_components = old_chunk.__components
+
+    local old_place = __entity_places[index]
+    local old_chunk_size = #old_chunk_entities
+
+    if old_place == old_chunk_size then
+        old_chunk_entities[old_place] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            cs[old_place] = nil
+        end
+    else
+        local last_chunk_entity = old_chunk_entities[old_chunk_size]
+        __entity_places[__unpack_id(last_chunk_entity)] = old_place
+
+        old_chunk_entities[old_place] = last_chunk_entity
+        old_chunk_entities[old_chunk_size] = nil
+
+        for _, cs in pairs(old_chunk_components) do
+            local last_chunk_component = cs[old_chunk_size]
+            cs[old_place] = last_chunk_component
+            cs[old_chunk_size] = nil
+        end
+    end
+
+    __entity_chunks[index] = nil
+    __entity_places[index] = nil
+
+    __structural_changes = __structural_changes + 1
+end
+
+---
+---
+---
+---
+---
+
 ---@param count? integer
 ---@return evolved.id ...
 ---@nodiscard
@@ -616,6 +667,11 @@ end
 function evolved.set(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
 
+    if __defer_depth > 0 then
+        __global_defer:set(entity, fragment, component)
+        return
+    end
+
     if not __alive_id(entity) then
         return false
     end
@@ -642,8 +698,6 @@ function evolved.set(entity, fragment, component, ...)
     new_chunk_components[fragment][new_place] = component
 
     if old_chunk then
-        local old_chunk_size = #old_chunk.__entities
-        local old_chunk_entities = old_chunk.__entities
         local old_chunk_components = old_chunk.__components
 
         for old_f, old_cs in pairs(old_chunk_components) do
@@ -651,25 +705,7 @@ function evolved.set(entity, fragment, component, ...)
             new_cs[new_place] = old_cs[old_place]
         end
 
-        if old_place == old_chunk_size then
-            old_chunk_entities[old_place] = nil
-
-            for _, cs in pairs(old_chunk_components) do
-                cs[old_place] = nil
-            end
-        else
-            local last_chunk_entity = old_chunk_entities[old_chunk_size]
-            __entity_places[__unpack_id(last_chunk_entity)] = old_place
-
-            old_chunk_entities[old_place] = last_chunk_entity
-            old_chunk_entities[old_chunk_size] = nil
-
-            for _, cs in pairs(old_chunk_components) do
-                local old_chunk_component = cs[old_chunk_size]
-                cs[old_place] = old_chunk_component
-                cs[old_chunk_size] = nil
-            end
-        end
+        __detach_entity(entity)
     end
 
     __entity_chunks[index] = new_chunk
@@ -689,27 +725,26 @@ end
 function evolved.assign(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
 
+    if __defer_depth > 0 then
+        __global_defer:assign(entity, fragment, component)
+        return false
+    end
+
     if not __alive_id(entity) then
         return false
     end
 
     local index = __unpack_id(entity)
 
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
 
-    if not chunk then
+    if not old_chunk or not old_chunk.__fragments[fragment] then
         return false
     end
 
-    local chunk_fragment_components = chunk.__components[fragment]
-
-    if not chunk_fragment_components then
-        return false
-    end
-
-    chunk_fragment_components[place] = component
-
+    local old_chunk_fragment_components = old_chunk.__components[fragment]
+    old_chunk_fragment_components[old_place] = component
     __on_assign(entity, fragment, component)
     return true
 end
@@ -721,6 +756,11 @@ end
 ---@return boolean is_inserted
 function evolved.insert(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
+
+    if __defer_depth > 0 then
+        __global_defer:insert(entity, fragment, component)
+        return false
+    end
 
     if not __alive_id(entity) then
         return false
@@ -745,8 +785,6 @@ function evolved.insert(entity, fragment, component, ...)
     new_chunk_components[fragment][new_place] = component
 
     if old_chunk then
-        local old_chunk_size = #old_chunk.__entities
-        local old_chunk_entities = old_chunk.__entities
         local old_chunk_components = old_chunk.__components
 
         for old_f, old_cs in pairs(old_chunk_components) do
@@ -754,25 +792,7 @@ function evolved.insert(entity, fragment, component, ...)
             new_cs[new_place] = old_cs[old_place]
         end
 
-        if old_place == old_chunk_size then
-            old_chunk_entities[old_place] = nil
-
-            for _, cs in pairs(old_chunk_components) do
-                cs[old_place] = nil
-            end
-        else
-            local last_chunk_entity = old_chunk_entities[old_chunk_size]
-            __entity_places[__unpack_id(last_chunk_entity)] = old_place
-
-            old_chunk_entities[old_place] = last_chunk_entity
-            old_chunk_entities[old_chunk_size] = nil
-
-            for _, cs in pairs(old_chunk_components) do
-                local old_chunk_component = cs[old_chunk_size]
-                cs[old_place] = old_chunk_component
-                cs[old_chunk_size] = nil
-            end
-        end
+        __detach_entity(entity)
     end
 
     __entity_chunks[index] = new_chunk
@@ -787,6 +807,11 @@ end
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
 function evolved.remove(entity, ...)
+    if __defer_depth > 0 then
+        __global_defer:remove(entity, ...)
+        return
+    end
+
     if not __alive_id(entity) then
         return
     end
@@ -803,129 +828,135 @@ function evolved.remove(entity, ...)
         return
     end
 
-    local old_chunk_size = #old_chunk.__entities
-    local old_chunk_entities = old_chunk.__entities
-    local old_chunk_fragments = old_chunk.__fragments
-    local old_chunk_components = old_chunk.__components
+    evolved.defer_begin()
+    do
+        local old_chunk_fragments = old_chunk.__fragments
+        local old_chunk_components = old_chunk.__components
 
-    for i = 1, select('#', ...) do
-        local old_f = select(i, ...)
-        if old_chunk_fragments[old_f] then
-            local old_cs = old_chunk_components[old_f]
-            __on_remove(entity, old_f, old_cs[old_place])
+        for i = 1, select('#', ...) do
+            local old_f = select(i, ...)
+            if old_chunk_fragments[old_f] then
+                local old_cs = old_chunk_components[old_f]
+                __on_remove(entity, old_f, old_cs[old_place])
+            end
         end
-    end
 
-    if old_chunk ~= __entity_chunks[index] then
-        error('entity structural changes are prohibited in ON_REMOVE hooks', 2)
-    end
+        if new_chunk and assert(new_place) then
+            local new_chunk_entities = new_chunk.__entities
+            local new_chunk_components = new_chunk.__components
 
-    if new_chunk and assert(new_place) then
-        local new_chunk_entities = new_chunk.__entities
-        local new_chunk_components = new_chunk.__components
+            new_chunk_entities[new_place] = entity
 
-        new_chunk_entities[new_place] = entity
-
-        for new_f, new_cs in pairs(new_chunk_components) do
-            local old_cs = old_chunk_components[new_f]
-            new_cs[new_place] = old_cs[old_place]
+            for new_f, new_cs in pairs(new_chunk_components) do
+                local old_cs = old_chunk_components[new_f]
+                new_cs[new_place] = old_cs[old_place]
+            end
         end
+
+        __detach_entity(entity)
+
+        __entity_chunks[index] = new_chunk
+        __entity_places[index] = new_place
+
+        __structural_changes = __structural_changes + 1
     end
-
-    if old_place == old_chunk_size then
-        old_chunk_entities[old_place] = nil
-
-        for _, cs in pairs(old_chunk_components) do
-            cs[old_place] = nil
-        end
-    else
-        local last_chunk_entity = old_chunk_entities[old_chunk_size]
-        __entity_places[__unpack_id(last_chunk_entity)] = old_place
-
-        old_chunk_entities[old_place] = last_chunk_entity
-        old_chunk_entities[old_chunk_size] = nil
-
-        for _, cs in pairs(old_chunk_components) do
-            local old_chunk_component = cs[old_chunk_size]
-            cs[old_place] = old_chunk_component
-            cs[old_chunk_size] = nil
-        end
-    end
-
-    __entity_chunks[index] = new_chunk
-    __entity_places[index] = new_place
-
-    __structural_changes = __structural_changes + 1
+    evolved.defer_end()
 end
 
 ---@param entity evolved.entity
 function evolved.clear(entity)
+    if __defer_depth > 0 then
+        __global_defer:clear(entity)
+        return
+    end
+
     if not __alive_id(entity) then
         return
     end
 
     local index = __unpack_id(entity)
 
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
 
-    if not chunk then
+    if not old_chunk then
         return
     end
 
-    local chunk_size = #chunk.__entities
-    local chunk_entities = chunk.__entities
-    local chunk_fragments = chunk.__fragments
-    local chunk_components = chunk.__components
+    evolved.defer_begin()
+    do
+        local old_chunk_fragments = old_chunk.__fragments
+        local old_chunk_components = old_chunk.__components
 
-    for f, _ in pairs(chunk_fragments) do
-        local cs = chunk_components[f]
-        __on_remove(entity, f, cs[place])
-    end
-
-    if chunk ~= __entity_chunks[index] then
-        error('entity structural changes are prohibited in ON_REMOVE hooks', 2)
-    end
-
-    if place == chunk_size then
-        chunk_entities[place] = nil
-
-        for _, cs in pairs(chunk_components) do
-            cs[place] = nil
+        for old_f, _ in pairs(old_chunk_fragments) do
+            local old_cs = old_chunk_components[old_f]
+            __on_remove(entity, old_f, old_cs[old_place])
         end
-    else
-        local last_chunk_entity = chunk_entities[chunk_size]
-        __entity_places[__unpack_id(last_chunk_entity)] = place
 
-        chunk_entities[place] = last_chunk_entity
-        chunk_entities[chunk_size] = nil
-
-        for _, cs in pairs(chunk_components) do
-            local last_chunk_component = cs[chunk_size]
-            cs[place] = last_chunk_component
-            cs[chunk_size] = nil
-        end
+        __detach_entity(entity)
     end
-
-    __entity_chunks[index] = nil
-    __entity_places[index] = nil
-
-    __structural_changes = __structural_changes + 1
+    evolved.defer_end()
 end
 
 ---@param entity evolved.entity
 function evolved.destroy(entity)
+    if __defer_depth > 0 then
+        __global_defer:destroy(entity)
+        return
+    end
+
     if not __alive_id(entity) then
         return
     end
 
     local index = __unpack_id(entity)
 
-    while __entity_chunks[index] do
-        evolved.clear(entity)
+    local old_chunk = __entity_chunks[index]
+    local old_place = __entity_places[index]
+
+    if not old_chunk then
+        __release_id(entity)
+        return
     end
 
-    __release_id(entity)
+    evolved.defer_begin()
+    do
+        local old_chunk_fragments = old_chunk.__fragments
+        local old_chunk_components = old_chunk.__components
+
+        for old_f, _ in pairs(old_chunk_fragments) do
+            local old_cs = old_chunk_components[old_f]
+            __on_remove(entity, old_f, old_cs[old_place])
+        end
+
+        __detach_entity(entity)
+        __release_id(entity)
+    end
+    evolved.defer_end()
+end
+
+---
+---
+---
+---
+---
+
+function evolved.defer_begin()
+    assert(__defer_depth >= 0, 'unbalanced defer_begin/defer_end')
+    __defer_depth = __defer_depth + 1
+
+    if __defer_depth == 1 and not __global_defer then
+        __global_defer = evolved.defer()
+    end
+end
+
+function evolved.defer_end()
+    assert(__defer_depth > 0, 'unbalanced defer_begin/defer_end')
+    __defer_depth = __defer_depth - 1
+
+    if __defer_depth == 0 and __global_defer then
+        __global_defer:playback()
+    end
 end
 
 ---
