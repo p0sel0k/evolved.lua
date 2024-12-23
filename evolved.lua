@@ -664,16 +664,18 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 ---@param ... any construct additional parameters
+---@return boolean is_set
+---@return boolean is_deferred
 function evolved.set(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
 
     if __defer_depth > 0 then
         __global_defer:set(entity, fragment, component)
-        return
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return false
+        return false, false
     end
 
     local index = __unpack_id(entity)
@@ -688,7 +690,7 @@ function evolved.set(entity, fragment, component, ...)
         local old_chunk_fragment_components = old_chunk.__components[fragment]
         old_chunk_fragment_components[old_place] = component
         __on_assign(entity, fragment, component)
-        return true
+        return true, false
     end
 
     local new_chunk_entities = new_chunk.__entities
@@ -714,7 +716,7 @@ function evolved.set(entity, fragment, component, ...)
     __structural_changes = __structural_changes + 1
 
     __on_insert(entity, fragment, component)
-    return true
+    return true, false
 end
 
 ---@param entity evolved.entity
@@ -722,16 +724,17 @@ end
 ---@param component evolved.component
 ---@param ... any construct additional parameters
 ---@return boolean is_assigned
+---@return boolean is_deferred
 function evolved.assign(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
 
     if __defer_depth > 0 then
         __global_defer:assign(entity, fragment, component)
-        return false
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return false
+        return false, false
     end
 
     local index = __unpack_id(entity)
@@ -740,13 +743,13 @@ function evolved.assign(entity, fragment, component, ...)
     local old_place = __entity_places[index]
 
     if not old_chunk or not old_chunk.__fragments[fragment] then
-        return false
+        return false, false
     end
 
     local old_chunk_fragment_components = old_chunk.__components[fragment]
     old_chunk_fragment_components[old_place] = component
     __on_assign(entity, fragment, component)
-    return true
+    return true, false
 end
 
 ---@param entity evolved.entity
@@ -754,16 +757,17 @@ end
 ---@param component evolved.component
 ---@param ... any construct additional parameters
 ---@return boolean is_inserted
+---@return boolean is_deferred
 function evolved.insert(entity, fragment, component, ...)
     component = __construct(entity, fragment, component, ...)
 
     if __defer_depth > 0 then
         __global_defer:insert(entity, fragment, component)
-        return false
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return false
+        return false, false
     end
 
     local index = __unpack_id(entity)
@@ -775,7 +779,7 @@ function evolved.insert(entity, fragment, component, ...)
     local new_place = #new_chunk.__entities + 1
 
     if old_chunk == new_chunk then
-        return false
+        return false, false
     end
 
     local new_chunk_entities = new_chunk.__entities
@@ -801,19 +805,21 @@ function evolved.insert(entity, fragment, component, ...)
     __structural_changes = __structural_changes + 1
 
     __on_insert(entity, fragment, component)
-    return true
+    return true, false
 end
 
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
+---@return boolean is_removed
+---@return boolean is_deferred
 function evolved.remove(entity, ...)
     if __defer_depth > 0 then
         __global_defer:remove(entity, ...)
-        return
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return
+        return false, false
     end
 
     local index = __unpack_id(entity)
@@ -825,7 +831,7 @@ function evolved.remove(entity, ...)
     local new_place = new_chunk and #new_chunk.__entities + 1
 
     if old_chunk == new_chunk then
-        return
+        return true, false
     end
 
     evolved.defer_begin()
@@ -861,17 +867,20 @@ function evolved.remove(entity, ...)
         __structural_changes = __structural_changes + 1
     end
     evolved.defer_end()
+    return true, false
 end
 
 ---@param entity evolved.entity
+---@return boolean is_cleared
+---@return boolean is_deferred
 function evolved.clear(entity)
     if __defer_depth > 0 then
         __global_defer:clear(entity)
-        return
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return
+        return false, false
     end
 
     local index = __unpack_id(entity)
@@ -880,7 +889,7 @@ function evolved.clear(entity)
     local old_place = __entity_places[index]
 
     if not old_chunk then
-        return
+        return true, false
     end
 
     evolved.defer_begin()
@@ -896,17 +905,20 @@ function evolved.clear(entity)
         __detach_entity(entity)
     end
     evolved.defer_end()
+    return true, false
 end
 
 ---@param entity evolved.entity
+---@return boolean is_destroyed
+---@return boolean is_deferred
 function evolved.destroy(entity)
     if __defer_depth > 0 then
         __global_defer:destroy(entity)
-        return
+        return false, true
     end
 
     if not __alive_id(entity) then
-        return
+        return true, false
     end
 
     local index = __unpack_id(entity)
@@ -916,7 +928,7 @@ function evolved.destroy(entity)
 
     if not old_chunk then
         __release_id(entity)
-        return
+        return true, false
     end
 
     evolved.defer_begin()
@@ -933,6 +945,7 @@ function evolved.destroy(entity)
         __release_id(entity)
     end
     evolved.defer_end()
+    return true, false
 end
 
 ---
