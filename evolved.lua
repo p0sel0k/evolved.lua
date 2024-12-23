@@ -161,28 +161,29 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
-local function __on_assign(entity, fragment, component)
+---@param new_component evolved.component
+---@param old_component evolved.component
+local function __on_assign(entity, fragment, new_component, old_component)
     local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
-    if on_set then on_set(entity, fragment, component) end
-    if on_assign then on_assign(entity, fragment, component) end
+    if on_set then on_set(entity, fragment, new_component, old_component) end
+    if on_assign then on_assign(entity, fragment, new_component, old_component) end
 end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
-local function __on_insert(entity, fragment, component)
+---@param new_component evolved.component
+local function __on_insert(entity, fragment, new_component)
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
-    if on_set then on_set(entity, fragment, component) end
-    if on_insert then on_insert(entity, fragment, component) end
+    if on_set then on_set(entity, fragment, new_component) end
+    if on_insert then on_insert(entity, fragment, new_component) end
 end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
-local function __on_remove(entity, fragment, component)
+---@param old_component evolved.component
+local function __on_remove(entity, fragment, old_component)
     local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
-    if on_remove then on_remove(entity, fragment, component) end
+    if on_remove then on_remove(entity, fragment, old_component) end
 end
 
 ---
@@ -688,8 +689,9 @@ function evolved.set(entity, fragment, component, ...)
 
     if old_chunk == new_chunk then
         local old_chunk_fragment_components = old_chunk.__components[fragment]
+        local old_component = old_chunk_fragment_components[old_place]
         old_chunk_fragment_components[old_place] = component
-        __on_assign(entity, fragment, component)
+        __on_assign(entity, fragment, component, old_component)
         return true, false
     end
 
@@ -747,8 +749,9 @@ function evolved.assign(entity, fragment, component, ...)
     end
 
     local old_chunk_fragment_components = old_chunk.__components[fragment]
+    local old_component = old_chunk_fragment_components[old_place]
     old_chunk_fragment_components[old_place] = component
-    __on_assign(entity, fragment, component)
+    __on_assign(entity, fragment, component, old_component)
     return true, false
 end
 
