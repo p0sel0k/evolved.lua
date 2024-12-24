@@ -557,18 +557,7 @@ do
 
     local e1, e2, e3, e4 = evo.id(4)
 
-    local d = evo.defer()
-        :set(e1, f1, 42)
-        :set(e1, f2, 43)
-        :remove(e2, f1, f2)
-        :assign(e2, f3, 48)
-        :clear(e3)
-        :insert(e3, f1, 48)
-        :insert(e3, f1, 49)
-        :destroy(e4)
-
     assert(evo.insert(e1, f3, 44))
-    assert(not evo.has_any(e1, f1, f2))
 
     assert(evo.insert(e2, f1, 45))
     assert(evo.insert(e2, f2, 46))
@@ -578,7 +567,32 @@ do
     assert(evo.insert(e3, f2, 46))
     assert(evo.insert(e3, f3, 47))
 
-    assert(d == d:playback())
+    assert(evo.defer())
+    assert(not evo.defer())
+
+    evo.set(e1, f1, 42)
+    evo.set(e1, f2, 43)
+    evo.remove(e2, f1, f2)
+    evo.assign(e2, f3, 48)
+    evo.clear(e3)
+    evo.insert(e3, f1, 48)
+    evo.insert(e3, f1, 49)
+    evo.destroy(e4)
+
+    assert(evo.get(e1, f1) == nil)
+    assert(evo.get(e1, f2) == nil)
+    assert(evo.get(e1, f3) == 44)
+
+    assert(evo.get(e2, f1) == 45)
+    assert(evo.get(e2, f2) == 46)
+    assert(evo.get(e2, f3) == 47)
+
+    assert(evo.get(e3, f1) == 45)
+    assert(evo.get(e3, f2) == 46)
+    assert(evo.get(e3, f3) == 47)
+
+    assert(not evo.commit())
+    assert(evo.commit())
 
     assert(evo.get(e1, f1) == 42)
     assert(evo.get(e1, f2) == 43)
