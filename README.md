@@ -6,8 +6,8 @@ id :: id
 pack :: integer, integer -> id
 unpack :: id -> integer, integer
 
-defer :: ()
-commit :: ()
+defer :: boolean
+commit :: boolean
 
 get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean
