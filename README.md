@@ -22,6 +22,8 @@ clear :: entity -> boolean, boolean
 
 alive :: entity -> boolean
 destroy :: entity -> boolean, boolean
+
+execute :: query -> {execution_state? -> chunk?}, execution_state?
 ```
 
 ## [License (MIT)](./LICENSE.md)
