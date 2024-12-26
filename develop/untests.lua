@@ -1,18 +1,5 @@
 local evo = require 'evolved'
 
----@generic V
----@param list V[]
----@return boolean
----@nodiscard
-local function __is_sorted(list)
-    for i = 1, #list - 1 do
-        if list[i] > list[i + 1] then
-            return false
-        end
-    end
-    return true
-end
-
 do
     local e1, e2 = evo.id(), evo.id()
     assert(e1 ~= e2)
@@ -674,40 +661,6 @@ do
         evo.destroy(e)
         assert(evo.get(e, f1) == nil)
         assert(evo.get(e, f2) == nil)
-    end
-end
-
-do
-    local f1, f2, f3, f4 = evo.id(4)
-
-    do
-        local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST)
-        assert(evo.has_all(q, evo.INCLUDE_LIST, evo.EXCLUDE_LIST))
-
-        local include_list, exclude_list = evo.get(q, evo.INCLUDE_LIST, evo.EXCLUDE_LIST)
-        assert(type(include_list) == "table" and next(include_list) == nil)
-        assert(type(exclude_list) == "table" and next(exclude_list) == nil)
-    end
-
-    do
-        local q = evo.id()
-        evo.set(q, evo.EXCLUDE_LIST)
-        assert(evo.has_all(q, evo.EXCLUDE_LIST, evo.INCLUDE_LIST))
-
-        local include_list, exclude_list = evo.get(q, evo.INCLUDE_LIST, evo.EXCLUDE_LIST)
-        assert(type(include_list) == "table" and next(include_list) == nil)
-        assert(type(exclude_list) == "table" and next(exclude_list) == nil)
-    end
-
-    do
-        local q = evo.id()
-
-        evo.set(q, evo.INCLUDE_LIST, { f2, f1 })
-        assert(__is_sorted(evo.get(q, evo.INCLUDE_LIST)))
-
-        evo.set(q, evo.EXCLUDE_LIST, { f4, f3 })
-        assert(__is_sorted(evo.get(q, evo.EXCLUDE_LIST)))
     end
 end
 

@@ -17,10 +17,6 @@ local evolved = {}
 ---@field __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
----@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, table<evolved.entity, boolean>, evolved.execution_stack]
----@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?
-
 ---
 ---
 ---
@@ -39,9 +35,6 @@ local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
-
-local __execution_stacks = {} ---@type evolved.execution_stack[]
-local __execution_states = {} ---@type evolved.execution_state[]
 
 local __structural_changes = 0 ---@type integer
 
@@ -1163,80 +1156,77 @@ end
 ---
 ---
 
+---@alias evolved.execution_stack evolved.chunk[]
+---@alias evolved.execution_state [integer, table<evolved.entity, boolean>, evolved.execution_stack]
+---@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?
+
+local __execution_stacks = {} ---@type evolved.execution_stack[]
+local __execution_states = {} ---@type evolved.execution_state[]
+
 local __INCLUDE_SET = __acquire_id()
 local __EXCLUDE_SET = __acquire_id()
+local __SORTED_INCLUDE_LIST = __acquire_id()
+local __SORTED_EXCLUDE_LIST = __acquire_id()
 
----@param in_list? evolved.fragment[]
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, in_list)
-    if not in_list then
-        return {}
-    end
+assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, include_list)
+    return include_list or {}
+end))
 
-    local out_list = {}
-
-    for i = 1, #in_list do
-        out_list[i] = in_list[i]
-    end
-
-    table.sort(out_list)
-    return out_list
+assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, exclude_list)
+    return exclude_list or {}
 end))
 
 ---@param query evolved.query
----@param include_list evolved.entity[]
+---@param include_list? evolved.entity[]
 assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
-    ---@type table<evolved.entity, boolean>
-    local include_set = {}
+    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
+    local include_set, sorted_include_list = {}, {}
 
-    for i = 1, #include_list do
-        include_set[include_list[i]] = true
+    if include_list then
+        for _, f in ipairs(include_list) do
+            include_set[f] = true
+            sorted_include_list[#sorted_include_list + 1] = f
+        end
     end
 
+    table.sort(sorted_include_list)
+
     evolved.set(query, __INCLUDE_SET, include_set)
+    evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
+
     evolved.insert(query, evolved.EXCLUDE_LIST)
 end))
 
----@param in_list? evolved.fragment[]
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, in_list)
-    if not in_list then
-        return {}
-    end
-
-    local out_list = {}
-
-    for i = 1, #in_list do
-        out_list[i] = in_list[i]
-    end
-
-    table.sort(out_list)
-    return out_list
-end))
-
 ---@param query evolved.query
----@param exclude_list evolved.entity[]
+---@param exclude_list? evolved.entity[]
 assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
-    ---@type table<evolved.entity, boolean>
-    local exclude_set = {}
+    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
+    local exclude_set, sorted_exclude_list = {}, {}
 
-    for i = 1, #exclude_list do
-        exclude_set[exclude_list[i]] = true
+    if exclude_list then
+        for _, f in ipairs(exclude_list) do
+            exclude_set[f] = true
+            sorted_exclude_list[#sorted_exclude_list + 1] = f
+        end
     end
+
+    table.sort(sorted_exclude_list)
 
     evolved.set(query, __EXCLUDE_SET, exclude_set)
+    evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
+
     evolved.insert(query, evolved.INCLUDE_LIST)
 end))
 
 ---@return evolved.execution_stack
 ---@nodiscard
 local function __acquire_execution_stack()
-    local execution_stacks = __execution_stacks
-
-    if #execution_stacks == 0 then
+    if #__execution_stacks == 0 then
         return {}
     end
 
-    local stack = execution_stacks[#execution_stacks]
-    execution_stacks[#execution_stacks] = nil
+    local stack = __execution_stacks[#__execution_stacks]
+    __execution_stacks[#__execution_stacks] = nil
 
     return stack
 end
@@ -1247,20 +1237,20 @@ local function __release_execution_stack(stack)
     __execution_stacks[#__execution_stacks + 1] = stack
 end
 
----@param exclude_set table<evolved.fragment, boolean>
+---@param query evolved.query
 ---@return evolved.execution_state
 ---@return evolved.execution_stack
 ---@nodiscard
-local function __acquire_execution_state(exclude_set)
-    local execution_states = __execution_states
+local function __acquire_execution_state(query)
+    local exclude_set = evolved.get(query, __EXCLUDE_SET)
 
-    if #execution_states == 0 then
+    if #__execution_states == 0 then
         local stack = __acquire_execution_stack()
         return { __structural_changes, exclude_set, stack }, stack
     end
 
-    local state = execution_states[#execution_states]
-    execution_states[#execution_states] = nil
+    local state = __execution_states[#__execution_states]
+    __execution_states[#__execution_states] = nil
 
     local stack = __acquire_execution_stack()
     state[1], state[2], state[3] = __structural_changes, exclude_set, stack
@@ -1313,15 +1303,12 @@ end
 ---@return evolved.execution_state?
 ---@nodiscard
 function evolved.execute(query)
-    local include_list =
-        evolved.get(query, evolved.INCLUDE_LIST)
+    local include_list, exclude_list = evolved.get(query,
+        __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
 
     if not include_list or #include_list == 0 then
         return __execution_iterator, nil
     end
-
-    local exclude_set, exclude_list =
-        evolved.get(query, __EXCLUDE_SET, evolved.EXCLUDE_LIST)
 
     local major_fragment = include_list[#include_list]
     local major_fragment_chunks = __major_chunks[major_fragment]
@@ -1330,8 +1317,7 @@ function evolved.execute(query)
         return __execution_iterator, nil
     end
 
-    local execution_state, execution_stack =
-        __acquire_execution_state(exclude_set)
+    local execution_state, execution_stack = __acquire_execution_state(query)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
