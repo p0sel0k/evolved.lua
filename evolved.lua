@@ -8,14 +8,14 @@ local evolved = {}
 ---@alias evolved.component any
 
 ---@class (exact) evolved.chunk
----@field __parent? evolved.chunk
----@field __children evolved.chunk[]
----@field __fragment evolved.fragment
----@field __entities evolved.entity[]
----@field __fragments table<evolved.fragment, boolean>
----@field __components table<evolved.fragment, evolved.component[]>
----@field __with_fragment_edges table<evolved.fragment, evolved.chunk>
----@field __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __parent? evolved.chunk
+---@field package __children evolved.chunk[]
+---@field package __fragment evolved.fragment
+---@field package __entities evolved.entity[]
+---@field package __fragments table<evolved.fragment, boolean>
+---@field package __components table<evolved.fragment, evolved.component[]>
+---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
 ---
 ---
@@ -1158,7 +1158,7 @@ end
 
 ---@alias evolved.execution_stack evolved.chunk[]
 ---@alias evolved.execution_state [integer, table<evolved.entity, boolean>, evolved.execution_stack]
----@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?
+---@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
 
 local __execution_stacks = {} ---@type evolved.execution_stack[]
 local __execution_states = {} ---@type evolved.execution_state[]
@@ -1290,7 +1290,7 @@ local function __execution_iterator(execution_state)
         end
 
         if #matched_chunk.__entities > 0 then
-            return matched_chunk
+            return matched_chunk, matched_chunk.__entities
         end
     end
 
@@ -1302,6 +1302,41 @@ end
 ---
 ---
 ---
+
+---@param chunk evolved.chunk
+---@param ... evolved.fragment fragments
+---@return evolved.component[] ... components
+---@nodiscard
+function evolved.select(chunk, ...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local components = chunk.__components
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return components[f1]
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return components[f1], components[f2]
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return components[f1], components[f2], components[f3]
+    end
+
+    do
+        local f1, f2, f3 = ...
+        return components[f1], components[f2], components[f3],
+            evolved.select(chunk, select(4, ...))
+    end
+end
 
 ---@param query evolved.query
 ---@return evolved.execution_iterator

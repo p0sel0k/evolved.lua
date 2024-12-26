@@ -23,7 +23,8 @@ clear :: entity -> boolean, boolean
 alive :: entity -> boolean
 destroy :: entity -> boolean, boolean
 
-execute :: query -> {execution_state? -> chunk?}, execution_state?
+select :: chunk, fragment... -> component[]...
+execute :: query -> {execution_state? -> chunk?, entity[]?}, execution_state?
 ```
 
 ## [License (MIT)](./LICENSE.md)
