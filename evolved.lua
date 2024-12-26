@@ -166,7 +166,7 @@ evolved.EXCLUDE_LIST = __acquire_id()
 ---@return evolved.component
 local function __construct(entity, fragment, component, ...)
     local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
-    if construct ~= nil then component = construct(entity, component, ...) end
+    if construct ~= nil then component = construct(entity, fragment, component, ...) end
     if component == nil then component = default end
     return component == nil and true or component
 end

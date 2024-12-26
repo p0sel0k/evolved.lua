@@ -345,8 +345,8 @@ end
 
 do
     local f1, f2, f3, f4, f5 = evo.id(5)
-    evo.set(f1, evo.CONSTRUCT, function(_, a, b) return a - b end)
-    evo.set(f2, evo.CONSTRUCT, function(_, c) return c end)
+    evo.set(f1, evo.CONSTRUCT, function(_, _, a, b) return a - b end)
+    evo.set(f2, evo.CONSTRUCT, function(_, _, c) return c end)
     evo.set(f3, evo.CONSTRUCT, function() return nil end)
     evo.set(f4, evo.CONSTRUCT, function() return false end)
     evo.set(f5, evo.CONSTRUCT, function(e) return e end)
