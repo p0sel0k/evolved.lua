@@ -1172,8 +1172,16 @@ assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, in
     return include_list or {}
 end))
 
+assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
+    evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
+end))
+
 assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, exclude_list)
     return exclude_list or {}
+end))
+
+assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
+    evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
 end))
 
 ---@param query evolved.query
@@ -1193,8 +1201,6 @@ assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, i
 
     evolved.set(query, __INCLUDE_SET, include_set)
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
-
-    evolved.insert(query, evolved.EXCLUDE_LIST)
 end))
 
 ---@param query evolved.query
@@ -1214,8 +1220,6 @@ assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, e
 
     evolved.set(query, __EXCLUDE_SET, exclude_set)
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
-
-    evolved.insert(query, evolved.INCLUDE_LIST)
 end))
 
 ---@return evolved.execution_stack
@@ -1242,7 +1246,8 @@ end
 ---@return evolved.execution_stack
 ---@nodiscard
 local function __acquire_execution_state(query)
-    local exclude_set = evolved.get(query, __EXCLUDE_SET)
+    ---@type table<evolved.fragment, boolean>
+    local exclude_set = evolved.get(query, __EXCLUDE_SET) or {}
 
     if #__execution_states == 0 then
         local stack = __acquire_execution_stack()
@@ -1303,10 +1308,14 @@ end
 ---@return evolved.execution_state?
 ---@nodiscard
 function evolved.execute(query)
+    ---@type evolved.fragment[]?, evolved.fragment[]?
     local include_list, exclude_list = evolved.get(query,
         __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
 
-    if not include_list or #include_list == 0 then
+    include_list = include_list or {}
+    exclude_list = exclude_list or {}
+
+    if #include_list == 0 then
         return __execution_iterator, nil
     end
 

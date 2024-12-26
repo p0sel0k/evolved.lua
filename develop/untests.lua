@@ -665,38 +665,54 @@ do
 end
 
 do
-    local f1, f2, f3, f4 = evo.id(4)
+    local f1, f2, f3, f4, f5 = evo.id(5)
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 41))
+    assert(evo.insert(e2, f2, 42))
+
+    local e3 = evo.id()
+    assert(evo.insert(e3, f1, 43))
+    assert(evo.insert(e3, f2, 44))
+    assert(evo.insert(e3, f3, 45))
+
+    local e4 = evo.id()
+    assert(evo.insert(e4, f1, 45))
+    assert(evo.insert(e4, f2, 46))
+    assert(evo.insert(e4, f3, 47))
+    assert(evo.insert(e4, f4, 48))
+
+    local e5 = evo.id()
+    assert(evo.insert(e5, f1, 49))
+    assert(evo.insert(e5, f2, 50))
+    assert(evo.insert(e5, f4, 51))
+
+    local e6 = evo.id()
+    assert(evo.insert(e6, f1, 49))
+    assert(evo.insert(e6, f2, 50))
+    assert(evo.insert(e6, f4, 51))
+    assert(evo.insert(e6, f5, 52))
 
     local q = evo.id()
     evo.set(q, evo.INCLUDE_LIST, { f2, f1 })
     evo.set(q, evo.EXCLUDE_LIST, { f3 })
 
-    do
-        local e1 = evo.id()
-        assert(evo.insert(e1, f1, 41))
+    for chunk in evo.execute(q) do
+        print(chunk)
+    end
 
-        local e2 = evo.id()
-        assert(evo.insert(e2, f1, 41))
-        assert(evo.insert(e2, f2, 42))
+    evo.remove(q, evo.EXCLUDE_LIST)
 
-        local e3 = evo.id()
-        assert(evo.insert(e3, f1, 43))
-        assert(evo.insert(e3, f2, 44))
-        assert(evo.insert(e3, f3, 45))
+    for chunk in evo.execute(q) do
+        print(chunk)
+    end
 
-        local e4 = evo.id()
-        assert(evo.insert(e4, f1, 45))
-        assert(evo.insert(e4, f2, 46))
-        assert(evo.insert(e4, f3, 47))
-        assert(evo.insert(e4, f4, 48))
+    evo.remove(q, evo.INCLUDE_LIST)
 
-        local e5 = evo.id()
-        assert(evo.insert(e5, f1, 49))
-        assert(evo.insert(e5, f2, 50))
-        assert(evo.insert(e5, f4, 51))
-
-        for chunk in evo.execute(q) do
-            print(chunk)
-        end
+    for chunk in evo.execute(q) do
+        print(chunk)
     end
 end
