@@ -755,6 +755,13 @@ function evolved.id(count)
     end
 end
 
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function evolved.alive(id)
+    return __alive_id(id)
+end
+
 ---@param index integer
 ---@param version integer
 ---@return evolved.id
@@ -1106,13 +1113,6 @@ function evolved.clear(entity)
 end
 
 ---@param entity evolved.entity
----@return boolean
----@nodiscard
-function evolved.alive(entity)
-    return __alive_id(entity)
-end
-
----@param entity evolved.entity
 ---@return boolean is_destroyed
 ---@return boolean is_deferred
 function evolved.destroy(entity)
@@ -1150,6 +1150,55 @@ function evolved.destroy(entity)
     end
     __defer_commit()
     return true, false
+end
+
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+---@return boolean is_set
+---@return boolean is_deferred
+function evolved.batch_set(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+---@return boolean is_assigned
+---@return boolean is_deferred
+function evolved.batch_assign(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+---@return boolean is_inserted
+---@return boolean is_deferred
+function evolved.batch_insert(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param ... evolved.fragment fragments
+---@return boolean is_removed
+---@return boolean is_deferred
+function evolved.batch_remove(query, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@return boolean is_cleared
+---@return boolean is_deferred
+function evolved.batch_clear(query)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@return boolean is_destroyed
+---@return boolean is_deferred
+function evolved.batch_destroy(query)
+    error('not implemented yet', 2)
 end
 
 ---
