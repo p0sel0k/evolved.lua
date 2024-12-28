@@ -555,6 +555,8 @@ end
 do
     local f1, f2, f3 = evo.id(3)
 
+    evo.set(f1, evo.DEFAULT, 42)
+
     local e1, e2, e3, e4 = evo.id(4)
 
     assert(evo.insert(e1, f3, 44))
@@ -570,7 +572,7 @@ do
     assert(evo.defer())
     assert(not evo.defer())
 
-    evo.set(e1, f1, 42)
+    evo.set(e1, f1)
     evo.set(e1, f2, 43)
     evo.remove(e2, f1, f2)
     evo.assign(e2, f3, 48)

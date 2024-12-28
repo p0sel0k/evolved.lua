@@ -655,23 +655,23 @@ local __defer_ops = {
     [__defer_op.set] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
-        local component = bytes[index + 2]
-        evolved.set(entity, fragment, component)
-        return 3
+        local argument_count = bytes[index + 2]
+        evolved.set(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
     end,
     [__defer_op.assign] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
-        local component = bytes[index + 2]
-        evolved.assign(entity, fragment, component)
-        return 3
+        local argument_count = bytes[index + 2]
+        evolved.assign(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
     end,
     [__defer_op.insert] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
-        local component = bytes[index + 2]
-        evolved.insert(entity, fragment, component)
-        return 3
+        local argument_count = bytes[index + 2]
+        evolved.insert(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
     end,
     [__defer_op.remove] = function(bytes, index)
         local entity = bytes[index + 0]
@@ -726,51 +726,63 @@ end
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_set(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     local length = __defer_length
     local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
 
     bytecode[length + 1] = __defer_op.set
     bytecode[length + 2] = entity
     bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
+    bytecode[length + 4] = argument_count
 
-    __defer_length = length + 4
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_assign(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     local length = __defer_length
     local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
 
     bytecode[length + 1] = __defer_op.assign
     bytecode[length + 2] = entity
     bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
+    bytecode[length + 4] = argument_count
 
-    __defer_length = length + 4
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_insert(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     local length = __defer_length
     local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
 
     bytecode[length + 1] = __defer_op.insert
     bytecode[length + 2] = entity
     bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
+    bytecode[length + 4] = argument_count
 
-    __defer_length = length + 4
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param entity evolved.entity
@@ -1002,10 +1014,8 @@ end
 ---@return boolean is_set
 ---@return boolean is_deferred
 function evolved.set(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     if __defer_depth > 0 then
-        __defer_set(entity, fragment, component)
+        __defer_set(entity, fragment, ...)
         return false, true
     end
 
@@ -1024,16 +1034,19 @@ function evolved.set(entity, fragment, ...)
     if old_chunk == new_chunk then
         local old_chunk_fragment_components = old_chunk.__components[fragment]
         local old_component = old_chunk_fragment_components[old_place]
-        old_chunk_fragment_components[old_place] = component
-        __on_assign(entity, fragment, component, old_component)
+        local new_component = __construct(entity, fragment, ...)
+        old_chunk_fragment_components[old_place] = new_component
+        __on_assign(entity, fragment, new_component, old_component)
         return true, false
     end
+
+    local new_component = __construct(entity, fragment, ...)
 
     local new_chunk_entities = new_chunk.__entities
     local new_chunk_components = new_chunk.__components
 
     new_chunk_entities[new_place] = entity
-    new_chunk_components[fragment][new_place] = component
+    new_chunk_components[fragment][new_place] = new_component
 
     if old_chunk then
         local old_chunk_components = old_chunk.__components
@@ -1051,7 +1064,7 @@ function evolved.set(entity, fragment, ...)
 
     __structural_changes = __structural_changes + 1
 
-    __on_insert(entity, fragment, component)
+    __on_insert(entity, fragment, new_component)
     return true, false
 end
 
@@ -1061,10 +1074,8 @@ end
 ---@return boolean is_assigned
 ---@return boolean is_deferred
 function evolved.assign(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     if __defer_depth > 0 then
-        __defer_assign(entity, fragment, component)
+        __defer_assign(entity, fragment, ...)
         return false, true
     end
 
@@ -1083,8 +1094,9 @@ function evolved.assign(entity, fragment, ...)
 
     local old_chunk_fragment_components = old_chunk.__components[fragment]
     local old_component = old_chunk_fragment_components[old_place]
-    old_chunk_fragment_components[old_place] = component
-    __on_assign(entity, fragment, component, old_component)
+    local new_component = __construct(entity, fragment, ...)
+    old_chunk_fragment_components[old_place] = new_component
+    __on_assign(entity, fragment, new_component, old_component)
     return true, false
 end
 
@@ -1094,10 +1106,8 @@ end
 ---@return boolean is_inserted
 ---@return boolean is_deferred
 function evolved.insert(entity, fragment, ...)
-    local component = __construct(entity, fragment, ...)
-
     if __defer_depth > 0 then
-        __defer_insert(entity, fragment, component)
+        __defer_insert(entity, fragment, ...)
         return false, true
     end
 
@@ -1117,11 +1127,13 @@ function evolved.insert(entity, fragment, ...)
         return false, false
     end
 
+    local new_component = __construct(entity, fragment, ...)
+
     local new_chunk_entities = new_chunk.__entities
     local new_chunk_components = new_chunk.__components
 
     new_chunk_entities[new_place] = entity
-    new_chunk_components[fragment][new_place] = component
+    new_chunk_components[fragment][new_place] = new_component
 
     if old_chunk then
         local old_chunk_components = old_chunk.__components
@@ -1139,7 +1151,7 @@ function evolved.insert(entity, fragment, ...)
 
     __structural_changes = __structural_changes + 1
 
-    __on_insert(entity, fragment, component)
+    __on_insert(entity, fragment, new_component)
     return true, false
 end
 
