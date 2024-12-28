@@ -648,6 +648,12 @@ local __defer_op = {
     remove = 4,
     clear = 5,
     destroy = 6,
+    batch_set = 7,
+    batch_assign = 8,
+    batch_insert = 9,
+    batch_remove = 10,
+    batch_clear = 11,
+    batch_destroy = 12,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
@@ -687,6 +693,43 @@ local __defer_ops = {
     [__defer_op.destroy] = function(bytes, index)
         local entity = bytes[index + 0]
         evolved.destroy(entity)
+        return 1
+    end,
+    [__defer_op.batch_set] = function(bytes, index)
+        local query = bytes[index + 0]
+        local fragment = bytes[index + 1]
+        local argument_count = bytes[index + 2]
+        evolved.batch_set(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
+    end,
+    [__defer_op.batch_assign] = function(bytes, index)
+        local query = bytes[index + 0]
+        local fragment = bytes[index + 1]
+        local argument_count = bytes[index + 2]
+        evolved.batch_assign(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
+    end,
+    [__defer_op.batch_insert] = function(bytes, index)
+        local query = bytes[index + 0]
+        local fragment = bytes[index + 1]
+        local argument_count = bytes[index + 2]
+        evolved.batch_insert(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        return 3 + argument_count
+    end,
+    [__defer_op.batch_remove] = function(bytes, index)
+        local query = bytes[index + 0]
+        local fragment_count = bytes[index + 1]
+        evolved.batch_remove(query, __lua_unpack(bytes, index + 2, index + 1 + fragment_count))
+        return 2 + fragment_count
+    end,
+    [__defer_op.batch_clear] = function(bytes, index)
+        local query = bytes[index + 0]
+        evolved.batch_clear(query)
+        return 1
+    end,
+    [__defer_op.batch_destroy] = function(bytes, index)
+        local query = bytes[index + 0]
+        evolved.batch_destroy(query)
         return 1
     end,
 }
@@ -831,37 +874,105 @@ end
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_batch_set(query, fragment, ...)
-    error('not implemented yet', 2)
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
+
+    bytecode[length + 1] = __defer_op.batch_set
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = argument_count
+
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_batch_assign(query, fragment, ...)
-    error('not implemented yet', 2)
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
+
+    bytecode[length + 1] = __defer_op.batch_assign
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = argument_count
+
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 local function __defer_batch_insert(query, fragment, ...)
-    error('not implemented yet', 2)
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    local argument_count = select('#', ...)
+
+    bytecode[length + 1] = __defer_op.batch_insert
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = argument_count
+
+    for i = 1, argument_count do
+        bytecode[length + 4 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 4 + argument_count
 end
 
 ---@param query evolved.query
 ---@param ... evolved.fragment fragments
 local function __defer_batch_remove(query, ...)
-    error('not implemented yet', 2)
+    local fragment_count = select('#', ...)
+    if fragment_count == 0 then return end
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_remove
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment_count
+
+    for i = 1, fragment_count do
+        bytecode[length + 3 + i] = select(i, ...)
+    end
+
+    __defer_length = length + 3 + fragment_count
 end
 
 ---@param query evolved.query
 local function __defer_batch_clear(query)
-    error('not implemented yet', 2)
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_clear
+    bytecode[length + 2] = query
+
+    __defer_length = length + 2
 end
 
 ---@param query evolved.query
 local function __defer_batch_destroy(query)
-    error('not implemented yet', 2)
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_destroy
+    bytecode[length + 2] = query
+
+    __defer_length = length + 2
 end
 
 ---
