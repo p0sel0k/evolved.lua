@@ -14,9 +14,9 @@ has :: entity, fragment -> boolean
 has_all :: entity, fragment... -> boolean
 has_any :: entity, fragment... -> boolean
 
-set :: entity, fragment, component, any... -> boolean, boolean
-assign :: entity, fragment, component, any... -> boolean, boolean
-insert :: entity, fragment, component, any... -> boolean, boolean
+set :: entity, fragment, any... -> boolean, boolean
+assign :: entity, fragment, any... -> boolean, boolean
+insert :: entity, fragment, any... -> boolean, boolean
 remove :: entity, fragment... -> boolean, boolean
 clear :: entity -> boolean, boolean
 

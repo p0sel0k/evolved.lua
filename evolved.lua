@@ -154,13 +154,21 @@ evolved.EXCLUDE_LIST = __acquire_id()
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
+---@param ... any component arguments
 ---@return evolved.component
-local function __construct(entity, fragment, component, ...)
+local function __construct(entity, fragment, ...)
     local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
-    if construct ~= nil then component = construct(entity, fragment, component, ...) end
-    if component == nil then component = default end
+
+    local component = ...
+
+    if construct ~= nil then
+        component = construct(entity, fragment, ...)
+    end
+
+    if component == nil then
+        component = default
+    end
+
     return component == nil and true or component
 end
 
@@ -622,10 +630,9 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
-local function __defer_set(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+---@param ... any component arguments
+local function __defer_set(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     local bytes = __defer_bytecode
     local length = __defer_bytecode_length
@@ -640,10 +647,9 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
-local function __defer_assign(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+---@param ... any component arguments
+local function __defer_assign(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     local bytes = __defer_bytecode
     local length = __defer_bytecode_length
@@ -658,10 +664,9 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
-local function __defer_insert(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+---@param ... any component arguments
+local function __defer_insert(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     local bytes = __defer_bytecode
     local length = __defer_bytecode_length
@@ -723,7 +728,7 @@ end
 ---
 
 ---@param count? integer
----@return evolved.id ...
+---@return evolved.id ... ids
 ---@nodiscard
 function evolved.id(count)
     count = count or 1
@@ -855,12 +860,11 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
+---@param ... any component arguments
 ---@return boolean is_set
 ---@return boolean is_deferred
-function evolved.set(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+function evolved.set(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     if __defer_depth > 0 then
         __defer_set(entity, fragment, component)
@@ -915,12 +919,11 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
+---@param ... any component arguments
 ---@return boolean is_assigned
 ---@return boolean is_deferred
-function evolved.assign(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+function evolved.assign(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     if __defer_depth > 0 then
         __defer_assign(entity, fragment, component)
@@ -949,12 +952,11 @@ end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
----@param component evolved.component
----@param ... any construct additional parameters
+---@param ... any component arguments
 ---@return boolean is_inserted
 ---@return boolean is_deferred
-function evolved.insert(entity, fragment, component, ...)
-    component = __construct(entity, fragment, component, ...)
+function evolved.insert(entity, fragment, ...)
+    local component = __construct(entity, fragment, ...)
 
     if __defer_depth > 0 then
         __defer_insert(entity, fragment, component)
