@@ -553,6 +553,32 @@ do
 end
 
 do
+    local f = evo.id()
+
+    do
+        local e = evo.id()
+        assert(evo.empty(e))
+
+        evo.insert(e, f, 42)
+        assert(not evo.empty(e))
+
+        evo.clear(e)
+        assert(evo.empty(e))
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.empty(e))
+
+        evo.insert(e, f, 42)
+        assert(not evo.empty(e))
+
+        evo.destroy(e)
+        assert(evo.empty(e))
+    end
+end
+
+do
     local f1, f2, f3 = evo.id(3)
 
     evo.set(f1, evo.DEFAULT, 42)

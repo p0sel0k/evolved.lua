@@ -1,14 +1,16 @@
 # evolved.lua (work in progress)
 
 ```
-id :: id
-alive :: id -> boolean
+id :: integer? -> id...
 
 pack :: integer, integer -> id
 unpack :: id -> integer, integer
 
 defer :: boolean
 commit :: boolean
+
+alive :: entity -> boolean
+empty :: entity -> boolean
 
 get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean

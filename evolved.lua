@@ -1009,13 +1009,6 @@ function evolved.id(count)
     end
 end
 
----@param id evolved.id
----@return boolean
----@nodiscard
-function evolved.alive(id)
-    return __alive_id(id)
-end
-
 ---@param index integer
 ---@param version integer
 ---@return evolved.id
@@ -1040,6 +1033,21 @@ end
 ---@return boolean committed
 function evolved.commit()
     return __defer_commit()
+end
+
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+function evolved.alive(entity)
+    return __alive_id(entity)
+end
+
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+function evolved.empty(entity)
+    return not __alive_id(entity)
+        or not __entity_chunks[__unpack_id(entity)]
 end
 
 ---@param entity evolved.entity
