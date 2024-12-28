@@ -27,8 +27,8 @@ local __freelist_ids = {} ---@type evolved.id[]
 local __available_idx = 0 ---@type integer
 
 local __defer_depth = 0 ---@type integer
+local __defer_length = 0 ---@type integer
 local __defer_bytecode = {} ---@type any[]
-local __defer_bytecode_length = 0 ---@type integer
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
@@ -613,14 +613,14 @@ local function __defer_commit()
         return false
     end
 
+    local length = __defer_length
     local bytecode = __defer_bytecode
-    local bytecode_length = __defer_bytecode_length
 
+    __defer_length = 0
     __defer_bytecode = {}
-    __defer_bytecode_length = 0
 
     local bytecode_index = 1
-    while bytecode_index <= bytecode_length do
+    while bytecode_index <= length do
         local op = __defer_ops[bytecode[bytecode_index]]
         bytecode_index = bytecode_index + op(bytecode, bytecode_index + 1) + 1
     end
@@ -634,15 +634,15 @@ end
 local function __defer_set(entity, fragment, ...)
     local component = __construct(entity, fragment, ...)
 
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.set
-    bytes[length + 2] = entity
-    bytes[length + 3] = fragment
-    bytes[length + 4] = component
+    bytecode[length + 1] = __defer_op.set
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = component
 
-    __defer_bytecode_length = length + 4
+    __defer_length = length + 4
 end
 
 ---@param entity evolved.entity
@@ -651,15 +651,15 @@ end
 local function __defer_assign(entity, fragment, ...)
     local component = __construct(entity, fragment, ...)
 
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.assign
-    bytes[length + 2] = entity
-    bytes[length + 3] = fragment
-    bytes[length + 4] = component
+    bytecode[length + 1] = __defer_op.assign
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = component
 
-    __defer_bytecode_length = length + 4
+    __defer_length = length + 4
 end
 
 ---@param entity evolved.entity
@@ -668,15 +668,15 @@ end
 local function __defer_insert(entity, fragment, ...)
     local component = __construct(entity, fragment, ...)
 
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.insert
-    bytes[length + 2] = entity
-    bytes[length + 3] = fragment
-    bytes[length + 4] = component
+    bytecode[length + 1] = __defer_op.insert
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = fragment
+    bytecode[length + 4] = component
 
-    __defer_bytecode_length = length + 4
+    __defer_length = length + 4
 end
 
 ---@param entity evolved.entity
@@ -685,40 +685,40 @@ local function __defer_remove(entity, ...)
     local fragment_count = select('#', ...)
     if fragment_count == 0 then return end
 
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.remove
-    bytes[length + 2] = entity
-    bytes[length + 3] = fragment_count
+    bytecode[length + 1] = __defer_op.remove
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = fragment_count
 
     for i = 1, fragment_count do
-        bytes[length + 3 + i] = select(i, ...)
+        bytecode[length + 3 + i] = select(i, ...)
     end
 
-    __defer_bytecode_length = length + 3 + fragment_count
+    __defer_length = length + 3 + fragment_count
 end
 
 ---@param entity evolved.entity
 local function __defer_clear(entity)
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.clear
-    bytes[length + 2] = entity
+    bytecode[length + 1] = __defer_op.clear
+    bytecode[length + 2] = entity
 
-    __defer_bytecode_length = length + 2
+    __defer_length = length + 2
 end
 
 ---@param entity evolved.entity
 local function __defer_destroy(entity)
-    local bytes = __defer_bytecode
-    local length = __defer_bytecode_length
+    local length = __defer_length
+    local bytecode = __defer_bytecode
 
-    bytes[length + 1] = __defer_op.destroy
-    bytes[length + 2] = entity
+    bytecode[length + 1] = __defer_op.destroy
+    bytecode[length + 2] = entity
 
-    __defer_bytecode_length = length + 2
+    __defer_length = length + 2
 end
 
 ---
