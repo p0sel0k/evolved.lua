@@ -17,6 +17,13 @@ local evolved = {}
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
+---@alias evolved.include_set table<evolved.fragment, boolean>
+---@alias evolved.exclude_set table<evolved.fragment, boolean>
+
+---@alias evolved.execution_stack evolved.chunk[]
+---@alias evolved.execution_state [integer, evolved.exclude_set, evolved.execution_stack]
+---@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
+
 ---
 ---
 ---
@@ -35,6 +42,9 @@ local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
+
+local __execution_stacks = {} ---@type evolved.execution_stack[]
+local __execution_states = {} ---@type evolved.execution_state[]
 
 local __structural_changes = 0 ---@type integer
 
@@ -77,6 +87,12 @@ local function __unpack_id(id)
     local version = (id - index) / 0x100000
     return index, version
 end
+
+---
+---
+---
+---
+---
 
 ---@return evolved.id
 ---@nodiscard
@@ -127,6 +143,84 @@ local function __release_id(id)
 
     __freelist_ids[index] = __available_idx + version
     __available_idx = index
+end
+
+---
+---
+---
+---
+---
+
+---@return evolved.execution_stack
+---@nodiscard
+local function __acquire_execution_stack()
+    if #__execution_stacks == 0 then
+        return {}
+    end
+
+    local stack = __execution_stacks[#__execution_stacks]
+    __execution_stacks[#__execution_stacks] = nil
+
+    return stack
+end
+
+---@param stack evolved.execution_stack
+local function __release_execution_stack(stack)
+    for i = #stack, 1, -1 do stack[i] = nil end
+    __execution_stacks[#__execution_stacks + 1] = stack
+end
+
+---@param exclude_set evolved.exclude_set
+---@return evolved.execution_state
+---@return evolved.execution_stack
+---@nodiscard
+local function __acquire_execution_state(exclude_set)
+    if #__execution_states == 0 then
+        local stack = __acquire_execution_stack()
+        return { __structural_changes, exclude_set, stack }, stack
+    end
+
+    local state = __execution_states[#__execution_states]
+    __execution_states[#__execution_states] = nil
+
+    local stack = __acquire_execution_stack()
+    state[1], state[2], state[3] = __structural_changes, exclude_set, stack
+    return state, stack
+end
+
+---@param state evolved.execution_state
+local function __release_execution_state(state)
+    __release_execution_stack(state[3]); state[3] = nil
+    __execution_states[#__execution_states + 1] = state
+end
+
+---@type evolved.execution_iterator
+local function __execution_iterator(execution_state)
+    if not execution_state then return end
+
+    local structural_changes, exclude_set, execution_stack =
+        execution_state[1], execution_state[2], execution_state[3]
+
+    if structural_changes ~= __structural_changes then
+        error('structural changes are prohibited during execution', 2)
+    end
+
+    while #execution_stack > 0 do
+        local matched_chunk = execution_stack[#execution_stack]
+        execution_stack[#execution_stack] = nil
+
+        for _, matched_chunk_child in ipairs(matched_chunk.__children) do
+            if not exclude_set[matched_chunk_child.__fragment] then
+                execution_stack[#execution_stack + 1] = matched_chunk_child
+            end
+        end
+
+        if #matched_chunk.__entities > 0 then
+            return matched_chunk, matched_chunk.__entities
+        end
+    end
+
+    __release_execution_state(execution_state)
 end
 
 ---
@@ -721,6 +815,43 @@ local function __defer_destroy(entity)
     __defer_length = length + 2
 end
 
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+local function __defer_batch_set(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+local function __defer_batch_assign(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param ... any component arguments
+local function __defer_batch_insert(query, fragment, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param ... evolved.fragment fragments
+local function __defer_batch_remove(query, ...)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+local function __defer_batch_clear(query)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+local function __defer_batch_destroy(query)
+    error('not implemented yet', 2)
+end
+
 ---
 ---
 ---
@@ -1155,49 +1286,79 @@ end
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return boolean is_set
+---@return integer set_count
 ---@return boolean is_deferred
 function evolved.batch_set(query, fragment, ...)
+    if __defer_depth > 0 then
+        __defer_batch_set(query, fragment, ...)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return boolean is_assigned
+---@return integer assigned_count
 ---@return boolean is_deferred
 function evolved.batch_assign(query, fragment, ...)
+    if __defer_depth > 0 then
+        __defer_batch_assign(query, fragment, ...)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return boolean is_inserted
+---@return integer inserted_count
 ---@return boolean is_deferred
 function evolved.batch_insert(query, fragment, ...)
+    if __defer_depth > 0 then
+        __defer_batch_insert(query, fragment, ...)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
 ---@param query evolved.query
 ---@param ... evolved.fragment fragments
----@return boolean is_removed
+---@return integer removed_count
 ---@return boolean is_deferred
 function evolved.batch_remove(query, ...)
+    if __defer_depth > 0 then
+        __defer_batch_remove(query, ...)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
 ---@param query evolved.query
----@return boolean is_cleared
+---@return integer cleared_count
 ---@return boolean is_deferred
 function evolved.batch_clear(query)
+    if __defer_depth > 0 then
+        __defer_batch_clear(query)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
 ---@param query evolved.query
----@return boolean is_destroyed
+---@return integer destroyed_count
 ---@return boolean is_deferred
 function evolved.batch_destroy(query)
+    if __defer_depth > 0 then
+        __defer_batch_destroy(query)
+        return 0, true
+    end
+
     error('not implemented yet', 2)
 end
 
@@ -1206,13 +1367,6 @@ end
 ---
 ---
 ---
-
----@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, table<evolved.entity, boolean>, evolved.execution_stack]
----@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
-
-local __execution_stacks = {} ---@type evolved.execution_stack[]
-local __execution_states = {} ---@type evolved.execution_state[]
 
 local __INCLUDE_SET = __acquire_id()
 local __EXCLUDE_SET = __acquire_id()
@@ -1272,81 +1426,6 @@ assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, e
     evolved.set(query, __EXCLUDE_SET, exclude_set)
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
 end))
-
----@return evolved.execution_stack
----@nodiscard
-local function __acquire_execution_stack()
-    if #__execution_stacks == 0 then
-        return {}
-    end
-
-    local stack = __execution_stacks[#__execution_stacks]
-    __execution_stacks[#__execution_stacks] = nil
-
-    return stack
-end
-
----@param stack evolved.execution_stack
-local function __release_execution_stack(stack)
-    for i = #stack, 1, -1 do stack[i] = nil end
-    __execution_stacks[#__execution_stacks + 1] = stack
-end
-
----@param query evolved.query
----@return evolved.execution_state
----@return evolved.execution_stack
----@nodiscard
-local function __acquire_execution_state(query)
-    ---@type table<evolved.fragment, boolean>
-    local exclude_set = evolved.get(query, __EXCLUDE_SET) or {}
-
-    if #__execution_states == 0 then
-        local stack = __acquire_execution_stack()
-        return { __structural_changes, exclude_set, stack }, stack
-    end
-
-    local state = __execution_states[#__execution_states]
-    __execution_states[#__execution_states] = nil
-
-    local stack = __acquire_execution_stack()
-    state[1], state[2], state[3] = __structural_changes, exclude_set, stack
-    return state, stack
-end
-
----@param state evolved.execution_state
-local function __release_execution_state(state)
-    __release_execution_stack(state[3]); state[3] = nil
-    __execution_states[#__execution_states + 1] = state
-end
-
----@type evolved.execution_iterator
-local function __execution_iterator(execution_state)
-    if not execution_state then return end
-
-    local structural_changes, exclude_set, execution_stack =
-        execution_state[1], execution_state[2], execution_state[3]
-
-    if structural_changes ~= __structural_changes then
-        error('structural changes are prohibited during execution', 2)
-    end
-
-    while #execution_stack > 0 do
-        local matched_chunk = execution_stack[#execution_stack]
-        execution_stack[#execution_stack] = nil
-
-        for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-            if not exclude_set[matched_chunk_child.__fragment] then
-                execution_stack[#execution_stack + 1] = matched_chunk_child
-            end
-        end
-
-        if #matched_chunk.__entities > 0 then
-            return matched_chunk, matched_chunk.__entities
-        end
-    end
-
-    __release_execution_state(execution_state)
-end
 
 ---
 ---
@@ -1412,7 +1491,8 @@ function evolved.execute(query)
         return __execution_iterator, nil
     end
 
-    local execution_state, execution_stack = __acquire_execution_state(query)
+    local exclude_set = evolved.get(query, __EXCLUDE_SET) or {}
+    local execution_state, execution_stack = __acquire_execution_state(exclude_set)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
