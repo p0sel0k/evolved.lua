@@ -18,7 +18,7 @@ local evolved = {}
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
 ---@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, table<evolved.fragment, boolean>, evolved.execution_stack]
+---@alias evolved.execution_state [integer, evolved.execution_stack, table<evolved.fragment, boolean>?]
 ---@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
 
 ---
@@ -207,27 +207,28 @@ local function __release_execution_stack(stack)
     __execution_stacks[#__execution_stacks + 1] = stack
 end
 
----@param exclude_set table<evolved.fragment, boolean>
+---@param exclude_set? table<evolved.fragment, boolean>
 ---@return evolved.execution_state
 ---@return evolved.execution_stack
 ---@nodiscard
 local function __acquire_execution_state(exclude_set)
     if #__execution_states == 0 then
         local stack = __acquire_execution_stack()
-        return { __structural_changes, exclude_set, stack }, stack
+        return { __structural_changes, stack, exclude_set }, stack
     end
 
     local state = __execution_states[#__execution_states]
     __execution_states[#__execution_states] = nil
 
     local stack = __acquire_execution_stack()
-    state[1], state[2], state[3] = __structural_changes, exclude_set, stack
+    state[1], state[2], state[3] = __structural_changes, stack, exclude_set
     return state, stack
 end
 
 ---@param state evolved.execution_state
 local function __release_execution_state(state)
-    __release_execution_stack(state[3]); state[3] = nil
+    __release_execution_stack(state[2]);
+    for i = #state, 1, -1 do state[i] = nil end
     __execution_states[#__execution_states + 1] = state
 end
 
@@ -235,7 +236,7 @@ end
 local function __execution_iterator(execution_state)
     if not execution_state then return end
 
-    local structural_changes, exclude_set, execution_stack =
+    local structural_changes, execution_stack, exclude_set =
         execution_state[1], execution_state[2], execution_state[3]
 
     if structural_changes ~= __structural_changes then
@@ -247,7 +248,7 @@ local function __execution_iterator(execution_state)
         execution_stack[#execution_stack] = nil
 
         for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-            if not exclude_set[matched_chunk_child.__fragment] then
+            if not exclude_set or not exclude_set[matched_chunk_child.__fragment] then
                 execution_stack[#execution_stack + 1] = matched_chunk_child
             end
         end
@@ -2282,8 +2283,8 @@ function evolved.execute(query)
         return __execution_iterator, nil
     end
 
-    ---@type table<evolved.fragment, boolean>
-    local exclude_set = evolved.get(query, __EXCLUDE_SET) or {}
+    ---@type table<evolved.fragment, boolean>?
+    local exclude_set = evolved.get(query, __EXCLUDE_SET)
     local execution_state, execution_stack = __acquire_execution_state(exclude_set)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
