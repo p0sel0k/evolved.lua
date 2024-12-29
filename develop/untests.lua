@@ -2223,3 +2223,80 @@ do
         assert(evo.get(e1, f1) == nil)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q = evo.id()
+    evo.set(q, evo.INCLUDE_LIST, { f1 })
+    evo.set(q, evo.INCLUDE_LIST, { f2 })
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f2, 42))
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+
+        assert(chunk == evo.chunk(f2))
+        assert(entities and entities[1] == e2)
+    end
+
+    evo.set(q, evo.INCLUDE_LIST)
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+
+        assert(not chunk)
+        assert(not entities)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q = evo.id()
+    evo.set(q, evo.INCLUDE_LIST, { f1 })
+
+    evo.set(q, evo.EXCLUDE_LIST, { f1 })
+    evo.set(q, evo.EXCLUDE_LIST, { f2 })
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 43))
+    assert(evo.insert(e2, f2, 44))
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+        assert(chunk == evo.chunk(f1))
+        assert(entities and entities[1] == e1)
+
+        chunk, entities = iter(state)
+        assert(not chunk)
+        assert(not entities)
+    end
+
+    evo.set(q, evo.EXCLUDE_LIST)
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+        assert(chunk == evo.chunk(f1))
+        assert(entities and entities[1] == e1)
+
+        chunk, entities = iter(state)
+        assert(chunk == evo.chunk(f1, f2))
+        assert(entities and entities[1] == e2)
+
+        chunk, entities = iter(state)
+        assert(not chunk)
+        assert(not entities)
+    end
+end

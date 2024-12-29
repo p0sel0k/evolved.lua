@@ -2123,6 +2123,8 @@ local __EXCLUDE_SET = __acquire_id()
 local __SORTED_INCLUDE_LIST = __acquire_id()
 local __SORTED_EXCLUDE_LIST = __acquire_id()
 
+assert(evolved.insert(evolved.TAG, evolved.TAG))
+
 assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, include_list)
     return include_list or {}
 end))
