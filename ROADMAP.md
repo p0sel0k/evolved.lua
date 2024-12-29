@@ -7,3 +7,4 @@
 - every chunk can hold has_on_assign/has_on_insert/has_on_remove tags
 - optimize batch operations for cases with moving entities to empty chunks
 - should we clear chunk's components by on_insert tag callback?
+- use table.new/clear for cached tables
