@@ -52,6 +52,7 @@ local __structural_changes = 0 ---@type integer
 ---
 ---
 
+---@diagnostic disable-next-line: deprecated
 local __table_move = table.move or function(a1, f, e, t, a2)
     if a2 == nil then
         a2 = a1
@@ -72,9 +73,8 @@ local __table_move = table.move or function(a1, f, e, t, a2)
     return a2
 end
 
-local __table_unpack = table.unpack or function(list, i, j)
-    return unpack(list, i, j)
-end
+---@diagnostic disable-next-line: deprecated
+local __table_unpack = table.unpack or unpack
 
 ---
 ---
