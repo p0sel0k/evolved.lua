@@ -9,8 +9,8 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
-alive :: entity -> boolean
-empty :: entity -> boolean
+is_alive :: entity -> boolean
+is_empty :: entity -> boolean
 
 get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean

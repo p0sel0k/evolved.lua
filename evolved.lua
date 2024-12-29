@@ -141,7 +141,7 @@ end
 ---@param id evolved.id
 ---@return boolean
 ---@nodiscard
-local function __alive_id(id)
+local function __is_id_alive(id)
     local index = id % 0x100000
     return __freelist_ids[index] == id
 end
@@ -1495,15 +1495,15 @@ end
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
-function evolved.alive(entity)
-    return __alive_id(entity)
+function evolved.is_alive(entity)
+    return __is_id_alive(entity)
 end
 
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
-function evolved.empty(entity)
-    return not __alive_id(entity)
+function evolved.is_empty(entity)
+    return not __is_id_alive(entity)
         or not __entity_chunks[__unpack_id(entity)]
 end
 
@@ -1512,7 +1512,7 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function evolved.get(entity, ...)
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return
     end
 
@@ -1532,7 +1532,7 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has(entity, fragment)
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false
     end
 
@@ -1551,7 +1551,7 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has_all(entity, ...)
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false
     end
 
@@ -1570,7 +1570,7 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has_any(entity, ...)
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false
     end
 
@@ -1595,7 +1595,7 @@ function evolved.set(entity, fragment, ...)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false, false
     end
 
@@ -1672,7 +1672,7 @@ function evolved.assign(entity, fragment, ...)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false, false
     end
 
@@ -1711,7 +1711,7 @@ function evolved.insert(entity, fragment, ...)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false, false
     end
 
@@ -1775,7 +1775,7 @@ function evolved.remove(entity, ...)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false, false
     end
 
@@ -1846,7 +1846,7 @@ function evolved.clear(entity)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return false, false
     end
 
@@ -1893,7 +1893,7 @@ function evolved.destroy(entity)
         return false, true
     end
 
-    if not __alive_id(entity) then
+    if not __is_id_alive(entity) then
         return true, false
     end
 

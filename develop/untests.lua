@@ -546,11 +546,11 @@ do
 
     assert(evo.insert(e, f, 42))
     assert(evo.has(e, f))
-    assert(evo.alive(e))
+    assert(evo.is_alive(e))
 
     evo.destroy(e)
     assert(not evo.has(e, f))
-    assert(not evo.alive(e))
+    assert(not evo.is_alive(e))
 end
 
 do
@@ -558,24 +558,24 @@ do
 
     do
         local e = evo.id()
-        assert(evo.empty(e))
+        assert(evo.is_empty(e))
 
         evo.insert(e, f, 42)
-        assert(not evo.empty(e))
+        assert(not evo.is_empty(e))
 
         evo.clear(e)
-        assert(evo.empty(e))
+        assert(evo.is_empty(e))
     end
 
     do
         local e = evo.id()
-        assert(evo.empty(e))
+        assert(evo.is_empty(e))
 
         evo.insert(e, f, 42)
-        assert(not evo.empty(e))
+        assert(not evo.is_empty(e))
 
         evo.destroy(e)
-        assert(evo.empty(e))
+        assert(evo.is_empty(e))
     end
 end
 
@@ -686,7 +686,7 @@ do
     assert(evo.get(e3, f2) == nil)
     assert(evo.get(e3, f3) == nil)
 
-    assert(not evo.alive(e4))
+    assert(not evo.is_alive(e4))
 end
 
 do
@@ -949,17 +949,17 @@ do
 
         assert(evo.batch_clear(q) == 3)
 
-        assert(evo.alive(e1))
-        assert(evo.alive(e2))
-        assert(evo.alive(e3))
-        assert(evo.alive(e4))
-        assert(evo.alive(e5))
+        assert(evo.is_alive(e1))
+        assert(evo.is_alive(e2))
+        assert(evo.is_alive(e3))
+        assert(evo.is_alive(e4))
+        assert(evo.is_alive(e5))
 
-        assert(not evo.empty(e1))
-        assert(evo.empty(e2))
-        assert(evo.empty(e3))
-        assert(evo.empty(e4))
-        assert(not evo.empty(e5))
+        assert(not evo.is_empty(e1))
+        assert(evo.is_empty(e2))
+        assert(evo.is_empty(e3))
+        assert(evo.is_empty(e4))
+        assert(not evo.is_empty(e5))
     end
     do
         local f1, f2, f3, f4 = evo.id(4)
@@ -1021,17 +1021,17 @@ do
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
         assert(component_sum == 42 + 43 + 44 + 45 + 46 + 47 + 48 + 49 + 50)
 
-        assert(evo.alive(e1))
-        assert(evo.alive(e2))
-        assert(evo.alive(e3))
-        assert(evo.alive(e4))
-        assert(evo.alive(e5))
+        assert(evo.is_alive(e1))
+        assert(evo.is_alive(e2))
+        assert(evo.is_alive(e3))
+        assert(evo.is_alive(e4))
+        assert(evo.is_alive(e5))
 
-        assert(not evo.empty(e1))
-        assert(evo.empty(e2))
-        assert(evo.empty(e3))
-        assert(evo.empty(e4))
-        assert(not evo.empty(e5))
+        assert(not evo.is_empty(e1))
+        assert(evo.is_empty(e2))
+        assert(evo.is_empty(e3))
+        assert(evo.is_empty(e4))
+        assert(not evo.is_empty(e5))
     end
 end
 
@@ -1067,17 +1067,17 @@ do
 
         assert(evo.batch_destroy(q) == 3)
 
-        assert(evo.alive(e1))
-        assert(not evo.alive(e2))
-        assert(not evo.alive(e3))
-        assert(not evo.alive(e4))
-        assert(evo.alive(e5))
+        assert(evo.is_alive(e1))
+        assert(not evo.is_alive(e2))
+        assert(not evo.is_alive(e3))
+        assert(not evo.is_alive(e4))
+        assert(evo.is_alive(e5))
 
-        assert(not evo.empty(e1))
-        assert(evo.empty(e2))
-        assert(evo.empty(e3))
-        assert(evo.empty(e4))
-        assert(not evo.empty(e5))
+        assert(not evo.is_empty(e1))
+        assert(evo.is_empty(e2))
+        assert(evo.is_empty(e3))
+        assert(evo.is_empty(e4))
+        assert(not evo.is_empty(e5))
     end
     do
         local f1, f2, f3, f4 = evo.id(4)
@@ -1139,17 +1139,17 @@ do
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
         assert(component_sum == 42 + 43 + 44 + 45 + 46 + 47 + 48 + 49 + 50)
 
-        assert(evo.alive(e1))
-        assert(not evo.alive(e2))
-        assert(not evo.alive(e3))
-        assert(not evo.alive(e4))
-        assert(evo.alive(e5))
+        assert(evo.is_alive(e1))
+        assert(not evo.is_alive(e2))
+        assert(not evo.is_alive(e3))
+        assert(not evo.is_alive(e4))
+        assert(evo.is_alive(e5))
 
-        assert(not evo.empty(e1))
-        assert(evo.empty(e2))
-        assert(evo.empty(e3))
-        assert(evo.empty(e4))
-        assert(not evo.empty(e5))
+        assert(not evo.is_empty(e1))
+        assert(evo.is_empty(e2))
+        assert(evo.is_empty(e3))
+        assert(evo.is_empty(e4))
+        assert(not evo.is_empty(e5))
     end
 end
 
@@ -1743,7 +1743,7 @@ do
             assert(evo.insert(e, f1, 41))
 
             last_remove_entity = 0
-            assert(evo.clear(e) and evo.alive(e))
+            assert(evo.clear(e) and evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1))
             assert(evo.get(e, f1) == nil)
@@ -1755,7 +1755,7 @@ do
             assert(evo.insert(e, f2, 42))
 
             last_remove_entity = 0
-            assert(evo.clear(e) and evo.alive(e))
+            assert(evo.clear(e) and evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
@@ -1768,7 +1768,7 @@ do
             assert(evo.insert(e, f3, 43))
 
             last_remove_entity = 0
-            assert(evo.clear(e) and evo.alive(e))
+            assert(evo.clear(e) and evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1) and not evo.has(e, f2) and not evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == nil)
@@ -1781,7 +1781,7 @@ do
             assert(evo.insert(e, f1, 41))
 
             last_remove_entity = 0
-            assert(evo.destroy(e) and not evo.alive(e))
+            assert(evo.destroy(e) and not evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1))
             assert(evo.get(e, f1) == nil)
@@ -1793,7 +1793,7 @@ do
             assert(evo.insert(e, f2, 42))
 
             last_remove_entity = 0
-            assert(evo.destroy(e) and not evo.alive(e))
+            assert(evo.destroy(e) and not evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
@@ -1806,7 +1806,7 @@ do
             assert(evo.insert(e, f3, 43))
 
             last_remove_entity = 0
-            assert(evo.destroy(e) and not evo.alive(e))
+            assert(evo.destroy(e) and not evo.is_alive(e))
             assert(last_remove_entity == e)
             assert(not evo.has(e, f1) and not evo.has(e, f2) and not evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == nil)
@@ -1981,9 +1981,9 @@ do
 
             assert(evo.batch_clear(q) == 2)
 
-            assert(evo.alive(e1))
-            assert(evo.alive(e2))
-            assert(evo.alive(e3))
+            assert(evo.is_alive(e1))
+            assert(evo.is_alive(e2))
+            assert(evo.is_alive(e3))
 
             assert(not evo.has(e1, f1) and not evo.has(e1, f2) and not evo.has(e1, f3))
             assert(evo.has(e2, f1) and not evo.has(e2, f2) and not evo.has(e2, f3))
@@ -2024,9 +2024,9 @@ do
 
             assert(evo.batch_destroy(q) == 2)
 
-            assert(not evo.alive(e1))
-            assert(evo.alive(e2))
-            assert(not evo.alive(e3))
+            assert(not evo.is_alive(e1))
+            assert(evo.is_alive(e2))
+            assert(not evo.is_alive(e3))
 
             assert(not evo.has(e1, f1) and not evo.has(e1, f2) and not evo.has(e1, f3))
             assert(evo.has(e2, f1) and not evo.has(e2, f2) and not evo.has(e2, f3))
@@ -2190,11 +2190,11 @@ do
             local c, d = evo.batch_clear(q)
             assert(c == 0 and d == true)
         end
-        assert(evo.alive(e1))
+        assert(evo.is_alive(e1))
         assert(evo.get(e1, f1) == 41)
 
         assert(evo.commit())
-        assert(evo.alive(e1))
+        assert(evo.is_alive(e1))
         assert(evo.get(e1, f1) == nil)
     end
 end
@@ -2215,11 +2215,11 @@ do
             local c, d = evo.batch_destroy(q)
             assert(c == 0 and d == true)
         end
-        assert(evo.alive(e1))
+        assert(evo.is_alive(e1))
         assert(evo.get(e1, f1) == 41)
 
         assert(evo.commit())
-        assert(not evo.alive(e1))
+        assert(not evo.is_alive(e1))
         assert(evo.get(e1, f1) == nil)
     end
 end
