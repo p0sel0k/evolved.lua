@@ -581,6 +581,57 @@ end
 do
     local f1, f2, f3 = evo.id(3)
 
+    local e0 = evo.id()
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 42))
+    assert(evo.insert(e2, f2, 43))
+
+    local e2b = evo.id()
+    assert(evo.insert(e2b, f1, 44))
+    assert(evo.insert(e2b, f2, 45))
+
+    do
+        local chunk, entities = evo.chunk()
+        assert(not chunk and not entities)
+    end
+
+    do
+        local chunk, entities = evo.chunk(f1)
+        assert(entities and entities[1] == e1)
+        assert(chunk and evo.select(chunk, f1)[1] == 41)
+    end
+
+    do
+        local chunk, entities = evo.chunk(f1, f2)
+        assert(chunk == evo.chunk(f1, f2))
+        assert(chunk == evo.chunk(f1, f1, f2))
+        assert(chunk == evo.chunk(f1, f1, f2, f2))
+        assert(chunk == evo.chunk(f1, f2, f2, f1))
+        assert(chunk == evo.chunk(f2, f1))
+        assert(chunk == evo.chunk(f2, f1, f2, f1))
+        assert(entities and entities[1] == e2 and entities[2] == e2b)
+        assert(chunk and evo.select(chunk, f1)[1] == 42 and evo.select(chunk, f2)[1] == 43)
+        assert(chunk and evo.select(chunk, f1)[2] == 44 and evo.select(chunk, f2)[2] == 45)
+    end
+
+    do
+        local chunk, entities = evo.chunk(f1, f2, f3)
+        assert(not chunk and not entities)
+    end
+
+    do
+        local chunk, entities = evo.chunk(f3, f2, f1)
+        assert(not chunk and not entities)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
     evo.set(f1, evo.DEFAULT, 42)
 
     local e1, e2, e3, e4 = evo.id(4)

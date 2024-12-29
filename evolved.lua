@@ -17,11 +17,8 @@ local evolved = {}
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
----@alias evolved.include_set table<evolved.fragment, boolean>
----@alias evolved.exclude_set table<evolved.fragment, boolean>
-
 ---@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, evolved.exclude_set, evolved.execution_stack]
+---@alias evolved.execution_state [integer, table<evolved.fragment, boolean>, evolved.execution_stack]
 ---@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
 
 ---
@@ -43,6 +40,7 @@ local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
+local __fragment_lists = {} ---@type evolved.fragment[][]
 local __execution_stacks = {} ---@type evolved.execution_stack[]
 local __execution_states = {} ---@type evolved.execution_state[]
 
@@ -151,6 +149,25 @@ end
 ---
 ---
 
+---@return evolved.fragment[]
+---@nodiscard
+local function __acquire_fragment_list()
+    if #__fragment_lists == 0 then
+        return {}
+    end
+
+    local list = __fragment_lists[#__fragment_lists]
+    __fragment_lists[#__fragment_lists] = nil
+
+    return list
+end
+
+---@param list evolved.fragment[]
+local function __release_fragment_list(list)
+    for i = #list, 1, -1 do list[i] = nil end
+    __fragment_lists[#__fragment_lists + 1] = list
+end
+
 ---@return evolved.execution_stack
 ---@nodiscard
 local function __acquire_execution_stack()
@@ -170,7 +187,7 @@ local function __release_execution_stack(stack)
     __execution_stacks[#__execution_stacks + 1] = stack
 end
 
----@param exclude_set evolved.exclude_set
+---@param exclude_set table<evolved.fragment, boolean>
 ---@return evolved.execution_state
 ---@return evolved.execution_stack
 ---@nodiscard
@@ -1564,9 +1581,43 @@ end))
 ---
 ---
 
+---@param ... evolved.fragment fragments
+---@return evolved.chunk?, evolved.entity[]?
+function evolved.chunk(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local sorted_fragment_list = __acquire_fragment_list()
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        sorted_fragment_list[#sorted_fragment_list + 1] = fragment
+    end
+
+    table.sort(sorted_fragment_list)
+
+    local root_fragment = sorted_fragment_list[1]
+    local chunk = __root_chunks[root_fragment]
+    if not chunk then return end
+
+    for i = 2, fragment_count do
+        local child_fragment = sorted_fragment_list[i]
+        if child_fragment > sorted_fragment_list[i - 1] then
+            chunk = chunk.__with_fragment_edges[child_fragment]
+            if not chunk then return end
+        end
+    end
+
+    __release_fragment_list(sorted_fragment_list)
+    return chunk, chunk.__entities
+end
+
 ---@param chunk evolved.chunk
 ---@param ... evolved.fragment fragments
----@return evolved.component[] ... components
+---@return evolved.component[]? ... components
 ---@nodiscard
 function evolved.select(chunk, ...)
     local fragment_count = select('#', ...)
@@ -1622,6 +1673,7 @@ function evolved.execute(query)
         return __execution_iterator, nil
     end
 
+    ---@type table<evolved.fragment, boolean>
     local exclude_set = evolved.get(query, __EXCLUDE_SET) or {}
     local execution_state, execution_stack = __acquire_execution_state(exclude_set)
 

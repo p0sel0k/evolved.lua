@@ -31,7 +31,8 @@ batch_remove :: query, fragment... -> integer, boolean
 batch_clear :: query -> integer, boolean
 batch_destroy :: query -> integer, boolean
 
-select :: chunk, fragment... -> component[]...
+chunk :: fragment... -> chunk?, entity[]?
+select :: chunk, fragment... -> component[]?...
 execute :: query -> {execution_state? -> chunk?, entity[]?}, execution_state?
 ```
 
