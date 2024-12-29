@@ -11,6 +11,15 @@
             }
         },
         {
+            "name": "Launch Evolved All (lua5.4)",
+            "type": "lua-local",
+            "request": "launch",
+            "program": {
+                "lua": "lua5.4",
+                "file": "${workspaceFolder}/develop/all.lua"
+            }
+        },
+        {
             "name": "Launch Evolved All (luajit)",
             "type": "lua-local",
             "request": "launch",
