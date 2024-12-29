@@ -52,7 +52,7 @@ local __structural_changes = 0 ---@type integer
 ---
 ---
 
-local __lua_move = table.move or function(a1, f, e, t, a2)
+local __table_move = table.move or function(a1, f, e, t, a2)
     if a2 == nil then
         a2 = a1
     end
@@ -72,11 +72,7 @@ local __lua_move = table.move or function(a1, f, e, t, a2)
     return a2
 end
 
-local __lua_pack = table.pack or function(...)
-    return { n = select('#', ...), ... }
-end
-
-local __lua_unpack = table.unpack or function(list, i, j)
+local __table_unpack = table.unpack or function(list, i, j)
     return unpack(list, i, j)
 end
 
@@ -779,14 +775,14 @@ local function __chunk_insert(chunk, fragment, ...)
     local new_chunk_size = #new_chunk_entities
     local new_chunk_fragment_components = new_chunk_components[fragment]
 
-    __lua_move(
+    __table_move(
         old_chunk_entities, 1, old_chunk_size,
         new_chunk_size + 1, new_chunk_entities)
 
     for old_f, old_cs in pairs(old_chunk_components) do
         local new_cs = new_chunk_components[old_f]
         if new_cs then
-            __lua_move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
+            __table_move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
         end
     end
 
@@ -906,14 +902,14 @@ local function __chunk_remove(chunk, ...)
 
         local new_chunk_size = #new_chunk.__entities
 
-        __lua_move(
+        __table_move(
             old_chunk_entities, 1, old_chunk_size,
             new_chunk_size + 1, new_chunk_entities)
 
         for new_f, new_cs in pairs(new_chunk_components) do
             local old_cs = old_chunk_components[new_f]
             if old_cs then
-                __lua_move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
+                __table_move(old_cs, 1, old_chunk_size, new_chunk_size + 1, new_cs)
             end
         end
 
@@ -1119,27 +1115,27 @@ local __defer_ops = {
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.set(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.set(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.assign] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.assign(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.assign(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.insert] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.insert(entity, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.insert(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.remove] = function(bytes, index)
         local entity = bytes[index + 0]
         local fragment_count = bytes[index + 1]
-        evolved.remove(entity, __lua_unpack(bytes, index + 2, index + 1 + fragment_count))
+        evolved.remove(entity, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
         return 2 + fragment_count
     end,
     [__defer_op.clear] = function(bytes, index)
@@ -1156,27 +1152,27 @@ local __defer_ops = {
         local query = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.batch_set(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.batch_set(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.batch_assign] = function(bytes, index)
         local query = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.batch_assign(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.batch_assign(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.batch_insert] = function(bytes, index)
         local query = bytes[index + 0]
         local fragment = bytes[index + 1]
         local argument_count = bytes[index + 2]
-        evolved.batch_insert(query, fragment, __lua_unpack(bytes, index + 3, index + 2 + argument_count))
+        evolved.batch_insert(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
         return 3 + argument_count
     end,
     [__defer_op.batch_remove] = function(bytes, index)
         local query = bytes[index + 0]
         local fragment_count = bytes[index + 1]
-        evolved.batch_remove(query, __lua_unpack(bytes, index + 2, index + 1 + fragment_count))
+        evolved.batch_remove(query, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
         return 2 + fragment_count
     end,
     [__defer_op.batch_clear] = function(bytes, index)
@@ -2125,33 +2121,26 @@ local __SORTED_EXCLUDE_LIST = __acquire_id()
 
 assert(evolved.insert(evolved.TAG, evolved.TAG))
 
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, include_list)
-    return include_list or {}
-end))
+---@param ... evolved.fragment
+assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+    local include_list = {}
 
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
-end))
+    for i = 1, select('#', ...) do
+        include_list[i] = select(i, ...)
+    end
 
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, exclude_list)
-    return exclude_list or {}
-end))
-
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
+    return include_list
 end))
 
 ---@param query evolved.query
----@param include_list? evolved.entity[]
+---@param include_list evolved.entity[]
 assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
     ---@type table<evolved.fragment, boolean>, evolved.fragment[]
     local include_set, sorted_include_list = {}, {}
 
-    if include_list then
-        for _, f in ipairs(include_list) do
-            include_set[f] = true
-            sorted_include_list[#sorted_include_list + 1] = f
-        end
+    for _, f in ipairs(include_list) do
+        include_set[f] = true
+        sorted_include_list[#sorted_include_list + 1] = f
     end
 
     table.sort(sorted_include_list)
@@ -2160,23 +2149,40 @@ assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, i
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
 end))
 
+assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
+    evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
+end))
+
+---@param ... evolved.fragment
+assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+    local exclude_list = {}
+
+    for i = 1, select('#', ...) do
+        exclude_list[i] = select(i, ...)
+    end
+
+    return exclude_list
+end))
+
 ---@param query evolved.query
----@param exclude_list? evolved.entity[]
+---@param exclude_list evolved.entity[]
 assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
     ---@type table<evolved.fragment, boolean>, evolved.fragment[]
     local exclude_set, sorted_exclude_list = {}, {}
 
-    if exclude_list then
-        for _, f in ipairs(exclude_list) do
-            exclude_set[f] = true
-            sorted_exclude_list[#sorted_exclude_list + 1] = f
-        end
+    for _, f in ipairs(exclude_list) do
+        exclude_set[f] = true
+        sorted_exclude_list[#sorted_exclude_list + 1] = f
     end
 
     table.sort(sorted_exclude_list)
 
     evolved.set(query, __EXCLUDE_SET, exclude_set)
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
+end))
+
+assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
+    evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
 end))
 
 ---
