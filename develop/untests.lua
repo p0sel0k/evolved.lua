@@ -2300,3 +2300,39 @@ do
         assert(not entities)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q = evo.id()
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 43))
+    assert(evo.insert(e2, f2, 44))
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+        assert(not chunk and not entities)
+    end
+
+    evo.set(q, evo.EXCLUDE_LIST, f2)
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+        assert(not chunk and not entities)
+    end
+
+    evo.set(q, evo.INCLUDE_LIST, f1)
+
+    do
+        local iter, state = evo.execute(q)
+        local chunk, entities = iter(state)
+        assert(chunk == evo.chunk(f1))
+        assert(entities and entities[1] == e1)
+    end
+end
