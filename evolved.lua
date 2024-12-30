@@ -17,7 +17,18 @@ local evolved = {}
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
----@alias evolved.execute_state [integer, evolved.chunk[], table<evolved.fragment, boolean>?]
+---@class (exact) evolved.each_state
+---@field [1] integer structural_changes
+---@field [2] evolved.chunk entity_chunk
+---@field [3] integer entity_place
+---@field [4] evolved.fragment? fragments_index
+
+---@class (exact) evolved.execute_state
+---@field [1] integer structural_changes
+---@field [2] evolved.chunk[] chunk_stack
+---@field [3] table<evolved.fragment, boolean>? exclude_set
+
+---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
 ---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?
 
 ---
@@ -42,6 +53,7 @@ local __entity_places = {} ---@type table<integer, integer>
 local __chunk_lists = {} ---@type evolved.chunk[][]
 local __fragment_lists = {} ---@type evolved.fragment[][]
 
+local __each_states = {} ---@type evolved.each_state[]
 local __execute_states = {} ---@type evolved.execute_state[]
 
 local __structural_changes = 0 ---@type integer
@@ -219,24 +231,79 @@ end
 ---
 ---
 
+---@param chunk evolved.chunk
+---@param place integer
+---@return evolved.each_state
+---@nodiscard
+local function __acquire_each_state(chunk, place)
+    local each_state_count = #__each_states
+
+    if each_state_count == 0 then
+        ---@type evolved.each_state
+        return { __structural_changes, chunk, place }
+    end
+
+    local state = __each_states[each_state_count]
+    __each_states[each_state_count] = nil
+
+    state[1], state[2], state[3] =
+        __structural_changes, chunk, place
+
+    return state
+end
+
+---@param state evolved.each_state
+local function __release_each_state(state)
+    for i = #state, 1, -1 do state[i] = nil end
+    __each_states[#__each_states + 1] = state
+end
+
+---@type evolved.each_iterator
+local function __each_iterator(state)
+    if not state then return end
+
+    local structural_changes, chunk, place, fragment =
+        state[1], state[2], state[3], state[4]
+
+    if structural_changes ~= __structural_changes then
+        error('structural changes are prohibited during iteration', 2)
+    end
+
+    fragment = next(chunk.__fragments, fragment)
+
+    if fragment then
+        state[4] = fragment
+        local fragment_components = chunk.__components[fragment]
+        return fragment, fragment_components and fragment_components[place]
+    end
+
+    __release_each_state(state)
+end
+
+---
+---
+---
+---
+---
+
 ---@param exclude_set? table<evolved.fragment, boolean>
 ---@return evolved.execute_state
----@return evolved.chunk[]
 ---@nodiscard
 local function __acquire_execute_state(exclude_set)
     local execute_state_count = #__execute_states
 
     if execute_state_count == 0 then
-        local chunk_stack = __acquire_chunk_list()
-        return { __structural_changes, chunk_stack, exclude_set }, chunk_stack
+        ---@type evolved.execute_state
+        return { __structural_changes, __acquire_chunk_list(), exclude_set }
     end
 
     local state = __execute_states[execute_state_count]
     __execute_states[execute_state_count] = nil
 
-    local chunk_stack = __acquire_chunk_list()
-    state[1], state[2], state[3] = __structural_changes, chunk_stack, exclude_set
-    return state, chunk_stack
+    state[1], state[2], state[3] =
+        __structural_changes, __acquire_chunk_list(), exclude_set
+
+    return state
 end
 
 ---@param state evolved.execute_state
@@ -2286,33 +2353,59 @@ function evolved.select(chunk, ...)
     end
 end
 
+---@param entity evolved.entity
+---@return evolved.each_iterator
+---@return evolved.each_state?
+---@nodiscard
+function evolved.each(entity)
+    if not __is_id_alive(entity) then
+        return __each_iterator
+    end
+
+    local index = __unpack_id(entity)
+
+    local chunk = __entity_chunks[index]
+    local place = __entity_places[index]
+
+    if not chunk then
+        return __each_iterator
+    end
+
+    return __each_iterator, __acquire_each_state(chunk, place)
+end
+
 ---@param query evolved.query
 ---@return evolved.execute_iterator
 ---@return evolved.execute_state?
 ---@nodiscard
 function evolved.execute(query)
+    if not __is_id_alive(query) then
+        return __execute_iterator
+    end
+
     ---@type evolved.fragment[]?, evolved.fragment[]?
     local include_list, exclude_list = evolved.get(query,
         __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
 
     if not include_list or #include_list == 0 then
-        return __execute_iterator, nil
+        return __execute_iterator
     end
 
     local major_fragment = include_list[#include_list]
     local major_fragment_chunks = __major_chunks[major_fragment]
 
     if not major_fragment_chunks then
-        return __execute_iterator, nil
+        return __execute_iterator
     end
 
     ---@type table<evolved.fragment, boolean>?
     local exclude_set = evolved.get(query, __EXCLUDE_SET)
-    local execute_state, chunk_stack = __acquire_execute_state(exclude_set)
+    local execute_state = __acquire_execute_state(exclude_set)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
             if not exclude_list or not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
+                local chunk_stack = execute_state[2]
                 chunk_stack[#chunk_stack + 1] = major_fragment_chunk
             end
         end

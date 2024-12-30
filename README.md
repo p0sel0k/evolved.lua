@@ -52,6 +52,8 @@ batch_destroy :: query -> integer, boolean
 
 chunk :: fragment... -> chunk?, entity[]?
 select :: chunk, fragment... -> component[]?...
+
+each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
 ```
 

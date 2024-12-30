@@ -2336,3 +2336,89 @@ do
         assert(entities and entities[1] == e1)
     end
 end
+
+do
+    local f1, f2 = evo.id(3)
+
+    do
+        local e = evo.id()
+
+        local iter, state = evo.each(e)
+        local fragment, component = iter(state)
+        assert(not fragment and not component)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.insert(e, f1, 41))
+
+        local iter, state = evo.each(e)
+        local fragment, component = iter(state)
+        assert(fragment == f1 and component == 41)
+
+        fragment, component = iter(state)
+        assert(not fragment and not component)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.insert(e, f1, 41))
+        assert(evo.insert(e, f2, 42))
+
+        do
+            local iter, state = evo.each(e)
+            local fragment, component = iter(state)
+            assert(fragment == f1 or fragment == f2)
+            assert((fragment == f1 and component == 41) or (fragment == f2 and component == 42))
+
+            fragment, component = iter(state)
+            assert(fragment == f1 or fragment == f2)
+            assert((fragment == f1 and component == 41) or (fragment == f2 and component == 42))
+
+            fragment, component = iter(state)
+            assert(not fragment and not component)
+        end
+
+        do
+            local fragment_sum = 0
+            local component_sum = 0
+            for f, c in evo.each(e) do
+                fragment_sum = fragment_sum + f
+                component_sum = component_sum + c
+            end
+            assert(fragment_sum == f1 + f2)
+            assert(component_sum == 41 + 42)
+        end
+    end
+
+    do
+        local s = evo.id()
+        evo.set(s, evo.TAG)
+
+        local e = evo.id()
+        assert(evo.insert(e, f1))
+        assert(evo.insert(e, s))
+
+        do
+            local iter, state = evo.each(e)
+            local fragment, component = iter(state)
+            assert(fragment == f1 or fragment == s)
+            if fragment == f1 then
+                assert(component == true)
+            elseif fragment == s then
+                assert(component == nil)
+            end
+
+            fragment, component = iter(state)
+            assert(fragment == f1 or fragment == s)
+            if fragment == f1 then
+                assert(component == true)
+            elseif fragment == s then
+                assert(component == nil)
+            end
+
+            fragment, component = iter(state)
+            assert(not fragment and not component)
+        end
+    end
+end
