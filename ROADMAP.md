@@ -9,3 +9,4 @@
 - should we clear chunk's components by on_insert tag callback?
 - use table.new/clear for cached tables
 - add `each :: entity -> {each_state? -> fragment?, component?}, each_state?` function
+- replace chunk_list/fragment_list pools to one generic table pool
