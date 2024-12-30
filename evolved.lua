@@ -17,9 +17,8 @@ local evolved = {}
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 
----@alias evolved.execution_stack evolved.chunk[]
----@alias evolved.execution_state [integer, evolved.execution_stack, table<evolved.fragment, boolean>?]
----@alias evolved.execution_iterator fun(state: evolved.execution_state?): evolved.chunk?, evolved.entity[]?
+---@alias evolved.execute_state [integer, evolved.chunk[], table<evolved.fragment, boolean>?]
+---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?
 
 ---
 ---
@@ -40,9 +39,10 @@ local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
+local __chunk_lists = {} ---@type evolved.chunk[][]
 local __fragment_lists = {} ---@type evolved.fragment[][]
-local __execution_stacks = {} ---@type evolved.execution_stack[]
-local __execution_states = {} ---@type evolved.execution_state[]
+
+local __execute_states = {} ---@type evolved.execute_state[]
 
 local __structural_changes = 0 ---@type integer
 
@@ -165,15 +165,44 @@ end
 ---
 ---
 
----@return evolved.fragment[]
+---@return evolved.chunk[]
 ---@nodiscard
-local function __acquire_fragment_list()
-    if #__fragment_lists == 0 then
+local function __acquire_chunk_list()
+    local chunk_list_count = #__chunk_lists
+
+    if chunk_list_count == 0 then
         return {}
     end
 
-    local list = __fragment_lists[#__fragment_lists]
-    __fragment_lists[#__fragment_lists] = nil
+    local list = __chunk_lists[chunk_list_count]
+    __chunk_lists[chunk_list_count] = nil
+
+    return list
+end
+
+---@param list evolved.chunk[]
+local function __release_chunk_list(list)
+    for i = #list, 1, -1 do list[i] = nil end
+    __chunk_lists[#__chunk_lists + 1] = list
+end
+
+---
+---
+---
+---
+---
+
+---@return evolved.fragment[]
+---@nodiscard
+local function __acquire_fragment_list()
+    local fragment_list_count = #__fragment_lists
+
+    if fragment_list_count == 0 then
+        return {}
+    end
+
+    local list = __fragment_lists[fragment_list_count]
+    __fragment_lists[fragment_list_count] = nil
 
     return list
 end
@@ -184,77 +213,66 @@ local function __release_fragment_list(list)
     __fragment_lists[#__fragment_lists + 1] = list
 end
 
----@return evolved.execution_stack
----@nodiscard
-local function __acquire_execution_stack()
-    if #__execution_stacks == 0 then
-        return {}
-    end
-
-    local stack = __execution_stacks[#__execution_stacks]
-    __execution_stacks[#__execution_stacks] = nil
-
-    return stack
-end
-
----@param stack evolved.execution_stack
-local function __release_execution_stack(stack)
-    for i = #stack, 1, -1 do stack[i] = nil end
-    __execution_stacks[#__execution_stacks + 1] = stack
-end
+---
+---
+---
+---
+---
 
 ---@param exclude_set? table<evolved.fragment, boolean>
----@return evolved.execution_state
----@return evolved.execution_stack
+---@return evolved.execute_state
+---@return evolved.chunk[]
 ---@nodiscard
-local function __acquire_execution_state(exclude_set)
-    if #__execution_states == 0 then
-        local stack = __acquire_execution_stack()
-        return { __structural_changes, stack, exclude_set }, stack
+local function __acquire_execute_state(exclude_set)
+    local execute_state_count = #__execute_states
+
+    if execute_state_count == 0 then
+        local chunk_stack = __acquire_chunk_list()
+        return { __structural_changes, chunk_stack, exclude_set }, chunk_stack
     end
 
-    local state = __execution_states[#__execution_states]
-    __execution_states[#__execution_states] = nil
+    local state = __execute_states[execute_state_count]
+    __execute_states[execute_state_count] = nil
 
-    local stack = __acquire_execution_stack()
-    state[1], state[2], state[3] = __structural_changes, stack, exclude_set
-    return state, stack
+    local chunk_stack = __acquire_chunk_list()
+    state[1], state[2], state[3] = __structural_changes, chunk_stack, exclude_set
+    return state, chunk_stack
 end
 
----@param state evolved.execution_state
-local function __release_execution_state(state)
-    __release_execution_stack(state[2]);
+---@param state evolved.execute_state
+local function __release_execute_state(state)
+    __release_chunk_list(state[2]);
     for i = #state, 1, -1 do state[i] = nil end
-    __execution_states[#__execution_states + 1] = state
+    __execute_states[#__execute_states + 1] = state
 end
 
----@type evolved.execution_iterator
-local function __execution_iterator(execution_state)
-    if not execution_state then return end
+---@type evolved.execute_iterator
+local function __execute_iterator(state)
+    if not state then return end
 
-    local structural_changes, execution_stack, exclude_set =
-        execution_state[1], execution_state[2], execution_state[3]
+    local structural_changes, chunk_stack, exclude_set =
+        state[1], state[2], state[3]
 
     if structural_changes ~= __structural_changes then
-        error('structural changes are prohibited during execution', 2)
+        error('structural changes are prohibited during iteration', 2)
     end
 
-    while #execution_stack > 0 do
-        local matched_chunk = execution_stack[#execution_stack]
-        execution_stack[#execution_stack] = nil
+    while #chunk_stack > 0 do
+        local chunk = chunk_stack[#chunk_stack]
+        chunk_stack[#chunk_stack] = nil
 
-        for _, matched_chunk_child in ipairs(matched_chunk.__children) do
-            if not exclude_set or not exclude_set[matched_chunk_child.__fragment] then
-                execution_stack[#execution_stack + 1] = matched_chunk_child
+        for _, chunk_child in ipairs(chunk.__children) do
+            if not exclude_set or not exclude_set[chunk_child.__fragment] then
+                chunk_stack[#chunk_stack + 1] = chunk_child
             end
         end
 
-        if #matched_chunk.__entities > 0 then
-            return matched_chunk, matched_chunk.__entities
+        if #chunk.__entities > 0 then
+            return chunk, chunk.__entities
         end
     end
 
-    __release_execution_state(execution_state)
+    __release_execute_state(state)
 end
 
 ---
@@ -1940,17 +1958,17 @@ function evolved.batch_set(query, fragment, ...)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local set_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             if __chunk_has_fragment(chunk, fragment) then
                 set_count = set_count + __chunk_assign(chunk, fragment, ...)
             else
@@ -1959,7 +1977,7 @@ function evolved.batch_set(query, fragment, ...)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return set_count, false
 end
 
@@ -1974,22 +1992,22 @@ function evolved.batch_assign(query, fragment, ...)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local assigned_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return assigned_count, false
 end
 
@@ -2004,22 +2022,22 @@ function evolved.batch_insert(query, fragment, ...)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local inserted_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return inserted_count, false
 end
 
@@ -2033,22 +2051,22 @@ function evolved.batch_remove(query, ...)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local removed_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             removed_count = removed_count + __chunk_remove(chunk, ...)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return removed_count, false
 end
 
@@ -2061,22 +2079,22 @@ function evolved.batch_clear(query)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local cleared_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             cleared_count = cleared_count + __chunk_clear(chunk)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return cleared_count, false
 end
 
@@ -2089,22 +2107,22 @@ function evolved.batch_destroy(query)
         return 0, true
     end
 
-    local chunks = __acquire_execution_stack()
+    local chunk_list = __acquire_chunk_list()
 
     for chunk in evolved.execute(query) do
-        chunks[#chunks + 1] = chunk
+        chunk_list[#chunk_list + 1] = chunk
     end
 
     local destroyed_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunks) do
+        for _, chunk in ipairs(chunk_list) do
             destroyed_count = destroyed_count + __chunk_destroy(chunk)
         end
     end
     __defer_commit()
-    __release_execution_stack(chunks)
+    __release_chunk_list(chunk_list)
     return destroyed_count, false
 end
 
@@ -2269,41 +2287,38 @@ function evolved.select(chunk, ...)
 end
 
 ---@param query evolved.query
----@return evolved.execution_iterator
----@return evolved.execution_state?
+---@return evolved.execute_iterator
+---@return evolved.execute_state?
 ---@nodiscard
 function evolved.execute(query)
     ---@type evolved.fragment[]?, evolved.fragment[]?
     local include_list, exclude_list = evolved.get(query,
         __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
 
-    include_list = include_list or {}
-    exclude_list = exclude_list or {}
-
-    if #include_list == 0 then
-        return __execution_iterator, nil
+    if not include_list or #include_list == 0 then
+        return __execute_iterator, nil
     end
 
     local major_fragment = include_list[#include_list]
     local major_fragment_chunks = __major_chunks[major_fragment]
 
     if not major_fragment_chunks then
-        return __execution_iterator, nil
+        return __execute_iterator, nil
     end
 
     ---@type table<evolved.fragment, boolean>?
     local exclude_set = evolved.get(query, __EXCLUDE_SET)
-    local execution_state, execution_stack = __acquire_execution_state(exclude_set)
+    local execute_state, chunk_stack = __acquire_execute_state(exclude_set)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
-            if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
-                execution_stack[#execution_stack + 1] = major_fragment_chunk
+            if not exclude_list or not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
+                chunk_stack[#chunk_stack + 1] = major_fragment_chunk
             end
         end
     end
 
-    return __execution_iterator, execution_state
+    return __execute_iterator, execute_state
 end
 
 ---

@@ -52,7 +52,7 @@ batch_destroy :: query -> integer, boolean
 
 chunk :: fragment... -> chunk?, entity[]?
 select :: chunk, fragment... -> component[]?...
-execute :: query -> {execution_state? -> chunk?, entity[]?}, execution_state?
+execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
 ```
 
 ## [License (MIT)](./LICENSE.md)
