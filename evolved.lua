@@ -76,12 +76,7 @@ local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
-local __chunk_lists = {} ---@type evolved.chunk[][]
-local __fragment_lists = {} ---@type evolved.fragment[][]
-
-local __each_states = {} ---@type evolved.each_state[]
-local __execute_states = {} ---@type evolved.execute_state[]
-
+local __table_cache = {} ---@type table[]
 local __structural_changes = 0 ---@type integer
 
 ---
@@ -203,52 +198,26 @@ end
 ---
 ---
 
----@return evolved.chunk[]
+---@return table
 ---@nodiscard
-local function __acquire_chunk_list()
-    local chunk_list_count = #__chunk_lists
+local function __acquire_table()
+    local table_cache_size = #__table_cache
 
-    if chunk_list_count == 0 then
+    if table_cache_size == 0 then
         return {}
     end
 
-    local list = __chunk_lists[chunk_list_count]
-    __chunk_lists[chunk_list_count] = nil
+    local table = __table_cache[table_cache_size]
+    __table_cache[table_cache_size] = nil
 
-    return list
+    return table
 end
 
----@param list evolved.chunk[]
-local function __release_chunk_list(list)
-    for i = #list, 1, -1 do list[i] = nil end
-    __chunk_lists[#__chunk_lists + 1] = list
-end
-
----
----
----
----
----
-
----@return evolved.fragment[]
----@nodiscard
-local function __acquire_fragment_list()
-    local fragment_list_count = #__fragment_lists
-
-    if fragment_list_count == 0 then
-        return {}
-    end
-
-    local list = __fragment_lists[fragment_list_count]
-    __fragment_lists[fragment_list_count] = nil
-
-    return list
-end
-
----@param list evolved.fragment[]
-local function __release_fragment_list(list)
-    for i = #list, 1, -1 do list[i] = nil end
-    __fragment_lists[#__fragment_lists + 1] = list
+---@param table table
+local function __release_table(table)
+    for i = #table, 1, -1 do table[i] = nil end
+    for k in pairs(table) do table[k] = nil end
+    __table_cache[#__table_cache + 1] = table
 end
 
 ---
@@ -256,95 +225,38 @@ end
 ---
 ---
 ---
-
----@param chunk evolved.chunk
----@param place integer
----@return evolved.each_state
----@nodiscard
-local function __acquire_each_state(chunk, place)
-    local each_state_count = #__each_states
-
-    if each_state_count == 0 then
-        ---@type evolved.each_state
-        return { __structural_changes, chunk, place }
-    end
-
-    local state = __each_states[each_state_count]
-    __each_states[each_state_count] = nil
-
-    state[1], state[2], state[3] =
-        __structural_changes, chunk, place
-
-    return state
-end
-
----@param state evolved.each_state
-local function __release_each_state(state)
-    for i = #state, 1, -1 do state[i] = nil end
-    __each_states[#__each_states + 1] = state
-end
 
 ---@type evolved.each_iterator
-local function __each_iterator(state)
-    if not state then return end
+local function __each_iterator(each_state)
+    if not each_state then return end
 
-    local structural_changes, chunk, place, fragment =
-        state[1], state[2], state[3], state[4]
+    local structural_changes = each_state[1]
+    local entity_chunk = each_state[2]
+    local entity_place = each_state[3]
+    local fragment_index = each_state[4]
 
     if structural_changes ~= __structural_changes then
         error('structural changes are prohibited during iteration', 2)
     end
 
-    fragment = next(chunk.__fragments, fragment)
+    fragment_index = next(entity_chunk.__fragments, fragment_index)
 
-    if fragment then
-        state[4] = fragment
-        local fragment_components = chunk.__components[fragment]
-        return fragment, fragment_components and fragment_components[place]
+    if fragment_index then
+        each_state[4] = fragment_index
+        local fragment_components = entity_chunk.__components[fragment_index]
+        return fragment_index, fragment_components and fragment_components[entity_place]
     end
 
-    __release_each_state(state)
-end
-
----
----
----
----
----
-
----@param exclude_set table<evolved.fragment, boolean>
----@return evolved.execute_state
----@nodiscard
-local function __acquire_execute_state(exclude_set)
-    local execute_state_count = #__execute_states
-
-    if execute_state_count == 0 then
-        ---@type evolved.execute_state
-        return { __structural_changes, __acquire_chunk_list(), exclude_set }
-    end
-
-    local state = __execute_states[execute_state_count]
-    __execute_states[execute_state_count] = nil
-
-    state[1], state[2], state[3] =
-        __structural_changes, __acquire_chunk_list(), exclude_set
-
-    return state
-end
-
----@param state evolved.execute_state
-local function __release_execute_state(state)
-    __release_chunk_list(state[2]);
-    for i = #state, 1, -1 do state[i] = nil end
-    __execute_states[#__execute_states + 1] = state
+    __release_table(each_state)
 end
 
 ---@type evolved.execute_iterator
-local function __execute_iterator(state)
-    if not state then return end
+local function __execute_iterator(execute_state)
+    if not execute_state then return end
 
-    local structural_changes, chunk_stack, exclude_set =
-        state[1], state[2], state[3]
+    local structural_changes = execute_state[1]
+    local chunk_stack = execute_state[2]
+    local exclude_set = execute_state[3]
 
     if structural_changes ~= __structural_changes then
         error('structural changes are prohibited during iteration', 2)
@@ -365,7 +277,8 @@ local function __execute_iterator(state)
         end
     end
 
-    __release_execute_state(state)
+    __release_table(chunk_stack)
+    __release_table(execute_state)
 end
 
 ---
@@ -2051,7 +1964,8 @@ function evolved.batch_set(query, fragment, ...)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2070,7 +1984,7 @@ function evolved.batch_set(query, fragment, ...)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return set_count, false
 end
 
@@ -2085,7 +1999,8 @@ function evolved.batch_assign(query, fragment, ...)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2100,7 +2015,7 @@ function evolved.batch_assign(query, fragment, ...)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return assigned_count, false
 end
 
@@ -2115,7 +2030,8 @@ function evolved.batch_insert(query, fragment, ...)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2130,7 +2046,7 @@ function evolved.batch_insert(query, fragment, ...)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return inserted_count, false
 end
 
@@ -2144,7 +2060,8 @@ function evolved.batch_remove(query, ...)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2159,7 +2076,7 @@ function evolved.batch_remove(query, ...)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return removed_count, false
 end
 
@@ -2172,7 +2089,8 @@ function evolved.batch_clear(query)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2187,7 +2105,7 @@ function evolved.batch_clear(query)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return cleared_count, false
 end
 
@@ -2200,7 +2118,8 @@ function evolved.batch_destroy(query)
         return 0, true
     end
 
-    local chunk_list = __acquire_chunk_list()
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table()
 
     for chunk in evolved.execute(query) do
         chunk_list[#chunk_list + 1] = chunk
@@ -2215,7 +2134,7 @@ function evolved.batch_destroy(query)
         end
     end
     __defer_commit()
-    __release_chunk_list(chunk_list)
+    __release_table(chunk_list)
     return destroyed_count, false
 end
 
@@ -2332,7 +2251,8 @@ function evolved.chunk(...)
         return
     end
 
-    local sorted_fragment_list = __acquire_fragment_list()
+    ---@type evolved.fragment[]
+    local sorted_fragment_list = __acquire_table()
 
     for i = 1, fragment_count do
         local fragment = select(i, ...)
@@ -2345,7 +2265,7 @@ function evolved.chunk(...)
     local chunk = __root_chunks[root_fragment]
 
     if not chunk then
-        __release_fragment_list(sorted_fragment_list)
+        __release_table(sorted_fragment_list)
         return
     end
 
@@ -2355,13 +2275,13 @@ function evolved.chunk(...)
             chunk = chunk.__with_fragment_edges[child_fragment]
 
             if not chunk then
-                __release_fragment_list(sorted_fragment_list)
+                __release_table(sorted_fragment_list)
                 return
             end
         end
     end
 
-    __release_fragment_list(sorted_fragment_list)
+    __release_table(sorted_fragment_list)
     return chunk, chunk.__entities
 end
 
@@ -2427,7 +2347,13 @@ function evolved.each(entity)
         return __each_iterator
     end
 
-    return __each_iterator, __acquire_each_state(chunk, place)
+    local each_state = __acquire_table()
+
+    each_state[1] = __structural_changes
+    each_state[2] = chunk
+    each_state[3] = place
+
+    return __each_iterator, each_state
 end
 
 ---@param query evolved.query
@@ -2458,12 +2384,16 @@ function evolved.execute(query)
         return __execute_iterator
     end
 
-    local execute_state = __acquire_execute_state(exclude_set)
+    local chunk_stack = __acquire_table()
+    local execute_state = __acquire_table()
+
+    execute_state[1] = __structural_changes
+    execute_state[2] = chunk_stack
+    execute_state[3] = exclude_set
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
             if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
-                local chunk_stack = execute_state[2]
                 chunk_stack[#chunk_stack + 1] = major_fragment_chunk
             end
         end
