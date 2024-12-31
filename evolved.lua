@@ -52,7 +52,7 @@ local evolved = {
 ---@class (exact) evolved.execute_state
 ---@field [1] integer structural_changes
 ---@field [2] evolved.chunk[] chunk_stack
----@field [3] table<evolved.fragment, boolean>? exclude_set
+---@field [3] table<evolved.fragment, boolean> exclude_set
 
 ---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
 ---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?
@@ -312,7 +312,7 @@ end
 ---
 ---
 
----@param exclude_set? table<evolved.fragment, boolean>
+---@param exclude_set table<evolved.fragment, boolean>
 ---@return evolved.execute_state
 ---@nodiscard
 local function __acquire_execute_state(exclude_set)
@@ -355,7 +355,7 @@ local function __execute_iterator(state)
         chunk_stack[#chunk_stack] = nil
 
         for _, chunk_child in ipairs(chunk.__children) do
-            if not exclude_set or not exclude_set[chunk_child.__fragment] then
+            if not exclude_set[chunk_child.__fragment] then
                 chunk_stack[#chunk_stack + 1] = chunk_child
             end
         end
@@ -2302,6 +2302,27 @@ end))
 ---
 ---
 
+---@type table<evolved.fragment, boolean>
+local __EMPTY_FRAGMENT_SET = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment set') end
+})
+
+---@type evolved.fragment[]
+local __EMPTY_FRAGMENT_LIST = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment list') end
+})
+
+---@type evolved.component[]
+local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty component storage') end
+})
+
+---
+---
+---
+---
+---
+
 ---@param ... evolved.fragment fragments
 ---@return evolved.chunk?, evolved.entity[]?
 function evolved.chunk(...)
@@ -2346,7 +2367,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param ... evolved.fragment fragments
----@return evolved.component[]? ... components
+---@return evolved.component[] ... components
 ---@nodiscard
 function evolved.select(chunk, ...)
     local fragment_count = select('#', ...)
@@ -2355,26 +2376,35 @@ function evolved.select(chunk, ...)
         return
     end
 
-    local components = chunk.__components
+    local chunk_components = chunk.__components
 
     if fragment_count == 1 then
         local f1 = ...
-        return components[f1]
+        return
+            chunk_components[f1] or __EMPTY_COMPONENT_STORAGE
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return components[f1], components[f2]
+        return
+            chunk_components[f1] or __EMPTY_COMPONENT_STORAGE,
+            chunk_components[f2] or __EMPTY_COMPONENT_STORAGE
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return components[f1], components[f2], components[f3]
+        return
+            chunk_components[f1] or __EMPTY_COMPONENT_STORAGE,
+            chunk_components[f2] or __EMPTY_COMPONENT_STORAGE,
+            chunk_components[f3] or __EMPTY_COMPONENT_STORAGE
     end
 
     do
         local f1, f2, f3 = ...
-        return components[f1], components[f2], components[f3],
+        return
+            chunk_components[f1] or __EMPTY_COMPONENT_STORAGE,
+            chunk_components[f2] or __EMPTY_COMPONENT_STORAGE,
+            chunk_components[f3] or __EMPTY_COMPONENT_STORAGE,
             evolved.select(chunk, select(4, ...))
     end
 end
@@ -2409,11 +2439,15 @@ function evolved.execute(query)
         return __execute_iterator
     end
 
-    ---@type evolved.fragment[]?, evolved.fragment[]?
-    local include_list, exclude_list = evolved.get(query,
-        __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
+    ---@type table<evolved.fragment, boolean>?, evolved.fragment[]?, evolved.fragment[]?
+    local exclude_set, include_list, exclude_list = evolved.get(query,
+        __EXCLUDE_SET, __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
 
-    if not include_list or #include_list == 0 then
+    if not exclude_set then exclude_set = __EMPTY_FRAGMENT_SET end
+    if not include_list then include_list = __EMPTY_FRAGMENT_LIST end
+    if not exclude_list then exclude_list = __EMPTY_FRAGMENT_LIST end
+
+    if #include_list == 0 then
         return __execute_iterator
     end
 
@@ -2424,13 +2458,11 @@ function evolved.execute(query)
         return __execute_iterator
     end
 
-    ---@type table<evolved.fragment, boolean>?
-    local exclude_set = evolved.get(query, __EXCLUDE_SET)
     local execute_state = __acquire_execute_state(exclude_set)
 
     for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
-            if not exclude_list or not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
+            if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
                 local chunk_stack = execute_state[2]
                 chunk_stack[#chunk_stack + 1] = major_fragment_chunk
             end
