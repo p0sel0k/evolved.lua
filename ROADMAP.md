@@ -8,5 +8,5 @@
 - optimize batch operations for cases with moving entities to empty chunks
 - should we clear chunk's components by on_insert tag callback?
 - use table.new/clear for cached tables
-- replace chunk_list/fragment_list pools to one generic table pool
 - replace id type aliases with separated types to hide implementation details
+- clear chunk's tables instead reallocating them

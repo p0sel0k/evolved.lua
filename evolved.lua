@@ -1231,7 +1231,7 @@ local function __defer_commit()
     local bytecode = __defer_bytecode
 
     __defer_length = 0
-    __defer_bytecode = {}
+    __defer_bytecode = __acquire_table()
 
     local bytecode_index = 1
     while bytecode_index <= length do
@@ -1239,6 +1239,7 @@ local function __defer_commit()
         bytecode_index = bytecode_index + op(bytecode, bytecode_index + 1) + 1
     end
 
+    __release_table(bytecode)
     return true
 end
 
@@ -1984,6 +1985,7 @@ function evolved.batch_set(query, fragment, ...)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return set_count, false
 end
@@ -2015,6 +2017,7 @@ function evolved.batch_assign(query, fragment, ...)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return assigned_count, false
 end
@@ -2046,6 +2049,7 @@ function evolved.batch_insert(query, fragment, ...)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return inserted_count, false
 end
@@ -2076,6 +2080,7 @@ function evolved.batch_remove(query, ...)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return removed_count, false
 end
@@ -2105,6 +2110,7 @@ function evolved.batch_clear(query)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return cleared_count, false
 end
@@ -2134,6 +2140,7 @@ function evolved.batch_destroy(query)
         end
     end
     __defer_commit()
+
     __release_table(chunk_list)
     return destroyed_count, false
 end
