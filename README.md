@@ -1,5 +1,23 @@
 # evolved.lua (work in progress)
 
+> Evolved Entity-Component-System for Lua
+
+[![language][badge.language]][language]
+[![license][badge.license]][license]
+
+[badge.language]: https://img.shields.io/badge/language-Lua-orange
+[badge.license]: https://img.shields.io/badge/license-MIT-blue
+
+[language]: https://en.wikipedia.org/wiki/Lua_(programming_language)
+[license]: https://en.wikipedia.org/wiki/MIT_License
+
+[evolved]: https://github.com/BlackMATov/evolved.lua
+
+## Requirements
+
+- [lua](https://www.lua.org/) **>= 5.1**
+- [luajit](https://luajit.org/) **>= 2.0**
+
 ## Predefs
 
 ```
