@@ -2257,6 +2257,34 @@ do
 end
 
 do
+    local f1, f2, f3 = evo.id(3)
+
+    local q = evo.id()
+    evo.set(q, evo.INCLUDE_LIST, f1)
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+    assert(evo.insert(e1, f2, 42))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 43))
+    assert(evo.insert(e2, f3, 44))
+
+    do
+        local entity_sum = 0
+
+        for _, entities in evo.execute(q) do
+            assert(#entities > 0)
+            for _, e in ipairs(entities) do
+                entity_sum = entity_sum + e
+            end
+        end
+
+        assert(entity_sum == e1 + e2)
+    end
+end
+
+do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
