@@ -149,39 +149,6 @@ local __table_clear = (function()
     end
 end)()
 
-
----
----
----
----
----
-
----@param index integer
----@param version integer
----@return evolved.id
----@nodiscard
-local function __pack_id(index, version)
-    if index < 1 or index > 0xFFFFF then
-        error('id index out of range [1;0xFFFFF]', 2)
-    end
-
-    if version < 1 or version > 0x7FF then
-        error('id version out of range [1;0x7FF]', 2)
-    end
-
-    return index + version * 0x100000
-end
-
----@param id evolved.id
----@return integer index
----@return integer version
----@nodiscard
-local function __unpack_id(id)
-    local index = id % 0x100000
-    local version = (id - index) / 0x100000
-    return index, version
-end
-
 ---
 ---
 ---
@@ -212,14 +179,6 @@ local function __acquire_id()
         __freelist_ids[index] = acquired_id
         return acquired_id
     end
-end
-
----@param id evolved.id
----@return boolean
----@nodiscard
-local function __is_id_alive(id)
-    local index = id % 0x100000
-    return __freelist_ids[index] == id
 end
 
 ---@param id evolved.id
@@ -948,9 +907,9 @@ local function __chunk_insert(chunk, fragment, ...)
 
     for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
         local entity = new_chunk_entities[new_place]
-        local index = __unpack_id(entity)
-        __entity_chunks[index] = new_chunk
-        __entity_places[index] = new_place
+        local entity_index = entity % 0x100000
+        __entity_chunks[entity_index] = new_chunk
+        __entity_places[entity_index] = new_place
     end
 
     do
@@ -1025,16 +984,16 @@ local function __chunk_remove(chunk, ...)
 
         for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
             local entity = new_chunk_entities[new_place]
-            local index = __unpack_id(entity)
-            __entity_chunks[index] = new_chunk
-            __entity_places[index] = new_place
+            local entity_index = entity % 0x100000
+            __entity_chunks[entity_index] = new_chunk
+            __entity_places[entity_index] = new_place
         end
     else
         for old_place = 1, old_chunk_size do
             local entity = old_chunk_entities[old_place]
-            local index = __unpack_id(entity)
-            __entity_chunks[index] = nil
-            __entity_places[index] = nil
+            local entity_index = entity % 0x100000
+            __entity_chunks[entity_index] = nil
+            __entity_places[entity_index] = nil
         end
     end
 
@@ -1084,9 +1043,9 @@ local function __chunk_clear(chunk)
 
     for place = 1, chunk_size do
         local entity = chunk_entities[place]
-        local index = __unpack_id(entity)
-        __entity_chunks[index] = nil
-        __entity_places[index] = nil
+        local entity_index = entity % 0x100000
+        __entity_chunks[entity_index] = nil
+        __entity_places[entity_index] = nil
     end
 
     do
@@ -1135,9 +1094,9 @@ local function __chunk_destroy(chunk)
 
     for place = 1, chunk_size do
         local entity = chunk_entities[place]
-        local index = __unpack_id(entity)
-        __entity_chunks[index] = nil
-        __entity_places[index] = nil
+        local entity_index = entity % 0x100000
+        __entity_chunks[entity_index] = nil
+        __entity_places[entity_index] = nil
         __release_id(entity)
     end
 
@@ -1161,9 +1120,9 @@ end
 
 ---@param entity evolved.entity
 local function __detach_entity(entity)
-    local index = __unpack_id(entity)
+    local entity_index = entity % 0x100000
 
-    local old_chunk = __entity_chunks[index]
+    local old_chunk = __entity_chunks[entity_index]
 
     if not old_chunk then
         return
@@ -1172,7 +1131,7 @@ local function __detach_entity(entity)
     local old_chunk_entities = old_chunk.__entities
     local old_chunk_components = old_chunk.__components
 
-    local old_place = __entity_places[index]
+    local old_place = __entity_places[entity_index]
     local old_chunk_size = #old_chunk_entities
 
     if old_place == old_chunk_size then
@@ -1183,7 +1142,8 @@ local function __detach_entity(entity)
         end
     else
         local last_chunk_entity = old_chunk_entities[old_chunk_size]
-        __entity_places[__unpack_id(last_chunk_entity)] = old_place
+        local last_chunk_entity_index = last_chunk_entity % 0x100000
+        __entity_places[last_chunk_entity_index] = old_place
 
         old_chunk_entities[old_place] = last_chunk_entity
         old_chunk_entities[old_chunk_size] = nil
@@ -1195,8 +1155,8 @@ local function __detach_entity(entity)
         end
     end
 
-    __entity_chunks[index] = nil
-    __entity_places[index] = nil
+    __entity_chunks[entity_index] = nil
+    __entity_places[entity_index] = nil
 
     __structural_changes = __structural_changes + 1
 end
@@ -1588,7 +1548,15 @@ end
 ---@return evolved.id
 ---@nodiscard
 function evolved.pack(index, version)
-    return __pack_id(index, version)
+    if index < 1 or index > 0xFFFFF then
+        error('id index out of range [1;0xFFFFF]', 2)
+    end
+
+    if version < 1 or version > 0x7FF then
+        error('id version out of range [1;0x7FF]', 2)
+    end
+
+    return index + version * 0x100000
 end
 
 ---@param id evolved.id
@@ -1596,7 +1564,9 @@ end
 ---@return integer version
 ---@nodiscard
 function evolved.unpack(id)
-    return __unpack_id(id)
+    local index = id % 0x100000
+    local version = (id - index) / 0x100000
+    return index, version
 end
 
 ---@return boolean started
@@ -1613,15 +1583,22 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.is_alive(entity)
-    return __is_id_alive(entity)
+    local entity_index = entity % 0x100000
+
+    return __freelist_ids[entity_index] == entity
 end
 
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
 function evolved.is_empty(entity)
-    return not __is_id_alive(entity)
-        or not __entity_chunks[__unpack_id(entity)]
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
+        return true
+    end
+
+    return not __entity_chunks[entity_index]
 end
 
 ---@param entity evolved.entity
@@ -1629,18 +1606,19 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function evolved.get(entity, ...)
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return
     end
 
-    local index = __unpack_id(entity)
-    local chunk = __entity_chunks[index]
+    local chunk = __entity_chunks[entity_index]
 
     if not chunk then
         return
     end
 
-    local place = __entity_places[index]
+    local place = __entity_places[entity_index]
     return __chunk_get_components(chunk, place, ...)
 end
 
@@ -1649,12 +1627,13 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has(entity, fragment)
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false
     end
 
-    local index = __unpack_id(entity)
-    local chunk = __entity_chunks[index]
+    local chunk = __entity_chunks[entity_index]
 
     if not chunk then
         return false
@@ -1668,12 +1647,13 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has_all(entity, ...)
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false
     end
 
-    local index = __unpack_id(entity)
-    local chunk = __entity_chunks[index]
+    local chunk = __entity_chunks[entity_index]
 
     if not chunk then
         return select('#', ...) == 0
@@ -1687,12 +1667,13 @@ end
 ---@return boolean
 ---@nodiscard
 function evolved.has_any(entity, ...)
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false
     end
 
-    local index = __unpack_id(entity)
-    local chunk = __entity_chunks[index]
+    local chunk = __entity_chunks[entity_index]
 
     if not chunk then
         return false
@@ -1712,14 +1693,14 @@ function evolved.set(entity, fragment, ...)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false, false
     end
 
-    local index = __unpack_id(entity)
-
-    local old_chunk = __entity_chunks[index]
-    local old_place = __entity_places[index]
+    local old_chunk = __entity_chunks[entity_index]
+    local old_place = __entity_places[entity_index]
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
     local new_place = #new_chunk.__entities + 1
@@ -1769,8 +1750,8 @@ function evolved.set(entity, fragment, ...)
             __detach_entity(entity)
         end
 
-        __entity_chunks[index] = new_chunk
-        __entity_places[index] = new_place
+        __entity_chunks[entity_index] = new_chunk
+        __entity_places[entity_index] = new_place
 
         __structural_changes = __structural_changes + 1
     end
@@ -1789,14 +1770,14 @@ function evolved.assign(entity, fragment, ...)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false, false
     end
 
-    local index = __unpack_id(entity)
-
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
 
     if not chunk or not chunk.__fragments[fragment] then
         return false, false
@@ -1828,14 +1809,14 @@ function evolved.insert(entity, fragment, ...)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false, false
     end
 
-    local index = __unpack_id(entity)
-
-    local old_chunk = __entity_chunks[index]
-    local old_place = __entity_places[index]
+    local old_chunk = __entity_chunks[entity_index]
+    local old_place = __entity_places[entity_index]
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
     local new_place = #new_chunk.__entities + 1
@@ -1873,8 +1854,8 @@ function evolved.insert(entity, fragment, ...)
             __detach_entity(entity)
         end
 
-        __entity_chunks[index] = new_chunk
-        __entity_places[index] = new_place
+        __entity_chunks[entity_index] = new_chunk
+        __entity_places[entity_index] = new_place
 
         __structural_changes = __structural_changes + 1
     end
@@ -1892,14 +1873,14 @@ function evolved.remove(entity, ...)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false, false
     end
 
-    local index = __unpack_id(entity)
-
-    local old_chunk = __entity_chunks[index]
-    local old_place = __entity_places[index]
+    local old_chunk = __entity_chunks[entity_index]
+    local old_place = __entity_places[entity_index]
 
     local new_chunk = __chunk_without_fragments(old_chunk, ...)
 
@@ -1942,8 +1923,8 @@ function evolved.remove(entity, ...)
 
             __detach_entity(entity)
 
-            __entity_chunks[index] = new_chunk
-            __entity_places[index] = new_place
+            __entity_chunks[entity_index] = new_chunk
+            __entity_places[entity_index] = new_place
         else
             __detach_entity(entity)
         end
@@ -1963,14 +1944,14 @@ function evolved.clear(entity)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return false, false
     end
 
-    local index = __unpack_id(entity)
-
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
 
     if not chunk then
         return true, false
@@ -2010,14 +1991,14 @@ function evolved.destroy(entity)
         return false, true
     end
 
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return true, false
     end
 
-    local index = __unpack_id(entity)
-
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
 
     if not chunk then
         __release_id(entity)
@@ -2437,14 +2418,14 @@ end
 ---@return evolved.each_state?
 ---@nodiscard
 function evolved.each(entity)
-    if not __is_id_alive(entity) then
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
         return __each_iterator
     end
 
-    local index = __unpack_id(entity)
-
-    local chunk = __entity_chunks[index]
-    local place = __entity_places[index]
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
 
     if not chunk then
         return __each_iterator
@@ -2466,7 +2447,9 @@ end
 ---@return evolved.execute_state?
 ---@nodiscard
 function evolved.execute(query)
-    if not __is_id_alive(query) then
+    local query_index = query % 0x100000
+
+    if __freelist_ids[query_index] ~= query then
         return __execute_iterator
     end
 
