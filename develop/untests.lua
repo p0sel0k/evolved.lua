@@ -1,4 +1,3 @@
----@diagnostic disable: invisible
 local evo = require 'evolved'
 
 do
@@ -1898,13 +1897,14 @@ do
             assert(evo.get(e3, f1) == nil and evo.get(e3, f2) == nil and evo.get(e3, f3) == 43)
 
             do
-                local chunk = assert(evo.chunk(f1, f2, f3))
+                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entities)
 
-                assert(chunk.__entities[1] == e3 and chunk.__entities[2] == e1)
+                assert(chunk_entities[1] == e3 and chunk_entities[2] == e1)
 
-                assert(chunk.__components[f1] == nil)
-                assert(chunk.__components[f2] == nil)
-                assert(chunk.__components[f3][1] == 43 and chunk.__components[f3][2] == 50)
+                assert(#evo.select(chunk, f1) == 0)
+                assert(#evo.select(chunk, f2) == 0)
+                assert(evo.select(chunk, f3)[1] == 43 and evo.select(chunk, f3)[2] == 50)
             end
         end
     end
@@ -1939,19 +1939,23 @@ do
             assert(not evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
 
             do
-                local chunk = assert(evo.chunk(f2))
-                assert(chunk.__entities[1] == e1)
-                assert(chunk.__components[f1] == nil)
-                assert(chunk.__components[f2] == nil)
-                assert(chunk.__components[f3] == nil)
+                local chunk, chunk_entities = evo.chunk(f2)
+                assert(chunk and chunk_entities)
+
+                assert(chunk_entities[1] == e1)
+                assert(#evo.select(chunk, f1) == 0)
+                assert(#evo.select(chunk, f2) == 0)
+                assert(#evo.select(chunk, f3) == 0)
             end
 
             do
-                local chunk = assert(evo.chunk(f2, f3))
-                assert(chunk.__entities[1] == e3)
-                assert(chunk.__components[f1] == nil)
-                assert(chunk.__components[f2] == nil)
-                assert(chunk.__components[f3][1] == 43)
+                local chunk, chunk_entities = evo.chunk(f2, f3)
+                assert(chunk and chunk_entities)
+
+                assert(chunk_entities[1] == e3)
+                assert(#evo.select(chunk, f1) == 0)
+                assert(#evo.select(chunk, f2) == 0)
+                assert(evo.select(chunk, f3)[1] == 43)
             end
         end
     end
@@ -1990,11 +1994,13 @@ do
             assert(not evo.has(e3, f1) and not evo.has(e3, f2) and not evo.has(e3, f3))
 
             do
-                local chunk = assert(evo.chunk(f1, f2, f3))
-                assert(next(chunk.__entities) == nil)
-                assert(chunk.__components[f1] == nil)
-                assert(chunk.__components[f2] == nil)
-                assert(next(chunk.__components[f3]) == nil)
+                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entities)
+
+                assert(next(chunk_entities) == nil)
+                assert(#evo.select(chunk, f1) == 0)
+                assert(#evo.select(chunk, f2) == 0)
+                assert(#evo.select(chunk, f3) == 0)
             end
         end
     end
@@ -2033,11 +2039,13 @@ do
             assert(not evo.has(e3, f1) and not evo.has(e3, f2) and not evo.has(e3, f3))
 
             do
-                local chunk = assert(evo.chunk(f1, f2, f3))
-                assert(next(chunk.__entities) == nil)
-                assert(chunk.__components[f1] == nil)
-                assert(chunk.__components[f2] == nil)
-                assert(next(chunk.__components[f3]) == nil)
+                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entities)
+
+                assert(next(chunk_entities) == nil)
+                assert(#evo.select(chunk, f1) == 0)
+                assert(#evo.select(chunk, f2) == 0)
+                assert(#evo.select(chunk, f3) == 0)
             end
         end
     end
