@@ -9,4 +9,5 @@
 - should we clear chunk's components by on_insert tag callback?
 - replace id type aliases with separated types to hide implementation details
 - clear chunk's tables instead reallocating them
-- add initializer list to __table_new?
+- add REQUIRES fragment trait
+- try to keep entity_chunks/places tables as arrays

@@ -130,6 +130,7 @@ local __table_new = (function()
     ---@param nhash integer
     ---@return table
     return table_new_loader and table_new_loader() or function(narray, nhash)
+        -- we have to check arguments here for consistency with table.new
         if type(narray) ~= 'number' then error('narray must be a number', 2) end
         if type(nhash) ~= 'number' then error('nhash must be a number', 2) end
         return {}
@@ -141,6 +142,7 @@ local __table_clear = (function()
     local table_clear_loader = package.preload['table.clear']
     ---@param tab table
     return table_clear_loader and table_clear_loader() or function(tab)
+        -- we have to check arguments here for consistency with table.clear
         if type(tab) ~= 'table' then error('tab must be a table', 2) end
         for i = #tab, 1, -1 do tab[i] = nil end
         for k in pairs(tab) do tab[k] = nil end
@@ -237,18 +239,18 @@ end
 ---
 ---
 
-local __TABLE_POOL_TAG__BYTECODE = 1
-local __TABLE_POOL_TAG__CHUNK_LIST = 2
-local __TABLE_POOL_TAG__EACH_STATE = 3
-local __TABLE_POOL_TAG__EXECUTE_STATE = 4
-local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
-
 ---@alias evolved.table_pool_tag
 ---| `__TABLE_POOL_TAG__BYTECODE`
 ---| `__TABLE_POOL_TAG__CHUNK_LIST`
 ---| `__TABLE_POOL_TAG__EACH_STATE`
 ---| `__TABLE_POOL_TAG__EXECUTE_STATE`
 ---| `__TABLE_POOL_TAG__FRAGMENT_LIST`
+
+local __TABLE_POOL_TAG__BYTECODE = 1
+local __TABLE_POOL_TAG__CHUNK_LIST = 2
+local __TABLE_POOL_TAG__EACH_STATE = 3
+local __TABLE_POOL_TAG__EXECUTE_STATE = 4
+local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
 
 ---@type table<evolved.table_pool_tag, table[]>
 local __tagged_table_pools = __table_new(5, 0)
