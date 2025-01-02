@@ -161,8 +161,14 @@ end)()
 ---@return evolved.id
 ---@nodiscard
 local function __pack_id(index, version)
-    assert(index >= 1 and index <= 0xFFFFF, 'id index out of range [1;0xFFFFF]')
-    assert(version >= 1 and version <= 0x7FF, 'id version out of range [1;0x7FF]')
+    if index < 1 or index > 0xFFFFF then
+        error('id index out of range [1;0xFFFFF]', 2)
+    end
+
+    if version < 1 or version > 0x7FF then
+        error('id version out of range [1;0x7FF]', 2)
+    end
+
     return index + version * 0x100000
 end
 
@@ -778,7 +784,9 @@ end
 ---@return integer assigned_count
 ---@nodiscard
 local function __chunk_assign(chunk, fragment, ...)
-    assert(__defer_depth > 0, 'batched chunk operations should be deferred')
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
 
     local chunk_entities = chunk.__entities
     local chunk_fragments = chunk.__fragments
@@ -854,7 +862,9 @@ end
 ---@return integer inserted_count
 ---@nodiscard
 local function __chunk_insert(chunk, fragment, ...)
-    assert(__defer_depth > 0, 'batched chunk operations should be deferred')
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
 
     local old_chunk = chunk
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
@@ -960,7 +970,9 @@ end
 ---@return integer removed_count
 ---@nodiscard
 local function __chunk_remove(chunk, ...)
-    assert(__defer_depth > 0, 'batched chunk operations should be deferred')
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
 
     local old_chunk = chunk
     local new_chunk = __chunk_without_fragments(chunk, ...)
@@ -1042,7 +1054,9 @@ end
 ---@return integer cleared_count
 ---@nodiscard
 local function __chunk_clear(chunk)
-    assert(__defer_depth > 0, 'batched chunk operations should be deferred')
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
 
     local chunk_entities = chunk.__entities
     local chunk_fragments = chunk.__fragments
@@ -1091,7 +1105,9 @@ end
 ---@return integer destroyed_count
 ---@nodiscard
 local function __chunk_destroy(chunk)
-    assert(__defer_depth > 0, 'batched chunk operations should be deferred')
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
 
     local chunk_entities = chunk.__entities
     local chunk_fragments = chunk.__fragments
@@ -1287,18 +1303,24 @@ local __defer_ops = {
 
 ---@return boolean started
 local function __defer()
-    assert(__defer_depth >= 0, 'unbalanced defer/commit')
     __defer_depth = __defer_depth + 1
     return __defer_depth == 1
 end
 
 ---@return boolean committed
 local function __defer_commit()
-    assert(__defer_depth > 0, 'unbalanced defer/commit')
+    if __defer_depth <= 0 then
+        error('unbalanced defer/commit', 2)
+    end
+
     __defer_depth = __defer_depth - 1
 
     if __defer_depth > 0 then
         return false
+    end
+
+    if __defer_length == 0 then
+        return true
     end
 
     local length = __defer_length
@@ -2230,10 +2252,10 @@ local __EXCLUDE_SET = __acquire_id()
 local __SORTED_INCLUDE_LIST = __acquire_id()
 local __SORTED_EXCLUDE_LIST = __acquire_id()
 
-assert(evolved.insert(evolved.TAG, evolved.TAG))
+evolved.set(evolved.TAG, evolved.TAG)
 
 ---@param ... evolved.fragment
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
     local include_list = {}
 
     for i = 1, select('#', ...) do
@@ -2241,11 +2263,11 @@ assert(evolved.insert(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ..
     end
 
     return include_list
-end))
+end)
 
 ---@param query evolved.query
 ---@param include_list evolved.entity[]
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
+evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
     ---@type table<evolved.fragment, boolean>, evolved.fragment[]
     local include_set, sorted_include_list = {}, {}
 
@@ -2258,14 +2280,14 @@ assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, i
 
     evolved.set(query, __INCLUDE_SET, include_set)
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
-end))
+end)
 
-assert(evolved.insert(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
-end))
+end)
 
 ---@param ... evolved.fragment
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
     local exclude_list = {}
 
     for i = 1, select('#', ...) do
@@ -2273,11 +2295,11 @@ assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ..
     end
 
     return exclude_list
-end))
+end)
 
 ---@param query evolved.query
 ---@param exclude_list evolved.entity[]
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
+evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
     ---@type table<evolved.fragment, boolean>, evolved.fragment[]
     local exclude_set, sorted_exclude_list = {}, {}
 
@@ -2290,11 +2312,11 @@ assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, e
 
     evolved.set(query, __EXCLUDE_SET, exclude_set)
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
-end))
+end)
 
-assert(evolved.insert(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
-end))
+end)
 
 ---
 ---
