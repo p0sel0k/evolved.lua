@@ -1,3 +1,4 @@
+package.loaded['evolved'] = nil
 local evo = require 'evolved'
 
 do
