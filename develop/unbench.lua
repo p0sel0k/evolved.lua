@@ -137,6 +137,10 @@ end, function()
     return f1, f2, f3, {}
 end)
 
+---
+--- initial
+---
+
 --[[ lua 5.1
 | create and destroy 1k entities ... |
     PASS | us: 312.60 | op/s: 3199.00 | kb/i: 0.05
@@ -157,4 +161,30 @@ end)
     PASS | us: 412.73 | op/s: 2422.89 | kb/i: 0.11
 | create and destroy 1k entities with three components ... |
     PASS | us: 611.62 | op/s: 1635.00 | kb/i: 0.17
+]]
+
+---
+--- unpack ids without dedicated functions
+---
+
+--[[ lua 5.1
+| create and destroy 1k entities ... |
+    PASS | us: 255.40 | op/s: 3915.42 | kb/i: 0.04
+| create and destroy 1k entities with one component ... |
+    PASS | us: 1248.45 | op/s: 801.00 | kb/i: 0.50
+| create and destroy 1k entities with two components ... |
+    PASS | us: 2208.79 | op/s: 452.74 | kb/i: 0.73
+| create and destroy 1k entities with three components ... |
+    PASS | us: 3278.69 | op/s: 305.00 | kb/i: 1.37
+]]
+
+--[[ luajit 2.1
+| create and destroy 1k entities ... |
+    PASS | us: 12.12 | op/s: 82482.59 | kb/i: 0.00
+| create and destroy 1k entities with one component ... |
+    PASS | us: 69.05 | op/s: 14482.59 | kb/i: 0.03
+| create and destroy 1k entities with two components ... |
+    PASS | us: 400.40 | op/s: 2497.51 | kb/i: 0.09
+| create and destroy 1k entities with three components ... |
+    PASS | us: 574.71 | op/s: 1740.00 | kb/i: 0.14
 ]]
