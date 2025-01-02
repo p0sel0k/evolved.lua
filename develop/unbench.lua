@@ -48,6 +48,22 @@ local function __bench_describe(name, loop, init)
     collectgarbage('collect')
 end
 
+---@param tables table[]
+__bench_describe('create and destroy 1k tables', function(tables)
+    for i = 1, 1000 do
+        local t = {}
+        tables[i] = t
+    end
+
+    for i = 1, #tables do
+        tables[i] = nil
+    end
+
+    collectgarbage('collect')
+end, function()
+    return {}
+end)
+
 ---@param entities evolved.id[]
 __bench_describe('create and destroy 1k entities', function(entities)
     local id = evo.id
@@ -187,4 +203,30 @@ end)
     PASS | us: 400.40 | op/s: 2497.51 | kb/i: 0.09
 | create and destroy 1k entities with three components ... |
     PASS | us: 574.71 | op/s: 1740.00 | kb/i: 0.14
+]]
+
+---
+--- hook flags for chunks
+---
+
+--[[ lua 5.1
+| create and destroy 1k entities ... |
+    PASS | us: 255.40 | op/s: 3915.42 | kb/i: 0.04
+| create and destroy 1k entities with one component ... |
+    PASS | us: 1005.03 | op/s: 995.00 | kb/i: 0.41
+| create and destroy 1k entities with two components ... |
+    PASS | us: 1747.83 | op/s: 572.14 | kb/i: 0.59
+| create and destroy 1k entities with three components ... |
+    PASS | us: 2576.92 | op/s: 388.06 | kb/i: 1.08
+]]
+
+--[[ luajit 2.1
+| create and destroy 1k entities ... |
+    PASS | us: 12.20 | op/s: 81940.30 | kb/i: 0.00
+| create and destroy 1k entities with one component ... |
+    PASS | us: 53.66 | op/s: 18636.82 | kb/i: 0.02
+| create and destroy 1k entities with two components ... |
+    PASS | us: 357.02 | op/s: 2801.00 | kb/i: 0.09
+| create and destroy 1k entities with three components ... |
+    PASS | us: 533.33 | op/s: 1875.00 | kb/i: 0.15
 ]]
