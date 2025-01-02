@@ -42,6 +42,9 @@ local evolved = {
 ---@field package __components table<evolved.fragment, evolved.component[]>
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __has_set_or_assign_hooks boolean
+---@field package __has_set_or_insert_hooks boolean
+---@field package __has_remove_hooks boolean
 
 ---@class (exact) evolved.each_state
 ---@field package [1] integer structural_changes
@@ -368,7 +371,7 @@ end
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
 ---@param old_component evolved.component
-local function __fragment_on_set_and_assign(entity, fragment, new_component, old_component)
+local function __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
     local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
     if on_set then on_set(entity, fragment, new_component, old_component) end
     if on_assign then on_assign(entity, fragment, new_component, old_component) end
@@ -377,7 +380,7 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
-local function __fragment_on_set_and_insert(entity, fragment, new_component)
+local function __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
     if on_set then on_set(entity, fragment, new_component) end
     if on_insert then on_insert(entity, fragment, new_component) end
@@ -386,7 +389,7 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param old_component evolved.component
-local function __fragment_on_remove(entity, fragment, old_component)
+local function __fragment_call_remove_hook(entity, fragment, old_component)
     local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
     if on_remove then on_remove(entity, fragment, old_component) end
 end
@@ -401,21 +404,21 @@ end
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-local function __fragment_has_on_set_or_assign(fragment)
+local function __fragment_has_set_or_assign_hooks(fragment)
     return evolved.has_any(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
 end
 
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-local function __fragment_has_on_set_or_insert(fragment)
+local function __fragment_has_set_or_insert_hooks(fragment)
     return evolved.has_any(fragment, evolved.ON_SET, evolved.ON_INSERT)
 end
 
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-local function __fragment_has_on_remove(fragment)
+local function __fragment_has_remove_hook(fragment)
     return evolved.has(fragment, evolved.ON_REMOVE)
 end
 
@@ -434,6 +437,10 @@ local function __root_chunk(fragment)
         if root_chunk then return root_chunk end
     end
 
+    local has_set_or_assign_hooks = __fragment_has_set_or_assign_hooks(fragment)
+    local has_set_or_insert_hooks = __fragment_has_set_or_insert_hooks(fragment)
+    local has_remove_hooks = __fragment_has_remove_hook(fragment)
+
     ---@type evolved.chunk
     local root_chunk = {
         __parent = nil,
@@ -444,6 +451,9 @@ local function __root_chunk(fragment)
         __components = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __has_set_or_assign_hooks = has_set_or_assign_hooks,
+        __has_set_or_insert_hooks = has_set_or_insert_hooks,
+        __has_remove_hooks = has_remove_hooks,
     }
 
     do
@@ -506,6 +516,10 @@ local function __chunk_with_fragment(chunk, fragment)
         return sibling_chunk
     end
 
+    local has_set_or_assign_hooks = chunk.__has_set_or_assign_hooks or __fragment_has_set_or_assign_hooks(fragment)
+    local has_set_or_insert_hooks = chunk.__has_set_or_insert_hooks or __fragment_has_set_or_insert_hooks(fragment)
+    local has_remove_hooks = chunk.__has_remove_hooks or __fragment_has_remove_hook(fragment)
+
     ---@type evolved.chunk
     local child_chunk = {
         __parent = chunk,
@@ -516,6 +530,9 @@ local function __chunk_with_fragment(chunk, fragment)
         __components = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __has_set_or_assign_hooks = has_set_or_assign_hooks,
+        __has_set_or_insert_hooks = has_set_or_insert_hooks,
+        __has_remove_hooks = has_remove_hooks,
     }
 
     do
@@ -758,7 +775,7 @@ local function __chunk_assign(chunk, fragment, ...)
     local chunk_size = #chunk_entities
     local chunk_fragment_components = chunk_components[fragment]
 
-    if __fragment_has_on_set_or_assign(fragment) then
+    if chunk.__has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
         if chunk_fragment_components then
             if __fragment_has_default_or_construct(fragment) then
                 for place = 1, chunk_size do
@@ -766,7 +783,7 @@ local function __chunk_assign(chunk, fragment, ...)
                     local old_component = chunk_fragment_components[place]
                     local new_component = __component_construct(entity, fragment, ...)
                     chunk_fragment_components[place] = new_component
-                    __fragment_on_set_and_assign(entity, fragment, new_component, old_component)
+                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 end
             else
                 local new_component = ...
@@ -779,13 +796,13 @@ local function __chunk_assign(chunk, fragment, ...)
                     local entity = chunk_entities[place]
                     local old_component = chunk_fragment_components[place]
                     chunk_fragment_components[place] = new_component
-                    __fragment_on_set_and_assign(entity, fragment, new_component, old_component)
+                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 end
             end
         else
             for place = 1, chunk_size do
                 local entity = chunk_entities[place]
-                __fragment_on_set_and_assign(entity, fragment)
+                __fragment_call_set_and_assign_hooks(entity, fragment)
             end
         end
     else
@@ -853,14 +870,14 @@ local function __chunk_insert(chunk, fragment, ...)
         end
     end
 
-    if __fragment_has_on_set_or_insert(fragment) then
+    if new_chunk.__has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
         if new_chunk_fragment_components then
             if __fragment_has_default_or_construct(fragment) then
                 for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
                     local entity = new_chunk_entities[new_place]
                     local new_component = __component_construct(entity, fragment, ...)
                     new_chunk_fragment_components[new_place] = new_component
-                    __fragment_on_set_and_insert(entity, fragment, new_component)
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
                 end
             else
                 local new_component = ...
@@ -872,13 +889,13 @@ local function __chunk_insert(chunk, fragment, ...)
                 for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
                     local entity = new_chunk_entities[new_place]
                     new_chunk_fragment_components[new_place] = new_component
-                    __fragment_on_set_and_insert(entity, fragment, new_component)
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
                 end
             end
         else
             for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
                 local entity = new_chunk_entities[new_place]
-                __fragment_on_set_and_insert(entity, fragment)
+                __fragment_call_set_and_insert_hooks(entity, fragment)
             end
         end
     else
@@ -946,20 +963,24 @@ local function __chunk_remove(chunk, ...)
 
     local old_chunk_size = #old_chunk_entities
 
-    for i = 1, select('#', ...) do
-        local fragment = select(i, ...)
-        if old_chunk_fragments[fragment] and __fragment_has_on_remove(fragment) then
-            local old_chunk_fragment_components = old_chunk_components[fragment]
-            if old_chunk_fragment_components then
-                for old_place = 1, old_chunk_size do
-                    local entity = old_chunk_entities[old_place]
-                    local old_component = old_chunk_fragment_components[old_place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                end
-            else
-                for old_place = 1, old_chunk_size do
-                    local entity = old_chunk_entities[old_place]
-                    __fragment_on_remove(entity, fragment)
+    if old_chunk.__has_remove_hooks then
+        for i = 1, select('#', ...) do
+            local fragment = select(i, ...)
+            if old_chunk_fragments[fragment] then
+                if __fragment_has_remove_hook(fragment) then
+                    local old_chunk_fragment_components = old_chunk_components[fragment]
+                    if old_chunk_fragment_components then
+                        for old_place = 1, old_chunk_size do
+                            local entity = old_chunk_entities[old_place]
+                            local old_component = old_chunk_fragment_components[old_place]
+                            __fragment_call_remove_hook(entity, fragment, old_component)
+                        end
+                    else
+                        for old_place = 1, old_chunk_size do
+                            local entity = old_chunk_entities[old_place]
+                            __fragment_call_remove_hook(entity, fragment)
+                        end
+                    end
                 end
             end
         end
@@ -1023,19 +1044,21 @@ local function __chunk_clear(chunk)
 
     local chunk_size = #chunk_entities
 
-    for fragment, _ in pairs(chunk_fragments) do
-        if __fragment_has_on_remove(fragment) then
-            local chunk_fragment_components = chunk_components[fragment]
-            if chunk_fragment_components then
-                for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    local old_component = chunk_fragment_components[place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                end
-            else
-                for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    __fragment_on_remove(entity, fragment)
+    if chunk.__has_remove_hooks then
+        for fragment, _ in pairs(chunk_fragments) do
+            if __fragment_has_remove_hook(fragment) then
+                local chunk_fragment_components = chunk_components[fragment]
+                if chunk_fragment_components then
+                    for place = 1, chunk_size do
+                        local entity = chunk_entities[place]
+                        local old_component = chunk_fragment_components[place]
+                        __fragment_call_remove_hook(entity, fragment, old_component)
+                    end
+                else
+                    for place = 1, chunk_size do
+                        local entity = chunk_entities[place]
+                        __fragment_call_remove_hook(entity, fragment)
+                    end
                 end
             end
         end
@@ -1074,19 +1097,21 @@ local function __chunk_destroy(chunk)
 
     local chunk_size = #chunk_entities
 
-    for fragment, _ in pairs(chunk_fragments) do
-        if __fragment_has_on_remove(fragment) then
-            local chunk_fragment_components = chunk_components[fragment]
-            if chunk_fragment_components then
-                for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    local old_component = chunk_fragment_components[place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                end
-            else
-                for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    __fragment_on_remove(entity, fragment)
+    if chunk.__has_remove_hooks then
+        for fragment, _ in pairs(chunk_fragments) do
+            if __fragment_has_remove_hook(fragment) then
+                local chunk_fragment_components = chunk_components[fragment]
+                if chunk_fragment_components then
+                    for place = 1, chunk_size do
+                        local entity = chunk_entities[place]
+                        local old_component = chunk_fragment_components[place]
+                        __fragment_call_remove_hook(entity, fragment, old_component)
+                    end
+                else
+                    for place = 1, chunk_size do
+                        local entity = chunk_entities[place]
+                        __fragment_call_remove_hook(entity, fragment)
+                    end
                 end
             end
         end
@@ -1713,9 +1738,13 @@ function evolved.set(entity, fragment, ...)
             local old_component = old_chunk_fragment_components[old_place]
             local new_component = __component_construct(entity, fragment, ...)
             old_chunk_fragment_components[old_place] = new_component
-            __fragment_on_set_and_assign(entity, fragment, new_component, old_component)
+            if old_chunk.__has_set_or_assign_hooks then
+                __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+            end
         else
-            __fragment_on_set_and_assign(entity, fragment)
+            if old_chunk.__has_set_or_assign_hooks then
+                __fragment_call_set_and_assign_hooks(entity, fragment)
+            end
         end
 
         return true, false
@@ -1732,9 +1761,13 @@ function evolved.set(entity, fragment, ...)
         if new_chunk_fragment_components then
             local new_component = __component_construct(entity, fragment, ...)
             new_chunk_fragment_components[new_place] = new_component
-            __fragment_on_set_and_insert(entity, fragment, new_component)
+            if new_chunk.__has_set_or_insert_hooks then
+                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            end
         else
-            __fragment_on_set_and_insert(entity, fragment)
+            if new_chunk.__has_set_or_insert_hooks then
+                __fragment_call_set_and_insert_hooks(entity, fragment)
+            end
         end
 
         if old_chunk then
@@ -1790,9 +1823,13 @@ function evolved.assign(entity, fragment, ...)
         local old_component = chunk_fragment_components[place]
         local new_component = __component_construct(entity, fragment, ...)
         chunk_fragment_components[place] = new_component
-        __fragment_on_set_and_assign(entity, fragment, new_component, old_component)
+        if chunk.__has_set_or_assign_hooks then
+            __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+        end
     else
-        __fragment_on_set_and_assign(entity, fragment)
+        if chunk.__has_set_or_assign_hooks then
+            __fragment_call_set_and_assign_hooks(entity, fragment)
+        end
     end
 
     return true, false
@@ -1836,9 +1873,13 @@ function evolved.insert(entity, fragment, ...)
         if new_chunk_fragment_components then
             local new_component = __component_construct(entity, fragment, ...)
             new_chunk_fragment_components[new_place] = new_component
-            __fragment_on_set_and_insert(entity, fragment, new_component)
+            if new_chunk.__has_set_or_insert_hooks then
+                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            end
         else
-            __fragment_on_set_and_insert(entity, fragment)
+            if new_chunk.__has_set_or_insert_hooks then
+                __fragment_call_set_and_insert_hooks(entity, fragment)
+            end
         end
 
         if old_chunk then
@@ -1893,15 +1934,19 @@ function evolved.remove(entity, ...)
         local old_chunk_fragments = old_chunk.__fragments
         local old_chunk_components = old_chunk.__components
 
-        for i = 1, select('#', ...) do
-            local fragment = select(i, ...)
-            if old_chunk_fragments[fragment] and __fragment_has_on_remove(fragment) then
-                local old_chunk_fragment_components = old_chunk_components[fragment]
-                if old_chunk_fragment_components then
-                    local old_component = old_chunk_fragment_components[old_place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                else
-                    __fragment_on_remove(entity, fragment)
+        if old_chunk.__has_remove_hooks then
+            for i = 1, select('#', ...) do
+                local fragment = select(i, ...)
+                if old_chunk_fragments[fragment] then
+                    if __fragment_has_remove_hook(fragment) then
+                        local old_chunk_fragment_components = old_chunk_components[fragment]
+                        if old_chunk_fragment_components then
+                            local old_component = old_chunk_fragment_components[old_place]
+                            __fragment_call_remove_hook(entity, fragment, old_component)
+                        else
+                            __fragment_call_remove_hook(entity, fragment)
+                        end
+                    end
                 end
             end
         end
@@ -1959,17 +2004,19 @@ function evolved.clear(entity)
 
     __defer()
     do
-        local chunk_fragments = chunk.__fragments
-        local chunk_components = chunk.__components
+        if chunk.__has_remove_hooks then
+            local chunk_fragments = chunk.__fragments
+            local chunk_components = chunk.__components
 
-        for fragment, _ in pairs(chunk_fragments) do
-            if __fragment_has_on_remove(fragment) then
-                local chunk_fragment_components = chunk_components[fragment]
-                if chunk_fragment_components then
-                    local old_component = chunk_fragment_components[place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                else
-                    __fragment_on_remove(entity, fragment)
+            for fragment, _ in pairs(chunk_fragments) do
+                if __fragment_has_remove_hook(fragment) then
+                    local chunk_fragment_components = chunk_components[fragment]
+                    if chunk_fragment_components then
+                        local old_component = chunk_fragment_components[place]
+                        __fragment_call_remove_hook(entity, fragment, old_component)
+                    else
+                        __fragment_call_remove_hook(entity, fragment)
+                    end
                 end
             end
         end
@@ -2007,17 +2054,19 @@ function evolved.destroy(entity)
 
     __defer()
     do
-        local chunk_fragments = chunk.__fragments
-        local chunk_components = chunk.__components
+        if chunk.__has_remove_hooks then
+            local chunk_fragments = chunk.__fragments
+            local chunk_components = chunk.__components
 
-        for fragment, _ in pairs(chunk_fragments) do
-            if __fragment_has_on_remove(fragment) then
-                local chunk_fragment_components = chunk_components[fragment]
-                if chunk_fragment_components then
-                    local old_component = chunk_fragment_components[place]
-                    __fragment_on_remove(entity, fragment, old_component)
-                else
-                    __fragment_on_remove(entity, fragment)
+            for fragment, _ in pairs(chunk_fragments) do
+                if __fragment_has_remove_hook(fragment) then
+                    local chunk_fragment_components = chunk_components[fragment]
+                    if chunk_fragment_components then
+                        local old_component = chunk_fragment_components[place]
+                        __fragment_call_remove_hook(entity, fragment, old_component)
+                    else
+                        __fragment_call_remove_hook(entity, fragment)
+                    end
                 end
             end
         end
