@@ -48,17 +48,113 @@ local function __bench_describe(name, loop, init)
     collectgarbage('collect')
 end
 
-__bench_describe('create and destroy 10k evolved ids', function()
+---@param entities evolved.id[]
+__bench_describe('create and destroy 1k entities', function(entities)
     local id = evo.id
     local destroy = evo.destroy
 
-    local ids = {}
-
-    for i = 1, 10000 do
-        ids[i] = id()
+    for i = 1, 1000 do
+        local e = id()
+        entities[i] = e
     end
 
-    for i = 1, 10000 do
-        destroy(ids[i])
+    for i = 1, #entities do
+        destroy(entities[i])
     end
+end, function()
+    return {}
 end)
+
+---@param f1 evolved.fragment
+---@param entities evolved.id[]
+__bench_describe('create and destroy 1k entities with one component', function(f1, entities)
+    local id = evo.id
+    local insert = evo.insert
+    local destroy = evo.destroy
+
+    for i = 1, 1000 do
+        local e = id()
+        entities[i] = e
+
+        insert(e, f1)
+    end
+
+    for i = 1, #entities do
+        destroy(entities[i])
+    end
+end, function()
+    local f1 = evo.id(2)
+    return f1, {}
+end)
+
+---@param f1 evolved.fragment
+---@param f2 evolved.fragment
+---@param entities evolved.id[]
+__bench_describe('create and destroy 1k entities with two components', function(f1, f2, entities)
+    local id = evo.id
+    local insert = evo.insert
+    local destroy = evo.destroy
+
+    for i = 1, 1000 do
+        local e = id()
+        entities[i] = e
+
+        insert(e, f1)
+        insert(e, f2)
+    end
+
+    for i = 1, #entities do
+        destroy(entities[i])
+    end
+end, function()
+    local f1, f2 = evo.id(2)
+    return f1, f2, {}
+end)
+
+---@param f1 evolved.fragment
+---@param f2 evolved.fragment
+---@param f3 evolved.fragment
+---@param entities evolved.id[]
+__bench_describe('create and destroy 1k entities with three components', function(f1, f2, f3, entities)
+    local id = evo.id
+    local insert = evo.insert
+    local destroy = evo.destroy
+
+    for i = 1, 1000 do
+        local e = id()
+        entities[i] = e
+
+        insert(e, f1)
+        insert(e, f2)
+        insert(e, f3)
+    end
+
+    for i = 1, #entities do
+        destroy(entities[i])
+    end
+end, function()
+    local f1, f2, f3 = evo.id(3)
+    return f1, f2, f3, {}
+end)
+
+--[[ lua 5.1
+| create and destroy 1k entities ... |
+    PASS | us: 312.60 | op/s: 3199.00 | kb/i: 0.05
+| create and destroy 1k entities with one component ... |
+    PASS | us: 1570.31 | op/s: 636.82 | kb/i: 0.63
+| create and destroy 1k entities with two components ... |
+    PASS | us: 2780.82 | op/s: 359.61 | kb/i: 0.91
+| create and destroy 1k entities with three components ... |
+    PASS | us: 4060.00 | op/s: 246.31 | kb/i: 1.67
+]]
+
+--[[ luajit 2.1
+| create and destroy 1k entities ... |
+    PASS | us: 12.22 | op/s: 81840.80 | kb/i: 0.00
+| create and destroy 1k entities with one component ... |
+    PASS | us: 56.22 | op/s: 17786.07 | kb/i: 0.02
+| create and destroy 1k entities with two components ... |
+    PASS | us: 412.73 | op/s: 2422.89 | kb/i: 0.11
+| create and destroy 1k entities with three components ... |
+    PASS | us: 611.62 | op/s: 1635.00 | kb/i: 0.17
+]]
