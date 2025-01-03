@@ -230,3 +230,29 @@ end)
 | create and destroy 1k entities with three components ... |
     PASS | us: 533.33 | op/s: 1875.00 | kb/i: 0.15
 ]]
+
+---
+--- construct flags for chunks
+---
+
+--[[ lua 5.1
+| create and destroy 1k entities ... |
+    PASS | us: 253.49 | op/s: 3945.00 | kb/i: 0.04
+| create and destroy 1k entities with one component ... |
+    PASS | us: 913.64 | op/s: 1094.53 | kb/i: 0.37
+| create and destroy 1k entities with two components ... |
+    PASS | us: 1562.50 | op/s: 640.00 | kb/i: 0.53
+| create and destroy 1k entities with three components ... |
+    PASS | us: 2280.90 | op/s: 438.42 | kb/i: 0.97
+]]
+
+--[[ luajit 2.1
+| create and destroy 1k entities ... |
+    PASS | us: 12.05 | op/s: 82995.02 | kb/i: 0.00
+| create and destroy 1k entities with one component ... |
+    PASS | us: 53.61 | op/s: 18651.74 | kb/i: 0.02
+| create and destroy 1k entities with two components ... |
+    PASS | us: 232.02 | op/s: 4310.00 | kb/i: 0.06
+| create and destroy 1k entities with three components ... |
+    PASS | us: 329.49 | op/s: 3035.00 | kb/i: 0.10
+]]
