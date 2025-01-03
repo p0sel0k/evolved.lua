@@ -42,6 +42,7 @@ local evolved = {
 ---@field package __components table<evolved.fragment, evolved.component[]>
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __has_defaults_or_constructs boolean
 ---@field package __has_set_or_assign_hooks boolean
 ---@field package __has_set_or_insert_hooks boolean
 ---@field package __has_remove_hooks boolean
@@ -437,6 +438,7 @@ local function __root_chunk(fragment)
         if root_chunk then return root_chunk end
     end
 
+    local has_defaults_or_constructs = __fragment_has_default_or_construct(fragment)
     local has_set_or_assign_hooks = __fragment_has_set_or_assign_hooks(fragment)
     local has_set_or_insert_hooks = __fragment_has_set_or_insert_hooks(fragment)
     local has_remove_hooks = __fragment_has_remove_hook(fragment)
@@ -451,6 +453,7 @@ local function __root_chunk(fragment)
         __components = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __has_defaults_or_constructs = has_defaults_or_constructs,
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
@@ -516,9 +519,14 @@ local function __chunk_with_fragment(chunk, fragment)
         return sibling_chunk
     end
 
-    local has_set_or_assign_hooks = chunk.__has_set_or_assign_hooks or __fragment_has_set_or_assign_hooks(fragment)
-    local has_set_or_insert_hooks = chunk.__has_set_or_insert_hooks or __fragment_has_set_or_insert_hooks(fragment)
-    local has_remove_hooks = chunk.__has_remove_hooks or __fragment_has_remove_hook(fragment)
+    local has_defaults_or_constructs = chunk.__has_defaults_or_constructs
+        or __fragment_has_default_or_construct(fragment)
+    local has_set_or_assign_hooks = chunk.__has_set_or_assign_hooks
+        or __fragment_has_set_or_assign_hooks(fragment)
+    local has_set_or_insert_hooks = chunk.__has_set_or_insert_hooks
+        or __fragment_has_set_or_insert_hooks(fragment)
+    local has_remove_hooks = chunk.__has_remove_hooks
+        or __fragment_has_remove_hook(fragment)
 
     ---@type evolved.chunk
     local child_chunk = {
@@ -530,6 +538,7 @@ local function __chunk_with_fragment(chunk, fragment)
         __components = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __has_defaults_or_constructs = has_defaults_or_constructs,
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
@@ -777,7 +786,7 @@ local function __chunk_assign(chunk, fragment, ...)
 
     if chunk.__has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
         if chunk_fragment_components then
-            if __fragment_has_default_or_construct(fragment) then
+            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for place = 1, chunk_size do
                     local entity = chunk_entities[place]
                     local old_component = chunk_fragment_components[place]
@@ -807,7 +816,7 @@ local function __chunk_assign(chunk, fragment, ...)
         end
     else
         if chunk_fragment_components then
-            if __fragment_has_default_or_construct(fragment) then
+            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for place = 1, chunk_size do
                     local entity = chunk_entities[place]
                     local new_component = __component_construct(entity, fragment, ...)
@@ -872,7 +881,7 @@ local function __chunk_insert(chunk, fragment, ...)
 
     if new_chunk.__has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
         if new_chunk_fragment_components then
-            if __fragment_has_default_or_construct(fragment) then
+            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
                     local entity = new_chunk_entities[new_place]
                     local new_component = __component_construct(entity, fragment, ...)
@@ -900,7 +909,7 @@ local function __chunk_insert(chunk, fragment, ...)
         end
     else
         if new_chunk_fragment_components then
-            if __fragment_has_default_or_construct(fragment) then
+            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for new_place = new_chunk_size + 1, new_chunk_size + old_chunk_size do
                     local entity = new_chunk_entities[new_place]
                     local new_component = __component_construct(entity, fragment, ...)
@@ -1736,10 +1745,24 @@ function evolved.set(entity, fragment, ...)
 
         if old_chunk_fragment_components then
             local old_component = old_chunk_fragment_components[old_place]
-            local new_component = __component_construct(entity, fragment, ...)
-            old_chunk_fragment_components[old_place] = new_component
-            if old_chunk.__has_set_or_assign_hooks then
-                __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+            if old_chunk.__has_defaults_or_constructs then
+                local new_component = __component_construct(entity, fragment, ...)
+
+                old_chunk_fragment_components[old_place] = new_component
+
+                if old_chunk.__has_set_or_assign_hooks then
+                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                end
+            else
+                local new_component = ...
+                if new_component == nil then new_component = true end
+
+                old_chunk_fragment_components[old_place] = new_component
+
+                if old_chunk.__has_set_or_assign_hooks then
+                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                end
             end
         else
             if old_chunk.__has_set_or_assign_hooks then
@@ -1759,10 +1782,23 @@ function evolved.set(entity, fragment, ...)
         new_chunk_entities[new_place] = entity
 
         if new_chunk_fragment_components then
-            local new_component = __component_construct(entity, fragment, ...)
-            new_chunk_fragment_components[new_place] = new_component
-            if new_chunk.__has_set_or_insert_hooks then
-                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            if new_chunk.__has_defaults_or_constructs then
+                local new_component = __component_construct(entity, fragment, ...)
+
+                new_chunk_fragment_components[new_place] = new_component
+
+                if new_chunk.__has_set_or_insert_hooks then
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                end
+            else
+                local new_component = ...
+                if new_component == nil then new_component = true end
+
+                new_chunk_fragment_components[new_place] = new_component
+
+                if new_chunk.__has_set_or_insert_hooks then
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                end
             end
         else
             if new_chunk.__has_set_or_insert_hooks then
@@ -1821,10 +1857,24 @@ function evolved.assign(entity, fragment, ...)
 
     if chunk_fragment_components then
         local old_component = chunk_fragment_components[place]
-        local new_component = __component_construct(entity, fragment, ...)
-        chunk_fragment_components[place] = new_component
-        if chunk.__has_set_or_assign_hooks then
-            __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+        if chunk.__has_defaults_or_constructs then
+            local new_component = __component_construct(entity, fragment, ...)
+
+            chunk_fragment_components[place] = new_component
+
+            if chunk.__has_set_or_assign_hooks then
+                __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+            end
+        else
+            local new_component = ...
+            if new_component == nil then new_component = true end
+
+            chunk_fragment_components[place] = new_component
+
+            if chunk.__has_set_or_assign_hooks then
+                __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+            end
         end
     else
         if chunk.__has_set_or_assign_hooks then
@@ -1871,10 +1921,23 @@ function evolved.insert(entity, fragment, ...)
         new_chunk_entities[new_place] = entity
 
         if new_chunk_fragment_components then
-            local new_component = __component_construct(entity, fragment, ...)
-            new_chunk_fragment_components[new_place] = new_component
-            if new_chunk.__has_set_or_insert_hooks then
-                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            if new_chunk.__has_defaults_or_constructs then
+                local new_component = __component_construct(entity, fragment, ...)
+
+                new_chunk_fragment_components[new_place] = new_component
+
+                if new_chunk.__has_set_or_insert_hooks then
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                end
+            else
+                local new_component = ...
+                if new_component == nil then new_component = true end
+
+                new_chunk_fragment_components[new_place] = new_component
+
+                if new_chunk.__has_set_or_insert_hooks then
+                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                end
             end
         else
             if new_chunk.__has_set_or_insert_hooks then
