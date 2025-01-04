@@ -1,6 +1,6 @@
 # evolved.lua (work in progress)
 
-> Evolved Entity-Component-System for Lua
+> Evolved ECS (Entity-Component-System) for Lua
 
 [![language][badge.language]][language]
 [![license][badge.license]][license]

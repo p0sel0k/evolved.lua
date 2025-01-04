@@ -6,7 +6,7 @@ source = {
 }
 description = {
    homepage = "https://github.com/BlackMATov/evolved.lua",
-   summary = "Evolved Entity-Component-System for Lua",
+   summary = "Evolved ECS (Entity-Component-System) for Lua",
    license = "MIT",
    labels = {
       "ecs",
