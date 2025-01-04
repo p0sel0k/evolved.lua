@@ -256,3 +256,29 @@ end)
 | create and destroy 1k entities with three components ... |
     PASS | us: 329.49 | op/s: 3035.00 | kb/i: 0.10
 ]]
+
+---
+--- after chunks refactoring
+---
+
+--[[ lua 5.1
+| create and destroy 1k entities ... |
+    PASS | us: 254.45 | op/s: 3930.00 | kb/i: 0.04
+| create and destroy 1k entities with one component ... |
+    PASS | us: 897.32 | op/s: 1114.43 | kb/i: 0.36
+| create and destroy 1k entities with two components ... |
+    PASS | us: 1481.48 | op/s: 675.00 | kb/i: 0.49
+| create and destroy 1k entities with three components ... |
+    PASS | us: 2126.32 | op/s: 470.30 | kb/i: 0.90
+]]
+
+--[[ luajit 2.1
+| create and destroy 1k entities ... |
+    PASS | us: 12.31 | op/s: 81248.76 | kb/i: 0.00
+| create and destroy 1k entities with one component ... |
+    PASS | us: 46.97 | op/s: 21288.56 | kb/i: 0.02
+| create and destroy 1k entities with two components ... |
+    PASS | us: 75.19 | op/s: 13300.00 | kb/i: 0.03
+| create and destroy 1k entities with three components ... |
+    PASS | us: 108.28 | op/s: 9235.00 | kb/i: 0.06
+]]
