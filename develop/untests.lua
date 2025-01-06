@@ -331,12 +331,11 @@ do
 end
 
 do
-    local f1, f2, f3, f4, f5 = evo.id(5)
-    evo.set(f1, evo.CONSTRUCT, function(_, _, a, b) return a - b end)
-    evo.set(f2, evo.CONSTRUCT, function(_, _, c) return c end)
+    local f1, f2, f3, f4 = evo.id(4)
+    evo.set(f1, evo.CONSTRUCT, function(a, b) return a - b end)
+    evo.set(f2, evo.CONSTRUCT, function(c) return c end)
     evo.set(f3, evo.CONSTRUCT, function() return nil end)
     evo.set(f4, evo.CONSTRUCT, function() return false end)
-    evo.set(f5, evo.CONSTRUCT, function(e) return e end)
 
     local e = evo.id()
 
@@ -344,25 +343,21 @@ do
     evo.insert(e, f2, false)
     evo.insert(e, f3, 43)
     evo.insert(e, f4, 43)
-    evo.insert(e, f5)
 
     assert(evo.get(e, f1) == 42)
     assert(evo.get(e, f2) == false)
     assert(evo.get(e, f3) == true)
     assert(evo.get(e, f4) == false)
-    assert(evo.get(e, f5) == e)
 
     evo.assign(e, f1, 42, 2)
     evo.assign(e, f2, true)
     evo.assign(e, f3, 43)
     evo.assign(e, f4, 43)
-    evo.assign(e, f5, 43)
 
     assert(evo.get(e, f1) == 40)
     assert(evo.get(e, f2) == true)
     assert(evo.get(e, f3) == true)
     assert(evo.get(e, f4) == false)
-    assert(evo.get(e, f5) == e)
 end
 
 do

@@ -379,17 +379,15 @@ local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
 ---
 ---
 
----@param entity evolved.entity
----@param fragment evolved.fragment
 ---@param ... any component arguments
 ---@return evolved.component
-local function __component_construct(entity, fragment, ...)
+local function __component_construct(fragment, ...)
     local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
 
     local component = ...
 
     if construct ~= nil then
-        component = construct(entity, fragment, ...)
+        component = construct(...)
     end
 
     if component == nil then
@@ -868,7 +866,7 @@ local function __chunk_assign(chunk, fragment, ...)
                 for place = 1, chunk_size do
                     local entity = chunk_entities[place]
                     local old_component = component_storage[place]
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
                     component_storage[place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 end
@@ -898,8 +896,7 @@ local function __chunk_assign(chunk, fragment, ...)
             local component_storage = chunk_component_storages[component_index]
             if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
                     component_storage[place] = new_component
                 end
             else
@@ -974,7 +971,7 @@ local function __chunk_insert(chunk, fragment, ...)
                 if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                     for new_place = new_size + 1, new_size + old_size do
                         local entity = new_entities[new_place]
-                        local new_component = __component_construct(entity, fragment, ...)
+                        local new_component = __component_construct(fragment, ...)
                         new_component_storage[new_place] = new_component
                         __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
                     end
@@ -1003,8 +1000,7 @@ local function __chunk_insert(chunk, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
                 if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                     for new_place = new_size + 1, new_size + old_size do
-                        local entity = new_entities[new_place]
-                        local new_component = __component_construct(entity, fragment, ...)
+                        local new_component = __component_construct(fragment, ...)
                         new_component_storage[new_place] = new_component
                     end
                 else
@@ -1850,7 +1846,7 @@ function evolved.set(entity, fragment, ...)
             local old_component = old_component_storage[old_place]
 
             if old_chunk.__has_defaults_or_constructs then
-                local new_component = __component_construct(entity, fragment, ...)
+                local new_component = __component_construct(fragment, ...)
 
                 old_component_storage[old_place] = new_component
 
@@ -1892,7 +1888,7 @@ function evolved.set(entity, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if new_chunk.__has_defaults_or_constructs then
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
@@ -1977,7 +1973,7 @@ function evolved.assign(entity, fragment, ...)
             local old_component = component_storage[place]
 
             if chunk.__has_defaults_or_constructs then
-                local new_component = __component_construct(entity, fragment, ...)
+                local new_component = __component_construct(fragment, ...)
 
                 component_storage[place] = new_component
 
@@ -2046,7 +2042,7 @@ function evolved.insert(entity, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if new_chunk.__has_defaults_or_constructs then
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
@@ -2477,7 +2473,7 @@ end
 evolved.set(evolved.TAG, evolved.TAG)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -2526,7 +2522,7 @@ evolved.set(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
 end)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
