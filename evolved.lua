@@ -339,13 +339,39 @@ evolved.TAG = __acquire_id()
 evolved.DEFAULT = __acquire_id()
 evolved.CONSTRUCT = __acquire_id()
 
+evolved.INCLUDES = __acquire_id()
+evolved.EXCLUDES = __acquire_id()
+
 evolved.ON_SET = __acquire_id()
 evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
 
-evolved.INCLUDE_LIST = __acquire_id()
-evolved.EXCLUDE_LIST = __acquire_id()
+---
+---
+---
+---
+---
+
+local __INCLUDE_SET = __acquire_id()
+local __EXCLUDE_SET = __acquire_id()
+local __SORTED_INCLUDE_LIST = __acquire_id()
+local __SORTED_EXCLUDE_LIST = __acquire_id()
+
+---@type table<evolved.fragment, boolean>
+local __EMPTY_FRAGMENT_SET = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment set') end
+})
+
+---@type evolved.fragment[]
+local __EMPTY_FRAGMENT_LIST = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment list') end
+})
+
+---@type evolved.component[]
+local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty component storage') end
+})
 
 ---
 ---
@@ -2448,15 +2474,10 @@ end
 ---
 ---
 
-local __INCLUDE_SET = __acquire_id()
-local __EXCLUDE_SET = __acquire_id()
-local __SORTED_INCLUDE_LIST = __acquire_id()
-local __SORTED_EXCLUDE_LIST = __acquire_id()
-
 evolved.set(evolved.TAG, evolved.TAG)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(_, _, ...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -2475,7 +2496,7 @@ end)
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
+evolved.set(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
     local include_list_size = #include_list
 
     ---@type table<evolved.fragment, boolean>
@@ -2500,12 +2521,12 @@ evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_lis
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
 end)
 
-evolved.set(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
 end)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
+evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(_, _, ...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -2524,7 +2545,7 @@ end)
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
+evolved.set(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
     local exclude_list_size = #exclude_list
 
     ---@type table<evolved.fragment, boolean>
@@ -2549,30 +2570,9 @@ evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_lis
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
 end)
 
-evolved.set(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
 end)
-
----
----
----
----
----
-
----@type table<evolved.fragment, boolean>
-local __EMPTY_FRAGMENT_SET = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty fragment set') end
-})
-
----@type evolved.fragment[]
-local __EMPTY_FRAGMENT_LIST = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty fragment list') end
-})
-
----@type evolved.component[]
-local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty component storage') end
-})
 
 ---
 ---
@@ -2637,39 +2637,39 @@ function evolved.select(chunk, ...)
     local indices = chunk.__component_indices
     local storages = chunk.__component_storages
 
-    local EMPTY_COMPONENT_STORAGE = __EMPTY_COMPONENT_STORAGE
+    local empty_component_storage = __EMPTY_COMPONENT_STORAGE
 
     if fragment_count == 1 then
         local f1 = ...
         local i1 = indices[f1]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
         local i1, i2 = indices[f1], indices[f2]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
         local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE,
-            i3 and storages[i3] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage,
+            i3 and storages[i3] or empty_component_storage
     end
 
     do
         local f1, f2, f3 = ...
         local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE,
-            i3 and storages[i3] or EMPTY_COMPONENT_STORAGE,
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage,
+            i3 and storages[i3] or empty_component_storage,
             evolved.select(chunk, select(4, ...))
     end
 end

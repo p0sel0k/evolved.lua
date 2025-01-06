@@ -26,13 +26,13 @@ TAG :: fragment
 DEFAULT :: fragment
 CONSTRUCT :: fragment
 
+INCLUDES :: fragment
+EXCLUDES :: fragment
+
 ON_SET :: fragment
 ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
-
-INCLUDE_LIST :: fragment
-EXCLUDE_LIST :: fragment
 ```
 
 ## Functions
