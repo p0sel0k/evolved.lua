@@ -2457,9 +2457,16 @@ evolved.set(evolved.TAG, evolved.TAG)
 
 ---@param ... evolved.fragment
 evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
-    local include_list = {}
+    local fragment_count = select('#', ...)
 
-    for i = 1, select('#', ...) do
+    if fragment_count == 0 then
+        return __table_new(0, 0)
+    end
+
+    ---@type evolved.fragment[]
+    local include_list = __table_new(fragment_count, 0)
+
+    for i = 1, fragment_count do
         include_list[i] = select(i, ...)
     end
 
@@ -2467,14 +2474,24 @@ evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
 end)
 
 ---@param query evolved.query
----@param include_list evolved.entity[]
+---@param include_list evolved.fragment[]
 evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
-    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
-    local include_set, sorted_include_list = {}, {}
+    local include_list_size = #include_list
 
-    for _, f in ipairs(include_list) do
-        include_set[f] = true
-        sorted_include_list[#sorted_include_list + 1] = f
+    ---@type table<evolved.fragment, boolean>
+    local include_set = __table_new(0, include_list_size)
+
+    for i = 1, include_list_size do
+        include_set[include_list[i]] = true
+    end
+
+    ---@type evolved.fragment[]
+    local sorted_include_list = __table_new(include_list_size, 0)
+    local sorted_include_list_size = 0
+
+    for f, _ in pairs(include_set) do
+        sorted_include_list[sorted_include_list_size + 1] = f
+        sorted_include_list_size = sorted_include_list_size + 1
     end
 
     table.sort(sorted_include_list)
@@ -2489,9 +2506,16 @@ end)
 
 ---@param ... evolved.fragment
 evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
-    local exclude_list = {}
+    local fragment_count = select('#', ...)
 
-    for i = 1, select('#', ...) do
+    if fragment_count == 0 then
+        return __table_new(0, 0)
+    end
+
+    ---@type evolved.fragment[]
+    local exclude_list = __table_new(fragment_count, 0)
+
+    for i = 1, fragment_count do
         exclude_list[i] = select(i, ...)
     end
 
@@ -2499,14 +2523,24 @@ evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
 end)
 
 ---@param query evolved.query
----@param exclude_list evolved.entity[]
+---@param exclude_list evolved.fragment[]
 evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
-    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
-    local exclude_set, sorted_exclude_list = {}, {}
+    local exclude_list_size = #exclude_list
 
-    for _, f in ipairs(exclude_list) do
-        exclude_set[f] = true
-        sorted_exclude_list[#sorted_exclude_list + 1] = f
+    ---@type table<evolved.fragment, boolean>
+    local exclude_set = __table_new(0, exclude_list_size)
+
+    for i = 1, exclude_list_size do
+        exclude_set[exclude_list[i]] = true
+    end
+
+    ---@type evolved.fragment[]
+    local sorted_exclude_list = __table_new(exclude_list_size, 0)
+    local sorted_exclude_list_size = 0
+
+    for f, _ in pairs(exclude_set) do
+        sorted_exclude_list[sorted_exclude_list_size + 1] = f
+        sorted_exclude_list_size = sorted_exclude_list_size + 1
     end
 
     table.sort(sorted_exclude_list)
