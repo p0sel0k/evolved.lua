@@ -2453,3 +2453,61 @@ do
         end
     end
 end
+
+do
+    local f1 = evo.fragment():default(41):build()
+    local f2 = evo.fragment():construct(function() return 42 end):build()
+    local f3 = evo.fragment():tag():build()
+
+    local e0 = evo.entity():build()
+    assert(not evo.has_any(e0, f1, f2, f3))
+
+    local e1 = evo.entity():set(f1):build()
+    assert(evo.has(e1, f1))
+    assert(evo.get(e1, f1) == 41)
+
+    local e2 = evo.entity():set(f1):set(f2):build()
+    assert(evo.has(e2, f1) and evo.has(e2, f2))
+    assert(evo.get(e2, f1) == 41 and evo.get(e2, f2) == 42)
+
+    local e3 = evo.entity():set(f1):set(f2):set(f3):build()
+    assert(evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
+    assert(evo.get(e3, f1) == 41 and evo.get(e3, f2) == 42 and evo.get(e3, f3) == nil)
+
+    ---@param q evolved.query
+    ---@return evolved.entity[]
+    local function collect_entities(q)
+        local entities = {}
+        for _, es in evo.execute(q) do
+            for _, e in ipairs(es) do
+                entities[#entities + 1] = e
+            end
+        end
+        return entities
+    end
+
+    local q1 = evo.query():include(f1):build()
+    local q2 = evo.query():include(f1, f2):build()
+    local q3 = evo.query():include(f1):include(f2):exclude(f3):build()
+
+    do
+        local entities = collect_entities(q1)
+        assert(#entities == 3)
+        assert(entities[1] == e1)
+        assert(entities[2] == e2)
+        assert(entities[3] == e3)
+    end
+
+    do
+        local entities = collect_entities(q2)
+        assert(#entities == 2)
+        assert(entities[1] == e2)
+        assert(entities[2] == e3)
+    end
+
+    do
+        local entities = collect_entities(q3)
+        assert(#entities == 1)
+        assert(entities[1] == e2)
+    end
+end

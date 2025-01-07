@@ -219,9 +219,10 @@ local __TABLE_POOL_TAG__CHUNK_LIST = 2
 local __TABLE_POOL_TAG__EACH_STATE = 3
 local __TABLE_POOL_TAG__EXECUTE_STATE = 4
 local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
+local __TABLE_POOL_TAG__COMPONENT_LIST = 6
 
 ---@type table<evolved.table_pool_tag, table[]>
-local __tagged_table_pools = __table_new(5, 0)
+local __tagged_table_pools = __table_new(6, 0)
 
 ---@param tag evolved.table_pool_tag
 ---@param narray integer
@@ -2748,6 +2749,264 @@ function evolved.execute(query)
     end
 
     return __execute_iterator, execute_state
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__entity_builder
+---@field package __fragment_list? evolved.fragment[]
+---@field package __component_list? evolved.component[]
+
+---@class evolved.entity_builder : evolved.__entity_builder
+local evolved_entity_builder = {}
+evolved_entity_builder.__index = evolved_entity_builder
+
+---@return evolved.entity_builder
+---@nodiscard
+function evolved.entity()
+    ---@type evolved.__entity_builder
+    local builder = {
+        __fragment_list = nil,
+        __component_list = nil,
+    }
+    ---@cast builder evolved.entity_builder
+    return setmetatable(builder, evolved_entity_builder)
+end
+
+---@param fragment evolved.fragment
+---@param ... any component arguments
+---@return evolved.entity_builder
+function evolved_entity_builder:set(fragment, ...)
+    local component = __component_construct(fragment, ...)
+
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+
+    if not fragment_list then
+        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__fragment_list = fragment_list
+    end
+
+    if not component_list then
+        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
+        self.__component_list = component_list
+    end
+
+    fragment_list[#fragment_list + 1] = fragment
+    component_list[#component_list + 1] = component
+
+    return self
+end
+
+---@return evolved.entity
+function evolved_entity_builder:build()
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+
+    self.__fragment_list = nil
+    self.__component_list = nil
+
+    local entity = evolved.id()
+
+    if fragment_list and component_list then
+        for i = 1, #fragment_list do
+            local fragment = fragment_list[i]
+            local component = component_list[i]
+            evolved.set(entity, fragment, component)
+        end
+    end
+
+    if fragment_list then
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    end
+
+    if component_list then
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
+    end
+
+    return entity
+end
+
+---
+---
+---
+---
+---
+
+---@class (evact) evolved.__fragment_builder
+---@field package __tag boolean
+---@field package __default? evolved.component
+---@field package __construct? fun(...): evolved.component
+
+---@class evolved.fragment_builder : evolved.__fragment_builder
+local evolved_fragment_builder = {}
+evolved_fragment_builder.__index = evolved_fragment_builder
+
+---@return evolved.fragment_builder
+---@nodiscard
+function evolved.fragment()
+    ---@type evolved.__fragment_builder
+    local builder = {
+        __tag = false,
+        __default = nil,
+        __construct = nil,
+    }
+    ---@cast builder evolved.fragment_builder
+    return setmetatable(builder, evolved_fragment_builder)
+end
+
+---@return evolved.fragment_builder
+function evolved_fragment_builder:tag()
+    self.__tag = true
+    return self
+end
+
+---@param default evolved.component
+---@return evolved.fragment_builder
+function evolved_fragment_builder:default(default)
+    self.__default = default
+    return self
+end
+
+---@param construct fun(...): evolved.component
+---@return evolved.fragment_builder
+function evolved_fragment_builder:construct(construct)
+    self.__construct = construct
+    return self
+end
+
+---@return evolved.fragment
+function evolved_fragment_builder:build()
+    local tag = self.__tag
+    local default = self.__default
+    local construct = self.__construct
+
+    self.__tag = false
+    self.__default = nil
+    self.__construct = nil
+
+    local fragment = evolved.id()
+
+    if tag then
+        evolved.set(fragment, evolved.TAG, tag)
+    end
+
+    if default ~= nil then
+        evolved.set(fragment, evolved.DEFAULT, default)
+    end
+
+    if construct ~= nil then
+        evolved.set(fragment, evolved.CONSTRUCT, construct)
+    end
+
+    return fragment
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__query_builder
+---@field package __include_list? evolved.fragment[]
+---@field package __exclude_list? evolved.fragment[]
+
+---@class evolved.query_builder : evolved.__query_builder
+local evolved_query_builder = {}
+evolved_query_builder.__index = evolved_query_builder
+
+---@return evolved.query_builder
+---@nodiscard
+function evolved.query()
+    ---@type evolved.__query_builder
+    local builder = {
+        __include_list = nil,
+        __exclude_list = nil,
+    }
+    ---@cast builder evolved.query_builder
+    return setmetatable(builder, evolved_query_builder)
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.query_builder
+function evolved_query_builder:include(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return self
+    end
+
+    local include_list = self.__include_list
+
+    if not include_list then
+        include_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__include_list = include_list
+    end
+
+    local include_list_size = #include_list
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        include_list[include_list_size + 1] = fragment
+        include_list_size = include_list_size + 1
+    end
+
+    return self
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.query_builder
+function evolved_query_builder:exclude(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return self
+    end
+
+    local exclude_list = self.__exclude_list
+
+    if not exclude_list then
+        exclude_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__exclude_list = exclude_list
+    end
+
+    local exclude_list_size = #exclude_list
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        exclude_list[exclude_list_size + 1] = fragment
+        exclude_list_size = exclude_list_size + 1
+    end
+
+    return self
+end
+
+---@return evolved.query
+function evolved_query_builder:build()
+    local include_list = self.__include_list
+    local exclude_list = self.__exclude_list
+
+    self.__include_list = nil
+    self.__exclude_list = nil
+
+    local query = evolved.id()
+
+    if include_list then
+        evolved.insert(query, evolved.INCLUDES, __table_unpack(include_list))
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, include_list)
+    end
+
+    if exclude_list then
+        evolved.insert(query, evolved.EXCLUDES, __table_unpack(exclude_list))
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, exclude_list)
+    end
+
+    return query
 end
 
 ---
