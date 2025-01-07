@@ -332,12 +332,11 @@ do
 end
 
 do
-    local f1, f2, f3, f4, f5 = evo.id(5)
-    evo.set(f1, evo.CONSTRUCT, function(_, _, a, b) return a - b end)
-    evo.set(f2, evo.CONSTRUCT, function(_, _, c) return c end)
+    local f1, f2, f3, f4 = evo.id(4)
+    evo.set(f1, evo.CONSTRUCT, function(a, b) return a - b end)
+    evo.set(f2, evo.CONSTRUCT, function(c) return c end)
     evo.set(f3, evo.CONSTRUCT, function() return nil end)
     evo.set(f4, evo.CONSTRUCT, function() return false end)
-    evo.set(f5, evo.CONSTRUCT, function(e) return e end)
 
     local e = evo.id()
 
@@ -345,25 +344,21 @@ do
     evo.insert(e, f2, false)
     evo.insert(e, f3, 43)
     evo.insert(e, f4, 43)
-    evo.insert(e, f5)
 
     assert(evo.get(e, f1) == 42)
     assert(evo.get(e, f2) == false)
     assert(evo.get(e, f3) == true)
     assert(evo.get(e, f4) == false)
-    assert(evo.get(e, f5) == e)
 
     evo.assign(e, f1, 42, 2)
     evo.assign(e, f2, true)
     evo.assign(e, f3, 43)
     evo.assign(e, f4, 43)
-    evo.assign(e, f5, 43)
 
     assert(evo.get(e, f1) == 40)
     assert(evo.get(e, f2) == true)
     assert(evo.get(e, f3) == true)
     assert(evo.get(e, f4) == false)
-    assert(evo.get(e, f5) == e)
 end
 
 do
@@ -827,7 +822,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_assign(q, f1, 60) == 3)
 
@@ -887,7 +882,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_assign(q, f1, 60) == 3)
 
@@ -945,7 +940,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_clear(q) == 3)
 
@@ -1015,7 +1010,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_clear(q) == 3)
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
@@ -1063,7 +1058,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_destroy(q) == 3)
 
@@ -1133,7 +1128,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_destroy(q) == 3)
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
@@ -1181,7 +1176,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_remove(q, f2, f3) == 3)
 
@@ -1254,7 +1249,7 @@ do
         assert(evo.insert(e5, f4, 53))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f1, f2)
+        evo.insert(q, evo.INCLUDES, f1, f2)
 
         assert(evo.batch_remove(q, f2, f3) == 3)
         assert(entity_sum == e2 + e3 * 2 + e4 * 2)
@@ -1290,7 +1285,7 @@ do
         assert(evo.insert(e4, f4, 50))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f2)
+        evo.insert(q, evo.INCLUDES, f2)
 
         assert(evo.batch_insert(q, f1, 60) == 1)
 
@@ -1335,7 +1330,7 @@ do
         assert(evo.insert(e4, f4, 50))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f2)
+        evo.insert(q, evo.INCLUDES, f2)
 
         entity_sum = 0
         component_sum = 0
@@ -1378,7 +1373,7 @@ do
         assert(evo.insert(e4, f4, 50))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f2)
+        evo.insert(q, evo.INCLUDES, f2)
 
         assert(evo.batch_set(q, f1, 60) == 3)
 
@@ -1423,7 +1418,7 @@ do
         assert(evo.insert(e4, f4, 50))
 
         local q = evo.id()
-        evo.insert(q, evo.INCLUDE_LIST, f2)
+        evo.insert(q, evo.INCLUDES, f2)
 
         entity_sum = 0
         component_sum = 0
@@ -1816,12 +1811,12 @@ do
     do
         do
             local q = evo.id()
-            evo.set(q, evo.INCLUDE_LIST, f1)
+            evo.set(q, evo.INCLUDES, f1)
             evo.batch_destroy(q)
         end
 
         local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST, f1, f2)
+        evo.set(q, evo.INCLUDES, f1, f2)
 
         do
             local e = evo.id()
@@ -1866,12 +1861,12 @@ do
     do
         do
             local q = evo.id()
-            evo.set(q, evo.INCLUDE_LIST, f1)
+            evo.set(q, evo.INCLUDES, f1)
             evo.batch_destroy(q)
         end
 
         local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST, f1, f2)
+        evo.set(q, evo.INCLUDES, f1, f2)
 
         do
             local e1 = evo.id()
@@ -1913,12 +1908,12 @@ do
     do
         do
             local q = evo.id()
-            evo.set(q, evo.INCLUDE_LIST, f1)
+            evo.set(q, evo.INCLUDES, f1)
             evo.batch_destroy(q)
         end
 
         local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST, f1, f2)
+        evo.set(q, evo.INCLUDES, f1, f2)
 
         do
             local e1 = evo.id()
@@ -1964,12 +1959,12 @@ do
     do
         do
             local q = evo.id()
-            evo.set(q, evo.INCLUDE_LIST, f1)
+            evo.set(q, evo.INCLUDES, f1)
             evo.batch_destroy(q)
         end
 
         local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST, f1, f2)
+        evo.set(q, evo.INCLUDES, f1, f2)
 
         do
             local e1 = evo.id()
@@ -2009,12 +2004,12 @@ do
     do
         do
             local q = evo.id()
-            evo.set(q, evo.INCLUDE_LIST, f1)
+            evo.set(q, evo.INCLUDES, f1)
             evo.batch_destroy(q)
         end
 
         local q = evo.id()
-        evo.set(q, evo.INCLUDE_LIST, f1, f2)
+        evo.set(q, evo.INCLUDES, f1, f2)
 
         do
             local e1 = evo.id()
@@ -2056,7 +2051,7 @@ do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2092,7 +2087,7 @@ do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2128,7 +2123,7 @@ do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2164,7 +2159,7 @@ do
     local f1 = evo.id(1)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2187,7 +2182,7 @@ do
     local f1 = evo.id(1)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2212,7 +2207,7 @@ do
     local f1 = evo.id(1)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2237,8 +2232,8 @@ do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
-    evo.set(q, evo.INCLUDE_LIST, f2)
+    evo.set(q, evo.INCLUDES, f1)
+    evo.set(q, evo.INCLUDES, f2)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2254,7 +2249,7 @@ do
         assert(entities and entities[1] == e2)
     end
 
-    evo.set(q, evo.INCLUDE_LIST)
+    evo.set(q, evo.INCLUDES)
 
     do
         local iter, state = evo.execute(q)
@@ -2269,7 +2264,7 @@ do
     local f1, f2, f3 = evo.id(3)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2297,10 +2292,10 @@ do
     local f1, f2 = evo.id(2)
 
     local q = evo.id()
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
-    evo.set(q, evo.EXCLUDE_LIST, f1)
-    evo.set(q, evo.EXCLUDE_LIST, f2)
+    evo.set(q, evo.EXCLUDES, f1)
+    evo.set(q, evo.EXCLUDES, f2)
 
     local e1 = evo.id()
     assert(evo.insert(e1, f1, 41))
@@ -2320,7 +2315,7 @@ do
         assert(not entities)
     end
 
-    evo.set(q, evo.EXCLUDE_LIST)
+    evo.set(q, evo.EXCLUDES)
 
     do
         local iter, state = evo.execute(q)
@@ -2356,7 +2351,7 @@ do
         assert(not chunk and not entities)
     end
 
-    evo.set(q, evo.EXCLUDE_LIST, f2)
+    evo.set(q, evo.EXCLUDES, f2)
 
     do
         local iter, state = evo.execute(q)
@@ -2364,7 +2359,7 @@ do
         assert(not chunk and not entities)
     end
 
-    evo.set(q, evo.INCLUDE_LIST, f1)
+    evo.set(q, evo.INCLUDES, f1)
 
     do
         local iter, state = evo.execute(q)
@@ -2457,5 +2452,63 @@ do
             fragment, component = iter(state)
             assert(not fragment and not component)
         end
+    end
+end
+
+do
+    local f1 = evo.fragment():default(41):build()
+    local f2 = evo.fragment():construct(function() return 42 end):build()
+    local f3 = evo.fragment():tag():build()
+
+    local e0 = evo.entity():build()
+    assert(not evo.has_any(e0, f1, f2, f3))
+
+    local e1 = evo.entity():set(f1):build()
+    assert(evo.has(e1, f1))
+    assert(evo.get(e1, f1) == 41)
+
+    local e2 = evo.entity():set(f1):set(f2):build()
+    assert(evo.has(e2, f1) and evo.has(e2, f2))
+    assert(evo.get(e2, f1) == 41 and evo.get(e2, f2) == 42)
+
+    local e3 = evo.entity():set(f1):set(f2):set(f3):build()
+    assert(evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
+    assert(evo.get(e3, f1) == 41 and evo.get(e3, f2) == 42 and evo.get(e3, f3) == nil)
+
+    ---@param q evolved.query
+    ---@return evolved.entity[]
+    local function collect_entities(q)
+        local entities = {}
+        for _, es in evo.execute(q) do
+            for _, e in ipairs(es) do
+                entities[#entities + 1] = e
+            end
+        end
+        return entities
+    end
+
+    local q1 = evo.query():include(f1):build()
+    local q2 = evo.query():include(f1, f2):build()
+    local q3 = evo.query():include(f1):include(f2):exclude(f3):build()
+
+    do
+        local entities = collect_entities(q1)
+        assert(#entities == 3)
+        assert(entities[1] == e1)
+        assert(entities[2] == e2)
+        assert(entities[3] == e3)
+    end
+
+    do
+        local entities = collect_entities(q2)
+        assert(#entities == 2)
+        assert(entities[1] == e2)
+        assert(entities[2] == e3)
+    end
+
+    do
+        local entities = collect_entities(q3)
+        assert(#entities == 1)
+        assert(entities[1] == e2)
     end
 end

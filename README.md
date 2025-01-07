@@ -26,13 +26,13 @@ TAG :: fragment
 DEFAULT :: fragment
 CONSTRUCT :: fragment
 
+INCLUDES :: fragment
+EXCLUDES :: fragment
+
 ON_SET :: fragment
 ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
-
-INCLUDE_LIST :: fragment
-EXCLUDE_LIST :: fragment
 ```
 
 ## Functions
@@ -73,6 +73,27 @@ select :: chunk, fragment... -> component[]...
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
+```
+
+```
+entity :: entity_builder
+entity_builder:set :: fragment, any... -> entity_builder
+entity_builder:build :: entity
+```
+
+```
+fragment :: fragment_builder
+fragment_builder:tag :: fragment_builder
+fragment_builder:default :: component -> fragment_builder
+fragment_builder:construct :: {any... -> component} -> fragment_builder
+fragment_builder:build :: fragment
+```
+
+```
+query :: query_builder
+query_builder:include :: fragment... -> query_builder
+query_builder:exclude :: fragment... -> query_builder
+query_builder:build :: query
 ```
 
 ## [License (MIT)](./LICENSE.md)

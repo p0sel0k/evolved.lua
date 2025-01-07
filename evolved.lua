@@ -219,9 +219,10 @@ local __TABLE_POOL_TAG__CHUNK_LIST = 2
 local __TABLE_POOL_TAG__EACH_STATE = 3
 local __TABLE_POOL_TAG__EXECUTE_STATE = 4
 local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
+local __TABLE_POOL_TAG__COMPONENT_LIST = 6
 
 ---@type table<evolved.table_pool_tag, table[]>
-local __tagged_table_pools = __table_new(5, 0)
+local __tagged_table_pools = __table_new(6, 0)
 
 ---@param tag evolved.table_pool_tag
 ---@param narray integer
@@ -339,13 +340,39 @@ evolved.TAG = __acquire_id()
 evolved.DEFAULT = __acquire_id()
 evolved.CONSTRUCT = __acquire_id()
 
+evolved.INCLUDES = __acquire_id()
+evolved.EXCLUDES = __acquire_id()
+
 evolved.ON_SET = __acquire_id()
 evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
 
-evolved.INCLUDE_LIST = __acquire_id()
-evolved.EXCLUDE_LIST = __acquire_id()
+---
+---
+---
+---
+---
+
+local __INCLUDE_SET = __acquire_id()
+local __EXCLUDE_SET = __acquire_id()
+local __SORTED_INCLUDE_LIST = __acquire_id()
+local __SORTED_EXCLUDE_LIST = __acquire_id()
+
+---@type table<evolved.fragment, boolean>
+local __EMPTY_FRAGMENT_SET = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment set') end
+})
+
+---@type evolved.fragment[]
+local __EMPTY_FRAGMENT_LIST = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty fragment list') end
+})
+
+---@type evolved.component[]
+local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty component storage') end
+})
 
 ---
 ---
@@ -353,17 +380,15 @@ evolved.EXCLUDE_LIST = __acquire_id()
 ---
 ---
 
----@param entity evolved.entity
----@param fragment evolved.fragment
 ---@param ... any component arguments
 ---@return evolved.component
-local function __component_construct(entity, fragment, ...)
+local function __component_construct(fragment, ...)
     local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
 
     local component = ...
 
     if construct ~= nil then
-        component = construct(entity, fragment, ...)
+        component = construct(...)
     end
 
     if component == nil then
@@ -842,7 +867,7 @@ local function __chunk_assign(chunk, fragment, ...)
                 for place = 1, chunk_size do
                     local entity = chunk_entities[place]
                     local old_component = component_storage[place]
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
                     component_storage[place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 end
@@ -872,8 +897,7 @@ local function __chunk_assign(chunk, fragment, ...)
             local component_storage = chunk_component_storages[component_index]
             if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for place = 1, chunk_size do
-                    local entity = chunk_entities[place]
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
                     component_storage[place] = new_component
                 end
             else
@@ -948,7 +972,7 @@ local function __chunk_insert(chunk, fragment, ...)
                 if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                     for new_place = new_size + 1, new_size + old_size do
                         local entity = new_entities[new_place]
-                        local new_component = __component_construct(entity, fragment, ...)
+                        local new_component = __component_construct(fragment, ...)
                         new_component_storage[new_place] = new_component
                         __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
                     end
@@ -977,8 +1001,7 @@ local function __chunk_insert(chunk, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
                 if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                     for new_place = new_size + 1, new_size + old_size do
-                        local entity = new_entities[new_place]
-                        local new_component = __component_construct(entity, fragment, ...)
+                        local new_component = __component_construct(fragment, ...)
                         new_component_storage[new_place] = new_component
                     end
                 else
@@ -1824,7 +1847,7 @@ function evolved.set(entity, fragment, ...)
             local old_component = old_component_storage[old_place]
 
             if old_chunk.__has_defaults_or_constructs then
-                local new_component = __component_construct(entity, fragment, ...)
+                local new_component = __component_construct(fragment, ...)
 
                 old_component_storage[old_place] = new_component
 
@@ -1866,7 +1889,7 @@ function evolved.set(entity, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if new_chunk.__has_defaults_or_constructs then
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
@@ -1951,7 +1974,7 @@ function evolved.assign(entity, fragment, ...)
             local old_component = component_storage[place]
 
             if chunk.__has_defaults_or_constructs then
-                local new_component = __component_construct(entity, fragment, ...)
+                local new_component = __component_construct(fragment, ...)
 
                 component_storage[place] = new_component
 
@@ -2020,7 +2043,7 @@ function evolved.insert(entity, fragment, ...)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if new_chunk.__has_defaults_or_constructs then
-                    local new_component = __component_construct(entity, fragment, ...)
+                    local new_component = __component_construct(fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
@@ -2448,18 +2471,20 @@ end
 ---
 ---
 
-local __INCLUDE_SET = __acquire_id()
-local __EXCLUDE_SET = __acquire_id()
-local __SORTED_INCLUDE_LIST = __acquire_id()
-local __SORTED_EXCLUDE_LIST = __acquire_id()
-
 evolved.set(evolved.TAG, evolved.TAG)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
-    local include_list = {}
+evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
+    local fragment_count = select('#', ...)
 
-    for i = 1, select('#', ...) do
+    if fragment_count == 0 then
+        return __table_new(0, 0)
+    end
+
+    ---@type evolved.fragment[]
+    local include_list = __table_new(fragment_count, 0)
+
+    for i = 1, fragment_count do
         include_list[i] = select(i, ...)
     end
 
@@ -2467,14 +2492,24 @@ evolved.set(evolved.INCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
 end)
 
 ---@param query evolved.query
----@param include_list evolved.entity[]
-evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_list)
-    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
-    local include_set, sorted_include_list = {}, {}
+---@param include_list evolved.fragment[]
+evolved.set(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
+    local include_list_size = #include_list
 
-    for _, f in ipairs(include_list) do
-        include_set[f] = true
-        sorted_include_list[#sorted_include_list + 1] = f
+    ---@type table<evolved.fragment, boolean>
+    local include_set = __table_new(0, include_list_size)
+
+    for i = 1, include_list_size do
+        include_set[include_list[i]] = true
+    end
+
+    ---@type evolved.fragment[]
+    local sorted_include_list = __table_new(include_list_size, 0)
+    local sorted_include_list_size = 0
+
+    for f, _ in pairs(include_set) do
+        sorted_include_list[sorted_include_list_size + 1] = f
+        sorted_include_list_size = sorted_include_list_size + 1
     end
 
     table.sort(sorted_include_list)
@@ -2483,15 +2518,22 @@ evolved.set(evolved.INCLUDE_LIST, evolved.ON_SET, function(query, _, include_lis
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
 end)
 
-evolved.set(evolved.INCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
 end)
 
 ---@param ... evolved.fragment
-evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
-    local exclude_list = {}
+evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
+    local fragment_count = select('#', ...)
 
-    for i = 1, select('#', ...) do
+    if fragment_count == 0 then
+        return __table_new(0, 0)
+    end
+
+    ---@type evolved.fragment[]
+    local exclude_list = __table_new(fragment_count, 0)
+
+    for i = 1, fragment_count do
         exclude_list[i] = select(i, ...)
     end
 
@@ -2499,14 +2541,24 @@ evolved.set(evolved.EXCLUDE_LIST, evolved.CONSTRUCT, function(_, _, ...)
 end)
 
 ---@param query evolved.query
----@param exclude_list evolved.entity[]
-evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_list)
-    ---@type table<evolved.fragment, boolean>, evolved.fragment[]
-    local exclude_set, sorted_exclude_list = {}, {}
+---@param exclude_list evolved.fragment[]
+evolved.set(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
+    local exclude_list_size = #exclude_list
 
-    for _, f in ipairs(exclude_list) do
-        exclude_set[f] = true
-        sorted_exclude_list[#sorted_exclude_list + 1] = f
+    ---@type table<evolved.fragment, boolean>
+    local exclude_set = __table_new(0, exclude_list_size)
+
+    for i = 1, exclude_list_size do
+        exclude_set[exclude_list[i]] = true
+    end
+
+    ---@type evolved.fragment[]
+    local sorted_exclude_list = __table_new(exclude_list_size, 0)
+    local sorted_exclude_list_size = 0
+
+    for f, _ in pairs(exclude_set) do
+        sorted_exclude_list[sorted_exclude_list_size + 1] = f
+        sorted_exclude_list_size = sorted_exclude_list_size + 1
     end
 
     table.sort(sorted_exclude_list)
@@ -2515,30 +2567,9 @@ evolved.set(evolved.EXCLUDE_LIST, evolved.ON_SET, function(query, _, exclude_lis
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
 end)
 
-evolved.set(evolved.EXCLUDE_LIST, evolved.ON_REMOVE, function(query)
+evolved.set(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
 end)
-
----
----
----
----
----
-
----@type table<evolved.fragment, boolean>
-local __EMPTY_FRAGMENT_SET = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty fragment set') end
-})
-
----@type evolved.fragment[]
-local __EMPTY_FRAGMENT_LIST = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty fragment list') end
-})
-
----@type evolved.component[]
-local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty component storage') end
-})
 
 ---
 ---
@@ -2603,39 +2634,39 @@ function evolved.select(chunk, ...)
     local indices = chunk.__component_indices
     local storages = chunk.__component_storages
 
-    local EMPTY_COMPONENT_STORAGE = __EMPTY_COMPONENT_STORAGE
+    local empty_component_storage = __EMPTY_COMPONENT_STORAGE
 
     if fragment_count == 1 then
         local f1 = ...
         local i1 = indices[f1]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
         local i1, i2 = indices[f1], indices[f2]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
         local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE,
-            i3 and storages[i3] or EMPTY_COMPONENT_STORAGE
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage,
+            i3 and storages[i3] or empty_component_storage
     end
 
     do
         local f1, f2, f3 = ...
         local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
         return
-            i1 and storages[i1] or EMPTY_COMPONENT_STORAGE,
-            i2 and storages[i2] or EMPTY_COMPONENT_STORAGE,
-            i3 and storages[i3] or EMPTY_COMPONENT_STORAGE,
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage,
+            i3 and storages[i3] or empty_component_storage,
             evolved.select(chunk, select(4, ...))
     end
 end
@@ -2718,6 +2749,264 @@ function evolved.execute(query)
     end
 
     return __execute_iterator, execute_state
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__entity_builder
+---@field package __fragment_list? evolved.fragment[]
+---@field package __component_list? evolved.component[]
+
+---@class evolved.entity_builder : evolved.__entity_builder
+local evolved_entity_builder = {}
+evolved_entity_builder.__index = evolved_entity_builder
+
+---@return evolved.entity_builder
+---@nodiscard
+function evolved.entity()
+    ---@type evolved.__entity_builder
+    local builder = {
+        __fragment_list = nil,
+        __component_list = nil,
+    }
+    ---@cast builder evolved.entity_builder
+    return setmetatable(builder, evolved_entity_builder)
+end
+
+---@param fragment evolved.fragment
+---@param ... any component arguments
+---@return evolved.entity_builder
+function evolved_entity_builder:set(fragment, ...)
+    local component = __component_construct(fragment, ...)
+
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+
+    if not fragment_list then
+        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__fragment_list = fragment_list
+    end
+
+    if not component_list then
+        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
+        self.__component_list = component_list
+    end
+
+    fragment_list[#fragment_list + 1] = fragment
+    component_list[#component_list + 1] = component
+
+    return self
+end
+
+---@return evolved.entity
+function evolved_entity_builder:build()
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+
+    self.__fragment_list = nil
+    self.__component_list = nil
+
+    local entity = evolved.id()
+
+    if fragment_list and component_list then
+        for i = 1, #fragment_list do
+            local fragment = fragment_list[i]
+            local component = component_list[i]
+            evolved.set(entity, fragment, component)
+        end
+    end
+
+    if fragment_list then
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    end
+
+    if component_list then
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
+    end
+
+    return entity
+end
+
+---
+---
+---
+---
+---
+
+---@class (evact) evolved.__fragment_builder
+---@field package __tag boolean
+---@field package __default? evolved.component
+---@field package __construct? fun(...): evolved.component
+
+---@class evolved.fragment_builder : evolved.__fragment_builder
+local evolved_fragment_builder = {}
+evolved_fragment_builder.__index = evolved_fragment_builder
+
+---@return evolved.fragment_builder
+---@nodiscard
+function evolved.fragment()
+    ---@type evolved.__fragment_builder
+    local builder = {
+        __tag = false,
+        __default = nil,
+        __construct = nil,
+    }
+    ---@cast builder evolved.fragment_builder
+    return setmetatable(builder, evolved_fragment_builder)
+end
+
+---@return evolved.fragment_builder
+function evolved_fragment_builder:tag()
+    self.__tag = true
+    return self
+end
+
+---@param default evolved.component
+---@return evolved.fragment_builder
+function evolved_fragment_builder:default(default)
+    self.__default = default
+    return self
+end
+
+---@param construct fun(...): evolved.component
+---@return evolved.fragment_builder
+function evolved_fragment_builder:construct(construct)
+    self.__construct = construct
+    return self
+end
+
+---@return evolved.fragment
+function evolved_fragment_builder:build()
+    local tag = self.__tag
+    local default = self.__default
+    local construct = self.__construct
+
+    self.__tag = false
+    self.__default = nil
+    self.__construct = nil
+
+    local fragment = evolved.id()
+
+    if tag then
+        evolved.set(fragment, evolved.TAG, tag)
+    end
+
+    if default ~= nil then
+        evolved.set(fragment, evolved.DEFAULT, default)
+    end
+
+    if construct ~= nil then
+        evolved.set(fragment, evolved.CONSTRUCT, construct)
+    end
+
+    return fragment
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__query_builder
+---@field package __include_list? evolved.fragment[]
+---@field package __exclude_list? evolved.fragment[]
+
+---@class evolved.query_builder : evolved.__query_builder
+local evolved_query_builder = {}
+evolved_query_builder.__index = evolved_query_builder
+
+---@return evolved.query_builder
+---@nodiscard
+function evolved.query()
+    ---@type evolved.__query_builder
+    local builder = {
+        __include_list = nil,
+        __exclude_list = nil,
+    }
+    ---@cast builder evolved.query_builder
+    return setmetatable(builder, evolved_query_builder)
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.query_builder
+function evolved_query_builder:include(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return self
+    end
+
+    local include_list = self.__include_list
+
+    if not include_list then
+        include_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__include_list = include_list
+    end
+
+    local include_list_size = #include_list
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        include_list[include_list_size + 1] = fragment
+        include_list_size = include_list_size + 1
+    end
+
+    return self
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.query_builder
+function evolved_query_builder:exclude(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return self
+    end
+
+    local exclude_list = self.__exclude_list
+
+    if not exclude_list then
+        exclude_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        self.__exclude_list = exclude_list
+    end
+
+    local exclude_list_size = #exclude_list
+
+    for i = 1, fragment_count do
+        local fragment = select(i, ...)
+        exclude_list[exclude_list_size + 1] = fragment
+        exclude_list_size = exclude_list_size + 1
+    end
+
+    return self
+end
+
+---@return evolved.query
+function evolved_query_builder:build()
+    local include_list = self.__include_list
+    local exclude_list = self.__exclude_list
+
+    self.__include_list = nil
+    self.__exclude_list = nil
+
+    local query = evolved.id()
+
+    if include_list then
+        evolved.insert(query, evolved.INCLUDES, __table_unpack(include_list))
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, include_list)
+    end
+
+    if exclude_list then
+        evolved.insert(query, evolved.EXCLUDES, __table_unpack(exclude_list))
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, exclude_list)
+    end
+
+    return query
 end
 
 ---
