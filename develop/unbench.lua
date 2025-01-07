@@ -4,6 +4,8 @@ local evo = require 'evolved'
 local basics = require 'develop.basics'
 
 local N = 1000
+local B = evo.entity()
+local F1, F2, F3, F4, F5 = evo.id(5)
 
 print '----------------------------------------'
 
@@ -38,96 +40,94 @@ basics.describe_bench(string.format('create and collect %d tables', N),
 print '----------------------------------------'
 
 basics.describe_bench(string.format('create %d tables with 1 component / AoS', N),
-    ---@param f1 table
     ---@param tables table
-    function(f1, tables)
+    function(tables)
         for i = 1, N do
             local e = {}
-            e[f1] = true
+            e[F1] = true
             tables[i] = e
         end
     end, function()
-        local f1 = {}
-        return f1, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 2 component / AoS', N),
-    ---@param f1 table
-    ---@param f2 table
     ---@param tables table
-    function(f1, f2, tables)
+    function(tables)
         for i = 1, N do
             local e = {}
-            e[f1] = true
-            e[f2] = true
+            e[F1] = true
+            e[F2] = true
             tables[i] = e
         end
     end, function()
-        local f1, f2 = {}, {}
-        return f1, f2, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 3 component / AoS', N),
-    ---@param f1 table
-    ---@param f2 table
-    ---@param f3 table
     ---@param tables table
-    function(f1, f2, f3, tables)
+    function(tables)
         for i = 1, N do
             local e = {}
-            e[f1] = true
-            e[f2] = true
-            e[f3] = true
+            e[F1] = true
+            e[F2] = true
+            e[F3] = true
             tables[i] = e
         end
     end, function()
-        local f1, f2, f3 = {}, {}, {}
-        return f1, f2, f3, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 4 component / AoS', N),
-    ---@param f1 table
-    ---@param f2 table
-    ---@param f3 table
-    ---@param f4 table
     ---@param tables table
-    function(f1, f2, f3, f4, tables)
+    function(tables)
         for i = 1, N do
             local e = {}
-            e[f1] = true
-            e[f2] = true
-            e[f3] = true
-            e[f4] = true
+            e[F1] = true
+            e[F2] = true
+            e[F3] = true
+            e[F4] = true
             tables[i] = e
         end
     end, function()
-        local f1, f2, f3, f4 = {}, {}, {}, {}
-        return f1, f2, f3, f4, {}
+        return {}
+    end)
+
+basics.describe_bench(string.format('create %d tables with 5 component / AoS', N),
+    ---@param tables table
+    function(tables)
+        for i = 1, N do
+            local e = {}
+            e[F1] = true
+            e[F2] = true
+            e[F3] = true
+            e[F4] = true
+            e[F5] = true
+            tables[i] = e
+        end
+    end, function()
+        return {}
     end)
 
 print '----------------------------------------'
 
 basics.describe_bench(string.format('create %d tables with 1 component / SoA', N),
-    ---@param f1 table
     ---@param tables table
-    function(f1, tables)
+    function(tables)
         local fs1 = {}
         for i = 1, N do
             local e = {}
             fs1[i] = true
             tables[i] = e
         end
-        tables[f1] = fs1
+        tables[F1] = fs1
     end, function()
-        local f1 = {}
-        return f1, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 2 component / SoA', N),
-    ---@param f1 table
-    ---@param f2 table
     ---@param tables table
-    function(f1, f2, tables)
+    function(tables)
         local fs1 = {}
         local fs2 = {}
         for i = 1, N do
@@ -136,19 +136,15 @@ basics.describe_bench(string.format('create %d tables with 2 component / SoA', N
             fs2[i] = true
             tables[i] = e
         end
-        tables[f1] = fs1
-        tables[f2] = fs2
+        tables[F1] = fs1
+        tables[F2] = fs2
     end, function()
-        local f1, f2 = {}, {}
-        return f1, f2, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 3 component / SoA', N),
-    ---@param f1 table
-    ---@param f2 table
-    ---@param f3 table
     ---@param tables table
-    function(f1, f2, f3, tables)
+    function(tables)
         local fs1 = {}
         local fs2 = {}
         local fs3 = {}
@@ -159,21 +155,16 @@ basics.describe_bench(string.format('create %d tables with 3 component / SoA', N
             fs3[i] = true
             tables[i] = e
         end
-        tables[f1] = fs1
-        tables[f2] = fs2
-        tables[f3] = fs3
+        tables[F1] = fs1
+        tables[F2] = fs2
+        tables[F3] = fs3
     end, function()
-        local f1, f2, f3 = {}, {}, {}
-        return f1, f2, f3, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create %d tables with 4 component / SoA', N),
-    ---@param f1 table
-    ---@param f2 table
-    ---@param f3 table
-    ---@param f4 table
     ---@param tables table
-    function(f1, f2, f3, f4, tables)
+    function(tables)
         local fs1 = {}
         local fs2 = {}
         local fs3 = {}
@@ -186,13 +177,38 @@ basics.describe_bench(string.format('create %d tables with 4 component / SoA', N
             fs4[i] = i
             tables[i] = e
         end
-        tables[f1] = fs1
-        tables[f2] = fs2
-        tables[f3] = fs3
-        tables[f4] = fs4
+        tables[F1] = fs1
+        tables[F2] = fs2
+        tables[F3] = fs3
+        tables[F4] = fs4
     end, function()
-        local f1, f2, f3, f4 = {}, {}, {}, {}
-        return f1, f2, f3, f4, {}
+        return {}
+    end)
+
+basics.describe_bench(string.format('create %d tables with 5 component / SoA', N),
+    ---@param tables table
+    function(tables)
+        local fs1 = {}
+        local fs2 = {}
+        local fs3 = {}
+        local fs4 = {}
+        local fs5 = {}
+        for i = 1, N do
+            local e = {}
+            fs1[i] = i
+            fs2[i] = i
+            fs3[i] = i
+            fs4[i] = i
+            fs5[i] = i
+            tables[i] = e
+        end
+        tables[F1] = fs1
+        tables[F2] = fs2
+        tables[F3] = fs3
+        tables[F4] = fs4
+        tables[F5] = fs5
+    end, function()
+        return {}
     end)
 
 print '----------------------------------------'
@@ -216,16 +232,15 @@ basics.describe_bench(string.format('create and destroy %d entities', N),
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 1 component', N),
-    ---@param f1 evolved.fragment
     ---@param entities evolved.id[]
-    function(f1, entities)
+    function(entities)
         local id = evo.id
         local insert = evo.insert
         local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
-            insert(e, f1)
+            insert(e, F1)
             entities[i] = e
         end
 
@@ -233,23 +248,20 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
             destroy(entities[i])
         end
     end, function()
-        local f1 = evo.id(2)
-        return f1, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 2 components', N),
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
     ---@param entities evolved.id[]
-    function(f1, f2, entities)
+    function(entities)
         local id = evo.id
         local insert = evo.insert
         local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
-            insert(e, f1)
-            insert(e, f2)
+            insert(e, F1)
+            insert(e, F2)
             entities[i] = e
         end
 
@@ -257,25 +269,21 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             destroy(entities[i])
         end
     end, function()
-        local f1, f2 = evo.id(2)
-        return f1, f2, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 3 components', N),
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
-    ---@param f3 evolved.fragment
     ---@param entities evolved.id[]
-    function(f1, f2, f3, entities)
+    function(entities)
         local id = evo.id
         local insert = evo.insert
         local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
-            insert(e, f1)
-            insert(e, f2)
-            insert(e, f3)
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
             entities[i] = e
         end
 
@@ -283,27 +291,22 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             destroy(entities[i])
         end
     end, function()
-        local f1, f2, f3 = evo.id(3)
-        return f1, f2, f3, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 4 components', N),
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
-    ---@param f3 evolved.fragment
-    ---@param f4 evolved.fragment
     ---@param entities evolved.id[]
-    function(f1, f2, f3, f4, entities)
+    function(entities)
         local id = evo.id
         local insert = evo.insert
         local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
-            insert(e, f1)
-            insert(e, f2)
-            insert(e, f3)
-            insert(e, f4)
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
+            insert(e, F4)
             entities[i] = e
         end
 
@@ -311,133 +314,155 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             destroy(entities[i])
         end
     end, function()
-        local f1, f2, f3, f4 = evo.id(4)
-        return f1, f2, f3, f4, {}
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local id = evo.id
+        local insert = evo.insert
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = id()
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
+            insert(e, F4)
+            insert(e, F5)
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
     end)
 
 print '----------------------------------------'
 
 basics.describe_bench(string.format('create and destroy %d entities / builder', N),
-    ---@param b evolved.entity_builder
     ---@param entities evolved.id[]
-    function(b, entities)
-        local build = b.build
+    function(entities)
+        local build = B.build
         local destroy = evo.destroy
 
         for i = 1, N do
-            entities[i] = build(b)
+            entities[i] = build(B)
         end
 
         for i = 1, #entities do
             destroy(entities[i])
         end
     end, function()
-        local b = evo.entity()
-        return b, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 1 components / builder', N),
-    ---@param b evolved.entity_builder
-    ---@param f1 evolved.fragment
     ---@param entities evolved.id[]
-    function(b, f1, entities)
-        local set = b.set
-        local build = b.build
+    function(entities)
+        local set = B.set
+        local build = B.build
         local destroy = evo.destroy
 
         for i = 1, N do
-            set(b, f1)
-            entities[i] = build(b)
+            set(B, F1)
+            entities[i] = build(B)
         end
 
         for i = 1, #entities do
             destroy(entities[i])
         end
     end, function()
-        local b = evo.entity()
-        local f1 = evo.id(1)
-        return b, f1, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 2 components / builder', N),
-    ---@param b evolved.entity_builder
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
     ---@param entities evolved.id[]
-    function(b, f1, f2, entities)
-        local set = b.set
-        local build = b.build
+    function(entities)
+        local set = B.set
+        local build = B.build
         local destroy = evo.destroy
 
         for i = 1, N do
-            set(b, f1)
-            set(b, f2)
-            entities[i] = build(b)
+            set(B, F1)
+            set(B, F2)
+            entities[i] = build(B)
         end
 
         for i = 1, #entities do
             destroy(entities[i])
         end
     end, function()
-        local b = evo.entity()
-        local f1, f2 = evo.id(2)
-        return b, f1, f2, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 3 components / builder', N),
-    ---@param b evolved.entity_builder
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
-    ---@param f3 evolved.fragment
     ---@param entities evolved.id[]
-    function(b, f1, f2, f3, entities)
-        local set = b.set
-        local build = b.build
+    function(entities)
+        local set = B.set
+        local build = B.build
         local destroy = evo.destroy
 
         for i = 1, N do
-            set(b, f1)
-            set(b, f2)
-            set(b, f3)
-            entities[i] = build(b)
+            set(B, F1)
+            set(B, F2)
+            set(B, F3)
+            entities[i] = build(B)
         end
 
         for i = 1, #entities do
             destroy(entities[i])
         end
     end, function()
-        local b = evo.entity()
-        local f1, f2, f3 = evo.id(3)
-        return b, f1, f2, f3, {}
+        return {}
     end)
 
 basics.describe_bench(string.format('create and destroy %d entities with 4 components / builder', N),
-    ---@param b evolved.entity_builder
-    ---@param f1 evolved.fragment
-    ---@param f2 evolved.fragment
-    ---@param f3 evolved.fragment
-    ---@param f4 evolved.fragment
     ---@param entities evolved.id[]
-    function(b, f1, f2, f3, f4, entities)
-        local set = b.set
-        local build = b.build
+    function(entities)
+        local set = B.set
+        local build = B.build
         local destroy = evo.destroy
 
         for i = 1, N do
-            set(b, f1)
-            set(b, f2)
-            set(b, f3)
-            set(b, f4)
-            entities[i] = build(b)
+            set(B, F1)
+            set(B, F2)
+            set(B, F3)
+            set(B, F4)
+            entities[i] = build(B)
         end
 
         for i = 1, #entities do
             destroy(entities[i])
         end
     end, function()
-        local b = evo.entity()
-        local f1, f2, f3, f4 = evo.id(4)
-        return b, f1, f2, f3, f4, {}
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / builder', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = B.set
+        local build = B.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            set(B, F1)
+            set(B, F2)
+            set(B, F3)
+            set(B, F4)
+            set(B, F5)
+            entities[i] = build(B)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
     end)
 
 print '----------------------------------------'
