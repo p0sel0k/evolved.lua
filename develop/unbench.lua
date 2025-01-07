@@ -317,6 +317,131 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
 
 print '----------------------------------------'
 
+basics.describe_bench(string.format('create and destroy %d entities / builder', N),
+    ---@param b evolved.entity_builder
+    ---@param entities evolved.id[]
+    function(b, entities)
+        local build = b.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            entities[i] = build(b)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        local b = evo.entity()
+        return b, {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / builder', N),
+    ---@param b evolved.entity_builder
+    ---@param f1 evolved.fragment
+    ---@param entities evolved.id[]
+    function(b, f1, entities)
+        local set = b.set
+        local build = b.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            set(b, f1)
+            entities[i] = build(b)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        local b = evo.entity()
+        local f1 = evo.id(1)
+        return b, f1, {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / builder', N),
+    ---@param b evolved.entity_builder
+    ---@param f1 evolved.fragment
+    ---@param f2 evolved.fragment
+    ---@param entities evolved.id[]
+    function(b, f1, f2, entities)
+        local set = b.set
+        local build = b.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            set(b, f1)
+            set(b, f2)
+            entities[i] = build(b)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        local b = evo.entity()
+        local f1, f2 = evo.id(2)
+        return b, f1, f2, {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / builder', N),
+    ---@param b evolved.entity_builder
+    ---@param f1 evolved.fragment
+    ---@param f2 evolved.fragment
+    ---@param f3 evolved.fragment
+    ---@param entities evolved.id[]
+    function(b, f1, f2, f3, entities)
+        local set = b.set
+        local build = b.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            set(b, f1)
+            set(b, f2)
+            set(b, f3)
+            entities[i] = build(b)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        local b = evo.entity()
+        local f1, f2, f3 = evo.id(3)
+        return b, f1, f2, f3, {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / builder', N),
+    ---@param b evolved.entity_builder
+    ---@param f1 evolved.fragment
+    ---@param f2 evolved.fragment
+    ---@param f3 evolved.fragment
+    ---@param f4 evolved.fragment
+    ---@param entities evolved.id[]
+    function(b, f1, f2, f3, f4, entities)
+        local set = b.set
+        local build = b.build
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            set(b, f1)
+            set(b, f2)
+            set(b, f3)
+            set(b, f4)
+            entities[i] = build(b)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        local b = evo.entity()
+        local f1, f2, f3, f4 = evo.id(4)
+        return b, f1, f2, f3, f4, {}
+    end)
+
+print '----------------------------------------'
+
 ---
 --- initial
 ---
