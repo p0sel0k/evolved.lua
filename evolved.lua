@@ -2598,22 +2598,12 @@ function evolved.chunk(...)
 
     local root_fragment = fragment_list[1]
     local chunk = __root_chunks[root_fragment]
-
-    if not chunk then
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-        return
-    end
+        or __root_chunk(root_fragment)
 
     for i = 2, fragment_count do
         local child_fragment = fragment_list[i]
-        if child_fragment > fragment_list[i - 1] then
-            chunk = chunk.__with_fragment_edges[child_fragment]
-
-            if not chunk then
-                __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-                return
-            end
-        end
+        chunk = chunk.__with_fragment_edges[child_fragment]
+            or __chunk_with_fragment(chunk, child_fragment)
     end
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
@@ -2770,8 +2760,8 @@ evolved_entity_builder.__index = evolved_entity_builder
 function evolved.entity()
     ---@type evolved.__entity_builder
     local builder = {
-        __fragment_list = nil,
-        __component_list = nil,
+        __fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0),
+        __component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0),
     }
     ---@cast builder evolved.entity_builder
     return setmetatable(builder, evolved_entity_builder)
@@ -2786,16 +2776,6 @@ function evolved_entity_builder:set(fragment, ...)
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
 
-    if not fragment_list then
-        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
-        self.__fragment_list = fragment_list
-    end
-
-    if not component_list then
-        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
-        self.__component_list = component_list
-    end
-
     fragment_list[#fragment_list + 1] = fragment
     component_list[#component_list + 1] = component
 
@@ -2807,26 +2787,19 @@ function evolved_entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
 
-    self.__fragment_list = nil
-    self.__component_list = nil
+    self.__fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+    self.__component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
 
     local entity = evolved.id()
 
-    if fragment_list and component_list then
-        for i = 1, #fragment_list do
-            local fragment = fragment_list[i]
-            local component = component_list[i]
-            evolved.set(entity, fragment, component)
-        end
+    for i = 1, #fragment_list do
+        local fragment = fragment_list[i]
+        local component = component_list[i]
+        evolved.set(entity, fragment, component)
     end
 
-    if fragment_list then
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-    end
-
-    if component_list then
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
-    end
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
     return entity
 end
