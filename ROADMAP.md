@@ -10,3 +10,6 @@
 - clear chunk's tables instead reallocating them
 - add REQUIRES fragment trait
 - try to keep entity_chunks/places tables as arrays
+- set/assign/insert/remove/destroy for lists?
+- add checks to internal defer commits
+- add attach/detach functions?
