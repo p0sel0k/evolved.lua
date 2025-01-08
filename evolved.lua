@@ -527,7 +527,6 @@ local function __root_chunk(root_fragment)
         fragment_chunks[#fragment_chunks + 1] = root_chunk
     end
 
-    __structural_changes = __structural_changes + 1
     return root_chunk
 end
 
@@ -642,7 +641,6 @@ local function __chunk_with_fragment(parent_chunk, child_fragment)
         fragment_chunks[#fragment_chunks + 1] = child_chunk
     end
 
-    __structural_changes = __structural_changes + 1
     return child_chunk
 end
 
