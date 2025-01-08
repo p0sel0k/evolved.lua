@@ -527,7 +527,6 @@ local function __root_chunk(root_fragment)
         fragment_chunks[#fragment_chunks + 1] = root_chunk
     end
 
-    __structural_changes = __structural_changes + 1
     return root_chunk
 end
 
@@ -642,7 +641,6 @@ local function __chunk_with_fragment(parent_chunk, child_fragment)
         fragment_chunks[#fragment_chunks + 1] = child_chunk
     end
 
-    __structural_changes = __structural_changes + 1
     return child_chunk
 end
 
@@ -1677,7 +1675,7 @@ end
 
 ---@param index integer
 ---@param version integer
----@return evolved.id
+---@return evolved.id id
 ---@nodiscard
 function evolved.pack(index, version)
     if index < 1 or index > 0xFFFFF then
@@ -2578,7 +2576,8 @@ end)
 ---
 
 ---@param ... evolved.fragment fragments
----@return evolved.chunk?, evolved.entity[]?
+---@return evolved.chunk? chunk
+---@return evolved.entity[]? chunk_entities
 function evolved.chunk(...)
     local fragment_count = select('#', ...)
 
@@ -2598,22 +2597,12 @@ function evolved.chunk(...)
 
     local root_fragment = fragment_list[1]
     local chunk = __root_chunks[root_fragment]
-
-    if not chunk then
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-        return
-    end
+        or __root_chunk(root_fragment)
 
     for i = 2, fragment_count do
         local child_fragment = fragment_list[i]
-        if child_fragment > fragment_list[i - 1] then
-            chunk = chunk.__with_fragment_edges[child_fragment]
-
-            if not chunk then
-                __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-                return
-            end
-        end
+        chunk = chunk.__with_fragment_edges[child_fragment]
+            or __chunk_with_fragment(chunk, child_fragment)
     end
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
@@ -2622,7 +2611,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param ... evolved.fragment fragments
----@return evolved.component[] ... components
+---@return evolved.component_storage ... component_storages
 ---@nodiscard
 function evolved.select(chunk, ...)
     local fragment_count = select('#', ...)
@@ -2672,8 +2661,8 @@ function evolved.select(chunk, ...)
 end
 
 ---@param entity evolved.entity
----@return evolved.each_iterator
----@return evolved.each_state?
+---@return evolved.each_iterator iterator
+---@return evolved.each_state? iterator_state
 ---@nodiscard
 function evolved.each(entity)
     local entity_index = entity % 0x100000
@@ -2701,8 +2690,8 @@ function evolved.each(entity)
 end
 
 ---@param query evolved.query
----@return evolved.execute_iterator
----@return evolved.execute_state?
+---@return evolved.execute_iterator iterator
+---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function evolved.execute(query)
     local query_index = query % 0x100000
@@ -2765,13 +2754,13 @@ end
 local evolved_entity_builder = {}
 evolved_entity_builder.__index = evolved_entity_builder
 
----@return evolved.entity_builder
+---@return evolved.entity_builder builder
 ---@nodiscard
 function evolved.entity()
     ---@type evolved.__entity_builder
     local builder = {
-        __fragment_list = nil,
-        __component_list = nil,
+        __fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0),
+        __component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0),
     }
     ---@cast builder evolved.entity_builder
     return setmetatable(builder, evolved_entity_builder)
@@ -2779,22 +2768,12 @@ end
 
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return evolved.entity_builder
+---@return evolved.entity_builder builder
 function evolved_entity_builder:set(fragment, ...)
     local component = __component_construct(fragment, ...)
 
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-
-    if not fragment_list then
-        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
-        self.__fragment_list = fragment_list
-    end
-
-    if not component_list then
-        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
-        self.__component_list = component_list
-    end
 
     fragment_list[#fragment_list + 1] = fragment
     component_list[#component_list + 1] = component
@@ -2802,31 +2781,24 @@ function evolved_entity_builder:set(fragment, ...)
     return self
 end
 
----@return evolved.entity
+---@return evolved.entity entity
 function evolved_entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
 
-    self.__fragment_list = nil
-    self.__component_list = nil
+    self.__fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+    self.__component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
 
     local entity = evolved.id()
 
-    if fragment_list and component_list then
-        for i = 1, #fragment_list do
-            local fragment = fragment_list[i]
-            local component = component_list[i]
-            evolved.set(entity, fragment, component)
-        end
+    for i = 1, #fragment_list do
+        local fragment = fragment_list[i]
+        local component = component_list[i]
+        evolved.set(entity, fragment, component)
     end
 
-    if fragment_list then
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
-    end
-
-    if component_list then
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
-    end
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
     return entity
 end
@@ -2846,7 +2818,7 @@ end
 local evolved_fragment_builder = {}
 evolved_fragment_builder.__index = evolved_fragment_builder
 
----@return evolved.fragment_builder
+---@return evolved.fragment_builder builder
 ---@nodiscard
 function evolved.fragment()
     ---@type evolved.__fragment_builder
@@ -2859,27 +2831,27 @@ function evolved.fragment()
     return setmetatable(builder, evolved_fragment_builder)
 end
 
----@return evolved.fragment_builder
+---@return evolved.fragment_builder builder
 function evolved_fragment_builder:tag()
     self.__tag = true
     return self
 end
 
 ---@param default evolved.component
----@return evolved.fragment_builder
+---@return evolved.fragment_builder builder
 function evolved_fragment_builder:default(default)
     self.__default = default
     return self
 end
 
 ---@param construct fun(...): evolved.component
----@return evolved.fragment_builder
+---@return evolved.fragment_builder builder
 function evolved_fragment_builder:construct(construct)
     self.__construct = construct
     return self
 end
 
----@return evolved.fragment
+---@return evolved.fragment fragment
 function evolved_fragment_builder:build()
     local tag = self.__tag
     local default = self.__default
@@ -2920,7 +2892,7 @@ end
 local evolved_query_builder = {}
 evolved_query_builder.__index = evolved_query_builder
 
----@return evolved.query_builder
+---@return evolved.query_builder builder
 ---@nodiscard
 function evolved.query()
     ---@type evolved.__query_builder
@@ -2933,7 +2905,7 @@ function evolved.query()
 end
 
 ---@param ... evolved.fragment fragments
----@return evolved.query_builder
+---@return evolved.query_builder builder
 function evolved_query_builder:include(...)
     local fragment_count = select('#', ...)
 
@@ -2960,7 +2932,7 @@ function evolved_query_builder:include(...)
 end
 
 ---@param ... evolved.fragment fragments
----@return evolved.query_builder
+---@return evolved.query_builder builder
 function evolved_query_builder:exclude(...)
     local fragment_count = select('#', ...)
 
@@ -2986,7 +2958,7 @@ function evolved_query_builder:exclude(...)
     return self
 end
 
----@return evolved.query
+---@return evolved.query query
 function evolved_query_builder:build()
     local include_list = self.__include_list
     local exclude_list = self.__exclude_list

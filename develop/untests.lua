@@ -615,13 +615,11 @@ do
     end
 
     do
-        local chunk, entities = evo.chunk(f1, f2, f3)
-        assert(not chunk and not entities)
-    end
-
-    do
-        local chunk, entities = evo.chunk(f3, f2, f1)
-        assert(not chunk and not entities)
+        local chunk123, entities123 = evo.chunk(f1, f2, f3)
+        local chunk321, entities321 = evo.chunk(f3, f2, f1)
+        assert(chunk123 and #entities123 == 0)
+        assert(chunk321 and #entities321 == 0)
+        assert(chunk123 == chunk321 and entities123 == entities321)
     end
 end
 
