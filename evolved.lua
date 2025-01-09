@@ -2840,6 +2840,8 @@ function evolved.multi_insert(entity, fragments, components)
             end
         end
 
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, inserted_set)
+
         __entity_chunks[entity_index] = new_chunk
         __entity_places[entity_index] = new_place
 
