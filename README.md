@@ -61,6 +61,11 @@ remove :: entity, fragment... -> boolean, boolean
 clear :: entity -> boolean, boolean
 destroy :: entity -> boolean, boolean
 
+multi_set :: entity, fragment[], component[]? -> boolean, boolean
+multi_assign :: entity, fragment[], component[]? -> boolean, boolean
+multi_insert :: entity, fragment[], component[]? -> boolean, boolean
+multi_remove :: entity, fragment[] -> boolean, boolean
+
 batch_set :: query, fragment, any... -> integer, boolean
 batch_assign :: query, fragment, any... -> integer, boolean
 batch_insert :: query, fragment, any... -> integer, boolean

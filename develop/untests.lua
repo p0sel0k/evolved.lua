@@ -2510,3 +2510,436 @@ do
         assert(entities[1] == e2)
     end
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local e = evo.id()
+        assert(not evo.multi_insert(e, {}))
+        assert(not evo.multi_insert(e, {}, {}))
+        assert(not evo.multi_insert(e, {}, { 41 }))
+        assert(evo.is_alive(e) and evo.is_empty(e))
+
+        assert(evo.multi_insert(e, { f1 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == true)
+
+        assert(not evo.multi_insert(e, { f1 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == true)
+
+        assert(evo.multi_insert(e, { f2 }, { 42, 43 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == true)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == true)
+
+        assert(evo.multi_insert(e, { f1, f3 }, { 20, 43 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        assert(evo.has(e, f3) and evo.get(e, f3) == 43)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local e1 = evo.id()
+        assert(evo.multi_insert(e1, { f1, f2 }, { 41, 42 }))
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 42)
+
+        local e2 = evo.id()
+        assert(evo.multi_insert(e2, { f1, f2 }, { 43, 44 }))
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 43)
+        assert(evo.has(e2, f2) and evo.get(e2, f2) == 44)
+
+        assert(evo.multi_insert(e1, { f3 }))
+        do
+            local chunk, entities = evo.chunk(f1, f2)
+            assert(entities and #entities == 1 and entities[1] == e2)
+            assert(chunk and evo.select(chunk, f2)[1] == 44)
+        end
+    end
+
+    do
+        local e1, e2 = evo.id(2)
+        evo.defer()
+        do
+            evo.multi_insert(e1, { f1, f2 }, { 41, 42 })
+            evo.multi_insert(e2, { f2, f2 }, { 43, 44 })
+        end
+        assert(evo.is_alive(e1) and evo.is_empty(e1))
+        assert(evo.is_alive(e2) and evo.is_empty(e2))
+        assert(evo.commit())
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 42)
+        assert(evo.has(e2, f2) and evo.get(e2, f2) == 44)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f3, evo.TAG)
+
+    local last_set_entity = 0
+    local last_set_component = 0
+
+    evo.set(f1, evo.ON_SET, function(e, f, c)
+        assert(f == f1)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    evo.set(f2, evo.ON_SET, function(e, f, c)
+        assert(f == f2)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    evo.set(f3, evo.ON_SET, function(e, f, c)
+        assert(f == f3)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41, 42 }))
+        assert(last_set_entity == e and last_set_component == 42)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2, f3 }, { 41, 42, 43 }))
+        assert(last_set_entity == e and last_set_component == nil)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local e = evo.id()
+        assert(not evo.multi_assign(e, {}))
+        assert(not evo.multi_assign(e, {}, {}))
+        assert(not evo.multi_assign(e, {}, { 41 }))
+        assert(evo.is_alive(e) and evo.is_empty(e))
+
+        assert(evo.multi_insert(e, { f1 }, { 21 }))
+        assert(evo.multi_assign(e, { f1, f2 }, { 41, 42 }))
+        assert(not evo.multi_assign(e, { f2 }, { 42 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+
+        assert(not evo.multi_assign(e, { f3 }, { 43 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+        assert(not evo.has(e, f3) and evo.get(e, f3) == nil)
+
+        assert(evo.multi_insert(e, { f2 }, { 22 }))
+        assert(evo.multi_assign(e, { f2 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        assert(evo.multi_assign(e, { f2 }, { 42, 43 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+    end
+
+    do
+        local e1, e2 = evo.id(2)
+        evo.defer()
+        do
+            evo.multi_insert(e1, { f1, f2 }, { 21, 22 })
+            evo.multi_assign(e1, { f1, f2 }, { 41, 42 })
+
+            evo.multi_insert(e2, { f1, f2 }, { 31, 32 })
+            evo.multi_assign(e2, { f1, f2 }, { 51, 52 })
+        end
+        assert(evo.is_alive(e1) and evo.is_empty(e1))
+        assert(evo.is_alive(e2) and evo.is_empty(e2))
+        assert(evo.commit())
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 42)
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 51)
+        assert(evo.has(e2, f2) and evo.get(e2, f2) == 52)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f3, evo.TAG)
+
+    local last_set_entity = 0
+    local last_set_component = 0
+
+    evo.set(f1, evo.ON_SET, function(e, f, c)
+        assert(f == f1)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    evo.set(f2, evo.ON_SET, function(e, f, c)
+        assert(f == f2)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    evo.set(f3, evo.ON_SET, function(e, f, c)
+        assert(f == f3)
+        last_set_entity = e
+        last_set_component = c
+    end)
+
+    do
+        local e = evo.id()
+        assert(not evo.multi_assign(e, { f1, f2 }, { 41, 42 }))
+        assert(last_set_entity == 0 and last_set_component == 0)
+
+        assert(evo.multi_insert(e, { f1, f2 }, { 21, 22 }))
+        assert(last_set_entity == e and last_set_component == 22)
+
+        assert(evo.multi_assign(e, { f1, f2 }, { 41, 42 }))
+        assert(last_set_entity == e and last_set_component == 42)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2, f3 }, { 21, 22, 23 }))
+        assert(last_set_entity == e and last_set_component == nil)
+
+        last_set_entity, last_set_component = 0, 0
+        assert(evo.multi_assign(e, { f1, f2, f3 }, { 41, 42, 43 }))
+        assert(last_set_entity == e and last_set_component == nil)
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+        assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+    end
+end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+
+    evo.set(f3, evo.TAG)
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2, f3 }, { 41, 42, 43 }))
+        assert(evo.has_all(e, f1, f2, f3))
+
+        assert(evo.multi_remove(e, {}))
+        assert(evo.multi_remove(e, { f4 }))
+        assert(evo.has_all(e, f1, f2, f3))
+
+        assert(evo.multi_remove(e, { f3 }))
+        assert(evo.has(e, f1) and evo.has(e, f2) and not evo.has(e, f3))
+        assert(evo.get(e, f1) == 41 and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
+
+        assert(evo.multi_remove(e, { f1, f2, f4 }))
+        assert(not evo.has_any(e, f1, f2, f3))
+        assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == nil)
+    end
+
+    do
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2, f3 }, { 41, 42, 43 }))
+        assert(evo.has_all(e, f1, f2, f3))
+        evo.defer()
+        evo.multi_remove(e, { f1, f2 })
+        assert(evo.has_all(e, f1, f2, f3))
+        assert(evo.commit())
+        assert(not evo.has(e, f1) and not evo.has(e, f2) and evo.has(e, f3))
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f3, evo.TAG)
+
+    local last_remove_entity = 0
+    local last_remove_component = 0
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f1)
+        last_remove_entity = e
+        last_remove_component = c
+    end)
+
+    evo.set(f2, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f2)
+        last_remove_entity = e
+        last_remove_component = c
+    end)
+
+    evo.set(f3, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f3)
+        last_remove_entity = e
+        last_remove_component = c
+    end)
+
+    do
+        local e = evo.id()
+        assert(evo.multi_remove(e, { f1, f2 }))
+        assert(last_remove_entity == 0 and last_remove_component == 0)
+
+        assert(evo.multi_insert(e, { f1, f2, f3 }, { 41, 42 }))
+        assert(last_remove_entity == 0 and last_remove_component == 0)
+        assert(evo.multi_remove(e, { f1, f2 }))
+        assert(last_remove_entity == e and last_remove_component == 42)
+        assert(evo.multi_remove(e, { f3 }))
+        assert(last_remove_entity == e and last_remove_component == nil)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local e1, e2 = evo.id(2)
+        assert(evo.multi_insert(e1, { f1, f2, f3 }, { 41, 42, 43 }))
+        assert(evo.multi_insert(e2, { f1, f2, f3 }, { 44, 45, 46 }))
+
+        assert(evo.multi_remove(e1, { f1, f2 }))
+
+        do
+            local chunk, entities = evo.chunk(f1, f2, f3)
+            assert(entities and #entities == 1 and entities[1] == e2)
+            assert(chunk and evo.select(chunk, f2)[1] == 45)
+        end
+
+        do
+            local chunk, entities = evo.chunk(f3)
+            assert(entities and #entities == 1 and entities[1] == e1)
+            assert(chunk and evo.select(chunk, f3)[1] == 43)
+        end
+    end
+end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+
+    evo.set(f3, evo.DEFAULT, 43)
+    evo.set(f4, evo.TAG)
+
+
+    do
+        local e = evo.id()
+        assert(not evo.multi_set(e, {}))
+        assert(not evo.multi_set(e, {}, {}))
+        assert(not evo.multi_set(e, {}, { 41 }))
+        assert(evo.is_alive(e) and evo.is_empty(e))
+
+        assert(evo.multi_set(e, { f1 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == true)
+
+        assert(evo.multi_set(e, { f1 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == true)
+
+        assert(evo.multi_set(e, { f1 }, { 41 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+
+        assert(evo.multi_set(e, { f2 }, { 42 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+
+        assert(evo.multi_set(e, { f2 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == true)
+
+        assert(evo.multi_set(e, { f2, f3 }, { 42 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+        assert(evo.has(e, f3) and evo.get(e, f3) == 43)
+
+        assert(evo.multi_set(e, { f3, f4 }, { 33, 44 }))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+        assert(evo.has(e, f3) and evo.get(e, f3) == 33)
+        assert(evo.has(e, f4) and evo.get(e, f4) == nil)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.DEFAULT, 42)
+    evo.set(f3, evo.TAG)
+
+    local last_assign_entity = 0
+    local last_assign_new_component = 0
+    local last_assign_old_component = 0
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f1)
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    evo.set(f2, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f2)
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    evo.set(f3, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f3)
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    local last_insert_entity = 0
+    local last_insert_component = 0
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, nc)
+        assert(f == f1)
+        last_insert_entity = e
+        last_insert_component = nc
+    end)
+
+    evo.set(f2, evo.ON_INSERT, function(e, f, nc)
+        assert(f == f2)
+        last_insert_entity = e
+        last_insert_component = nc
+    end)
+
+    evo.set(f3, evo.ON_INSERT, function(e, f, nc)
+        assert(f == f3)
+        last_insert_entity = e
+        last_insert_component = nc
+    end)
+
+    do
+        last_assign_entity, last_assign_old_component, last_assign_new_component = 0, 0, 0
+        last_insert_entity, last_insert_component = 0, 0
+
+        local e = evo.id()
+        assert(evo.multi_set(e, { f1 }))
+        assert(last_assign_entity == 0 and last_assign_old_component == 0 and last_assign_new_component == 0)
+        assert(last_insert_entity == e and last_insert_component == true)
+
+        last_assign_entity, last_assign_old_component, last_assign_new_component = 0, 0, 0
+        last_insert_entity, last_insert_component = 0, 0
+
+        assert(evo.multi_set(e, { f1 }, { 41 }))
+        assert(last_assign_entity == e and last_assign_old_component == true and last_assign_new_component == 41)
+        assert(last_insert_entity == 0 and last_insert_component == 0)
+
+        last_assign_entity, last_assign_old_component, last_assign_new_component = 0, 0, 0
+        last_insert_entity, last_insert_component = 0, 0
+
+        assert(evo.multi_set(e, { f1, f2 }, { 11 }))
+        assert(last_assign_entity == e and last_assign_old_component == 41 and last_assign_new_component == 11)
+        assert(last_insert_entity == e and last_insert_component == 42)
+    end
+end
