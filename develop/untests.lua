@@ -3046,3 +3046,102 @@ do
         assert(remove_entity_sum == e and remove_component_sum == 41)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+    local qb = evo.query()
+
+    do
+        local q = qb:build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(includes == nil)
+        assert(excludes == nil)
+    end
+
+    do
+        local q = qb:include(f1):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(#includes == 1 and includes[1] == f1)
+        assert(excludes == nil)
+    end
+
+    do
+        local q = qb:include(f1, f2):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(#includes == 2 and includes[1] == f1 and includes[2] == f2)
+        assert(excludes == nil)
+    end
+
+    do
+        local q = qb:include(f1):include(f2):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(#includes == 2 and includes[1] == f1 and includes[2] == f2)
+        assert(excludes == nil)
+    end
+
+    do
+        local q = qb:exclude(f1):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(includes == nil)
+        assert(#excludes == 1 and excludes[1] == f1)
+    end
+
+    do
+        local q = qb:exclude(f1, f2):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(includes == nil)
+        assert(#excludes == 2 and excludes[1] == f1 and excludes[2] == f2)
+    end
+
+    do
+        local q = qb:exclude(f1):exclude(f2):build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(includes == nil)
+        assert(#excludes == 2 and excludes[1] == f1 and excludes[2] == f2)
+    end
+
+    do
+        qb:include(f1)
+        qb:exclude(f2)
+
+        local q = qb:build()
+
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
+        assert(#includes == 1 and includes[1] == f1)
+        assert(#excludes == 1 and excludes[1] == f2)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local eb = evo.entity()
+
+    do
+        local e = eb:build()
+        assert(evo.is_alive(e) and evo.is_empty(e))
+    end
+
+    do
+        local e = eb:set(f1, 41):build()
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+    end
+
+    do
+        local e = eb:set(f1, 41):set(f2, 42):build()
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+    end
+
+    do
+        local e = eb:build()
+        assert(evo.is_alive(e) and evo.is_empty(e))
+    end
+end
