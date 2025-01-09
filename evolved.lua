@@ -212,14 +212,17 @@ end
 ---| `__TABLE_POOL_TAG__CHUNK_LIST`
 ---| `__TABLE_POOL_TAG__EACH_STATE`
 ---| `__TABLE_POOL_TAG__EXECUTE_STATE`
+---| `__TABLE_POOL_TAG__FRAGMENT_SET`
 ---| `__TABLE_POOL_TAG__FRAGMENT_LIST`
+---| `__TABLE_POOL_TAG__COMPONENT_LIST`
 
 local __TABLE_POOL_TAG__BYTECODE = 1
 local __TABLE_POOL_TAG__CHUNK_LIST = 2
 local __TABLE_POOL_TAG__EACH_STATE = 3
 local __TABLE_POOL_TAG__EXECUTE_STATE = 4
-local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
-local __TABLE_POOL_TAG__COMPONENT_LIST = 6
+local __TABLE_POOL_TAG__FRAGMENT_SET = 5
+local __TABLE_POOL_TAG__FRAGMENT_LIST = 7
+local __TABLE_POOL_TAG__COMPONENT_LIST = 8
 
 ---@type table<evolved.table_pool_tag, table[]>
 local __tagged_table_pools = __table_new(6, 0)
@@ -2561,9 +2564,11 @@ function evolved.multi_set(entity, fragments, components)
             __detach_entity(entity)
         end
 
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if old_fragment_set[fragment] then
+            if inserted_set[fragment] or old_fragment_set[fragment] then
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2597,6 +2602,8 @@ function evolved.multi_set(entity, fragments, components)
                     end
                 end
             else
+                inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2630,6 +2637,8 @@ function evolved.multi_set(entity, fragments, components)
                 end
             end
         end
+
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, inserted_set)
 
         __entity_chunks[entity_index] = new_chunk
         __entity_places[entity_index] = new_place
@@ -2790,9 +2799,13 @@ function evolved.multi_insert(entity, fragments, components)
             __detach_entity(entity)
         end
 
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if not old_fragment_set[fragment] then
+            if not inserted_set[fragment] and not old_fragment_set[fragment] then
+                inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2876,9 +2889,12 @@ function evolved.multi_remove(entity, fragments)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
+            local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
             for i = 1, fragment_count do
                 local fragment = fragments[i]
-                if old_fragment_set[fragment] then
+                if not removed_set[fragment] and old_fragment_set[fragment] then
+                    removed_set[fragment] = true
                     local old_component_index = old_component_indices[fragment]
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
@@ -2889,6 +2905,8 @@ function evolved.multi_remove(entity, fragments)
                     end
                 end
             end
+
+            __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, removed_set)
         end
 
         if new_chunk then
@@ -3411,8 +3429,8 @@ evolved_entity_builder.__index = evolved_entity_builder
 function evolved.entity()
     ---@type evolved.__entity_builder
     local builder = {
-        __fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0),
-        __component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0),
+        __fragment_list = nil,
+        __component_list = nil,
     }
     ---@cast builder evolved.entity_builder
     return setmetatable(builder, evolved_entity_builder)
@@ -3427,6 +3445,13 @@ function evolved_entity_builder:set(fragment, ...)
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
 
+    if not fragment_list then
+        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
+        self.__fragment_list = fragment_list
+        self.__component_list = component_list
+    end
+
     fragment_list[#fragment_list + 1] = fragment
     component_list[#component_list + 1] = component
 
@@ -3438,16 +3463,16 @@ function evolved_entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
 
-    self.__fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
-    self.__component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
+    self.__fragment_list = nil
+    self.__component_list = nil
 
     local entity = evolved.id()
 
-    for i = 1, #fragment_list do
-        local fragment = fragment_list[i]
-        local component = component_list[i]
-        evolved.set(entity, fragment, component)
+    if not fragment_list then
+        return entity
     end
+
+    evolved.multi_set(entity, fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
@@ -3515,17 +3540,28 @@ function evolved_fragment_builder:build()
 
     local fragment = evolved.id()
 
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 3, 0)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 3, 0)
+
     if tag then
-        evolved.set(fragment, evolved.TAG, tag)
+        fragment_list[#fragment_list + 1] = evolved.TAG
+        component_list[#component_list + 1] = true
     end
 
     if default ~= nil then
-        evolved.set(fragment, evolved.DEFAULT, default)
+        fragment_list[#fragment_list + 1] = evolved.DEFAULT
+        component_list[#component_list + 1] = default
     end
 
     if construct ~= nil then
-        evolved.set(fragment, evolved.CONSTRUCT, construct)
+        fragment_list[#fragment_list + 1] = evolved.CONSTRUCT
+        component_list[#component_list + 1] = construct
     end
+
+    evolved.multi_set(fragment, fragment_list, component_list)
+
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
     return fragment
 end
@@ -3568,7 +3604,7 @@ function evolved_query_builder:include(...)
     local include_list = self.__include_list
 
     if not include_list then
-        include_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        include_list = __table_new(math.max(8, fragment_count), 0)
         self.__include_list = include_list
     end
 
@@ -3576,8 +3612,7 @@ function evolved_query_builder:include(...)
 
     for i = 1, fragment_count do
         local fragment = select(i, ...)
-        include_list[include_list_size + 1] = fragment
-        include_list_size = include_list_size + 1
+        include_list[include_list_size + i] = fragment
     end
 
     return self
@@ -3595,7 +3630,7 @@ function evolved_query_builder:exclude(...)
     local exclude_list = self.__exclude_list
 
     if not exclude_list then
-        exclude_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
+        exclude_list = __table_new(math.max(8, fragment_count), 0)
         self.__exclude_list = exclude_list
     end
 
@@ -3603,8 +3638,7 @@ function evolved_query_builder:exclude(...)
 
     for i = 1, fragment_count do
         local fragment = select(i, ...)
-        exclude_list[exclude_list_size + 1] = fragment
-        exclude_list_size = exclude_list_size + 1
+        exclude_list[exclude_list_size + i] = fragment
     end
 
     return self
@@ -3620,15 +3654,23 @@ function evolved_query_builder:build()
 
     local query = evolved.id()
 
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 2, 0)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 2, 0)
+
     if include_list then
-        evolved.insert(query, evolved.INCLUDES, __table_unpack(include_list))
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, include_list)
+        fragment_list[#fragment_list + 1] = evolved.INCLUDES
+        component_list[#component_list + 1] = include_list
     end
 
     if exclude_list then
-        evolved.insert(query, evolved.EXCLUDES, __table_unpack(exclude_list))
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, exclude_list)
+        fragment_list[#fragment_list + 1] = evolved.EXCLUDES
+        component_list[#component_list + 1] = exclude_list
     end
+
+    evolved.multi_set(query, fragment_list, component_list)
+
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
     return query
 end
