@@ -212,14 +212,17 @@ end
 ---| `__TABLE_POOL_TAG__CHUNK_LIST`
 ---| `__TABLE_POOL_TAG__EACH_STATE`
 ---| `__TABLE_POOL_TAG__EXECUTE_STATE`
+---| `__TABLE_POOL_TAG__FRAGMENT_SET`
 ---| `__TABLE_POOL_TAG__FRAGMENT_LIST`
+---| `__TABLE_POOL_TAG__COMPONENT_LIST`
 
 local __TABLE_POOL_TAG__BYTECODE = 1
 local __TABLE_POOL_TAG__CHUNK_LIST = 2
 local __TABLE_POOL_TAG__EACH_STATE = 3
 local __TABLE_POOL_TAG__EXECUTE_STATE = 4
-local __TABLE_POOL_TAG__FRAGMENT_LIST = 5
-local __TABLE_POOL_TAG__COMPONENT_LIST = 6
+local __TABLE_POOL_TAG__FRAGMENT_SET = 5
+local __TABLE_POOL_TAG__FRAGMENT_LIST = 7
+local __TABLE_POOL_TAG__COMPONENT_LIST = 8
 
 ---@type table<evolved.table_pool_tag, table[]>
 local __tagged_table_pools = __table_new(6, 0)
@@ -2561,9 +2564,11 @@ function evolved.multi_set(entity, fragments, components)
             __detach_entity(entity)
         end
 
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if old_fragment_set[fragment] then
+            if inserted_set[fragment] or old_fragment_set[fragment] then
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2597,6 +2602,8 @@ function evolved.multi_set(entity, fragments, components)
                     end
                 end
             else
+                inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2630,6 +2637,8 @@ function evolved.multi_set(entity, fragments, components)
                 end
             end
         end
+
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, inserted_set)
 
         __entity_chunks[entity_index] = new_chunk
         __entity_places[entity_index] = new_place
@@ -2790,9 +2799,13 @@ function evolved.multi_insert(entity, fragments, components)
             __detach_entity(entity)
         end
 
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if not old_fragment_set[fragment] then
+            if not inserted_set[fragment] and not old_fragment_set[fragment] then
+                inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2876,9 +2889,12 @@ function evolved.multi_remove(entity, fragments)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
+            local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
             for i = 1, fragment_count do
                 local fragment = fragments[i]
-                if old_fragment_set[fragment] then
+                if not removed_set[fragment] and old_fragment_set[fragment] then
+                    removed_set[fragment] = true
                     local old_component_index = old_component_indices[fragment]
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
@@ -2889,6 +2905,8 @@ function evolved.multi_remove(entity, fragments)
                     end
                 end
             end
+
+            __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, removed_set)
         end
 
         if new_chunk then

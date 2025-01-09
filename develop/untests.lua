@@ -2453,6 +2453,27 @@ do
 end
 
 do
+    local f1, f2 = evo.id(2)
+
+    do
+        local e = evo.entity()
+            :set(f1, 41)
+            :set(f2, 42)
+            :build()
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 42)
+    end
+
+    do
+        local e = evo.entity()
+            :set(f1, 11)
+            :set(f1, 41)
+            :build()
+        assert(evo.has(e, f1) and evo.get(e, f1) == 41)
+    end
+end
+
+do
     local f1 = evo.fragment():default(41):build()
     local f2 = evo.fragment():construct(function() return 42 end):build()
     local f3 = evo.fragment():tag():build()
@@ -2578,7 +2599,7 @@ do
         assert(evo.commit())
         assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
         assert(evo.has(e1, f2) and evo.get(e1, f2) == 42)
-        assert(evo.has(e2, f2) and evo.get(e2, f2) == 44)
+        assert(evo.has(e2, f2) and evo.get(e2, f2) == 43)
     end
 end
 
@@ -2940,5 +2961,88 @@ do
         assert(evo.multi_set(e, { f1, f2 }, { 11 }))
         assert(last_assign_entity == e and last_assign_old_component == 41 and last_assign_new_component == 11)
         assert(last_insert_entity == e and last_insert_component == 42)
+    end
+end
+
+do
+    local f1 = evo.id()
+
+    local assign_entity_sum = 0
+    local assign_component_sum = 0
+    local insert_entity_sum = 0
+    local insert_component_sum = 0
+    local remove_entity_sum = 0
+    local remove_component_sum = 0
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, c)
+        assert(f == f1)
+        assign_entity_sum = assign_entity_sum + e
+        assign_component_sum = assign_component_sum + c
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, c)
+        assert(f == f1)
+        insert_entity_sum = insert_entity_sum + e
+        insert_component_sum = insert_component_sum + c
+    end)
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f1)
+        remove_entity_sum = remove_entity_sum + e
+        remove_component_sum = remove_component_sum + c
+    end)
+
+    do
+        assign_entity_sum, assign_component_sum = 0, 0
+        insert_entity_sum, insert_component_sum = 0, 0
+
+        local e = evo.id()
+        assert(evo.multi_set(e, { f1, f1 }, { 41, 42 }))
+
+        assert(assign_entity_sum == e and assign_component_sum == 42)
+        assert(insert_entity_sum == e and insert_component_sum == 41)
+    end
+
+    do
+        assign_entity_sum, assign_component_sum = 0, 0
+        insert_entity_sum, insert_component_sum = 0, 0
+
+        local e = evo.id()
+        assert(evo.multi_set(e, { f1, f1, f1 }, { 41, 42, 43 }))
+
+        assert(assign_entity_sum == e + e and assign_component_sum == 42 + 43)
+        assert(insert_entity_sum == e and insert_component_sum == 41)
+    end
+
+    do
+        assign_entity_sum, assign_component_sum = 0, 0
+        insert_entity_sum, insert_component_sum = 0, 0
+
+        local e = evo.id()
+        assert(evo.insert(e, f1, 41))
+        assert(evo.multi_assign(e, { f1, f1 }, { 42, 43 }))
+
+        assert(assign_entity_sum == e + e and assign_component_sum == 42 + 43)
+        assert(insert_entity_sum == e and insert_component_sum == 41)
+    end
+
+    do
+        assign_entity_sum, assign_component_sum = 0, 0
+        insert_entity_sum, insert_component_sum = 0, 0
+
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f1 }, { 41, 42 }))
+
+        assert(insert_entity_sum == e and insert_component_sum == 41)
+    end
+
+    do
+        remove_entity_sum, remove_component_sum = 0, 0
+
+        local e = evo.id()
+        assert(evo.insert(e, f1, 41))
+        assert(evo.multi_remove(e, { f1, f1 }))
+
+        assert(remove_entity_sum == e and remove_component_sum == 41)
     end
 end
