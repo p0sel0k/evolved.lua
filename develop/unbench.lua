@@ -343,15 +343,20 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('create and destroy %d entities / builder', N),
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / defer', N),
     ---@param entities evolved.id[]
     function(entities)
-        local build = B.build
+        local id = evo.id
+        local insert = evo.insert
         local destroy = evo.destroy
 
+        evo.defer()
         for i = 1, N do
-            entities[i] = build(B)
+            local e = id()
+            insert(e, F1)
+            entities[i] = e
         end
+        evo.commit()
 
         for i = 1, #entities do
             destroy(entities[i])
@@ -359,6 +364,106 @@ basics.describe_bench(string.format('create and destroy %d entities / builder', 
     end, function()
         return {}
     end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / defer', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local id = evo.id
+        local insert = evo.insert
+        local destroy = evo.destroy
+
+        evo.defer()
+        for i = 1, N do
+            local e = id()
+            insert(e, F1)
+            insert(e, F2)
+            entities[i] = e
+        end
+        evo.commit()
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / defer', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local id = evo.id
+        local insert = evo.insert
+        local destroy = evo.destroy
+
+        evo.defer()
+        for i = 1, N do
+            local e = id()
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
+            entities[i] = e
+        end
+        evo.commit()
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / defer', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local id = evo.id
+        local insert = evo.insert
+        local destroy = evo.destroy
+
+        evo.defer()
+        for i = 1, N do
+            local e = id()
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
+            insert(e, F4)
+            entities[i] = e
+        end
+        evo.commit()
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / defer', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local id = evo.id
+        local insert = evo.insert
+        local destroy = evo.destroy
+
+        evo.defer()
+        for i = 1, N do
+            local e = id()
+            insert(e, F1)
+            insert(e, F2)
+            insert(e, F3)
+            insert(e, F4)
+            insert(e, F5)
+            entities[i] = e
+        end
+        evo.commit()
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+print '----------------------------------------'
 
 basics.describe_bench(string.format('create and destroy %d entities with 1 components / builder', N),
     ---@param entities evolved.id[]
