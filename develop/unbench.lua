@@ -467,6 +467,103 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
 
 print '----------------------------------------'
 
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / multi-set', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = evo.multi_set
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = evo.id()
+            set(e, { F1 })
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / multi-set', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = evo.multi_set
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = evo.id()
+            set(e, { F1, F2 })
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / multi-set', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = evo.multi_set
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = evo.id()
+            set(e, { F1, F2, F3 })
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / multi-set', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = evo.multi_set
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = evo.id()
+            set(e, { F1, F2, F3, F4 })
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / multi-set', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local set = evo.multi_set
+        local destroy = evo.destroy
+
+        for i = 1, N do
+            local e = evo.id()
+            set(e, { F1, F2, F3, F4, F5 })
+            entities[i] = e
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+print '----------------------------------------'
+
 ---
 --- initial
 ---
