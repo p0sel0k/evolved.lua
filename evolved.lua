@@ -2020,24 +2020,27 @@ function evolved.set(entity, fragment, ...)
 
         if old_component_index then
             local old_component_storage = old_component_storages[old_component_index]
-            local old_component = old_component_storage[old_place]
 
             if old_chunk.__has_defaults_or_constructs then
                 local new_component = __component_construct(fragment, ...)
 
-                old_component_storage[old_place] = new_component
-
                 if old_chunk.__has_set_or_assign_hooks then
+                    local old_component = old_component_storage[old_place]
+                    old_component_storage[old_place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                else
+                    old_component_storage[old_place] = new_component
                 end
             else
                 local new_component = ...
                 if new_component == nil then new_component = true end
 
-                old_component_storage[old_place] = new_component
-
                 if old_chunk.__has_set_or_assign_hooks then
+                    local old_component = old_component_storage[old_place]
+                    old_component_storage[old_place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                else
+                    old_component_storage[old_place] = new_component
                 end
             end
         else
@@ -2145,24 +2148,27 @@ function evolved.assign(entity, fragment, ...)
 
         if component_index then
             local component_storage = component_storages[component_index]
-            local old_component = component_storage[place]
 
             if chunk.__has_defaults_or_constructs then
                 local new_component = __component_construct(fragment, ...)
 
-                component_storage[place] = new_component
-
                 if chunk.__has_set_or_assign_hooks then
+                    local old_component = component_storage[place]
+                    component_storage[place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                else
+                    component_storage[place] = new_component
                 end
             else
                 local new_component = ...
                 if new_component == nil then new_component = true end
 
-                component_storage[place] = new_component
-
                 if chunk.__has_set_or_assign_hooks then
+                    local old_component = component_storage[place]
+                    component_storage[place] = new_component
                     __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                else
+                    component_storage[place] = new_component
                 end
             end
         else
@@ -2507,7 +2513,6 @@ function evolved.multi_set(entity, fragments, components)
 
                 if old_component_index then
                     local old_component_storage = old_component_storages[old_component_index]
-                    local old_component = old_component_storage[old_place]
 
                     if old_chunk.__has_defaults_or_constructs then
                         local new_component = components[i]
@@ -2515,19 +2520,23 @@ function evolved.multi_set(entity, fragments, components)
                         if new_component == nil then new_component = evolved.get(fragment, evolved.DEFAULT) end
                         if new_component == nil then new_component = true end
 
-                        old_component_storage[old_place] = new_component
-
                         if old_chunk.__has_set_or_assign_hooks then
+                            local old_component = old_component_storage[old_place]
+                            old_component_storage[old_place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            old_component_storage[old_place] = new_component
                         end
                     else
                         local new_component = components[i]
                         if new_component == nil then new_component = true end
 
-                        old_component_storage[old_place] = new_component
-
                         if old_chunk.__has_set_or_assign_hooks then
+                            local old_component = old_component_storage[old_place]
+                            old_component_storage[old_place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            old_component_storage[old_place] = new_component
                         end
                     end
                 else
@@ -2573,7 +2582,6 @@ function evolved.multi_set(entity, fragments, components)
 
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
-                    local old_component = new_component_storage[new_place]
 
                     if new_chunk.__has_defaults_or_constructs then
                         local new_component = components[i]
@@ -2581,19 +2589,23 @@ function evolved.multi_set(entity, fragments, components)
                         if new_component == nil then new_component = evolved.get(fragment, evolved.DEFAULT) end
                         if new_component == nil then new_component = true end
 
-                        new_component_storage[new_place] = new_component
-
                         if new_chunk.__has_set_or_assign_hooks then
+                            local old_component = new_component_storage[new_place]
+                            new_component_storage[new_place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            new_component_storage[new_place] = new_component
                         end
                     else
                         local new_component = components[i]
                         if new_component == nil then new_component = true end
 
-                        new_component_storage[new_place] = new_component
-
                         if new_chunk.__has_set_or_assign_hooks then
+                            local old_component = new_component_storage[new_place]
+                            new_component_storage[new_place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            new_component_storage[new_place] = new_component
                         end
                     end
                 else
@@ -2698,7 +2710,6 @@ function evolved.multi_assign(entity, fragments, components)
 
                 if component_index then
                     local component_storage = component_storages[component_index]
-                    local old_component = component_storage[place]
 
                     if chunk.__has_defaults_or_constructs then
                         local new_component = components[i]
@@ -2706,19 +2717,23 @@ function evolved.multi_assign(entity, fragments, components)
                         if new_component == nil then new_component = evolved.get(fragment, evolved.DEFAULT) end
                         if new_component == nil then new_component = true end
 
-                        component_storage[place] = new_component
-
                         if chunk.__has_set_or_assign_hooks then
+                            local old_component = component_storage[place]
+                            component_storage[place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            component_storage[place] = new_component
                         end
                     else
                         local new_component = components[i]
                         if new_component == nil then new_component = true end
 
-                        component_storage[place] = new_component
-
                         if chunk.__has_set_or_assign_hooks then
+                            local old_component = component_storage[place]
+                            component_storage[place] = new_component
                             __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        else
+                            component_storage[place] = new_component
                         end
                     end
                 else
