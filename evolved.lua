@@ -3318,27 +3318,16 @@ function evolved.chunk(...)
         return
     end
 
-    ---@type evolved.fragment[]
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-
-    for i = 1, fragment_count do
-        local fragment = select(i, ...)
-        fragment_list[#fragment_list + 1] = fragment
-    end
-
-    table.sort(fragment_list)
-
-    local root_fragment = fragment_list[1]
+    local root_fragment = select(1, ...)
     local chunk = __root_chunks[root_fragment]
         or __root_chunk(root_fragment)
 
     for i = 2, fragment_count do
-        local child_fragment = fragment_list[i]
+        local child_fragment = select(i, ...)
         chunk = chunk.__with_fragment_edges[child_fragment]
             or __chunk_with_fragment(chunk, child_fragment)
     end
 
-    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     return chunk, chunk.__entities
 end
 
