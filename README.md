@@ -81,6 +81,11 @@ execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
 ```
 
 ```
+spawn :: fragment[]?, component[]? -> entity, boolean
+spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
+```
+
+```
 entity :: entity_builder
 entity_builder:set :: fragment, any... -> entity_builder
 entity_builder:build :: entity

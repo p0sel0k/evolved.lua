@@ -669,6 +669,262 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
 
 print '----------------------------------------'
 
+basics.describe_bench(string.format('create and destroy %d entities / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = {}
+        local components = {}
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = { F1 }
+        local components = { true }
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2 }
+        local components = { true, true }
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3 }
+        local components = { true, true, true }
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3, F4 }
+        local components = { true, true, true, true }
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn = evo.spawn
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3, F4, F5 }
+        local components = { true, true, true, true, true }
+
+        for i = 1, N do
+            entities[i] = spawn(fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+print '----------------------------------------'
+
+basics.describe_bench(string.format('create and destroy %d entities / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = {}
+        local components = {}
+
+        local chunk = evo.chunk()
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = { F1 }
+        local components = { true }
+
+        local chunk = evo.chunk(F1)
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2 }
+        local components = { true, true }
+
+        local chunk = evo.chunk(F1, F2)
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3 }
+        local components = { true, true, true }
+
+        local chunk = evo.chunk(F1, F2, F3)
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3, F4 }
+        local components = { true, true, true, true }
+
+        local chunk = evo.chunk(F1, F2, F3, F4)
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn_at', N),
+    ---@param entities evolved.id[]
+    function(entities)
+        local spawn_at = evo.spawn_at
+        local destroy = evo.destroy
+
+        local fragments = { F1, F2, F3, F4, F5 }
+        local components = { true, true, true, true, true }
+
+        local chunk = evo.chunk(F1, F2, F3, F4, F5)
+
+        for i = 1, N do
+            entities[i] = spawn_at(chunk, fragments, components)
+        end
+
+        for i = 1, #entities do
+            destroy(entities[i])
+        end
+    end, function()
+        return {}
+    end)
+
+print '----------------------------------------'
+
 ---
 --- initial
 ---
