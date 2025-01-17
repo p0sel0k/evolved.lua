@@ -81,9 +81,14 @@ execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
 ```
 
 ```
+spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
+spawn_with :: fragment[]?, component[]? -> entity, boolean
+```
+
+```
 entity :: entity_builder
 entity_builder:set :: fragment, any... -> entity_builder
-entity_builder:build :: entity
+entity_builder:build :: entity, boolean
 ```
 
 ```
@@ -91,14 +96,14 @@ fragment :: fragment_builder
 fragment_builder:tag :: fragment_builder
 fragment_builder:default :: component -> fragment_builder
 fragment_builder:construct :: {any... -> component} -> fragment_builder
-fragment_builder:build :: fragment
+fragment_builder:build :: fragment, boolean
 ```
 
 ```
 query :: query_builder
 query_builder:include :: fragment... -> query_builder
 query_builder:exclude :: fragment... -> query_builder
-query_builder:build :: query
+query_builder:build :: query, boolean
 ```
 
 ## [License (MIT)](./LICENSE.md)

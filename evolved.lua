@@ -751,6 +751,58 @@ end
 ---
 ---
 
+---@param ... evolved.fragment fragments
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_fragments(...)
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local root_fragment = select(1, ...)
+    local chunk = __root_chunks[root_fragment]
+        or __root_chunk(root_fragment)
+
+    for i = 2, fragment_count do
+        local child_fragment = select(i, ...)
+        chunk = chunk.__with_fragment_edges[child_fragment]
+            or __chunk_with_fragment(chunk, child_fragment)
+    end
+
+    return chunk
+end
+
+---@param fragment_list evolved.fragment[]
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_fragment_list(fragment_list)
+    local fragment_count = #fragment_list
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local root_fragment = fragment_list[1]
+    local chunk = __root_chunks[root_fragment]
+        or __root_chunk(root_fragment)
+
+    for i = 2, fragment_count do
+        local child_fragment = fragment_list[i]
+        chunk = chunk.__with_fragment_edges[child_fragment]
+            or __chunk_with_fragment(chunk, child_fragment)
+    end
+
+    return chunk
+end
+
+---
+---
+---
+---
+---
+
 ---@param chunk evolved.chunk
 ---@param fragment evolved.fragment
 ---@return boolean
@@ -1335,6 +1387,165 @@ local function __detach_entity(entity)
     __structural_changes = __structural_changes + 1
 end
 
+---@param entity evolved.entity
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __spawn_entity_at(entity, chunk, fragments, components)
+    local chunk_entities = chunk.__entities
+    local chunk_fragment_list = chunk.__fragment_list
+    local chunk_component_indices = chunk.__component_indices
+    local chunk_component_storages = chunk.__component_storages
+
+    local place = #chunk_entities + 1
+    chunk_entities[place] = entity
+
+    for i = 1, #chunk_fragment_list do
+        local fragment = chunk_fragment_list[i]
+        local component_index = chunk_component_indices[fragment]
+
+        if component_index then
+            local component_storage = chunk_component_storages[component_index]
+
+            if chunk.__has_defaults_or_constructs then
+                local new_component = evolved.get(fragment, evolved.DEFAULT)
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                component_storage[place] = new_component
+            else
+                local new_component = true
+
+                component_storage[place] = new_component
+            end
+        end
+    end
+
+    for i = 1, #fragments do
+        local fragment = fragments[i]
+        local component_index = chunk_component_indices[fragment]
+
+        if component_index then
+            local component_storage = chunk_component_storages[component_index]
+
+            if chunk.__has_defaults_or_constructs then
+                local new_component = components[i]
+
+                if new_component == nil then
+                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                component_storage[place] = new_component
+            else
+                local new_component = components[i]
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                component_storage[place] = new_component
+            end
+        end
+    end
+
+    if chunk.__has_set_or_insert_hooks then
+        for i = 1, #chunk_fragment_list do
+            local fragment = chunk_fragment_list[i]
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                local new_component = component_storage[place]
+
+                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            else
+                __fragment_call_set_and_insert_hooks(entity, fragment)
+            end
+        end
+    end
+
+    local entity_index = entity % 0x100000
+    __entity_chunks[entity_index] = chunk
+    __entity_places[entity_index] = place
+
+    __structural_changes = __structural_changes + 1
+end
+
+---@param entity evolved.entity
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __spawn_entity_with(entity, chunk, fragments, components)
+    local chunk_entities = chunk.__entities
+    local chunk_fragment_list = chunk.__fragment_list
+    local chunk_component_indices = chunk.__component_indices
+    local chunk_component_storages = chunk.__component_storages
+
+    local place = #chunk_entities + 1
+    chunk_entities[place] = entity
+
+    for i = 1, #fragments do
+        local fragment = fragments[i]
+        local component_index = chunk_component_indices[fragment]
+
+        if component_index then
+            local component_storage = chunk_component_storages[component_index]
+
+            if chunk.__has_defaults_or_constructs then
+                local new_component = components[i]
+
+                if new_component == nil then
+                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                component_storage[place] = new_component
+            else
+                local new_component = components[i]
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                component_storage[place] = new_component
+            end
+        end
+    end
+
+    if chunk.__has_set_or_insert_hooks then
+        for i = 1, #chunk_fragment_list do
+            local fragment = chunk_fragment_list[i]
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                local new_component = component_storage[place]
+
+                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+            else
+                __fragment_call_set_and_insert_hooks(entity, fragment)
+            end
+        end
+    end
+
+    local entity_index = entity % 0x100000
+    __entity_chunks[entity_index] = chunk
+    __entity_places[entity_index] = place
+
+    __structural_changes = __structural_changes + 1
+end
+
 ---
 ---
 ---
@@ -1361,6 +1572,9 @@ local __defer_op = {
     batch_remove = 14,
     batch_clear = 15,
     batch_destroy = 16,
+
+    spawn_entity_at = 17,
+    spawn_entity_with = 18,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
@@ -1472,6 +1686,26 @@ local __defer_ops = {
         local query = bytes[index + 0]
         evolved.batch_destroy(query)
         return 1
+    end,
+    [__defer_op.spawn_entity_at] = function(bytes, index)
+        local entity = bytes[index + 0]
+        local chunk = bytes[index + 1]
+        local fragments = bytes[index + 2]
+        local components = bytes[index + 3]
+        __spawn_entity_at(entity, chunk, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+        return 4
+    end,
+    [__defer_op.spawn_entity_with] = function(bytes, index)
+        local entity = bytes[index + 0]
+        local chunk = bytes[index + 1]
+        local fragments = bytes[index + 2]
+        local components = bytes[index + 3]
+        __spawn_entity_with(entity, chunk, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+        return 4
     end,
 }
 
@@ -1807,6 +2041,56 @@ local function __defer_batch_destroy(query)
     bytecode[length + 2] = query
 
     __defer_length = length + 2
+end
+
+---@param entity evolved.entity
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __defer_spawn_entity_at(entity, chunk, fragments, components)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local component_count = #components
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
+    __table_move(components, 1, component_count, 1, component_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.spawn_entity_at
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = chunk
+    bytecode[length + 4] = fragment_list
+    bytecode[length + 5] = component_list
+
+    __defer_length = length + 5
+end
+
+---@param entity evolved.entity
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __defer_spawn_entity_with(entity, chunk, fragments, components)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local component_count = #components
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
+    __table_move(components, 1, component_count, 1, component_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.spawn_entity_with
+    bytecode[length + 2] = entity
+    bytecode[length + 3] = chunk
+    bytecode[length + 4] = fragment_list
+    bytecode[length + 5] = component_list
+
+    __defer_length = length + 5
 end
 
 ---
@@ -3310,22 +3594,12 @@ end)
 
 ---@param ... evolved.fragment fragments
 ---@return evolved.chunk? chunk
----@return evolved.entity[]? chunk_entities
+---@return evolved.entity[]? entities
 function evolved.chunk(...)
-    local fragment_count = select('#', ...)
+    local chunk = __chunk_fragments(...)
 
-    if fragment_count == 0 then
+    if not chunk then
         return
-    end
-
-    local root_fragment = select(1, ...)
-    local chunk = __root_chunks[root_fragment]
-        or __root_chunk(root_fragment)
-
-    for i = 2, fragment_count do
-        local child_fragment = select(i, ...)
-        chunk = chunk.__with_fragment_edges[child_fragment]
-            or __chunk_with_fragment(chunk, child_fragment)
     end
 
     return chunk, chunk.__entities
@@ -3468,9 +3742,85 @@ end
 ---
 ---
 
+---@param chunk? evolved.chunk
+---@param fragments? evolved.fragment[]
+---@param components? evolved.component[]
+---@return evolved.entity entity
+---@return boolean is_deferred
+function evolved.spawn_at(chunk, fragments, components)
+    if not fragments then
+        fragments = __EMPTY_FRAGMENT_LIST
+    end
+
+    if not components then
+        components = __EMPTY_COMPONENT_LIST
+    end
+
+    local entity = evolved.id()
+
+    if not chunk then
+        return entity, false
+    end
+
+    if __defer_depth > 0 then
+        __defer_spawn_entity_at(entity, chunk, fragments, components)
+        return entity, true
+    end
+
+    __defer()
+
+    do
+        __spawn_entity_at(entity, chunk, fragments, components)
+    end
+
+    __defer_commit()
+    return entity, false
+end
+
+---@param fragments? evolved.fragment[]
+---@param components? evolved.component[]
+---@return evolved.entity entity
+---@return boolean is_deferred
+function evolved.spawn_with(fragments, components)
+    if not fragments then
+        fragments = __EMPTY_FRAGMENT_LIST
+    end
+
+    if not components then
+        components = __EMPTY_COMPONENT_LIST
+    end
+
+    local entity, chunk = evolved.id(), __chunk_fragment_list(fragments)
+
+    if not chunk then
+        return entity, false
+    end
+
+    if __defer_depth > 0 then
+        __defer_spawn_entity_with(entity, chunk, fragments, components)
+        return entity, true
+    end
+
+    __defer()
+
+    do
+        __spawn_entity_with(entity, chunk, fragments, components)
+    end
+
+    __defer_commit()
+    return entity, false
+end
+
+---
+---
+---
+---
+---
+
 ---@class (exact) evolved.__entity_builder
 ---@field package __fragment_list? evolved.fragment[]
 ---@field package __component_list? evolved.component[]
+---@field package __component_count integer
 
 ---@class evolved.entity_builder : evolved.__entity_builder
 local evolved_entity_builder = {}
@@ -3483,6 +3833,7 @@ function evolved.entity()
     local builder = {
         __fragment_list = nil,
         __component_list = nil,
+        __component_count = 0,
     }
     ---@cast builder evolved.entity_builder
     return setmetatable(builder, evolved_entity_builder)
@@ -3496,40 +3847,45 @@ function evolved_entity_builder:set(fragment, ...)
 
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
+    local component_count = self.__component_count
 
-    if not fragment_list then
+    if component_count == 0 then
         fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
         component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
         self.__fragment_list = fragment_list
         self.__component_list = component_list
     end
 
-    fragment_list[#fragment_list + 1] = fragment
-    component_list[#component_list + 1] = component
+    component_count = component_count + 1
+    self.__component_count = component_count
+
+    fragment_list[component_count] = fragment
+    component_list[component_count] = component
 
     return self
 end
 
 ---@return evolved.entity entity
+---@return boolean is_deferred
 function evolved_entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
+    local component_count = self.__component_count
 
     self.__fragment_list = nil
     self.__component_list = nil
+    self.__component_count = 0
 
-    local entity = evolved.id()
-
-    if not fragment_list then
-        return entity
+    if component_count == 0 then
+        return evolved.id(), false
     end
 
-    evolved.multi_set(entity, fragment_list, component_list)
+    local entity, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return entity
+    return entity, is_deferred
 end
 
 ---
@@ -3581,6 +3937,7 @@ function evolved_fragment_builder:construct(construct)
 end
 
 ---@return evolved.fragment fragment
+---@return boolean is_deferred
 function evolved_fragment_builder:build()
     local tag = self.__tag
     local default = self.__default
@@ -3590,32 +3947,38 @@ function evolved_fragment_builder:build()
     self.__default = nil
     self.__construct = nil
 
-    local fragment = evolved.id()
-
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 3, 0)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 3, 0)
+    local component_count = 0
 
     if tag then
-        fragment_list[#fragment_list + 1] = evolved.TAG
-        component_list[#component_list + 1] = true
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.TAG
+        component_list[component_count] = true
     end
 
     if default ~= nil then
-        fragment_list[#fragment_list + 1] = evolved.DEFAULT
-        component_list[#component_list + 1] = default
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.DEFAULT
+        component_list[component_count] = default
     end
 
     if construct ~= nil then
-        fragment_list[#fragment_list + 1] = evolved.CONSTRUCT
-        component_list[#component_list + 1] = construct
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.CONSTRUCT
+        component_list[component_count] = construct
     end
 
-    evolved.multi_set(fragment, fragment_list, component_list)
+    if component_count == 0 then
+        return evolved.id(), false
+    end
+
+    local fragment, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return fragment
+    return fragment, is_deferred
 end
 
 ---
@@ -3697,6 +4060,7 @@ function evolved_query_builder:exclude(...)
 end
 
 ---@return evolved.query query
+---@return boolean is_deferred
 function evolved_query_builder:build()
     local include_list = self.__include_list
     local exclude_list = self.__exclude_list
@@ -3704,27 +4068,32 @@ function evolved_query_builder:build()
     self.__include_list = nil
     self.__exclude_list = nil
 
-    local query = evolved.id()
-
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 2, 0)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 2, 0)
+    local component_count = 0
 
     if include_list then
-        fragment_list[#fragment_list + 1] = evolved.INCLUDES
-        component_list[#component_list + 1] = include_list
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.INCLUDES
+        component_list[component_count] = include_list
     end
 
     if exclude_list then
-        fragment_list[#fragment_list + 1] = evolved.EXCLUDES
-        component_list[#component_list + 1] = exclude_list
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.EXCLUDES
+        component_list[component_count] = exclude_list
     end
 
-    evolved.multi_set(query, fragment_list, component_list)
+    if component_count == 0 then
+        return evolved.id(), false
+    end
+
+    local query, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return query
+    return query, is_deferred
 end
 
 ---
