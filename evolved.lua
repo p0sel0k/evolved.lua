@@ -1573,8 +1573,13 @@ local __defer_op = {
     batch_clear = 15,
     batch_destroy = 16,
 
-    spawn_entity_at = 17,
-    spawn_entity_with = 18,
+    batch_multi_set = 17,
+    batch_multi_assign = 18,
+    batch_multi_insert = 19,
+    batch_multi_remove = 20,
+
+    spawn_entity_at = 21,
+    spawn_entity_with = 22,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
@@ -1686,6 +1691,18 @@ local __defer_ops = {
         local query = bytes[index + 0]
         evolved.batch_destroy(query)
         return 1
+    end,
+    [__defer_op.batch_multi_set] = function(bytes, index)
+        error('not implemented yet', 2)
+    end,
+    [__defer_op.batch_multi_assign] = function(bytes, index)
+        error('not implemented yet', 2)
+    end,
+    [__defer_op.batch_multi_insert] = function(bytes, index)
+        error('not implemented yet', 2)
+    end,
+    [__defer_op.batch_multi_remove] = function(bytes, index)
+        error('not implemented yet', 2)
     end,
     [__defer_op.spawn_entity_at] = function(bytes, index)
         local entity = bytes[index + 0]
@@ -2041,6 +2058,33 @@ local function __defer_batch_destroy(query)
     bytecode[length + 2] = query
 
     __defer_length = length + 2
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __defer_batch_multi_set(query, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __defer_batch_multi_assign(query, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+local function __defer_batch_multi_insert(query, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+local function __defer_batch_multi_remove(query, fragments)
+    error('not implemented yet', 2)
 end
 
 ---@param entity evolved.entity
@@ -3478,6 +3522,73 @@ function evolved.batch_destroy(query)
 
     __release_table(__TABLE_POOL_TAG__CHUNK_LIST, chunk_list)
     return destroyed_count, false
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components? evolved.component[]
+---@return integer set_count
+---@return boolean is_deferred
+function evolved.batch_multi_set(query, fragments, components)
+    if not components then
+        components = __EMPTY_COMPONENT_LIST
+    end
+
+    if __defer_depth > 0 then
+        __defer_batch_multi_set(query, fragments, components)
+        return 0, true
+    end
+
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components? evolved.component[]
+---@return integer assigned_count
+---@return boolean is_deferred
+function evolved.batch_multi_assign(query, fragments, components)
+    if not components then
+        components = __EMPTY_COMPONENT_LIST
+    end
+
+    if __defer_depth > 0 then
+        __defer_batch_multi_assign(query, fragments, components)
+        return 0, true
+    end
+
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@param components? evolved.component[]
+---@return integer inserted_count
+---@return boolean is_deferred
+function evolved.batch_multi_insert(query, fragments, components)
+    if not components then
+        components = __EMPTY_COMPONENT_LIST
+    end
+
+    if __defer_depth > 0 then
+        __defer_batch_multi_insert(query, fragments, components)
+        return 0, true
+    end
+
+    error('not implemented yet', 2)
+end
+
+---@param query evolved.query
+---@param fragments evolved.fragment[]
+---@return integer removed_count
+---@return boolean is_deferred
+function evolved.batch_multi_remove(query, fragments)
+    if __defer_depth > 0 then
+        __defer_batch_multi_remove(query, fragments)
+        return 0, true
+    end
+
+    error('not implemented yet', 2)
 end
 
 ---
