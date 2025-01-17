@@ -3710,3 +3710,152 @@ do
         assert(evo.has(e2, f4) and evo.get(e2, f4) == nil)
     end
 end
+
+do
+    local f1, f2, f3, f4, f5 = evo.id(5)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+    local e4 = evo.entity():set(f1, 41):set(f2, 42):set(f3, 43):set(f4, 44):build()
+
+    do
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_multi_remove(q, {}) == 0)
+        assert(evo.batch_multi_remove(q, { f5 }) == 0)
+    end
+
+    do
+        local q = evo.query():include(f3):build()
+
+        assert(evo.batch_multi_remove(q, { f4 }) == 1)
+        assert(evo.has_all(e4, f1, f2, f3) and not evo.has(e4, f4))
+        assert(evo.get(e4, f1) == 41)
+        assert(evo.get(e4, f2) == 42)
+        assert(evo.get(e4, f3) == 43)
+        assert(evo.get(e4, f4) == nil)
+
+        for chunk in evo.execute(q) do
+            assert(next(evo.select(chunk, f4)) == nil)
+        end
+
+        do
+            local chunk, entities = evo.chunk(f1, f2, f3)
+            assert(chunk and entities)
+            assert(#entities == 2)
+            assert(entities[1] == e3, entities[2] == e4)
+            assert(evo.select(chunk, f3)[1] == 33)
+            assert(evo.select(chunk, f3)[2] == 43)
+        end
+
+        do
+            local chunk, entities = evo.chunk(f1, f2, f3, f4)
+            assert(chunk)
+            assert(next(evo.select(chunk, f4)) == nil)
+            assert(#entities == 0)
+        end
+    end
+
+    do
+        local q = evo.query():include(f2):build()
+
+        assert(evo.batch_multi_remove(q, { f1 }) == 3)
+        assert(evo.has_all(e1, f1) and not evo.has_any(e1, f2, f3, f4))
+        assert(evo.has_all(e2, f2) and not evo.has_any(e2, f1, f3, f4))
+        assert(evo.has_all(e3, f2, f3) and not evo.has_any(e3, f1, f4))
+        assert(evo.has_all(e4, f2, f3) and not evo.has_any(e4, f1, f4))
+
+        for chunk in evo.execute(q) do
+            assert(next(evo.select(chunk, f1)) == nil)
+        end
+
+        assert(evo.batch_multi_remove(q, { f2, f3 }) == 3)
+        assert(evo.has_all(e1, f1) and not evo.has_any(e1, f2, f3, f4))
+        assert(not evo.has_any(e2, f1, f2, f3, f4))
+        assert(not evo.has_any(e3, f1, f2, f3, f4))
+        assert(not evo.has_any(e4, f1, f2, f3, f4))
+
+        for chunk in evo.execute(q) do
+            assert(next(evo.select(chunk, f2)) == nil)
+            assert(next(evo.select(chunk, f3)) == nil)
+        end
+
+        do
+            local chunk, entities = evo.chunk(f1, f2)
+            assert(chunk)
+            assert(next(evo.select(chunk, f1)) == nil)
+            assert(next(evo.select(chunk, f2)) == nil)
+            assert(#entities == 0)
+        end
+
+        do
+            local chunk, entities = evo.chunk(f1, f2, f3)
+            assert(chunk)
+            assert(next(evo.select(chunk, f1)) == nil)
+            assert(next(evo.select(chunk, f2)) == nil)
+            assert(next(evo.select(chunk, f3)) == nil)
+            assert(#entities == 0)
+        end
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        assert(evo.defer())
+        assert(evo.batch_multi_remove(q, { f1 }) == 0)
+        assert(evo.has(e1, f1))
+        assert(evo.commit())
+        assert(not evo.has(e1, f1))
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    evo.set(f2, evo.TAG)
+
+    local last_remove_entity = 0
+    local last_remove_component = 0
+    local sum_removed_components = 0
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f1)
+        last_remove_entity = e
+        last_remove_component = c
+        sum_removed_components = sum_removed_components + c
+    end)
+
+    evo.set(f2, evo.ON_REMOVE, function(e, f, c)
+        assert(f == f2)
+        last_remove_entity = e
+        last_remove_component = c
+    end)
+
+    local _ = evo.spawn_with({ f1 }, { 11 })
+    local e2 = evo.spawn_with({ f1, f2 }, { 21, 22 })
+    assert(last_remove_entity == 0 and last_remove_component == 0)
+
+    do
+        last_remove_entity = 0
+        last_remove_component = 0
+        sum_removed_components = 0
+
+        local q = evo.query():include(f1):build()
+
+        assert(evo.batch_multi_remove(q, { f1, f1 }) == 2)
+        assert(last_remove_entity == e2 and last_remove_component == 21)
+        assert(sum_removed_components == 11 + 21)
+    end
+
+    do
+        last_remove_entity = 0
+        last_remove_component = 0
+        sum_removed_components = 0
+
+        local q = evo.query():include(f2):build()
+
+        assert(evo.batch_multi_remove(q, { f2 }) == 1)
+        assert(last_remove_entity == e2 and last_remove_component == nil)
+        assert(sum_removed_components == 0)
+    end
+end

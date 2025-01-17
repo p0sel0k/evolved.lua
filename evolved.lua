@@ -1377,7 +1377,105 @@ end
 ---@param fragments evolved.fragment[]
 ---@return integer removed_count
 local function __chunk_multi_remove(chunk, fragments)
-    error('not implemented yet', 2)
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
+
+    local fragment_count = #fragments
+
+    if fragment_count == 0 then
+        return 0
+    end
+
+    local old_chunk = chunk
+    local new_chunk = __chunk_without_fragment_list(chunk, fragments)
+
+    if old_chunk == new_chunk then
+        return 0
+    end
+
+    local old_entities = old_chunk.__entities
+    local old_size = #old_entities
+
+    local old_fragment_set = old_chunk.__fragment_set
+    local old_component_indices = old_chunk.__component_indices
+    local old_component_storages = old_chunk.__component_storages
+
+    if old_chunk.__has_remove_hooks then
+        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
+        for i = 1, fragment_count do
+            local fragment = fragments[i]
+
+            if not removed_set[fragment] and old_fragment_set[fragment] and __fragment_has_remove_hook(fragment) then
+                removed_set[fragment] = true
+
+                local old_component_index = old_component_indices[fragment]
+
+                if old_component_index then
+                    local old_component_storage = old_component_storages[old_component_index]
+
+                    for old_place = 1, old_size do
+                        local entity = old_entities[old_place]
+                        local old_component = old_component_storage[old_place]
+                        __fragment_call_remove_hook(entity, fragment, old_component)
+                    end
+                else
+                    for place = 1, old_size do
+                        local entity = old_entities[place]
+                        __fragment_call_remove_hook(entity, fragment)
+                    end
+                end
+            end
+        end
+    end
+
+    if new_chunk then
+        local new_entities = new_chunk.__entities
+        local new_size = #new_entities
+
+        local new_component_storages = new_chunk.__component_storages
+        local new_component_fragments = new_chunk.__component_fragments
+
+        __table_move(
+            old_entities, 1, old_size,
+            new_size + 1, new_entities)
+
+        for i = 1, #new_component_fragments do
+            local new_f = new_component_fragments[i]
+            local new_cs = new_component_storages[i]
+            local old_ci = old_component_indices[new_f]
+            if old_ci then
+                local old_cs = old_component_storages[old_ci]
+                __table_move(old_cs, 1, old_size, new_size + 1, new_cs)
+            end
+        end
+
+        for new_place = new_size + 1, new_size + old_size do
+            local entity = new_entities[new_place]
+            local entity_index = entity % 0x100000
+            __entity_chunks[entity_index] = new_chunk
+            __entity_places[entity_index] = new_place
+        end
+    else
+        for old_place = 1, old_size do
+            local entity = old_entities[old_place]
+            local entity_index = entity % 0x100000
+            __entity_chunks[entity_index] = nil
+            __entity_places[entity_index] = nil
+        end
+    end
+
+    do
+        old_chunk.__entities = {}
+
+        for i = 1, #old_component_storages do
+            old_component_storages[i] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + old_size
+    return old_size
 end
 
 ---
