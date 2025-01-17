@@ -1336,6 +1336,37 @@ local function __chunk_destroy(chunk)
     return chunk_size
 end
 
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+---@return integer set_count
+local function __chunk_multi_set(chunk, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+---@return integer assigned_count
+local function __chunk_multi_assign(chunk, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@param components evolved.component[]
+---@return integer inserted_count
+local function __chunk_multi_insert(chunk, fragments, components)
+    error('not implemented yet', 2)
+end
+
+---@param chunk evolved.chunk
+---@param fragments evolved.fragment[]
+---@return integer removed_count
+local function __chunk_multi_remove(chunk, fragments)
+    error('not implemented yet', 2)
+end
+
 ---
 ---
 ---
@@ -1693,16 +1724,38 @@ local __defer_ops = {
         return 1
     end,
     [__defer_op.batch_multi_set] = function(bytes, index)
-        error('not implemented yet', 2)
+        local query = bytes[index + 0]
+        local fragments = bytes[index + 1]
+        local components = bytes[index + 2]
+        evolved.batch_multi_set(query, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+        return 3
     end,
     [__defer_op.batch_multi_assign] = function(bytes, index)
-        error('not implemented yet', 2)
+        local query = bytes[index + 0]
+        local fragments = bytes[index + 1]
+        local components = bytes[index + 2]
+        evolved.batch_multi_assign(query, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+        return 3
     end,
     [__defer_op.batch_multi_insert] = function(bytes, index)
-        error('not implemented yet', 2)
+        local query = bytes[index + 0]
+        local fragments = bytes[index + 1]
+        local components = bytes[index + 2]
+        evolved.batch_multi_insert(query, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+        return 3
     end,
     [__defer_op.batch_multi_remove] = function(bytes, index)
-        error('not implemented yet', 2)
+        local query = bytes[index + 0]
+        local fragments = bytes[index + 1]
+        evolved.batch_multi_remove(query, fragments)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        return 2
     end,
     [__defer_op.spawn_entity_at] = function(bytes, index)
         local entity = bytes[index + 0]
@@ -2064,27 +2117,86 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_set(query, fragments, components)
-    error('not implemented yet', 2)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local component_count = #components
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
+    __table_move(components, 1, component_count, 1, component_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_multi_set
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment_list
+    bytecode[length + 4] = component_list
+
+    __defer_length = length + 4
 end
 
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_assign(query, fragments, components)
-    error('not implemented yet', 2)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local component_count = #components
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
+    __table_move(components, 1, component_count, 1, component_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_multi_assign
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment_list
+    bytecode[length + 4] = component_list
+
+    __defer_length = length + 4
 end
 
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_insert(query, fragments, components)
-    error('not implemented yet', 2)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local component_count = #components
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
+    __table_move(components, 1, component_count, 1, component_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_multi_insert
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment_list
+    bytecode[length + 4] = component_list
+
+    __defer_length = length + 4
 end
 
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 local function __defer_batch_multi_remove(query, fragments)
-    error('not implemented yet', 2)
+    local fragment_count = #fragments
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
+    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.batch_multi_remove
+    bytecode[length + 2] = query
+    bytecode[length + 3] = fragment_list
+
+    __defer_length = length + 3
 end
 
 ---@param entity evolved.entity
@@ -3539,7 +3651,25 @@ function evolved.batch_multi_set(query, fragments, components)
         return 0, true
     end
 
-    error('not implemented yet', 2)
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+
+    for chunk in evolved.execute(query) do
+        chunk_list[#chunk_list + 1] = chunk
+    end
+
+    local set_count = 0
+
+    __defer()
+    do
+        for _, chunk in ipairs(chunk_list) do
+            set_count = set_count + __chunk_multi_set(chunk, fragments, components)
+        end
+    end
+    __defer_commit()
+
+    __release_table(__TABLE_POOL_TAG__CHUNK_LIST, chunk_list)
+    return set_count, false
 end
 
 ---@param query evolved.query
@@ -3557,7 +3687,25 @@ function evolved.batch_multi_assign(query, fragments, components)
         return 0, true
     end
 
-    error('not implemented yet', 2)
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+
+    for chunk in evolved.execute(query) do
+        chunk_list[#chunk_list + 1] = chunk
+    end
+
+    local assigned_count = 0
+
+    __defer()
+    do
+        for _, chunk in ipairs(chunk_list) do
+            assigned_count = assigned_count + __chunk_multi_assign(chunk, fragments, components)
+        end
+    end
+    __defer_commit()
+
+    __release_table(__TABLE_POOL_TAG__CHUNK_LIST, chunk_list)
+    return assigned_count, false
 end
 
 ---@param query evolved.query
@@ -3575,7 +3723,25 @@ function evolved.batch_multi_insert(query, fragments, components)
         return 0, true
     end
 
-    error('not implemented yet', 2)
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+
+    for chunk in evolved.execute(query) do
+        chunk_list[#chunk_list + 1] = chunk
+    end
+
+    local inserted_count = 0
+
+    __defer()
+    do
+        for _, chunk in ipairs(chunk_list) do
+            inserted_count = inserted_count + __chunk_multi_insert(chunk, fragments, components)
+        end
+    end
+    __defer_commit()
+
+    __release_table(__TABLE_POOL_TAG__CHUNK_LIST, chunk_list)
+    return inserted_count, false
 end
 
 ---@param query evolved.query
@@ -3588,7 +3754,25 @@ function evolved.batch_multi_remove(query, fragments)
         return 0, true
     end
 
-    error('not implemented yet', 2)
+    ---@type evolved.chunk[]
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+
+    for chunk in evolved.execute(query) do
+        chunk_list[#chunk_list + 1] = chunk
+    end
+
+    local removed_count = 0
+
+    __defer()
+    do
+        for _, chunk in ipairs(chunk_list) do
+            removed_count = removed_count + __chunk_multi_remove(chunk, fragments)
+        end
+    end
+    __defer_commit()
+
+    __release_table(__TABLE_POOL_TAG__CHUNK_LIST, chunk_list)
+    return removed_count, false
 end
 
 ---
