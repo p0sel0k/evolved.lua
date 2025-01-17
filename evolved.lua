@@ -3866,6 +3866,7 @@ function evolved_entity_builder:set(fragment, ...)
 end
 
 ---@return evolved.entity entity
+---@return boolean is_deferred
 function evolved_entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
@@ -3876,15 +3877,15 @@ function evolved_entity_builder:build()
     self.__component_count = 0
 
     if component_count == 0 then
-        return evolved.id()
+        return evolved.id(), false
     end
 
-    local entity = evolved.spawn_with(fragment_list, component_list)
+    local entity, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return entity
+    return entity, is_deferred
 end
 
 ---
@@ -3936,6 +3937,7 @@ function evolved_fragment_builder:construct(construct)
 end
 
 ---@return evolved.fragment fragment
+---@return boolean is_deferred
 function evolved_fragment_builder:build()
     local tag = self.__tag
     local default = self.__default
@@ -3968,15 +3970,15 @@ function evolved_fragment_builder:build()
     end
 
     if component_count == 0 then
-        return evolved.id()
+        return evolved.id(), false
     end
 
-    local fragment = evolved.spawn_with(fragment_list, component_list)
+    local fragment, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return fragment
+    return fragment, is_deferred
 end
 
 ---
@@ -4058,6 +4060,7 @@ function evolved_query_builder:exclude(...)
 end
 
 ---@return evolved.query query
+---@return boolean is_deferred
 function evolved_query_builder:build()
     local include_list = self.__include_list
     local exclude_list = self.__exclude_list
@@ -4082,15 +4085,15 @@ function evolved_query_builder:build()
     end
 
     if component_count == 0 then
-        return evolved.id()
+        return evolved.id(), false
     end
 
-    local query = evolved.spawn_with(fragment_list, component_list)
+    local query, is_deferred = evolved.spawn_with(fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
-    return query
+    return query, is_deferred
 end
 
 ---
