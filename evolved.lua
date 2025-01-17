@@ -1143,6 +1143,12 @@ local function __chunk_remove(chunk, ...)
         error('batched chunk operations should be deferred', 2)
     end
 
+    local fragment_count = select('#', ...)
+
+    if fragment_count == 0 then
+        return 0
+    end
+
     local old_chunk = chunk
     local new_chunk = __chunk_without_fragments(chunk, ...)
 
@@ -1153,17 +1159,24 @@ local function __chunk_remove(chunk, ...)
     local old_entities = old_chunk.__entities
     local old_size = #old_entities
 
+    local old_fragment_set = old_chunk.__fragment_set
     local old_component_indices = chunk.__component_indices
     local old_component_storages = chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
-        local old_fragment_set = old_chunk.__fragment_set
-        for i = 1, select('#', ...) do
+        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
+        for i = 1, fragment_count do
             local fragment = select(i, ...)
-            if old_fragment_set[fragment] and __fragment_has_remove_hook(fragment) then
+
+            if not removed_set[fragment] and old_fragment_set[fragment] and __fragment_has_remove_hook(fragment) then
+                removed_set[fragment] = true
+
                 local old_component_index = old_component_indices[fragment]
+
                 if old_component_index then
                     local old_component_storage = old_component_storages[old_component_index]
+
                     for old_place = 1, old_size do
                         local entity = old_entities[old_place]
                         local old_component = old_component_storage[old_place]

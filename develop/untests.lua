@@ -1249,7 +1249,7 @@ do
         local q = evo.id()
         evo.insert(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_remove(q, f2, f3) == 3)
+        assert(evo.batch_remove(q, f2, f3, f3) == 3)
         assert(entity_sum == e2 + e3 * 2 + e4 * 2)
         assert(component_sum == 43 + 45 + 46 + 48 + 49)
 
