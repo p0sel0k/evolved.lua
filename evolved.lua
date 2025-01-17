@@ -1190,6 +1190,8 @@ local function __chunk_remove(chunk, ...)
                 end
             end
         end
+
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, removed_set)
     end
 
     if new_chunk then
@@ -1428,6 +1430,8 @@ local function __chunk_multi_remove(chunk, fragments)
                 end
             end
         end
+
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, removed_set)
     end
 
     if new_chunk then
