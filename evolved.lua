@@ -1639,6 +1639,10 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __spawn_entity_at(entity, chunk, fragments, components)
+    if __defer_depth <= 0 then
+        error('spawn entity operations should be deferred', 2)
+    end
+
     local chunk_entities = chunk.__entities
     local chunk_fragment_list = chunk.__fragment_list
     local chunk_component_indices = chunk.__component_indices
@@ -1730,6 +1734,10 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __spawn_entity_with(entity, chunk, fragments, components)
+    if __defer_depth <= 0 then
+        error('spawn entity operations should be deferred', 2)
+    end
+
     local chunk_entities = chunk.__entities
     local chunk_fragment_list = chunk.__fragment_list
     local chunk_component_indices = chunk.__component_indices
@@ -1830,170 +1838,7 @@ local __defer_op = {
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
-local __defer_ops = {
-    [__defer_op.set] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.set(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.assign] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.assign(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.insert] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.insert(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.remove] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragment_count = bytes[index + 1]
-        evolved.remove(entity, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
-        return 2 + fragment_count
-    end,
-    [__defer_op.clear] = function(bytes, index)
-        local entity = bytes[index + 0]
-        evolved.clear(entity)
-        return 1
-    end,
-    [__defer_op.destroy] = function(bytes, index)
-        local entity = bytes[index + 0]
-        evolved.destroy(entity)
-        return 1
-    end,
-    [__defer_op.multi_set] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.multi_set(entity, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.multi_assign] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.multi_assign(entity, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.multi_insert] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.multi_insert(entity, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.multi_remove] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        evolved.multi_remove(entity, fragments)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        return 2
-    end,
-    [__defer_op.batch_set] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.batch_set(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.batch_assign] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.batch_assign(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.batch_insert] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragment = bytes[index + 1]
-        local argument_count = bytes[index + 2]
-        evolved.batch_insert(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
-        return 3 + argument_count
-    end,
-    [__defer_op.batch_remove] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragment_count = bytes[index + 1]
-        evolved.batch_remove(query, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
-        return 2 + fragment_count
-    end,
-    [__defer_op.batch_clear] = function(bytes, index)
-        local query = bytes[index + 0]
-        evolved.batch_clear(query)
-        return 1
-    end,
-    [__defer_op.batch_destroy] = function(bytes, index)
-        local query = bytes[index + 0]
-        evolved.batch_destroy(query)
-        return 1
-    end,
-    [__defer_op.batch_multi_set] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.batch_multi_set(query, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.batch_multi_assign] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.batch_multi_assign(query, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.batch_multi_insert] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        local components = bytes[index + 2]
-        evolved.batch_multi_insert(query, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 3
-    end,
-    [__defer_op.batch_multi_remove] = function(bytes, index)
-        local query = bytes[index + 0]
-        local fragments = bytes[index + 1]
-        evolved.batch_multi_remove(query, fragments)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        return 2
-    end,
-    [__defer_op.spawn_entity_at] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local chunk = bytes[index + 1]
-        local fragments = bytes[index + 2]
-        local components = bytes[index + 3]
-        __spawn_entity_at(entity, chunk, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 4
-    end,
-    [__defer_op.spawn_entity_with] = function(bytes, index)
-        local entity = bytes[index + 0]
-        local chunk = bytes[index + 1]
-        local fragments = bytes[index + 2]
-        local components = bytes[index + 3]
-        __spawn_entity_with(entity, chunk, fragments, components)
-        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
-        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
-        return 4
-    end,
-}
+local __defer_ops = {}
 
 ---@return boolean started
 local function __defer()
@@ -2054,6 +1899,14 @@ local function __defer_set(entity, fragment, ...)
     __defer_length = length + 4 + argument_count
 end
 
+__defer_ops[__defer_op.set] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.set(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
+end
+
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
@@ -2073,6 +1926,14 @@ local function __defer_assign(entity, fragment, ...)
     end
 
     __defer_length = length + 4 + argument_count
+end
+
+__defer_ops[__defer_op.assign] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.assign(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
 end
 
 ---@param entity evolved.entity
@@ -2096,6 +1957,14 @@ local function __defer_insert(entity, fragment, ...)
     __defer_length = length + 4 + argument_count
 end
 
+__defer_ops[__defer_op.insert] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.insert(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
+end
+
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
 local function __defer_remove(entity, ...)
@@ -2116,6 +1985,13 @@ local function __defer_remove(entity, ...)
     __defer_length = length + 3 + fragment_count
 end
 
+__defer_ops[__defer_op.remove] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragment_count = bytes[index + 1]
+    evolved.remove(entity, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
+    return 2 + fragment_count
+end
+
 ---@param entity evolved.entity
 local function __defer_clear(entity)
     local length = __defer_length
@@ -2127,6 +2003,12 @@ local function __defer_clear(entity)
     __defer_length = length + 2
 end
 
+__defer_ops[__defer_op.clear] = function(bytes, index)
+    local entity = bytes[index + 0]
+    evolved.clear(entity)
+    return 1
+end
+
 ---@param entity evolved.entity
 local function __defer_destroy(entity)
     local length = __defer_length
@@ -2136,6 +2018,12 @@ local function __defer_destroy(entity)
     bytecode[length + 2] = entity
 
     __defer_length = length + 2
+end
+
+__defer_ops[__defer_op.destroy] = function(bytes, index)
+    local entity = bytes[index + 0]
+    evolved.destroy(entity)
+    return 1
 end
 
 ---@param entity evolved.entity
@@ -2161,6 +2049,16 @@ local function __defer_multi_set(entity, fragments, components)
     __defer_length = length + 4
 end
 
+__defer_ops[__defer_op.multi_set] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.multi_set(entity, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
+end
+
 ---@param entity evolved.entity
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
@@ -2182,6 +2080,16 @@ local function __defer_multi_assign(entity, fragments, components)
     bytecode[length + 4] = component_list
 
     __defer_length = length + 4
+end
+
+__defer_ops[__defer_op.multi_assign] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.multi_assign(entity, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
 end
 
 ---@param entity evolved.entity
@@ -2207,6 +2115,16 @@ local function __defer_multi_insert(entity, fragments, components)
     __defer_length = length + 4
 end
 
+__defer_ops[__defer_op.multi_insert] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.multi_insert(entity, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
+end
+
 ---@param entity evolved.entity
 ---@param fragments evolved.fragment[]
 local function __defer_multi_remove(entity, fragments)
@@ -2222,6 +2140,14 @@ local function __defer_multi_remove(entity, fragments)
     bytecode[length + 3] = fragment_list
 
     __defer_length = length + 3
+end
+
+__defer_ops[__defer_op.multi_remove] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    evolved.multi_remove(entity, fragments)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    return 2
 end
 
 ---@param query evolved.query
@@ -2245,6 +2171,14 @@ local function __defer_batch_set(query, fragment, ...)
     __defer_length = length + 4 + argument_count
 end
 
+__defer_ops[__defer_op.batch_set] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.batch_set(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
+end
+
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
@@ -2264,6 +2198,14 @@ local function __defer_batch_assign(query, fragment, ...)
     end
 
     __defer_length = length + 4 + argument_count
+end
+
+__defer_ops[__defer_op.batch_assign] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.batch_assign(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
 end
 
 ---@param query evolved.query
@@ -2287,6 +2229,14 @@ local function __defer_batch_insert(query, fragment, ...)
     __defer_length = length + 4 + argument_count
 end
 
+__defer_ops[__defer_op.batch_insert] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragment = bytes[index + 1]
+    local argument_count = bytes[index + 2]
+    evolved.batch_insert(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+    return 3 + argument_count
+end
+
 ---@param query evolved.query
 ---@param ... evolved.fragment fragments
 local function __defer_batch_remove(query, ...)
@@ -2307,6 +2257,13 @@ local function __defer_batch_remove(query, ...)
     __defer_length = length + 3 + fragment_count
 end
 
+__defer_ops[__defer_op.batch_remove] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragment_count = bytes[index + 1]
+    evolved.batch_remove(query, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
+    return 2 + fragment_count
+end
+
 ---@param query evolved.query
 local function __defer_batch_clear(query)
     local length = __defer_length
@@ -2318,6 +2275,12 @@ local function __defer_batch_clear(query)
     __defer_length = length + 2
 end
 
+__defer_ops[__defer_op.batch_clear] = function(bytes, index)
+    local query = bytes[index + 0]
+    evolved.batch_clear(query)
+    return 1
+end
+
 ---@param query evolved.query
 local function __defer_batch_destroy(query)
     local length = __defer_length
@@ -2327,6 +2290,12 @@ local function __defer_batch_destroy(query)
     bytecode[length + 2] = query
 
     __defer_length = length + 2
+end
+
+__defer_ops[__defer_op.batch_destroy] = function(bytes, index)
+    local query = bytes[index + 0]
+    evolved.batch_destroy(query)
+    return 1
 end
 
 ---@param query evolved.query
@@ -2352,6 +2321,16 @@ local function __defer_batch_multi_set(query, fragments, components)
     __defer_length = length + 4
 end
 
+__defer_ops[__defer_op.batch_multi_set] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.batch_multi_set(query, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
+end
+
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
@@ -2373,6 +2352,16 @@ local function __defer_batch_multi_assign(query, fragments, components)
     bytecode[length + 4] = component_list
 
     __defer_length = length + 4
+end
+
+__defer_ops[__defer_op.batch_multi_assign] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.batch_multi_assign(query, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
 end
 
 ---@param query evolved.query
@@ -2398,6 +2387,16 @@ local function __defer_batch_multi_insert(query, fragments, components)
     __defer_length = length + 4
 end
 
+__defer_ops[__defer_op.batch_multi_insert] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    local components = bytes[index + 2]
+    evolved.batch_multi_insert(query, fragments, components)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    return 3
+end
+
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 local function __defer_batch_multi_remove(query, fragments)
@@ -2413,6 +2412,14 @@ local function __defer_batch_multi_remove(query, fragments)
     bytecode[length + 3] = fragment_list
 
     __defer_length = length + 3
+end
+
+__defer_ops[__defer_op.batch_multi_remove] = function(bytes, index)
+    local query = bytes[index + 0]
+    local fragments = bytes[index + 1]
+    evolved.batch_multi_remove(query, fragments)
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+    return 2
 end
 
 ---@param entity evolved.entity
@@ -2440,6 +2447,21 @@ local function __defer_spawn_entity_at(entity, chunk, fragments, components)
     __defer_length = length + 5
 end
 
+__defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local chunk = bytes[index + 1]
+    local fragments = bytes[index + 2]
+    local components = bytes[index + 3]
+    __defer()
+    do
+        __spawn_entity_at(entity, chunk, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    end
+    __defer_commit()
+    return 4
+end
+
 ---@param entity evolved.entity
 ---@param chunk evolved.chunk
 ---@param fragments evolved.fragment[]
@@ -2463,6 +2485,21 @@ local function __defer_spawn_entity_with(entity, chunk, fragments, components)
     bytecode[length + 5] = component_list
 
     __defer_length = length + 5
+end
+
+__defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
+    local entity = bytes[index + 0]
+    local chunk = bytes[index + 1]
+    local fragments = bytes[index + 2]
+    local components = bytes[index + 3]
+    __defer()
+    do
+        __spawn_entity_with(entity, chunk, fragments, components)
+        __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
+        __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
+    end
+    __defer_commit()
+    return 4
 end
 
 ---
