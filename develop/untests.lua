@@ -1263,6 +1263,22 @@ end
 
 do
     do
+        local f1, f2 = evo.id(2)
+        evo.set(f2, evo.DEFAULT, 42)
+
+        local e1 = evo.entity():set(f1, 11):build()
+        local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22)
+
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_insert(q, f2) == 1)
+
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 42)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22)
+    end
+    do
         local f1, f2, f3, f4 = evo.id(4)
 
         local e1 = evo.id()

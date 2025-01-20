@@ -1064,7 +1064,7 @@ local function __chunk_insert(chunk, fragment, ...)
         local new_component_index = new_component_indices[fragment]
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
-            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+            if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for new_place = new_size + 1, new_size + old_size do
                     local entity = new_entities[new_place]
                     local new_component = __component_construct(fragment, ...)
@@ -1094,7 +1094,7 @@ local function __chunk_insert(chunk, fragment, ...)
         local new_component_index = new_component_indices[fragment]
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
-            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+            if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
                 for new_place = new_size + 1, new_size + old_size do
                     local new_component = __component_construct(fragment, ...)
                     new_component_storage[new_place] = new_component
