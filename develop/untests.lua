@@ -3859,3 +3859,212 @@ do
         assert(sum_removed_components == 0)
     end
 end
+
+do
+    local f1, f2, f3, f4, f5 = evo.id(5)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+    local e4 = evo.entity():set(f1, 41):set(f2, 42):set(f3, 43):set(f4, 44):build()
+
+    assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+    assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+    assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33)
+    assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 44)
+
+    do
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_multi_assign(q, {}) == 0)
+        assert(evo.batch_multi_assign(q, { f5 }) == 0)
+    end
+
+    do
+        local q = evo.query():include(f3):build()
+
+        assert(evo.batch_multi_assign(q, { f4 }, { 54 }) == 1)
+        assert(evo.get(e3, f3) == 33 and evo.get(e3, f4) == nil)
+        assert(evo.get(e4, f3) == 43 and evo.get(e4, f4) == 54)
+    end
+
+    do
+        local q = evo.query():include(f2):build()
+
+        assert(evo.batch_multi_assign(q, { f1 }, { 51, 52 }) == 3)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33)
+        assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 54)
+
+        assert(evo.batch_multi_assign(q, { f2, f3 }, { 52, 53 }) == 3)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 52 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 52 and evo.get(e3, f3) == 53)
+        assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 52 and evo.get(e4, f3) == 53 and evo.get(e4, f4) == 54)
+    end
+end
+
+do
+    local f1, f2, f3, f4, f5 = evo.id(4)
+
+    evo.set(f2, evo.DEFAULT, 41)
+    evo.set(f3, evo.TAG)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+    local e4 = evo.entity():set(f1, 41):set(f2, 42):set(f3, 43):set(f4, 44):build()
+
+    assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+    assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+    assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+    assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 44)
+
+    do
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_multi_assign(q, {}) == 0)
+        assert(evo.batch_multi_assign(q, { f5 }) == 0)
+    end
+
+    do
+        local q = evo.query():include(f3):build()
+
+        assert(evo.batch_multi_assign(q, { f4 }, { 54 }) == 1)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
+    end
+
+    do
+        local q = evo.query():include(f2):build()
+
+        assert(evo.batch_multi_assign(q, { f1 }, { 51, 52 }) == 3)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
+
+        assert(evo.batch_multi_assign(q, { f2, f3 }, { 52, 53 }) == 3)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 52 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 52 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 52 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        assert(evo.batch_multi_assign(q, { f1 }) == 4)
+        assert(evo.get(e1, f1) == true and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == true and evo.get(e2, f2) == 52 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == true and evo.get(e3, f2) == 52 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == true and evo.get(e4, f2) == 52 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
+
+        assert(evo.batch_multi_assign(q, { f2 }) == 3)
+        assert(evo.get(e1, f1) == true and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == true and evo.get(e2, f2) == 41 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == true and evo.get(e3, f2) == 41 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == true and evo.get(e4, f2) == 41 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.DEFAULT, 42)
+    evo.set(f3, evo.TAG)
+
+    local sum_entity = 0
+    local last_assign_entity = 0
+    local last_assign_new_component = 0
+    local last_assign_old_component = 0
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f1)
+        sum_entity = sum_entity + e
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    evo.set(f2, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f2)
+        sum_entity = sum_entity + e
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    evo.set(f3, evo.ON_ASSIGN, function(e, f, nc, oc)
+        assert(f == f3)
+        sum_entity = sum_entity + e
+        last_assign_entity = e
+        last_assign_new_component = nc
+        last_assign_old_component = oc
+    end)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+
+    do
+        local q = evo.query():include(f3):build()
+
+        sum_entity = 0
+        last_assign_entity = 0
+        last_assign_new_component = 0
+        last_assign_old_component = 0
+
+        assert(evo.batch_multi_assign(q, { f2 }, {}) == 1)
+        assert(sum_entity == e3)
+        assert(last_assign_entity == e3)
+        assert(last_assign_new_component == 42)
+        assert(last_assign_old_component == 32)
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        sum_entity = 0
+        last_assign_entity = 0
+        last_assign_new_component = 0
+        last_assign_old_component = 0
+
+        assert(evo.batch_multi_assign(q, { f1 }, { 51 }) == 3)
+        assert(sum_entity == e1 + e2 + e3)
+        assert(last_assign_entity == e3)
+        assert(last_assign_new_component == 51)
+        assert(last_assign_old_component == 31)
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        sum_entity = 0
+        last_assign_entity = 0
+        last_assign_new_component = 0
+        last_assign_old_component = 0
+
+        assert(evo.batch_multi_assign(q, { f1, f1 }, { 61, 61 }) == 3)
+        assert(sum_entity == e1 + e2 + e3 + e1 + e2 + e3)
+        assert(last_assign_entity == e3)
+        assert(last_assign_new_component == 61)
+        assert(last_assign_old_component == 61)
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        sum_entity = 0
+        last_assign_entity = 0
+        last_assign_new_component = 0
+        last_assign_old_component = 0
+
+        assert(evo.batch_multi_assign(q, { f3 }, { 63 }) == 1)
+        assert(sum_entity == e3)
+        assert(last_assign_entity == e3)
+        assert(last_assign_new_component == nil)
+        assert(last_assign_old_component == nil)
+    end
+end

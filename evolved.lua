@@ -1364,7 +1364,108 @@ end
 ---@param components evolved.component[]
 ---@return integer assigned_count
 local function __chunk_multi_assign(chunk, fragments, components)
-    error('not implemented yet', 2)
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
+
+    local fragment_count = #fragments
+
+    if fragment_count == 0 then
+        return 0
+    end
+
+    if not __chunk_has_any_fragment_list(chunk, fragments) then
+        return 0
+    end
+
+    local chunk_entities = chunk.__entities
+    local chunk_size = #chunk_entities
+
+    local chunk_fragment_set = chunk.__fragment_set
+    local chunk_component_indices = chunk.__component_indices
+    local chunk_component_storages = chunk.__component_storages
+
+    for i = 1, fragment_count do
+        local fragment = fragments[i]
+        if chunk_fragment_set[fragment] then
+            if chunk.__has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
+                local component_index = chunk_component_indices[fragment]
+                if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+                    if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = evolved.get(fragment, evolved.DEFAULT)
+                        end
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for place = 1, chunk_size do
+                            local entity = chunk_entities[place]
+                            local old_component = component_storage[place]
+                            component_storage[place] = new_component
+                            __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        end
+                    else
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for place = 1, chunk_size do
+                            local entity = chunk_entities[place]
+                            local old_component = component_storage[place]
+                            component_storage[place] = new_component
+                            __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        end
+                    end
+                else
+                    for place = 1, chunk_size do
+                        local entity = chunk_entities[place]
+                        __fragment_call_set_and_assign_hooks(entity, fragment)
+                    end
+                end
+            else
+                local component_index = chunk_component_indices[fragment]
+                if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+                    if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = evolved.get(fragment, evolved.DEFAULT)
+                        end
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for place = 1, chunk_size do
+                            component_storage[place] = new_component
+                        end
+                    else
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for place = 1, chunk_size do
+                            component_storage[place] = new_component
+                        end
+                    end
+                else
+                    -- nothing
+                end
+            end
+        end
+    end
+
+    return chunk_size
 end
 
 ---@param chunk evolved.chunk
