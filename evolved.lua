@@ -1473,7 +1473,152 @@ end
 ---@param components evolved.component[]
 ---@return integer inserted_count
 local function __chunk_multi_insert(chunk, fragments, components)
-    error('not implemented yet', 2)
+    if __defer_depth <= 0 then
+        error('batched chunk operations should be deferred', 2)
+    end
+
+    local fragment_count = #fragments
+
+    if fragment_count == 0 then
+        return 0
+    end
+
+    local old_chunk = chunk
+    local new_chunk = __chunk_with_fragment_list(chunk, fragments)
+
+    if not new_chunk or old_chunk == new_chunk then
+        return 0
+    end
+
+    local old_entities = old_chunk.__entities
+    local old_size = #old_entities
+
+    local old_fragment_set = old_chunk.__fragment_set
+    local old_component_storages = old_chunk.__component_storages
+    local old_component_fragments = old_chunk.__component_fragments
+
+    local new_entities = new_chunk.__entities
+    local new_size = #new_entities
+
+    local new_component_indices = new_chunk.__component_indices
+    local new_component_storages = new_chunk.__component_storages
+
+    do
+        __table_move(
+            old_entities, 1, old_size,
+            new_size + 1, new_entities)
+
+        for i = 1, #old_component_fragments do
+            local old_f = old_component_fragments[i]
+            local old_cs = old_component_storages[i]
+            local new_ci = new_component_indices[old_f]
+            if new_ci then
+                local new_cs = new_component_storages[new_ci]
+                __table_move(old_cs, 1, old_size, new_size + 1, new_cs)
+            end
+        end
+    end
+
+    local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+
+    for i = 1, fragment_count do
+        local fragment = fragments[i]
+        if not inserted_set[fragment] and not old_fragment_set[fragment] then
+            inserted_set[fragment] = true
+            if new_chunk.__has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
+                local new_component_index = new_component_indices[fragment]
+                if new_component_index then
+                    local new_component_storage = new_component_storages[new_component_index]
+                    if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = evolved.get(fragment, evolved.DEFAULT)
+                        end
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for new_place = new_size + 1, new_size + old_size do
+                            local entity = new_entities[new_place]
+                            new_component_storage[new_place] = new_component
+                            __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        end
+                    else
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for new_place = new_size + 1, new_size + old_size do
+                            local entity = new_entities[new_place]
+                            new_component_storage[new_place] = new_component
+                            __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        end
+                    end
+                else
+                    for new_place = new_size + 1, new_size + old_size do
+                        local entity = new_entities[new_place]
+                        __fragment_call_set_and_insert_hooks(entity, fragment)
+                    end
+                end
+            else
+                local new_component_index = new_component_indices[fragment]
+                if new_component_index then
+                    local new_component_storage = new_component_storages[new_component_index]
+                    if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = evolved.get(fragment, evolved.DEFAULT)
+                        end
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for new_place = new_size + 1, new_size + old_size do
+                            new_component_storage[new_place] = new_component
+                        end
+                    else
+                        local new_component = components[i]
+
+                        if new_component == nil then
+                            new_component = true
+                        end
+
+                        for new_place = new_size + 1, new_size + old_size do
+                            new_component_storage[new_place] = new_component
+                        end
+                    end
+                else
+                    -- nothing
+                end
+            end
+        end
+    end
+
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_SET, inserted_set)
+
+    for new_place = new_size + 1, new_size + old_size do
+        local entity = new_entities[new_place]
+        local entity_index = entity % 0x100000
+        __entity_chunks[entity_index] = new_chunk
+        __entity_places[entity_index] = new_place
+    end
+
+    do
+        old_chunk.__entities = {}
+
+        for i = 1, #old_component_storages do
+            old_component_storages[i] = {}
+        end
+    end
+
+    __structural_changes = __structural_changes + old_size
+    return old_size
 end
 
 ---@param chunk evolved.chunk

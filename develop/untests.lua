@@ -4084,3 +4084,258 @@ do
         assert(last_assign_old_component == nil)
     end
 end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+    local e4 = evo.entity():set(f1, 41):set(f2, 42):set(f3, 43):set(f4, 44):build()
+
+    do
+        local q = evo.query():include(f1):build()
+
+        assert(evo.batch_multi_insert(q, {}) == 0)
+        assert(evo.batch_multi_insert(q, { f1 }) == 0)
+    end
+
+    do
+        local q = evo.query():include(f3):build()
+
+        assert(evo.batch_multi_insert(q, { f4 }) == 1)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33 and evo.get(e3, f4) == true)
+        assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 44)
+
+        do
+            local c123, c123_es = evo.chunk(f1, f2, f3)
+            assert(c123 and #c123_es == 0)
+            assert(#evo.select(c123, f1) == 0)
+            assert(#evo.select(c123, f2) == 0)
+            assert(#evo.select(c123, f3) == 0)
+
+            local c1234, c1234_es = evo.chunk(f1, f2, f3, f4)
+            assert(c1234 and #c1234_es == 2)
+            assert(#evo.select(c1234, f1) == 2)
+            assert(#evo.select(c1234, f2) == 2)
+            assert(#evo.select(c1234, f3) == 2)
+            assert(#evo.select(c1234, f4) == 2)
+        end
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+
+        assert(evo.batch_multi_insert(q, { f3, f4 }, { 53, 54 }) == 2)
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == 53 and evo.get(e1, f4) == 54)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == 53 and evo.get(e2, f4) == 54)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33 and evo.get(e3, f4) == true)
+        assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 44)
+
+        do
+            local c1, c1_es = evo.chunk(f1)
+            assert(c1 and #c1_es == 0)
+            assert(#evo.select(c1, f1) == 0)
+        end
+
+        do
+            local c12, c12_es = evo.chunk(f1, f2)
+            assert(c12 and #c12_es == 0)
+            assert(#evo.select(c12, f1) == 0)
+            assert(#evo.select(c12, f2) == 0)
+        end
+
+        do
+            local c134, c134_es = evo.chunk(f1, f3, f4)
+            assert(c134 and #c134_es == 1)
+            assert(#evo.select(c134, f1) == 1)
+            assert(#evo.select(c134, f3) == 1)
+            assert(#evo.select(c134, f4) == 1)
+        end
+
+        do
+            local c1234, c1234_es = evo.chunk(f1, f2, f3, f4)
+            assert(c1234 and #c1234_es == 3)
+            assert(#evo.select(c1234, f1) == 3)
+            assert(#evo.select(c1234, f2) == 3)
+            assert(#evo.select(c1234, f3) == 3)
+            assert(#evo.select(c1234, f4) == 3)
+        end
+    end
+end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+
+    evo.set(f2, evo.DEFAULT, 41)
+    evo.set(f3, evo.TAG)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+    local e4 = evo.entity():set(f1, 41):set(f2, 42):set(f3, 43):set(f4, 44):build()
+
+    assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+    assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+    assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+    assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 44)
+
+    do
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_multi_insert(q, {}) == 0)
+    end
+
+    do
+        local q = evo.query():include(f1):build()
+        assert(evo.batch_multi_insert(q, { f2 }) == 1)
+
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 41 and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+        assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 44)
+    end
+end
+
+do
+    local f1, f2, f3, f4, f5 = evo.id(5)
+
+    evo.set(f2, evo.DEFAULT, 42)
+    evo.set(f3, evo.TAG)
+
+    local sum_entity = 0
+    local last_insert_entity = 0
+    local last_insert_component = 0
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, c)
+        assert(f == f1)
+        sum_entity = sum_entity + e
+        last_insert_entity = e
+        last_insert_component = c
+    end)
+
+    evo.set(f2, evo.ON_INSERT, function(e, f, c)
+        assert(f == f2)
+        sum_entity = sum_entity + e
+        last_insert_entity = e
+        last_insert_component = c
+    end)
+
+    evo.set(f3, evo.ON_INSERT, function(e, f, c)
+        assert(f == f3)
+        sum_entity = sum_entity + e
+        last_insert_entity = e
+        last_insert_component = c
+    end)
+
+    evo.set(f4, evo.ON_INSERT, function(e, f, c)
+        assert(f == f4)
+        sum_entity = sum_entity + e
+        last_insert_entity = e
+        last_insert_component = c
+    end)
+
+    evo.set(f5, evo.ON_INSERT, function(e, f, c)
+        assert(f == f5)
+        sum_entity = sum_entity + e
+        last_insert_entity = e
+        last_insert_component = c
+    end)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+
+    do
+        local q = evo.query():include(f1):build()
+
+        sum_entity = 0
+        last_insert_entity = 0
+        last_insert_component = 0
+
+        assert(evo.batch_multi_insert(q, { f2 }) == 1)
+        assert(sum_entity == e1)
+        assert(last_insert_entity == e1)
+        assert(last_insert_component == 42)
+        assert(evo.has(e1, f1) and evo.has(e1, f2) and not evo.has(e1, f3))
+        assert(evo.has(e2, f1) and evo.has(e2, f2) and not evo.has(e2, f3))
+        assert(evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 42 and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+    end
+
+    do
+        local q = evo.query():include(f2):build()
+
+        sum_entity = 0
+        last_insert_entity = 0
+        last_insert_component = 0
+
+        assert(evo.batch_multi_insert(q, { f3 }) == 2)
+        assert(sum_entity == e1 + e2)
+        assert(last_insert_entity == e1)
+        assert(last_insert_component == nil)
+        assert(evo.has(e1, f1) and evo.has(e1, f2) and evo.has(e1, f3))
+        assert(evo.has(e2, f1) and evo.has(e2, f2) and evo.has(e2, f3))
+        assert(evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 42 and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+    end
+
+    do
+        local q = evo.query():include(f1, f2, f3):build()
+
+        sum_entity = 0
+        last_insert_entity = 0
+        last_insert_component = 0
+
+        assert(evo.batch_multi_insert(q, { f3, f4, f5, f5 }, { 53, 54, 55, 65 }) == 3)
+        assert(sum_entity == e1 + e2 + e3 + e1 + e2 + e3)
+        assert(last_insert_entity == e1)
+        assert(last_insert_component == 55)
+        assert(evo.has_all(e1, f1, f2, f3, f4, f5))
+        assert(evo.has_all(e2, f1, f2, f3, f4, f5))
+        assert(evo.has_all(e3, f1, f2, f3, f4, f5))
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 42 and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
+        assert(evo.get(e1, f4) == 54 and evo.get(e1, f5) == 55)
+        assert(evo.get(e2, f4) == 54 and evo.get(e2, f5) == 55)
+        assert(evo.get(e3, f4) == 54 and evo.get(e3, f5) == 55)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    local e1 = evo.entity():set(f1, 11):build()
+    local e2 = evo.entity():set(f1, 21):set(f2, 22):build()
+    local e3 = evo.entity():set(f1, 31):set(f2, 32):set(f3, 33):build()
+
+    assert(evo.defer())
+    do
+        local q = evo.query():include(f1):build()
+        do
+            local n, d = evo.batch_multi_insert(q, { f2 }, { 42 })
+            assert(n == 0 and d == true)
+        end
+        do
+            local n, d = evo.batch_multi_assign(q, { f3 }, { 43 })
+            assert(n == 0 and d == true)
+        end
+        do
+            local n, d = evo.batch_multi_remove(q, { f1 })
+            assert(n == 0 and d == true)
+        end
+        assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33)
+    end
+    assert(evo.commit())
+    do
+        assert(evo.get(e1, f1) == nil and evo.get(e1, f2) == 42 and evo.get(e1, f3) == nil)
+        assert(evo.get(e2, f1) == nil and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
+        assert(evo.get(e3, f1) == nil and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 43)
+    end
+end
