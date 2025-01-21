@@ -73,6 +73,11 @@ batch_remove :: query, fragment... -> integer, boolean
 batch_clear :: query -> integer, boolean
 batch_destroy :: query -> integer, boolean
 
+batch_multi_set :: query, fragment[], component[]? -> integer, boolean
+batch_multi_assign :: query, fragment[], component[]? -> integer, boolean
+batch_multi_insert :: query, fragment[], component[]? -> integer, boolean
+batch_multi_remove :: query, fragment[] -> integer, boolean
+
 chunk :: fragment... -> chunk?, entity[]?
 select :: chunk, fragment... -> component[]...
 
