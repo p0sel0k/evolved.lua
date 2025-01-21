@@ -3503,6 +3503,15 @@ do
         assert(evo.has(e4, f3) and evo.get(e4, f3) == 43)
         assert(evo.has(e4, f4) and evo.get(e4, f4) == nil)
     end
+
+    do
+        local c = evo.chunk(f1, f2, f3)
+
+        local e1 = evo.spawn_at(c, { f1, f2, f3 })
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == true)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == true)
+        assert(evo.has(e1, f3) and evo.get(e1, f3) == 33)
+    end
 end
 
 do
@@ -4887,6 +4896,15 @@ do
         assert(sum_entity == e1a + e1b + e2a + e2b)
         assert(last_assign_entity == e1b)
         assert(last_assign_component == 42)
+
+        sum_entity = 0
+        last_assign_entity = 0
+        last_assign_component = 0
+
+        assert(evo.batch_assign(q, f1) == 4)
+        assert(sum_entity == e1a + e1b + e2a + e2b)
+        assert(last_assign_entity == e1b)
+        assert(last_assign_component == true)
     end
 end
 
@@ -4968,6 +4986,7 @@ do
     assert(not evo.multi_set(e, { f1 }, { 11 }))
     assert(not evo.multi_assign(e, { f1 }, { 11 }))
     assert(not evo.multi_insert(e, { f1 }, { 11 }))
+    assert(not evo.multi_remove(e, { f1 }))
 end
 
 do
@@ -4990,12 +5009,18 @@ do
     local last_assign_f2_new_component = 0
     local last_assign_f2_old_component = 0
 
+    local last_insert_f2_new_component = 0
     local last_insert_f3_new_component = 0
 
     evo.set(f2, evo.ON_ASSIGN, function(_, f, nc, oc)
         assert(f == f2)
         last_assign_f2_new_component = nc
         last_assign_f2_old_component = oc
+    end)
+
+    evo.set(f2, evo.ON_INSERT, function(_, f, nc)
+        assert(f == f2)
+        last_insert_f2_new_component = nc
     end)
 
     evo.set(f3, evo.ON_INSERT, function(_, f, nc)
@@ -5016,6 +5041,11 @@ do
         assert(evo.get(e, f1) == true and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
         assert(last_assign_f2_new_component == 42 and last_assign_f2_old_component == 22)
         assert(last_insert_f3_new_component == nil)
+
+        assert(evo.multi_assign(e, { f1, f2, f3 }, { 11, 22, 33 }))
+        assert(evo.get(e, f1) == 11 and evo.get(e, f2) == 22 and evo.get(e, f3) == nil)
+        assert(evo.multi_assign(e, { f1, f2, f3 }, {}))
+        assert(evo.get(e, f1) == true and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
     end
 
     do
@@ -5032,5 +5062,61 @@ do
         assert(evo.multi_set(e, { f1, f1, f2, f2, f3 }, {}))
         assert(evo.has_all(e, f1, f2, f3))
         assert(evo.get(e, f1) == true and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
+    end
+
+    do
+        local e = evo.id()
+
+        last_insert_f2_new_component = 0
+
+        assert(evo.multi_insert(e, { f2, f2 }, { nil, 22 }))
+        assert(evo.get(e, f2) == 42)
+        assert(last_insert_f2_new_component == 42)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    evo.set(f1, evo.DEFAULT, 41)
+
+    do
+        local e = evo.id()
+
+        assert(evo.multi_insert(e, { f1, f2 }))
+        assert(evo.get(e, f1) == 41 and evo.get(e, f2) == true)
+        assert(evo.multi_assign(e, { f1, f2 }, { 11, 22 }))
+        assert(evo.get(e, f1) == 11 and evo.get(e, f2) == 22)
+        assert(evo.multi_assign(e, { f1, f2 }))
+        assert(evo.get(e, f1) == 41 and evo.get(e, f2) == true)
+    end
+end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+    local e = evo.spawn_with({ f1, f2, f3, f4 }, { 1, 2, 3, 4 })
+
+    local c, es = evo.chunk(f1, f2, f3, f4)
+    assert(c and es and #es == 1 and es[1] == e)
+
+    do
+        local c1, c2 = evo.select(c, f1, f2)
+        assert(c1 and #c1 == 1 and c1[1] == 1)
+        assert(c2 and #c2 == 1 and c2[1] == 2)
+    end
+
+    do
+        local c1, c2, c3 = evo.select(c, f1, f2, f3)
+        assert(c1 and #c1 == 1 and c1[1] == 1)
+        assert(c2 and #c2 == 1 and c2[1] == 2)
+        assert(c3 and #c3 == 1 and c3[1] == 3)
+    end
+
+    do
+        local c1, c2, c3, c4 = evo.select(c, f1, f2, f3, f4)
+        assert(c1 and #c1 == 1 and c1[1] == 1)
+        assert(c2 and #c2 == 1 and c2[1] == 2)
+        assert(c3 and #c3 == 1 and c3[1] == 3)
+        assert(c4 and #c4 == 1 and c4[1] == 4)
     end
 end
