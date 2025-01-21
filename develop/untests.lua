@@ -4889,3 +4889,148 @@ do
         assert(last_assign_component == 42)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    do
+        local e = evo.id()
+        assert(evo.defer())
+        do
+            local s, d = evo.multi_set(e, { f1 }, { 11 })
+            assert(not s and d == true)
+            assert(not evo.has_any(e, f1))
+        end
+        assert(evo.commit())
+        do
+            assert(evo.has_all(e, f1))
+            assert(evo.get(e, f1) == 11)
+        end
+        assert(evo.defer())
+        do
+            local s, d = evo.multi_set(e, { f1, f2 }, { 21, 22 })
+            assert(not s and d == true)
+            assert(not evo.has_any(e, f2))
+        end
+        assert(evo.commit())
+        do
+            assert(evo.has_all(e, f1, f2))
+            assert(evo.get(e, f1) == 21 and evo.get(e, f2) == 22)
+        end
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    assert(evo.defer())
+    local c2, c12 = evo.chunk(f2), evo.chunk(f2, f1)
+    local e2 = evo.spawn_at(c2, { f2 }, { 22 })
+    local e12 = evo.spawn_at(c12, { f1, f2 }, { 11, 12 })
+    assert(evo.is_alive(e2) and evo.is_empty(e2))
+    assert(evo.is_alive(e12) and evo.is_empty(e12))
+    assert(evo.commit())
+    assert(evo.is_alive(e2) and not evo.is_empty(e2))
+    assert(evo.is_alive(e12) and not evo.is_empty(e12))
+    assert(evo.has(e2, f2) and evo.get(e2, f2) == 22)
+    assert(evo.has(e12, f1) and evo.get(e12, f1) == 11)
+    assert(evo.has(e12, f2) and evo.get(e12, f2) == 12)
+end
+
+do
+    local id = evo.pack(7, 3)
+    assert(id == 0x300007)
+    local index, version = evo.unpack(0x500004)
+    assert(index == 4 and version == 5)
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local e = evo.id()
+
+    assert(evo.set(e, f1, 11))
+    assert(evo.set(e, f1))
+
+    assert(evo.set(e, f2, 22))
+    assert(evo.assign(e, f2))
+
+    assert(evo.get(e, f1) == true and evo.get(e, f2) == true)
+
+    assert(evo.destroy(e))
+    assert(not evo.has(e, f1) and not evo.has(e, f2))
+    assert(not evo.has_all(e, f1, f2) and not evo.has_any(e, f1, f2))
+
+    assert(not evo.set(e, f1, 11))
+    assert(not evo.assign(e, f1, 11))
+    assert(not evo.insert(e, f1, 11))
+
+    assert(not evo.multi_set(e, { f1 }, { 11 }))
+    assert(not evo.multi_assign(e, { f1 }, { 11 }))
+    assert(not evo.multi_insert(e, { f1 }, { 11 }))
+end
+
+do
+    local f1 = evo.id(2)
+
+    local e = evo.id()
+    assert(evo.clear(e) and evo.clear(e))
+    assert(evo.set(e, f1, 11))
+    assert(evo.clear(e) and evo.clear(e))
+    assert(evo.destroy(e) and evo.destroy(e))
+    assert(not evo.clear(e))
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.DEFAULT, 42)
+    evo.set(f3, evo.TAG)
+
+    local last_assign_f2_new_component = 0
+    local last_assign_f2_old_component = 0
+
+    local last_insert_f3_new_component = 0
+
+    evo.set(f2, evo.ON_ASSIGN, function(_, f, nc, oc)
+        assert(f == f2)
+        last_assign_f2_new_component = nc
+        last_assign_f2_old_component = oc
+    end)
+
+    evo.set(f3, evo.ON_INSERT, function(_, f, nc)
+        assert(f == f3)
+        last_insert_f3_new_component = nc
+    end)
+
+    do
+        local e = evo.id()
+
+        assert(evo.multi_set(e, { f1, f2, f3 }, { 11, 22 }))
+        assert(evo.has_all(e, f1, f2, f3))
+        assert(evo.get(e, f1) == 11 and evo.get(e, f2) == 22 and evo.get(e, f3) == nil)
+        assert(last_assign_f2_new_component == 0 and last_assign_f2_old_component == 0)
+
+        assert(evo.multi_set(e, { f1, f2, f3, f3 }, {}))
+        assert(evo.has_all(e, f1, f2, f3))
+        assert(evo.get(e, f1) == true and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
+        assert(last_assign_f2_new_component == 42 and last_assign_f2_old_component == 22)
+        assert(last_insert_f3_new_component == nil)
+    end
+
+    do
+        local e = evo.id()
+
+        assert(evo.multi_set(e, { f1, f1, f3, f3 }, {}))
+        assert(evo.has_all(e, f1, f3))
+        assert(evo.get(e, f1) == true and evo.get(e, f3) == nil)
+    end
+
+    do
+        local e = evo.id()
+
+        assert(evo.multi_set(e, { f1, f1, f2, f2, f3 }, {}))
+        assert(evo.has_all(e, f1, f2, f3))
+        assert(evo.get(e, f1) == true and evo.get(e, f2) == 42 and evo.get(e, f3) == nil)
+    end
+end
