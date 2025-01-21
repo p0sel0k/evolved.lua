@@ -4714,3 +4714,36 @@ do
         assert(evo.get(e3, f1) == nil and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 53 and evo.get(e3, f4) == 54)
     end
 end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+    local e = evo.entity():set(f1, 11):set(f2, 22):set(f3, 33):set(f4, 44):build()
+    do
+        local c1 = evo.get(e, f1)
+        assert(c1 == 11)
+    end
+    do
+        local c1, c2 = evo.get(e, f1, f2)
+        assert(c1 == 11 and c2 == 22)
+    end
+    do
+        local c2, c1 = evo.get(e, f2, f1)
+        assert(c1 == 11 and c2 == 22)
+    end
+    do
+        local c1, c2, c3 = evo.get(e, f1, f2, f3)
+        assert(c1 == 11 and c2 == 22 and c3 == 33)
+    end
+    do
+        local c3, c2, c1 = evo.get(e, f3, f2, f1)
+        assert(c1 == 11 and c2 == 22 and c3 == 33)
+    end
+    do
+        local c1, c2, c3, c4 = evo.get(e, f1, f2, f3, f4)
+        assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44)
+    end
+    do
+        local c4, c3, c2, c1 = evo.get(e, f4, f3, f2, f1)
+        assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44)
+    end
+end
