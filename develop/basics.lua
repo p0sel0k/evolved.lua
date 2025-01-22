@@ -13,7 +13,8 @@ end)()
 ---@param name string
 ---@param loop fun(...): ...
 ---@param init? fun(): ...
-function basics.describe_bench(name, loop, init)
+---@param fini? fun(...): ...
+function basics.describe_bench(name, loop, init, fini)
     print(string.format('| %s ... |', name))
 
     local state = init and __table_pack(init()) or {}
@@ -28,7 +29,7 @@ function basics.describe_bench(name, loop, init)
         end)
 
         if not success then
-            print('|-- FAIL: ' .. result)
+            print('|-- WARMUP FAIL: ' .. result)
             return
         end
     end
@@ -59,7 +60,17 @@ function basics.describe_bench(name, loop, init)
                 (finish_kb - start_kb) / iters,
                 iters))
         else
-            print('|-- FAIL: ' .. result)
+            print('|-- LOOP FAIL: ' .. result)
+        end
+    end
+
+    if fini then
+        local success, result = pcall(function()
+            fini(__table_unpack(state))
+        end)
+
+        if not success then
+            print('|-- FINI FAIL: ' .. result)
         end
     end
 

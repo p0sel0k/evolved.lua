@@ -10,3 +10,4 @@
 - add REQUIRES fragment trait
 - try to keep entity_chunks/places tables as arrays
 - set/assign/insert/remove/destroy for lists?
+- pass to __detach_entity entity_index, entity_place, and entity_chunk
