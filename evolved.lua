@@ -2339,8 +2339,28 @@ local function __defer_set(entity, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2350,7 +2370,26 @@ __defer_ops[__defer_op.set] = function(bytes, index)
     local entity = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.set(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local set = evolved.set
+
+    if argument_count == 0 then
+        set(entity, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        set(entity, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        set(entity, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        set(entity, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        set(entity, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2368,8 +2407,28 @@ local function __defer_assign(entity, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2379,7 +2438,26 @@ __defer_ops[__defer_op.assign] = function(bytes, index)
     local entity = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.assign(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local assign = evolved.assign
+
+    if argument_count == 0 then
+        assign(entity, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        assign(entity, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        assign(entity, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        assign(entity, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        assign(entity, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2397,8 +2475,28 @@ local function __defer_insert(entity, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2408,7 +2506,26 @@ __defer_ops[__defer_op.insert] = function(bytes, index)
     local entity = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.insert(entity, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local insert = evolved.insert
+
+    if argument_count == 0 then
+        insert(entity, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        insert(entity, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        insert(entity, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        insert(entity, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        insert(entity, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2425,8 +2542,28 @@ local function __defer_remove(entity, ...)
     bytecode[length + 2] = entity
     bytecode[length + 3] = fragment_count
 
-    for i = 1, fragment_count do
-        bytecode[length + 3 + i] = select(i, ...)
+    if fragment_count == 0 then
+        -- nothing
+    elseif fragment_count == 1 then
+        local f1 = select(1, ...)
+        bytecode[length + 4] = f1
+    elseif fragment_count == 2 then
+        local f1, f2 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+    elseif fragment_count == 3 then
+        local f1, f2, f3 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+    else
+        local f1, f2, f3 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+        for i = 4, fragment_count do
+            bytecode[length + 3 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 3 + fragment_count
@@ -2435,7 +2572,26 @@ end
 __defer_ops[__defer_op.remove] = function(bytes, index)
     local entity = bytes[index + 0]
     local fragment_count = bytes[index + 1]
-    evolved.remove(entity, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
+
+    local remove = evolved.remove
+
+    if fragment_count == 0 then
+        -- nothing
+    elseif fragment_count == 1 then
+        local f1 = bytes[index + 2]
+        remove(entity, f1)
+    elseif fragment_count == 2 then
+        local f1, f2 = bytes[index + 2], bytes[index + 3]
+        remove(entity, f1, f2)
+    elseif fragment_count == 3 then
+        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        remove(entity, f1, f2, f3)
+    else
+        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        remove(entity, f1, f2, f3,
+            __table_unpack(bytes, index + 5, index + 1 + fragment_count))
+    end
+
     return 2 + fragment_count
 end
 
@@ -2611,8 +2767,28 @@ local function __defer_batch_set(query, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2622,7 +2798,26 @@ __defer_ops[__defer_op.batch_set] = function(bytes, index)
     local query = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.batch_set(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local batch_set = evolved.batch_set
+
+    if argument_count == 0 then
+        batch_set(query, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        batch_set(query, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        batch_set(query, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_set(query, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_set(query, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2640,8 +2835,28 @@ local function __defer_batch_assign(query, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2651,7 +2866,26 @@ __defer_ops[__defer_op.batch_assign] = function(bytes, index)
     local query = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.batch_assign(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local batch_assign = evolved.batch_assign
+
+    if argument_count == 0 then
+        batch_assign(query, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        batch_assign(query, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        batch_assign(query, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_assign(query, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_assign(query, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2669,8 +2903,28 @@ local function __defer_batch_insert(query, fragment, ...)
     bytecode[length + 3] = fragment
     bytecode[length + 4] = argument_count
 
-    for i = 1, argument_count do
-        bytecode[length + 4 + i] = select(i, ...)
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = select(1, ...)
+        bytecode[length + 5] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+    else
+        local a1, a2, a3 = select(1, ...)
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        for i = 4, argument_count do
+            bytecode[length + 4 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 4 + argument_count
@@ -2680,7 +2934,26 @@ __defer_ops[__defer_op.batch_insert] = function(bytes, index)
     local query = bytes[index + 0]
     local fragment = bytes[index + 1]
     local argument_count = bytes[index + 2]
-    evolved.batch_insert(query, fragment, __table_unpack(bytes, index + 3, index + 2 + argument_count))
+
+    local batch_insert = evolved.batch_insert
+
+    if argument_count == 0 then
+        batch_insert(query, fragment)
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 3]
+        batch_insert(query, fragment, a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 3], bytes[index + 4]
+        batch_insert(query, fragment, a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_insert(query, fragment, a1, a2, a3)
+    else
+        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_insert(query, fragment, a1, a2, a3,
+            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+    end
+
     return 3 + argument_count
 end
 
@@ -2697,8 +2970,28 @@ local function __defer_batch_remove(query, ...)
     bytecode[length + 2] = query
     bytecode[length + 3] = fragment_count
 
-    for i = 1, fragment_count do
-        bytecode[length + 3 + i] = select(i, ...)
+    if fragment_count == 0 then
+        -- nothing
+    elseif fragment_count == 1 then
+        local f1 = select(1, ...)
+        bytecode[length + 4] = f1
+    elseif fragment_count == 2 then
+        local f1, f2 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+    elseif fragment_count == 3 then
+        local f1, f2, f3 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+    else
+        local f1, f2, f3 = select(1, ...)
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+        for i = 4, fragment_count do
+            bytecode[length + 3 + i] = select(i, ...)
+        end
     end
 
     __defer_length = length + 3 + fragment_count
@@ -2707,7 +3000,26 @@ end
 __defer_ops[__defer_op.batch_remove] = function(bytes, index)
     local query = bytes[index + 0]
     local fragment_count = bytes[index + 1]
-    evolved.batch_remove(query, __table_unpack(bytes, index + 2, index + 1 + fragment_count))
+
+    local batch_remove = evolved.batch_remove
+
+    if fragment_count == 0 then
+        -- nothing
+    elseif fragment_count == 1 then
+        local f1 = bytes[index + 2]
+        batch_remove(query, f1)
+    elseif fragment_count == 2 then
+        local f1, f2 = bytes[index + 2], bytes[index + 3]
+        batch_remove(query, f1, f2)
+    elseif fragment_count == 3 then
+        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        batch_remove(query, f1, f2, f3)
+    else
+        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        batch_remove(query, f1, f2, f3,
+            __table_unpack(bytes, index + 5, index + 1 + fragment_count))
+    end
+
     return 2 + fragment_count
 end
 
