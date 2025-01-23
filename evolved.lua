@@ -2036,49 +2036,36 @@ end
 ---
 ---
 
----@param entity evolved.entity
-local function __detach_entity(entity)
-    local entity_index = entity % 0x100000
+---@param chunk evolved.chunk
+---@param place integer
+local function __detach_entity(chunk, place)
+    local chunk_entities = chunk.__entities
+    local chunk_size = #chunk_entities
 
-    local old_chunk = __entity_chunks[entity_index]
+    local chunk_component_storages = chunk.__component_storages
 
-    if not old_chunk then
-        return
-    end
+    if place == chunk_size then
+        chunk_entities[place] = nil
 
-    local old_entities = old_chunk.__entities
-    local old_component_storages = old_chunk.__component_storages
-
-    local old_place = __entity_places[entity_index]
-    local old_size = #old_entities
-
-    if old_place == old_size then
-        old_entities[old_place] = nil
-
-        for i = 1, #old_component_storages do
-            local old_cs = old_component_storages[i]
-            old_cs[old_place] = nil
+        for i = 1, #chunk_component_storages do
+            local component_storage = chunk_component_storages[i]
+            component_storage[place] = nil
         end
     else
-        local last_entity = old_entities[old_size]
+        local last_entity = chunk_entities[chunk_size]
         local last_entity_index = last_entity % 0x100000
-        __entity_places[last_entity_index] = old_place
+        __entity_places[last_entity_index] = place
 
-        old_entities[old_place] = last_entity
-        old_entities[old_size] = nil
+        chunk_entities[place] = last_entity
+        chunk_entities[chunk_size] = nil
 
-        for i = 1, #old_component_storages do
-            local old_cs = old_component_storages[i]
-            local last_component = old_cs[old_size]
-            old_cs[old_place] = last_component
-            old_cs[old_size] = nil
+        for i = 1, #chunk_component_storages do
+            local component_storage = chunk_component_storages[i]
+            local last_component = component_storage[chunk_size]
+            component_storage[place] = last_component
+            component_storage[chunk_size] = nil
         end
     end
-
-    __entity_chunks[entity_index] = nil
-    __entity_places[entity_index] = nil
-
-    __structural_changes = __structural_changes + 1
 end
 
 ---@param entity evolved.entity
@@ -3519,7 +3506,7 @@ function evolved.set(entity, fragment, ...)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
         end
 
         do
@@ -3687,7 +3674,7 @@ function evolved.insert(entity, fragment, ...)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
         end
 
         do
@@ -3800,12 +3787,15 @@ function evolved.remove(entity, ...)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
 
             __entity_chunks[entity_index] = new_chunk
             __entity_places[entity_index] = new_place
         else
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
+
+            __entity_chunks[entity_index] = nil
+            __entity_places[entity_index] = nil
         end
 
         __structural_changes = __structural_changes + 1
@@ -3858,7 +3848,10 @@ function evolved.clear(entity)
             end
         end
 
-        __detach_entity(entity)
+        __detach_entity(chunk, place)
+
+        __entity_chunks[entity_index] = nil
+        __entity_places[entity_index] = nil
 
         __structural_changes = __structural_changes + 1
     end
@@ -3911,8 +3904,11 @@ function evolved.destroy(entity)
             end
         end
 
-        __detach_entity(entity)
+        __detach_entity(chunk, place)
         __release_id(entity)
+
+        __entity_chunks[entity_index] = nil
+        __entity_places[entity_index] = nil
 
         __structural_changes = __structural_changes + 1
     end
@@ -4036,7 +4032,7 @@ function evolved.multi_set(entity, fragments, components)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
         end
 
         local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
@@ -4301,7 +4297,7 @@ function evolved.multi_insert(entity, fragments, components)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
         end
 
         local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
@@ -4442,12 +4438,15 @@ function evolved.multi_remove(entity, fragments)
                 end
             end
 
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
 
             __entity_chunks[entity_index] = new_chunk
             __entity_places[entity_index] = new_place
         else
-            __detach_entity(entity)
+            __detach_entity(old_chunk, old_place)
+
+            __entity_chunks[entity_index] = nil
+            __entity_places[entity_index] = nil
         end
 
         __structural_changes = __structural_changes + 1
