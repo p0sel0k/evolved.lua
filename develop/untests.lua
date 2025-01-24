@@ -4957,9 +4957,14 @@ end
 
 do
     local id = evo.pack(7, 3)
-    assert(id == 0x300007)
-    local index, version = evo.unpack(0x500004)
-    assert(index == 4 and version == 5)
+    local index, version = evo.unpack(id)
+    assert(index == 7 and version == 3)
+end
+
+do
+    local id = evo.pack(0xFFFFF, 0x7FF)
+    local index, version = evo.unpack(id)
+    assert(index == 0xFFFFF and version == 0x7FF)
 end
 
 do

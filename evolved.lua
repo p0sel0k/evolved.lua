@@ -27,7 +27,7 @@ local evolved = {
     ]]
 }
 
----@alias evolved.id integer
+---@class evolved.id
 
 ---@alias evolved.entity evolved.id
 ---@alias evolved.fragment evolved.id
@@ -73,7 +73,7 @@ local evolved = {
 ---
 ---
 
-local __freelist_ids = {} ---@type evolved.id[]
+local __freelist_ids = {} ---@type integer[]
 local __available_idx = 0 ---@type integer
 
 local __defer_depth = 0 ---@type integer
@@ -161,44 +161,56 @@ end)()
 ---@return evolved.id
 ---@nodiscard
 local function __acquire_id()
-    if __available_idx ~= 0 then
-        local index = __available_idx
-        local freelist_id = __freelist_ids[index]
-        __available_idx = freelist_id % 0x100000
-        local version = freelist_id - __available_idx
+    local freelist_ids = __freelist_ids
+    local available_idx = __available_idx
 
-        local acquired_id = index + version
-        __freelist_ids[index] = acquired_id
-        return acquired_id
+    if available_idx ~= 0 then
+        local acquired_index = available_idx
+        local freelist_id = freelist_ids[acquired_index]
+
+        local next_available_idx = freelist_id % 0x100000
+        local shifted_version = freelist_id - next_available_idx
+
+        __available_idx = next_available_idx
+
+        local acquired_id = acquired_index + shifted_version
+        freelist_ids[acquired_index] = acquired_id
+
+        return acquired_id --[[@as evolved.id]]
     else
-        if #__freelist_ids == 0xFFFFF then
+        local freelist_size = #freelist_ids
+
+        if freelist_size == 0xFFFFF then
             error('id index overflow', 2)
         end
 
-        local index = #__freelist_ids + 1
-        local version = 0x100000
+        local acquired_index = freelist_size + 1
+        local shifted_version = 0x100000
 
-        local acquired_id = index + version
-        __freelist_ids[index] = acquired_id
-        return acquired_id
+        local acquired_id = acquired_index + shifted_version
+        freelist_ids[acquired_index] = acquired_id
+
+        return acquired_id --[[@as evolved.id]]
     end
 end
 
 ---@param id evolved.id
 local function __release_id(id)
-    local index = id % 0x100000
-    local version = id - index
+    local acquired_index = id % 0x100000
+    local shifted_version = id - acquired_index
 
-    if __freelist_ids[index] ~= id then
+    local freelist_ids = __freelist_ids
+
+    if freelist_ids[acquired_index] ~= id then
         error('id is not acquired or already released', 2)
     end
 
-    version = version == 0x7FF00000
+    shifted_version = shifted_version == 0x7FF00000
         and 0x100000
-        or version + 0x100000
+        or shifted_version + 0x100000
 
-    __freelist_ids[index] = __available_idx + version
-    __available_idx = index
+    freelist_ids[acquired_index] = __available_idx + shifted_version
+    __available_idx = acquired_index
 end
 
 ---
@@ -3295,7 +3307,8 @@ function evolved.pack(index, version)
         error('id version out of range [1;0x7FF]', 2)
     end
 
-    return index + version * 0x100000
+    local shifted_version = version * 0x100000
+    return index + shifted_version --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
