@@ -6,6 +6,7 @@ local basics = require 'develop.basics'
 local N = 1000
 local B = evo.entity()
 local F1, F2, F3, F4, F5 = evo.id(5)
+local Q1 = evo.query():include(F1):build()
 
 print '----------------------------------------'
 
@@ -224,7 +225,7 @@ basics.describe_bench(string.format('create and destroy %d entities', N),
             entities[i] = e
         end
 
-        for i = 1, #entities do
+        for i = #entities, 1, -1 do
             destroy(entities[i])
         end
     end, function()
@@ -236,7 +237,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
@@ -244,9 +244,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -256,7 +254,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
@@ -265,9 +262,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -277,7 +272,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
@@ -287,9 +281,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -299,7 +291,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
@@ -310,9 +301,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -322,7 +311,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = id()
@@ -334,9 +322,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -348,7 +334,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         evo.defer()
         for i = 1, N do
@@ -358,9 +343,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
         end
         evo.commit()
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -370,7 +353,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         evo.defer()
         for i = 1, N do
@@ -381,9 +363,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
         end
         evo.commit()
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -393,7 +373,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         evo.defer()
         for i = 1, N do
@@ -405,9 +384,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
         end
         evo.commit()
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -417,7 +394,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         evo.defer()
         for i = 1, N do
@@ -430,9 +406,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
         end
         evo.commit()
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -442,7 +416,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     function(entities)
         local id = evo.id
         local insert = evo.insert
-        local destroy = evo.destroy
 
         evo.defer()
         for i = 1, N do
@@ -456,9 +429,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
         end
         evo.commit()
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -470,16 +441,13 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     function(entities)
         local set = B.set
         local build = B.build
-        local destroy = evo.destroy
 
         for i = 1, N do
             set(B, F1)
             entities[i] = build(B)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -489,7 +457,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     function(entities)
         local set = B.set
         local build = B.build
-        local destroy = evo.destroy
 
         for i = 1, N do
             set(B, F1)
@@ -497,9 +464,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             entities[i] = build(B)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -509,7 +474,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     function(entities)
         local set = B.set
         local build = B.build
-        local destroy = evo.destroy
 
         for i = 1, N do
             set(B, F1)
@@ -518,9 +482,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             entities[i] = build(B)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -530,7 +492,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     function(entities)
         local set = B.set
         local build = B.build
-        local destroy = evo.destroy
 
         for i = 1, N do
             set(B, F1)
@@ -540,9 +501,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             entities[i] = build(B)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -552,7 +511,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     function(entities)
         local set = B.set
         local build = B.build
-        local destroy = evo.destroy
 
         for i = 1, N do
             set(B, F1)
@@ -563,9 +521,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             entities[i] = build(B)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -576,7 +532,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = evo.multi_set
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = evo.id()
@@ -584,9 +539,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -595,7 +548,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = evo.multi_set
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = evo.id()
@@ -603,9 +555,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -614,7 +564,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = evo.multi_set
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = evo.id()
@@ -622,9 +571,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -633,7 +580,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = evo.multi_set
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = evo.id()
@@ -641,9 +587,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -652,7 +596,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = evo.multi_set
-        local destroy = evo.destroy
 
         for i = 1, N do
             local e = evo.id()
@@ -660,9 +603,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             entities[i] = e
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -672,8 +613,8 @@ print '----------------------------------------'
 basics.describe_bench(string.format('create and destroy %d entities / spawn_at', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_at = evo.spawn_at
         local destroy = evo.destroy
+        local spawn_at = evo.spawn_at
 
         local fragments = {}
         local components = {}
@@ -684,7 +625,7 @@ basics.describe_bench(string.format('create and destroy %d entities / spawn_at',
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
+        for i = #entities, 1, -1 do
             destroy(entities[i])
         end
     end, function()
@@ -695,7 +636,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_at = evo.spawn_at
-        local destroy = evo.destroy
 
         local fragments = { F1 }
         local components = { true }
@@ -706,9 +646,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -717,7 +655,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_at = evo.spawn_at
-        local destroy = evo.destroy
 
         local fragments = { F1, F2 }
         local components = { true, true }
@@ -728,9 +665,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -739,7 +674,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_at = evo.spawn_at
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3 }
         local components = { true, true, true }
@@ -750,9 +684,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -761,7 +693,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_at = evo.spawn_at
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3, F4 }
         local components = { true, true, true, true }
@@ -772,9 +703,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -783,7 +712,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_at = evo.spawn_at
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3, F4, F5 }
         local components = { true, true, true, true, true }
@@ -794,9 +722,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             entities[i] = spawn_at(chunk, fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -806,8 +732,8 @@ print '----------------------------------------'
 basics.describe_bench(string.format('create and destroy %d entities / spawn_with', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_with = evo.spawn_with
         local destroy = evo.destroy
+        local spawn_with = evo.spawn_with
 
         local fragments = {}
         local components = {}
@@ -816,7 +742,7 @@ basics.describe_bench(string.format('create and destroy %d entities / spawn_with
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
+        for i = #entities, 1, -1 do
             destroy(entities[i])
         end
     end, function()
@@ -827,7 +753,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_with = evo.spawn_with
-        local destroy = evo.destroy
 
         local fragments = { F1 }
         local components = { true }
@@ -836,9 +761,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -847,7 +770,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_with = evo.spawn_with
-        local destroy = evo.destroy
 
         local fragments = { F1, F2 }
         local components = { true, true }
@@ -856,9 +778,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -867,7 +787,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_with = evo.spawn_with
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3 }
         local components = { true, true, true }
@@ -876,9 +795,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -887,7 +804,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_with = evo.spawn_with
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3, F4 }
         local components = { true, true, true, true }
@@ -896,9 +812,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
@@ -907,7 +821,6 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local spawn_with = evo.spawn_with
-        local destroy = evo.destroy
 
         local fragments = { F1, F2, F3, F4, F5 }
         local components = { true, true, true, true, true }
@@ -916,9 +829,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             entities[i] = spawn_with(fragments, components)
         end
 
-        for i = 1, #entities do
-            destroy(entities[i])
-        end
+        evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
