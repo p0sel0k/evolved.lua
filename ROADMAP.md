@@ -9,3 +9,5 @@
 - add REQUIRES fragment trait
 - try to keep entity_chunks/places tables as arrays
 - set/assign/insert/remove/destroy for lists?
+- when we call hooks from chunk operations, we should use precached hook functions
+- we shouldn't clear big reusable tables
