@@ -1,4 +1,5 @@
-package.loaded['evolved'] = nil
+require 'develop.unload' 'evolved'
+
 local evo = require 'evolved'
 
 do

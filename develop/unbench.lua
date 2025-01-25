@@ -1,7 +1,7 @@
-package.loaded['evolved'] = nil
-local evo = require 'evolved'
-
+require 'develop.unload' 'evolved'
 local basics = require 'develop.basics'
+
+local evo = require 'evolved'
 
 local N = 1000
 local B = evo.entity()

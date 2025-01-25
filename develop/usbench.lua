@@ -1,7 +1,7 @@
-package.loaded['evolved'] = nil
-local evo = require 'evolved'
-
+require 'develop.unload' 'evolved'
 local basics = require 'develop.basics'
+
+local evo = require 'evolved'
 local tiny = require 'develop.3rdparty.tiny'
 
 local N = 1000
