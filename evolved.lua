@@ -237,9 +237,25 @@ local __TABLE_POOL_TAG__EXECUTE_STATE = 4
 local __TABLE_POOL_TAG__FRAGMENT_SET = 5
 local __TABLE_POOL_TAG__FRAGMENT_LIST = 6
 local __TABLE_POOL_TAG__COMPONENT_LIST = 7
+local __TABLE_POOL_TAG__COUNT = 7
 
----@type table<evolved.table_pool_tag, table[]>
-local __tagged_table_pools = __table_new(7, 0)
+---@class (exact) evolved.table_pool
+---@field package __size integer
+---@field package [integer] table
+
+---@type table<evolved.table_pool_tag, evolved.table_pool>
+local __tagged_table_pools = (function()
+    local table_pools = __table_new(__TABLE_POOL_TAG__COUNT, 0)
+
+    for tag = 1, __TABLE_POOL_TAG__COUNT do
+        ---@type evolved.table_pool
+        local table_pool = __table_new(16, 1)
+        table_pool.__size = 0
+        table_pools[tag] = table_pool
+    end
+
+    return table_pools
+end)()
 
 ---@param tag evolved.table_pool_tag
 ---@param narray integer
@@ -248,38 +264,35 @@ local __tagged_table_pools = __table_new(7, 0)
 ---@nodiscard
 local function __acquire_table(tag, narray, nhash)
     local table_pool = __tagged_table_pools[tag]
-
-    if not table_pool then
-        table_pool = __table_new(16, 0)
-        __tagged_table_pools[tag] = table_pool
-    end
-
-    local table_pool_size = #table_pool
+    local table_pool_size = table_pool.__size
 
     if table_pool_size == 0 then
         return __table_new(narray, nhash)
     end
 
     local table = table_pool[table_pool_size]
+
+    local new_table_pool_size = table_pool_size - 1
     table_pool[table_pool_size] = nil
+    table_pool.__size = new_table_pool_size
 
     return table
 end
 
 ---@param tag evolved.table_pool_tag
----@param tab table
-local function __release_table(tag, tab)
+---@param table table
+---@param no_clear? boolean
+local function __release_table(tag, table, no_clear)
     local table_pool = __tagged_table_pools[tag]
+    local table_pool_size = table_pool.__size
 
-    if not table_pool then
-        table_pool = __table_new(16, 0)
-        __tagged_table_pools[tag] = table_pool
+    if not no_clear then
+        __table_clear(table)
     end
 
-    setmetatable(tab, nil)
-    __table_clear(tab)
-
-    table_pool[#table_pool + 1] = tab
+    local new_table_pool_size = table_pool_size + 1
+    table_pool[new_table_pool_size] = table
+    table_pool.__size = new_table_pool_size
 end
 
 ---
