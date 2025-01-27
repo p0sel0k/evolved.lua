@@ -260,16 +260,14 @@ local __tagged_table_pools = (function()
 end)()
 
 ---@param tag evolved.table_pool_tag
----@param narray integer
----@param nhash integer
 ---@return table
 ---@nodiscard
-local function __acquire_table(tag, narray, nhash)
+local function __acquire_table(tag)
     local table_pool = __tagged_table_pools[tag]
     local table_pool_size = table_pool.__size
 
     if table_pool_size == 0 then
-        return __table_new(narray, nhash)
+        return {}
     end
 
     local table = table_pool[table_pool_size]
@@ -344,13 +342,13 @@ local function __execute_iterator(execute_state)
         error('structural changes are prohibited during iteration', 2)
     end
 
-    local cur_chunk_stack_size = #chunk_stack
+    local chunk_stack_size = #chunk_stack
 
-    while cur_chunk_stack_size > 0 do
-        local chunk = chunk_stack[cur_chunk_stack_size]
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
 
-        chunk_stack[cur_chunk_stack_size] = nil
-        cur_chunk_stack_size = cur_chunk_stack_size - 1
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
 
         local chunk_children = chunk.__children
         local chunk_child_count = chunk.__child_count
@@ -360,8 +358,8 @@ local function __execute_iterator(execute_state)
             local chunk_child_fragment = chunk_child.__fragment
 
             if not exclude_set[chunk_child_fragment] then
-                cur_chunk_stack_size = cur_chunk_stack_size + 1
-                chunk_stack[cur_chunk_stack_size] = chunk_child
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = chunk_child
             end
         end
 
@@ -560,7 +558,6 @@ local function __root_chunk(root_fragment)
 
     do
         root_fragment_count = root_fragment_count + 1
-
         root_fragment_set[root_fragment] = true
         root_fragment_list[root_fragment_count] = root_fragment
 
@@ -668,9 +665,13 @@ local function __chunk_with_fragment(parent_chunk, child_fragment)
         __has_remove_hooks = has_remove_hooks,
     }
 
-    for _, parent_fragment in ipairs(parent_chunk.__fragment_list) do
-        child_fragment_count = child_fragment_count + 1
+    local parent_fragment_list = parent_chunk.__fragment_list
+    local parent_fragment_count = parent_chunk.__fragment_count
 
+    for parent_fragment_index = 1, parent_fragment_count do
+        local parent_fragment = parent_fragment_list[parent_fragment_index]
+
+        child_fragment_count = child_fragment_count + 1
         child_fragment_set[parent_fragment] = true
         child_fragment_list[child_fragment_count] = parent_fragment
 
@@ -686,7 +687,6 @@ local function __chunk_with_fragment(parent_chunk, child_fragment)
 
     do
         child_fragment_count = child_fragment_count + 1
-
         child_fragment_set[child_fragment] = true
         child_fragment_list[child_fragment_count] = child_fragment
 
@@ -1250,7 +1250,7 @@ local function __chunk_remove(chunk, ...)
     local old_component_storages = chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
-        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
         for i = 1, fragment_count do
             local fragment = select(i, ...)
@@ -1594,7 +1594,7 @@ local function __chunk_multi_set(chunk, fragments, components)
             end
         end
 
-        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
@@ -1940,7 +1940,7 @@ local function __chunk_multi_insert(chunk, fragments, components)
         end
     end
 
-    local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+    local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
     for i = 1, fragment_count do
         local fragment = fragments[i]
@@ -2076,7 +2076,7 @@ local function __chunk_multi_remove(chunk, fragments)
     local old_component_storages = old_chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
-        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+        local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
@@ -2470,7 +2470,7 @@ local function __defer_commit()
     local bytecode = __defer_bytecode
 
     __defer_length = 0
-    __defer_bytecode = __acquire_table(__TABLE_POOL_TAG__BYTECODE, length, 0)
+    __defer_bytecode = __acquire_table(__TABLE_POOL_TAG__BYTECODE)
 
     local bytecode_index = 1
     while bytecode_index <= length do
@@ -2790,13 +2790,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_multi_set(entity, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -2823,13 +2821,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_multi_assign(entity, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -2856,13 +2852,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_multi_insert(entity, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -2888,9 +2882,8 @@ end
 ---@param entity evolved.entity
 ---@param fragments evolved.fragment[]
 local function __defer_multi_remove(entity, fragments)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3218,13 +3211,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_set(query, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3251,13 +3242,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_assign(query, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3284,13 +3273,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_batch_multi_insert(query, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3316,9 +3303,8 @@ end
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 local function __defer_batch_multi_remove(query, fragments)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3343,13 +3329,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_spawn_entity_at(entity, chunk, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -3383,13 +3367,11 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 local function __defer_spawn_entity_with(entity, chunk, fragments, components)
-    local fragment_count = #fragments
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_count, 0)
-    __table_move(fragments, 1, fragment_count, 1, fragment_list)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    __table_move(fragments, 1, #fragments, 1, fragment_list)
 
-    local component_count = #components
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_count, 0)
-    __table_move(components, 1, component_count, 1, component_list)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    __table_move(components, 1, #components, 1, component_list)
 
     local length = __defer_length
     local bytecode = __defer_bytecode
@@ -4236,7 +4218,7 @@ function evolved.multi_set(entity, fragments, components)
             __detach_entity(old_chunk, old_place)
         end
 
-        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
@@ -4507,7 +4489,7 @@ function evolved.multi_insert(entity, fragments, components)
             __detach_entity(old_chunk, old_place)
         end
 
-        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+        local inserted_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
@@ -4610,7 +4592,7 @@ function evolved.multi_remove(entity, fragments)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
-            local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET, 0, fragment_count)
+            local removed_set = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_SET)
 
             for i = 1, fragment_count do
                 local fragment = fragments[i]
@@ -4681,17 +4663,20 @@ function evolved.batch_set(query, fragment, ...)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local set_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             if __chunk_has_fragment(chunk, fragment) then
                 set_count = set_count + __chunk_assign(chunk, fragment, ...)
             else
@@ -4717,17 +4702,20 @@ function evolved.batch_assign(query, fragment, ...)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local assigned_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
         end
     end
@@ -4749,17 +4737,20 @@ function evolved.batch_insert(query, fragment, ...)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local inserted_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
         end
     end
@@ -4780,17 +4771,20 @@ function evolved.batch_remove(query, ...)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local removed_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             removed_count = removed_count + __chunk_remove(chunk, ...)
         end
     end
@@ -4810,17 +4804,20 @@ function evolved.batch_clear(query)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local cleared_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             cleared_count = cleared_count + __chunk_clear(chunk)
         end
     end
@@ -4840,17 +4837,20 @@ function evolved.batch_destroy(query)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local destroyed_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             destroyed_count = destroyed_count + __chunk_destroy(chunk)
         end
     end
@@ -4876,17 +4876,20 @@ function evolved.batch_multi_set(query, fragments, components)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local set_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             set_count = set_count + __chunk_multi_set(chunk, fragments, components)
         end
     end
@@ -4912,17 +4915,20 @@ function evolved.batch_multi_assign(query, fragments, components)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local assigned_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             assigned_count = assigned_count + __chunk_multi_assign(chunk, fragments, components)
         end
     end
@@ -4948,17 +4954,20 @@ function evolved.batch_multi_insert(query, fragments, components)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local inserted_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             inserted_count = inserted_count + __chunk_multi_insert(chunk, fragments, components)
         end
     end
@@ -4979,17 +4988,20 @@ function evolved.batch_multi_remove(query, fragments)
     end
 
     ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
+    local chunk_list = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_list_size = 0
 
     for chunk in evolved.execute(query) do
-        chunk_list[#chunk_list + 1] = chunk
+        chunk_list_size = chunk_list_size + 1
+        chunk_list[chunk_list_size] = chunk
     end
 
     local removed_count = 0
 
     __defer()
     do
-        for _, chunk in ipairs(chunk_list) do
+        for i = 1, chunk_list_size do
+            local chunk = chunk_list[i]
             removed_count = removed_count + __chunk_multi_remove(chunk, fragments)
         end
     end
@@ -5194,7 +5206,7 @@ function evolved.each(entity)
     end
 
     ---@type evolved.each_state
-    local each_state = __acquire_table(__TABLE_POOL_TAG__EACH_STATE, 4, 0)
+    local each_state = __acquire_table(__TABLE_POOL_TAG__EACH_STATE)
 
     each_state[1] = __structural_changes
     each_state[2] = chunk
@@ -5235,21 +5247,22 @@ function evolved.execute(query)
     end
 
     ---@type evolved.chunk[]
-    local chunk_stack = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST, 16, 0)
-    local cur_chunk_stack_size = 0
+    local chunk_stack = __acquire_table(__TABLE_POOL_TAG__CHUNK_LIST)
+    local chunk_stack_size = 0
 
     ---@type evolved.execute_state
-    local execute_state = __acquire_table(__TABLE_POOL_TAG__EXECUTE_STATE, 3, 0)
+    local execute_state = __acquire_table(__TABLE_POOL_TAG__EXECUTE_STATE)
 
     execute_state[1] = __structural_changes
     execute_state[2] = chunk_stack
     execute_state[3] = exclude_set
 
-    for _, major_fragment_chunk in ipairs(major_fragment_chunks) do
+    for major_fragment_chunk_index = 1, #major_fragment_chunks do
+        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
         if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
             if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
-                cur_chunk_stack_size = cur_chunk_stack_size + 1
-                chunk_stack[cur_chunk_stack_size] = major_fragment_chunk
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = major_fragment_chunk
             end
         end
     end
@@ -5277,7 +5290,7 @@ function evolved.spawn_at(chunk, fragments, components)
         components = __EMPTY_COMPONENT_LIST
     end
 
-    local entity = evolved.id()
+    local entity = __acquire_id()
 
     if not chunk then
         return entity, false
@@ -5311,7 +5324,7 @@ function evolved.spawn_with(fragments, components)
         components = __EMPTY_COMPONENT_LIST
     end
 
-    local entity, chunk = evolved.id(), __chunk_fragment_list(fragments)
+    local entity, chunk = __acquire_id(), __chunk_fragment_list(fragments)
 
     if not chunk then
         return entity, false
@@ -5371,8 +5384,8 @@ function evolved_entity_builder:set(fragment, ...)
     local component_count = self.__component_count
 
     if component_count == 0 then
-        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 8, 0)
-        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 8, 0)
+        fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+        component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
         self.__fragment_list = fragment_list
         self.__component_list = component_list
     end
@@ -5468,8 +5481,8 @@ function evolved_fragment_builder:build()
     self.__default = nil
     self.__construct = nil
 
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 3, 0)
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 3, 0)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
     local component_count = 0
 
     if tag then
@@ -5589,8 +5602,8 @@ function evolved_query_builder:build()
     self.__include_list = nil
     self.__exclude_list = nil
 
-    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST, 2, 0)
-    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST, 2, 0)
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
     local component_count = 0
 
     if include_list then
