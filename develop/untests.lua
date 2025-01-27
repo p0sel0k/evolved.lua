@@ -521,7 +521,7 @@ do
 
     assert(evo.insert(e, f1, 42))
     assert(evo.insert(e, f2, 43))
-    evo.remove(e, f1, f2)
+    evo.remove(e, f1, f2, f2)
     assert(remove_count == 3)
     assert(last_removed_component == 43)
 
