@@ -36,6 +36,12 @@ local evolved = {
 ---@alias evolved.component any
 ---@alias evolved.component_storage evolved.component[]
 
+---@alias evolved.default evolved.component
+---@alias evolved.construct fun(...: any): evolved.component
+---@alias evolved.set_or_assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
+---@alias evolved.set_or_insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
+---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
+
 ---@class (exact) evolved.chunk
 ---@field package __parent? evolved.chunk
 ---@field package __children evolved.chunk[]
@@ -433,6 +439,7 @@ local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
 ---@param ... any component arguments
 ---@return evolved.component
 local function __component_construct(fragment, ...)
+    ---@type evolved.default, evolved.construct
     local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
 
     local component = ...
@@ -453,6 +460,7 @@ end
 ---@param new_component evolved.component
 ---@param old_component evolved.component
 local function __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+    ---@type evolved.set_or_assign_hook, evolved.set_or_assign_hook
     local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
     if on_set then on_set(entity, fragment, new_component, old_component) end
     if on_assign then on_assign(entity, fragment, new_component, old_component) end
@@ -462,6 +470,7 @@ end
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
 local function __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+    ---@type evolved.set_or_insert_hook, evolved.set_or_insert_hook
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
     if on_set then on_set(entity, fragment, new_component) end
     if on_insert then on_insert(entity, fragment, new_component) end
@@ -471,6 +480,7 @@ end
 ---@param fragment evolved.fragment
 ---@param old_component evolved.component
 local function __fragment_call_remove_hook(entity, fragment, old_component)
+    ---@type evolved.remove_hook
     local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
     if on_remove then on_remove(entity, fragment, old_component) end
 end
@@ -1033,53 +1043,97 @@ local function __chunk_assign(chunk, fragment, ...)
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
-    if chunk.__has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
+    ---@type evolved.default?, evolved.construct?
+    local fragment_default, fragment_construct
+
+    ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+    local fragment_on_set, fragment_on_assign
+
+    do
+        if chunk.__has_defaults_or_constructs then
+            fragment_default, fragment_construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+        end
+
+        if chunk.__has_set_or_assign_hooks then
+            fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+        end
+    end
+
+    if fragment_on_set ~= nil or fragment_on_assign ~= nil then
         local component_index = chunk_component_indices[fragment]
+
         if component_index then
             local component_storage = chunk_component_storages[component_index]
-            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+
+            if fragment_default ~= nil or fragment_construct ~= nil then
                 for place = 1, chunk_entity_count do
                     local entity = chunk_entities[place]
                     local old_component = component_storage[place]
-                    local new_component = __component_construct(fragment, ...)
+
+                    local new_component = ...
+                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
+
                     component_storage[place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set ~= nil then
+                        fragment_on_set(entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign ~= nil then
+                        fragment_on_assign(entity, fragment, new_component, old_component)
+                    end
                 end
             else
                 local new_component = ...
-
-                if new_component == nil then
-                    new_component = true
-                end
+                if new_component == nil then new_component = true end
 
                 for place = 1, chunk_entity_count do
                     local entity = chunk_entities[place]
                     local old_component = component_storage[place]
+
                     component_storage[place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set ~= nil then
+                        fragment_on_set(entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign ~= nil then
+                        fragment_on_assign(entity, fragment, new_component, old_component)
+                    end
                 end
             end
         else
             for place = 1, chunk_entity_count do
                 local entity = chunk_entities[place]
-                __fragment_call_set_and_assign_hooks(entity, fragment)
+
+                if fragment_on_set ~= nil then
+                    fragment_on_set(entity, fragment)
+                end
+
+                if fragment_on_assign ~= nil then
+                    fragment_on_assign(entity, fragment)
+                end
             end
         end
     else
         local component_index = chunk_component_indices[fragment]
+
         if component_index then
             local component_storage = chunk_component_storages[component_index]
-            if chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+
+            if fragment_default ~= nil or fragment_construct ~= nil then
                 for place = 1, chunk_entity_count do
-                    local new_component = __component_construct(fragment, ...)
+                    local new_component = ...
+                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
                     component_storage[place] = new_component
                 end
             else
                 local new_component = ...
-
-                if new_component == nil then
-                    new_component = true
-                end
+                if new_component == nil then new_component = true end
 
                 for place = 1, chunk_entity_count do
                     component_storage[place] = new_component
@@ -1105,7 +1159,7 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
-    if old_chunk == new_chunk then
+    if not new_chunk or old_chunk == new_chunk then
         return 0
     end
 
@@ -1121,6 +1175,22 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
     local new_component_indices = new_chunk.__component_indices
     local new_component_storages = new_chunk.__component_storages
+
+    ---@type evolved.default?, evolved.construct?
+    local fragment_default, fragment_construct
+
+    ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+    local fragment_on_set, fragment_on_insert
+
+    do
+        if new_chunk.__has_defaults_or_constructs then
+            fragment_default, fragment_construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+        end
+
+        if new_chunk.__has_set_or_insert_hooks then
+            fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+        end
+    end
 
     do
         new_chunk.__entity_count = new_entity_count + old_entity_count
@@ -1140,51 +1210,73 @@ local function __chunk_insert(old_chunk, fragment, ...)
         end
     end
 
-    if new_chunk.__has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
+    if fragment_on_set ~= nil or fragment_on_insert ~= nil then
         local new_component_index = new_component_indices[fragment]
+
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
-            if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+
+            if fragment_default ~= nil or fragment_construct ~= nil then
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                     local entity = new_entities[new_place]
-                    local new_component = __component_construct(fragment, ...)
+
+                    local new_component = ...
+                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
+
                     new_component_storage[new_place] = new_component
-                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+
+                    if fragment_on_set ~= nil then
+                        fragment_on_set(entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert ~= nil then
+                        fragment_on_insert(entity, fragment, new_component)
+                    end
                 end
             else
                 local new_component = ...
-
-                if new_component == nil then
-                    new_component = true
-                end
+                if new_component == nil then new_component = true end
 
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                     local entity = new_entities[new_place]
+
                     new_component_storage[new_place] = new_component
-                    __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+
+                    if fragment_on_set ~= nil then
+                        fragment_on_set(entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert ~= nil then
+                        fragment_on_insert(entity, fragment, new_component)
+                    end
                 end
             end
         else
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entities[new_place]
-                __fragment_call_set_and_insert_hooks(entity, fragment)
+                if fragment_on_set ~= nil then fragment_on_set(entity, fragment) end
+                if fragment_on_insert ~= nil then fragment_on_insert(entity, fragment) end
             end
         end
     else
         local new_component_index = new_component_indices[fragment]
+
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
-            if new_chunk.__has_defaults_or_constructs and __fragment_has_default_or_construct(fragment) then
+
+            if fragment_default ~= nil or fragment_construct ~= nil then
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-                    local new_component = __component_construct(fragment, ...)
+                    local new_component = ...
+                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
                     new_component_storage[new_place] = new_component
                 end
             else
                 local new_component = ...
-
-                if new_component == nil then
-                    new_component = true
-                end
+                if new_component == nil then new_component = true end
 
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                     new_component_storage[new_place] = new_component
@@ -1252,20 +1344,29 @@ local function __chunk_remove(old_chunk, ...)
 
         for i = 1, fragment_count do
             local fragment = select(i, ...)
-            if not removed_set[fragment] and old_fragment_set[fragment] and __fragment_has_remove_hook(fragment) then
+
+            if not removed_set[fragment] and old_fragment_set[fragment] then
                 removed_set[fragment] = true
-                local old_component_index = old_component_indices[fragment]
-                if old_component_index then
-                    local old_component_storage = old_component_storages[old_component_index]
-                    for old_place = 1, old_entity_count do
-                        local entity = old_entities[old_place]
-                        local old_component = old_component_storage[old_place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
-                    end
-                else
-                    for old_place = 1, old_entity_count do
-                        local entity = old_entities[old_place]
-                        __fragment_call_remove_hook(entity, fragment)
+
+                ---@type evolved.remove_hook?
+                local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+
+                if fragment_on_remove ~= nil then
+                    local old_component_index = old_component_indices[fragment]
+
+                    if old_component_index then
+                        local old_component_storage = old_component_storages[old_component_index]
+
+                        for old_place = 1, old_entity_count do
+                            local entity = old_entities[old_place]
+                            local old_component = old_component_storage[old_place]
+                            fragment_on_remove(entity, fragment, old_component)
+                        end
+                    else
+                        for old_place = 1, old_entity_count do
+                            local entity = old_entities[old_place]
+                            fragment_on_remove(entity, fragment)
+                        end
                     end
                 end
             end
@@ -1347,21 +1448,28 @@ local function __chunk_clear(chunk)
     if chunk.__has_remove_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
+
         for i = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[i]
-            if __fragment_has_remove_hook(fragment) then
+
+            ---@type evolved.remove_hook?
+            local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+
+            if fragment_on_remove ~= nil then
                 local component_index = chunk_component_indices[fragment]
+
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
+
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
                         local old_component = component_storage[place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
+                        fragment_on_remove(entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __fragment_call_remove_hook(entity, fragment)
+                        fragment_on_remove(entity, fragment)
                     end
                 end
             end
@@ -1409,21 +1517,28 @@ local function __chunk_destroy(chunk)
     if chunk.__has_remove_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
+
         for i = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[i]
-            if __fragment_has_remove_hook(fragment) then
+
+            ---@type evolved.remove_hook?
+            local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+
+            if fragment_on_remove ~= nil then
                 local component_index = chunk_component_indices[fragment]
+
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
+
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
                         local old_component = component_storage[place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
+                        fragment_on_remove(entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __fragment_call_remove_hook(entity, fragment)
+                        fragment_on_remove(entity, fragment)
                     end
                 end
             end
@@ -1490,47 +1605,69 @@ local function __chunk_multi_set(old_chunk, fragments, components)
     if old_chunk == new_chunk then
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if old_chunk_has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
+
+            ---@type evolved.default?
+            local fragment_default
+
+            ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+            local fragment_on_set, fragment_on_assign
+
+            do
+                if old_chunk_has_defaults_or_constructs then
+                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if old_chunk_has_set_or_assign_hooks then
+                    fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                end
+            end
+
+            if fragment_on_set ~= nil or fragment_on_assign ~= nil then
                 local old_component_index = old_component_indices[fragment]
+
                 if old_component_index then
                     local old_component_storage = old_component_storages[old_component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and old_chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for place = 1, old_entity_count do
                         local entity = old_entities[place]
                         local old_component = old_component_storage[place]
+
                         old_component_storage[place] = new_component
-                        __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign ~= nil then
+                            fragment_on_assign(entity, fragment, new_component, old_component)
+                        end
                     end
                 else
                     for place = 1, old_entity_count do
                         local entity = old_entities[place]
-                        __fragment_call_set_and_assign_hooks(entity, fragment)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment)
+                        end
+
+                        if fragment_on_assign ~= nil then
+                            fragment_on_assign(entity, fragment)
+                        end
                     end
                 end
             else
                 local old_component_index = old_component_indices[fragment]
+
                 if old_component_index then
                     local old_component_storage = old_component_storages[old_component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and old_chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for place = 1, old_entity_count do
                         old_component_storage[place] = new_component
@@ -1573,48 +1710,69 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
+
             if inserted_set[fragment] or old_fragment_set[fragment] then
-                if new_chunk_has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
+                ---@type evolved.default?
+                local fragment_default
+
+                ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+                local fragment_on_set, fragment_on_assign
+
+                do
+                    if new_chunk_has_defaults_or_constructs then
+                        fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                    end
+
+                    if new_chunk_has_set_or_assign_hooks then
+                        fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                    end
+                end
+
+                if fragment_on_set ~= nil or fragment_on_assign ~= nil then
                     local new_component_index = new_component_indices[fragment]
                     if new_component_index then
                         local new_component_storage = new_component_storages[new_component_index]
 
                         local new_component = components[i]
-
-                        if new_component == nil and new_chunk_has_defaults_or_constructs then
-                            new_component = evolved.get(fragment, evolved.DEFAULT)
-                        end
-
-                        if new_component == nil then
-                            new_component = true
-                        end
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
                             local old_component = new_component_storage[new_place]
+
                             new_component_storage[new_place] = new_component
-                            __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+                            if fragment_on_set ~= nil then
+                                fragment_on_set(entity, fragment, new_component, old_component)
+                            end
+
+                            if fragment_on_assign ~= nil then
+                                fragment_on_assign(entity, fragment, new_component, old_component)
+                            end
                         end
                     else
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
-                            __fragment_call_set_and_assign_hooks(entity, fragment)
+
+                            if fragment_on_set ~= nil then
+                                fragment_on_set(entity, fragment)
+                            end
+
+                            if fragment_on_assign ~= nil then
+                                fragment_on_assign(entity, fragment)
+                            end
                         end
                     end
                 else
                     local new_component_index = new_component_indices[fragment]
+
                     if new_component_index then
                         local new_component_storage = new_component_storages[new_component_index]
 
                         local new_component = components[i]
-
-                        if new_component == nil and new_chunk_has_defaults_or_constructs then
-                            new_component = evolved.get(fragment, evolved.DEFAULT)
-                        end
-
-                        if new_component == nil then
-                            new_component = true
-                        end
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             new_component_storage[new_place] = new_component
@@ -1625,46 +1783,68 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                 end
             else
                 inserted_set[fragment] = true
-                if new_chunk_has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
+
+                ---@type evolved.default?
+                local fragment_default
+
+                ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+                local fragment_on_set, fragment_on_insert
+
+                do
+                    if new_chunk_has_defaults_or_constructs then
+                        fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                    end
+
+                    if new_chunk_has_set_or_insert_hooks then
+                        fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+                    end
+                end
+
+                if fragment_on_set ~= nil or fragment_on_insert ~= nil then
                     local new_component_index = new_component_indices[fragment]
+
                     if new_component_index then
                         local new_component_storage = new_component_storages[new_component_index]
 
                         local new_component = components[i]
-
-                        if new_component == nil and new_chunk_has_defaults_or_constructs then
-                            new_component = evolved.get(fragment, evolved.DEFAULT)
-                        end
-
-                        if new_component == nil then
-                            new_component = true
-                        end
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
+
                             new_component_storage[new_place] = new_component
-                            __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+
+                            if fragment_on_set ~= nil then
+                                fragment_on_set(entity, fragment, new_component)
+                            end
+
+                            if fragment_on_insert ~= nil then
+                                fragment_on_insert(entity, fragment, new_component)
+                            end
                         end
                     else
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
-                            __fragment_call_set_and_insert_hooks(entity, fragment)
+
+                            if fragment_on_set ~= nil then
+                                fragment_on_set(entity, fragment)
+                            end
+
+                            if fragment_on_insert ~= nil then
+                                fragment_on_insert(entity, fragment)
+                            end
                         end
                     end
                 else
                     local new_component_index = new_component_indices[fragment]
+
                     if new_component_index then
                         local new_component_storage = new_component_storages[new_component_index]
 
                         local new_component = components[i]
-
-                        if new_component == nil and new_chunk_has_defaults_or_constructs then
-                            new_component = evolved.get(fragment, evolved.DEFAULT)
-                        end
-
-                        if new_component == nil then
-                            new_component = true
-                        end
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             new_component_storage[new_place] = new_component
@@ -1735,47 +1915,68 @@ local function __chunk_multi_assign(chunk, fragments, components)
     for i = 1, fragment_count do
         local fragment = fragments[i]
         if chunk_fragment_set[fragment] then
-            if chunk_has_set_or_assign_hooks and __fragment_has_set_or_assign_hooks(fragment) then
+            ---@type evolved.default?
+            local fragment_default
+
+            ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+            local fragment_on_set, fragment_on_assign
+
+            do
+                if chunk_has_defaults_or_constructs then
+                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if chunk_has_set_or_assign_hooks then
+                    fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                end
+            end
+
+            if fragment_on_set ~= nil or fragment_on_assign ~= nil then
                 local component_index = chunk_component_indices[fragment]
+
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
                         local old_component = component_storage[place]
+
                         component_storage[place] = new_component
-                        __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign ~= nil then
+                            fragment_on_assign(entity, fragment, new_component, old_component)
+                        end
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __fragment_call_set_and_assign_hooks(entity, fragment)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment)
+                        end
+
+                        if fragment_on_assign ~= nil then
+                            fragment_on_assign(entity, fragment)
+                        end
                     end
                 end
             else
                 local component_index = chunk_component_indices[fragment]
+
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for place = 1, chunk_entity_count do
                         component_storage[place] = new_component
@@ -1852,46 +2053,68 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
         local fragment = fragments[i]
         if not inserted_set[fragment] and not old_fragment_set[fragment] then
             inserted_set[fragment] = true
-            if new_chunk_has_set_or_insert_hooks and __fragment_has_set_or_insert_hooks(fragment) then
+
+            ---@type evolved.default?
+            local fragment_default
+
+            ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+            local fragment_on_set, fragment_on_insert
+
+            do
+                if new_chunk_has_defaults_or_constructs then
+                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if new_chunk_has_set_or_insert_hooks then
+                    fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+                end
+            end
+
+            if fragment_on_set ~= nil or fragment_on_insert ~= nil then
                 local new_component_index = new_component_indices[fragment]
+
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and new_chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entities[new_place]
+
                         new_component_storage[new_place] = new_component
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment, new_component)
+                        end
+
+                        if fragment_on_insert ~= nil then
+                            fragment_on_insert(entity, fragment, new_component)
+                        end
                     end
                 else
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entities[new_place]
-                        __fragment_call_set_and_insert_hooks(entity, fragment)
+
+                        if fragment_on_set ~= nil then
+                            fragment_on_set(entity, fragment)
+                        end
+
+                        if fragment_on_insert ~= nil then
+                            fragment_on_insert(entity, fragment)
+                        end
                     end
                 end
             else
                 local new_component_index = new_component_indices[fragment]
+
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
                     local new_component = components[i]
-
-                    if new_component == nil and new_chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         new_component_storage[new_place] = new_component
@@ -1961,20 +2184,29 @@ local function __chunk_multi_remove(old_chunk, fragments)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if not removed_set[fragment] and old_fragment_set[fragment] and __fragment_has_remove_hook(fragment) then
+
+            if not removed_set[fragment] and old_fragment_set[fragment] then
                 removed_set[fragment] = true
-                local old_component_index = old_component_indices[fragment]
-                if old_component_index then
-                    local old_component_storage = old_component_storages[old_component_index]
-                    for old_place = 1, old_entity_count do
-                        local entity = old_entities[old_place]
-                        local old_component = old_component_storage[old_place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
-                    end
-                else
-                    for place = 1, old_entity_count do
-                        local entity = old_entities[place]
-                        __fragment_call_remove_hook(entity, fragment)
+
+                ---@type evolved.remove_hook?
+                local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+
+                if fragment_on_remove ~= nil then
+                    local old_component_index = old_component_indices[fragment]
+
+                    if old_component_index then
+                        local old_component_storage = old_component_storages[old_component_index]
+
+                        for old_place = 1, old_entity_count do
+                            local entity = old_entities[old_place]
+                            local old_component = old_component_storage[old_place]
+                            fragment_on_remove(entity, fragment, old_component)
+                        end
+                    else
+                        for place = 1, old_entity_count do
+                            local entity = old_entities[place]
+                            fragment_on_remove(entity, fragment)
+                        end
                     end
                 end
             end
@@ -3565,10 +3797,7 @@ function evolved.set(entity, fragment, ...)
                     end
                 else
                     local new_component = ...
-
-                    if new_component == nil then
-                        new_component = true
-                    end
+                    if new_component == nil then new_component = true end
 
                     new_component_storage[new_place] = new_component
 
@@ -3610,8 +3839,11 @@ function evolved.assign(entity, fragment, ...)
         return false, false
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
+    local entity_chunks = __entity_chunks
+    local entity_places = __entity_places
+
+    local chunk = entity_chunks[entity_index]
+    local place = entity_places[entity_index]
 
     if not chunk or not chunk.__fragment_set[fragment] then
         return false, false
@@ -3809,9 +4041,12 @@ function evolved.remove(entity, ...)
 
             for i = 1, select('#', ...) do
                 local fragment = select(i, ...)
+
                 if not removed_set[fragment] and old_fragment_set[fragment] then
                     removed_set[fragment] = true
+
                     local old_component_index = old_component_indices[fragment]
+
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
                         local old_component = old_component_storage[old_place]
@@ -4026,7 +4261,6 @@ function evolved.multi_set(entity, fragments, components)
     __defer()
 
     if old_chunk == new_chunk then
-        local old_fragment_set = old_chunk.__fragment_set
         local old_component_indices = old_chunk.__component_indices
         local old_component_storages = old_chunk.__component_storages
 
@@ -4035,32 +4269,32 @@ function evolved.multi_set(entity, fragments, components)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
-            if old_fragment_set[fragment] then
-                local old_component_index = old_component_indices[fragment]
-                if old_component_index then
-                    local old_component_storage = old_component_storages[old_component_index]
 
-                    local new_component = components[i]
+            local old_component_index = old_component_indices[fragment]
 
-                    if new_component == nil and old_chunk_has_defaults_or_constructs then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
-                    end
+            if old_component_index then
+                local old_component_storage = old_component_storages[old_component_index]
 
-                    if new_component == nil then
-                        new_component = true
-                    end
+                local new_component = components[i]
 
-                    if old_chunk_has_set_or_assign_hooks then
-                        local old_component = old_component_storage[old_place]
-                        old_component_storage[old_place] = new_component
-                        __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
-                    else
-                        old_component_storage[old_place] = new_component
-                    end
+                if old_chunk_has_defaults_or_constructs and new_component == nil then
+                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                end
+
+                if new_component == nil then
+                    new_component = true
+                end
+
+                if old_chunk_has_set_or_assign_hooks then
+                    local old_component = old_component_storage[old_place]
+                    old_component_storage[old_place] = new_component
+                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
-                    if old_chunk_has_set_or_assign_hooks then
-                        __fragment_call_set_and_assign_hooks(entity, fragment)
-                    end
+                    old_component_storage[old_place] = new_component
+                end
+            else
+                if old_chunk_has_set_or_assign_hooks then
+                    __fragment_call_set_and_assign_hooks(entity, fragment)
                 end
             end
         end
@@ -4104,14 +4338,16 @@ function evolved.multi_set(entity, fragments, components)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
+
             if inserted_set[fragment] or old_fragment_set[fragment] then
                 local new_component_index = new_component_indices[fragment]
+
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
                     local new_component = components[i]
 
-                    if new_component == nil and new_chunk_has_defaults_or_constructs then
+                    if new_chunk_has_defaults_or_constructs and new_component == nil then
                         new_component = evolved.get(fragment, evolved.DEFAULT)
                     end
 
@@ -4133,13 +4369,15 @@ function evolved.multi_set(entity, fragments, components)
                 end
             else
                 inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
+
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
                     local new_component = components[i]
 
-                    if new_component == nil and new_chunk_has_defaults_or_constructs then
+                    if new_chunk_has_defaults_or_constructs and new_component == nil then
                         new_component = evolved.get(fragment, evolved.DEFAULT)
                     end
 
@@ -4199,8 +4437,11 @@ function evolved.multi_assign(entity, fragments, components)
         return false, false
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
+    local entity_chunks = __entity_chunks
+    local entity_places = __entity_places
+
+    local chunk = entity_chunks[entity_index]
+    local place = entity_places[entity_index]
 
     if not chunk or not __chunk_has_any_fragment_list(chunk, fragments) then
         return false, false
@@ -4218,14 +4459,16 @@ function evolved.multi_assign(entity, fragments, components)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
+
             if chunk_fragment_set[fragment] then
                 local component_index = chunk_component_indices[fragment]
+
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
 
                     local new_component = components[i]
 
-                    if new_component == nil and chunk_has_defaults_or_constructs then
+                    if chunk_has_defaults_or_constructs and new_component == nil then
                         new_component = evolved.get(fragment, evolved.DEFAULT)
                     end
 
@@ -4333,15 +4576,18 @@ function evolved.multi_insert(entity, fragments, components)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
+
             if not inserted_set[fragment] and not old_fragment_set[fragment] then
                 inserted_set[fragment] = true
+
                 local new_component_index = new_component_indices[fragment]
+
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
                     local new_component = components[i]
 
-                    if new_component == nil and new_chunk_has_defaults_or_constructs then
+                    if new_chunk_has_defaults_or_constructs and new_component == nil then
                         new_component = evolved.get(fragment, evolved.DEFAULT)
                     end
 
@@ -4420,9 +4666,12 @@ function evolved.multi_remove(entity, fragments)
 
             for i = 1, fragment_count do
                 local fragment = fragments[i]
+
                 if not removed_set[fragment] and old_fragment_set[fragment] then
                     removed_set[fragment] = true
+
                     local old_component_index = old_component_indices[fragment]
+
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
                         local old_component = old_component_storage[old_place]
@@ -5024,8 +5273,11 @@ function evolved.each(entity)
         return __each_iterator
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
+    local entity_chunks = __entity_chunks
+    local entity_places = __entity_places
+
+    local chunk = entity_chunks[entity_index]
+    local place = entity_places[entity_index]
 
     if not chunk then
         return __each_iterator
