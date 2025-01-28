@@ -3748,7 +3748,10 @@ function evolved.set(entity, fragment, ...)
                     end
                 else
                     local new_component = ...
-                    if new_component == nil then new_component = true end
+
+                    if new_component == nil then
+                        new_component = true
+                    end
 
                     new_component_storage[new_place] = new_component
 
