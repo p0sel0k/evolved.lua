@@ -2550,6 +2550,83 @@ do
 end
 
 do
+    local f1_assign_count = 0
+    local f1_insert_count = 0
+    local f2_set_count = 0
+    local f2_remove_count = 0
+
+    local FB = evo.fragment()
+
+    local f1 = FB
+        :on_assign(function(e, f, nc, oc)
+            f1_assign_count = f1_assign_count + 1
+            assert(evo.is_alive(e))
+            assert(evo.is_alive(f))
+            assert(nc == 42)
+            assert(oc == 41)
+        end)
+        :on_insert(function(e, f, nc)
+            f1_insert_count = f1_insert_count + 1
+            assert(evo.is_alive(e))
+            assert(evo.is_alive(f))
+            assert(nc == 41)
+        end)
+        :build()
+
+    local f2 = FB
+        :on_set(function(e, f, nc, oc)
+            f2_set_count = f2_set_count + 1
+            assert(evo.is_alive(e))
+            assert(evo.is_alive(f))
+            if oc then
+                assert(oc == 81)
+                assert(nc == 82)
+            else
+                assert(nc == 81)
+            end
+        end)
+        :on_remove(function(e, f, c)
+            f2_remove_count = f2_remove_count + 1
+            assert(evo.is_alive(e))
+            assert(evo.is_alive(f))
+            assert(c == 82)
+        end)
+        :build()
+
+    local e1 = evo.entity():set(f1, 41):build()
+    assert(f1_assign_count == 0 and f1_insert_count == 1)
+
+    local e2 = evo.entity():set(f1, 42):set(f1, 41):build()
+    assert(f1_assign_count == 0 and f1_insert_count == 2)
+
+    assert(evo.assign(e1, f1, 42))
+    assert(f1_assign_count == 1 and f1_insert_count == 2)
+
+    assert(evo.assign(e2, f1, 42))
+    assert(f1_assign_count == 2 and f1_insert_count == 2)
+
+    assert(evo.get(e1, f1) == 42 and evo.get(e2, f1) == 42)
+
+    assert(evo.set(e1, f2, 81))
+    assert(f2_set_count == 1)
+    assert(evo.set(e1, f2, 82))
+    assert(f2_set_count == 2)
+
+    assert(evo.set(e2, f2, 81))
+    assert(f2_set_count == 3)
+    assert(evo.set(e2, f2, 82))
+    assert(f2_set_count == 4)
+
+    assert(evo.get(e1, f2) == 82 and evo.get(e2, f2) == 82)
+
+    assert(evo.remove(e1, f1, f1, f2, f2) and evo.remove(e1, f1, f1, f2, f2))
+    assert(f2_remove_count == 1)
+
+    assert(evo.destroy(e2) and evo.destroy(e2))
+    assert(f2_remove_count == 2)
+end
+
+do
     local f1, f2, f3 = evo.id(3)
 
     do

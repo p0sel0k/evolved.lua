@@ -38,8 +38,10 @@ local evolved = {
 
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
----@alias evolved.set_or_assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
----@alias evolved.set_or_insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
+
+---@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
+---@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
+---@alias evolved.insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
 ---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
 
 ---@class (exact) evolved.chunk
@@ -444,7 +446,7 @@ local function __component_construct(fragment, ...)
 
     local component = ...
 
-    if construct ~= nil then
+    if construct then
         component = construct(...)
     end
 
@@ -460,7 +462,7 @@ end
 ---@param new_component evolved.component
 ---@param old_component evolved.component
 local function __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
-    ---@type evolved.set_or_assign_hook, evolved.set_or_assign_hook
+    ---@type evolved.set_hook?, evolved.assign_hook?
     local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
     if on_set then on_set(entity, fragment, new_component, old_component) end
     if on_assign then on_assign(entity, fragment, new_component, old_component) end
@@ -470,7 +472,7 @@ end
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
 local function __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
-    ---@type evolved.set_or_insert_hook, evolved.set_or_insert_hook
+    ---@type evolved.set_hook?, evolved.insert_hook?
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
     if on_set then on_set(entity, fragment, new_component) end
     if on_insert then on_insert(entity, fragment, new_component) end
@@ -480,7 +482,7 @@ end
 ---@param fragment evolved.fragment
 ---@param old_component evolved.component
 local function __fragment_call_remove_hook(entity, fragment, old_component)
-    ---@type evolved.remove_hook
+    ---@type evolved.remove_hook?
     local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
     if on_remove then on_remove(entity, fragment, old_component) end
 end
@@ -1288,7 +1290,7 @@ local function __chunk_assign(chunk, fragment, ...)
     ---@type evolved.default?, evolved.construct?
     local fragment_default, fragment_construct
 
-    ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+    ---@type evolved.set_hook?, evolved.assign_hook?
     local fragment_on_set, fragment_on_assign
 
     do
@@ -1301,29 +1303,29 @@ local function __chunk_assign(chunk, fragment, ...)
         end
     end
 
-    if fragment_on_set ~= nil or fragment_on_assign ~= nil then
+    if fragment_on_set or fragment_on_assign then
         local component_index = chunk_component_indices[fragment]
 
         if component_index then
             local component_storage = chunk_component_storages[component_index]
 
-            if fragment_default ~= nil or fragment_construct ~= nil then
+            if fragment_default ~= nil or fragment_construct then
                 for place = 1, chunk_entity_count do
                     local entity = chunk_entities[place]
                     local old_component = component_storage[place]
 
                     local new_component = ...
-                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if fragment_construct then new_component = fragment_construct(...) end
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
 
                     component_storage[place] = new_component
 
-                    if fragment_on_set ~= nil then
+                    if fragment_on_set then
                         fragment_on_set(entity, fragment, new_component, old_component)
                     end
 
-                    if fragment_on_assign ~= nil then
+                    if fragment_on_assign then
                         fragment_on_assign(entity, fragment, new_component, old_component)
                     end
                 end
@@ -1337,11 +1339,11 @@ local function __chunk_assign(chunk, fragment, ...)
 
                     component_storage[place] = new_component
 
-                    if fragment_on_set ~= nil then
+                    if fragment_on_set then
                         fragment_on_set(entity, fragment, new_component, old_component)
                     end
 
-                    if fragment_on_assign ~= nil then
+                    if fragment_on_assign then
                         fragment_on_assign(entity, fragment, new_component, old_component)
                     end
                 end
@@ -1350,11 +1352,11 @@ local function __chunk_assign(chunk, fragment, ...)
             for place = 1, chunk_entity_count do
                 local entity = chunk_entities[place]
 
-                if fragment_on_set ~= nil then
+                if fragment_on_set then
                     fragment_on_set(entity, fragment)
                 end
 
-                if fragment_on_assign ~= nil then
+                if fragment_on_assign then
                     fragment_on_assign(entity, fragment)
                 end
             end
@@ -1365,10 +1367,10 @@ local function __chunk_assign(chunk, fragment, ...)
         if component_index then
             local component_storage = chunk_component_storages[component_index]
 
-            if fragment_default ~= nil or fragment_construct ~= nil then
+            if fragment_default ~= nil or fragment_construct then
                 for place = 1, chunk_entity_count do
                     local new_component = ...
-                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if fragment_construct then new_component = fragment_construct(...) end
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
                     component_storage[place] = new_component
@@ -1421,7 +1423,7 @@ local function __chunk_insert(old_chunk, fragment, ...)
     ---@type evolved.default?, evolved.construct?
     local fragment_default, fragment_construct
 
-    ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+    ---@type evolved.set_hook?, evolved.insert_hook?
     local fragment_on_set, fragment_on_insert
 
     do
@@ -1452,28 +1454,28 @@ local function __chunk_insert(old_chunk, fragment, ...)
         end
     end
 
-    if fragment_on_set ~= nil or fragment_on_insert ~= nil then
+    if fragment_on_set or fragment_on_insert then
         local new_component_index = new_component_indices[fragment]
 
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
 
-            if fragment_default ~= nil or fragment_construct ~= nil then
+            if fragment_default ~= nil or fragment_construct then
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                     local entity = new_entities[new_place]
 
                     local new_component = ...
-                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if fragment_construct then new_component = fragment_construct(...) end
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
 
                     new_component_storage[new_place] = new_component
 
-                    if fragment_on_set ~= nil then
+                    if fragment_on_set then
                         fragment_on_set(entity, fragment, new_component)
                     end
 
-                    if fragment_on_insert ~= nil then
+                    if fragment_on_insert then
                         fragment_on_insert(entity, fragment, new_component)
                     end
                 end
@@ -1486,11 +1488,11 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    if fragment_on_set ~= nil then
+                    if fragment_on_set then
                         fragment_on_set(entity, fragment, new_component)
                     end
 
-                    if fragment_on_insert ~= nil then
+                    if fragment_on_insert then
                         fragment_on_insert(entity, fragment, new_component)
                     end
                 end
@@ -1498,8 +1500,14 @@ local function __chunk_insert(old_chunk, fragment, ...)
         else
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entities[new_place]
-                if fragment_on_set ~= nil then fragment_on_set(entity, fragment) end
-                if fragment_on_insert ~= nil then fragment_on_insert(entity, fragment) end
+
+                if fragment_on_set then
+                    fragment_on_set(entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    fragment_on_insert(entity, fragment)
+                end
             end
         end
     else
@@ -1508,10 +1516,10 @@ local function __chunk_insert(old_chunk, fragment, ...)
         if new_component_index then
             local new_component_storage = new_component_storages[new_component_index]
 
-            if fragment_default ~= nil or fragment_construct ~= nil then
+            if fragment_default ~= nil or fragment_construct then
                 for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                     local new_component = ...
-                    if fragment_construct ~= nil then new_component = fragment_construct(...) end
+                    if fragment_construct then new_component = fragment_construct(...) end
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
                     new_component_storage[new_place] = new_component
@@ -1585,7 +1593,7 @@ local function __chunk_remove(old_chunk, ...)
                 ---@type evolved.remove_hook?
                 local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
 
-                if fragment_on_remove ~= nil then
+                if fragment_on_remove then
                     local old_component_index = old_component_indices[fragment]
 
                     if old_component_index then
@@ -1681,7 +1689,7 @@ local function __chunk_clear(chunk)
             ---@type evolved.remove_hook?
             local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
 
-            if fragment_on_remove ~= nil then
+            if fragment_on_remove then
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
@@ -1742,7 +1750,7 @@ local function __chunk_destroy(chunk)
             ---@type evolved.remove_hook?
             local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
 
-            if fragment_on_remove ~= nil then
+            if fragment_on_remove then
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
@@ -1820,7 +1828,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
             ---@type evolved.default?
             local fragment_default
 
-            ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+            ---@type evolved.set_hook?, evolved.assign_hook?
             local fragment_on_set, fragment_on_assign
 
             do
@@ -1833,7 +1841,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                 end
             end
 
-            if fragment_on_set ~= nil or fragment_on_assign ~= nil then
+            if fragment_on_set or fragment_on_assign then
                 local old_component_index = old_component_indices[fragment]
 
                 if old_component_index then
@@ -1849,11 +1857,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                         old_component_storage[place] = new_component
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment, new_component, old_component)
                         end
 
-                        if fragment_on_assign ~= nil then
+                        if fragment_on_assign then
                             fragment_on_assign(entity, fragment, new_component, old_component)
                         end
                     end
@@ -1861,11 +1869,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                     for place = 1, old_entity_count do
                         local entity = old_entities[place]
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment)
                         end
 
-                        if fragment_on_assign ~= nil then
+                        if fragment_on_assign then
                             fragment_on_assign(entity, fragment)
                         end
                     end
@@ -1926,7 +1934,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                 ---@type evolved.default?
                 local fragment_default
 
-                ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+                ---@type evolved.set_hook?, evolved.assign_hook?
                 local fragment_on_set, fragment_on_assign
 
                 do
@@ -1939,7 +1947,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                     end
                 end
 
-                if fragment_on_set ~= nil or fragment_on_assign ~= nil then
+                if fragment_on_set or fragment_on_assign then
                     local new_component_index = new_component_indices[fragment]
                     if new_component_index then
                         local new_component_storage = new_component_storages[new_component_index]
@@ -1954,11 +1962,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                             new_component_storage[new_place] = new_component
 
-                            if fragment_on_set ~= nil then
+                            if fragment_on_set then
                                 fragment_on_set(entity, fragment, new_component, old_component)
                             end
 
-                            if fragment_on_assign ~= nil then
+                            if fragment_on_assign then
                                 fragment_on_assign(entity, fragment, new_component, old_component)
                             end
                         end
@@ -1966,11 +1974,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
 
-                            if fragment_on_set ~= nil then
+                            if fragment_on_set then
                                 fragment_on_set(entity, fragment)
                             end
 
-                            if fragment_on_assign ~= nil then
+                            if fragment_on_assign then
                                 fragment_on_assign(entity, fragment)
                             end
                         end
@@ -1998,7 +2006,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                 ---@type evolved.default?
                 local fragment_default
 
-                ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+                ---@type evolved.set_hook?, evolved.insert_hook?
                 local fragment_on_set, fragment_on_insert
 
                 do
@@ -2011,7 +2019,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                     end
                 end
 
-                if fragment_on_set ~= nil or fragment_on_insert ~= nil then
+                if fragment_on_set or fragment_on_insert then
                     local new_component_index = new_component_indices[fragment]
 
                     if new_component_index then
@@ -2026,11 +2034,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                             new_component_storage[new_place] = new_component
 
-                            if fragment_on_set ~= nil then
+                            if fragment_on_set then
                                 fragment_on_set(entity, fragment, new_component)
                             end
 
-                            if fragment_on_insert ~= nil then
+                            if fragment_on_insert then
                                 fragment_on_insert(entity, fragment, new_component)
                             end
                         end
@@ -2038,11 +2046,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
 
-                            if fragment_on_set ~= nil then
+                            if fragment_on_set then
                                 fragment_on_set(entity, fragment)
                             end
 
-                            if fragment_on_insert ~= nil then
+                            if fragment_on_insert then
                                 fragment_on_insert(entity, fragment)
                             end
                         end
@@ -2122,7 +2130,7 @@ local function __chunk_multi_assign(chunk, fragments, components)
             ---@type evolved.default?
             local fragment_default
 
-            ---@type evolved.set_or_assign_hook?, evolved.set_or_assign_hook?
+            ---@type evolved.set_hook?, evolved.assign_hook?
             local fragment_on_set, fragment_on_assign
 
             do
@@ -2135,7 +2143,7 @@ local function __chunk_multi_assign(chunk, fragments, components)
                 end
             end
 
-            if fragment_on_set ~= nil or fragment_on_assign ~= nil then
+            if fragment_on_set or fragment_on_assign then
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
@@ -2151,11 +2159,11 @@ local function __chunk_multi_assign(chunk, fragments, components)
 
                         component_storage[place] = new_component
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment, new_component, old_component)
                         end
 
-                        if fragment_on_assign ~= nil then
+                        if fragment_on_assign then
                             fragment_on_assign(entity, fragment, new_component, old_component)
                         end
                     end
@@ -2163,11 +2171,11 @@ local function __chunk_multi_assign(chunk, fragments, components)
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment)
                         end
 
-                        if fragment_on_assign ~= nil then
+                        if fragment_on_assign then
                             fragment_on_assign(entity, fragment)
                         end
                     end
@@ -2261,7 +2269,7 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
             ---@type evolved.default?
             local fragment_default
 
-            ---@type evolved.set_or_insert_hook?, evolved.set_or_insert_hook?
+            ---@type evolved.set_hook?, evolved.insert_hook?
             local fragment_on_set, fragment_on_insert
 
             do
@@ -2274,7 +2282,7 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
                 end
             end
 
-            if fragment_on_set ~= nil or fragment_on_insert ~= nil then
+            if fragment_on_set or fragment_on_insert then
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -2289,11 +2297,11 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
                         new_component_storage[new_place] = new_component
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment, new_component)
                         end
 
-                        if fragment_on_insert ~= nil then
+                        if fragment_on_insert then
                             fragment_on_insert(entity, fragment, new_component)
                         end
                     end
@@ -2301,11 +2309,11 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entities[new_place]
 
-                        if fragment_on_set ~= nil then
+                        if fragment_on_set then
                             fragment_on_set(entity, fragment)
                         end
 
-                        if fragment_on_insert ~= nil then
+                        if fragment_on_insert then
                             fragment_on_insert(entity, fragment)
                         end
                     end
@@ -2387,7 +2395,7 @@ local function __chunk_multi_remove(old_chunk, fragments)
                 ---@type evolved.remove_hook?
                 local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
 
-                if fragment_on_remove ~= nil then
+                if fragment_on_remove then
                     local old_component_index = old_component_indices[fragment]
 
                     if old_component_index then
@@ -5453,6 +5461,10 @@ end
 ---@field package __tag boolean
 ---@field package __default? evolved.component
 ---@field package __construct? fun(...): evolved.component
+---@field package __on_set? evolved.set_hook
+---@field package __on_assign? evolved.set_hook
+---@field package __on_insert? evolved.set_hook
+---@field package __on_remove? evolved.remove_hook
 
 ---@class evolved.fragment_builder : evolved.__fragment_builder
 local evolved_fragment_builder = {}
@@ -5466,6 +5478,10 @@ function evolved.fragment()
         __tag = false,
         __default = nil,
         __construct = nil,
+        __on_set = nil,
+        __on_assign = nil,
+        __on_insert = nil,
+        __on_remove = nil,
     }
     ---@cast builder evolved.fragment_builder
     return setmetatable(builder, evolved_fragment_builder)
@@ -5491,6 +5507,34 @@ function evolved_fragment_builder:construct(construct)
     return self
 end
 
+---@param on_set evolved.set_hook
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_set(on_set)
+    self.__on_set = on_set
+    return self
+end
+
+---@param on_assign evolved.assign_hook
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_assign(on_assign)
+    self.__on_assign = on_assign
+    return self
+end
+
+---@param on_insert evolved.insert_hook
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_insert(on_insert)
+    self.__on_insert = on_insert
+    return self
+end
+
+---@param on_remove evolved.remove_hook
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_remove(on_remove)
+    self.__on_remove = on_remove
+    return self
+end
+
 ---@return evolved.fragment fragment
 ---@return boolean is_deferred
 function evolved_fragment_builder:build()
@@ -5498,9 +5542,19 @@ function evolved_fragment_builder:build()
     local default = self.__default
     local construct = self.__construct
 
+    local on_set = self.__on_set
+    local on_assign = self.__on_assign
+    local on_insert = self.__on_insert
+    local on_remove = self.__on_remove
+
     self.__tag = false
     self.__default = nil
     self.__construct = nil
+
+    self.__on_set = nil
+    self.__on_assign = nil
+    self.__on_insert = nil
+    self.__on_remove = nil
 
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
@@ -5518,10 +5572,34 @@ function evolved_fragment_builder:build()
         component_list[component_count] = default
     end
 
-    if construct ~= nil then
+    if construct then
         component_count = component_count + 1
         fragment_list[component_count] = evolved.CONSTRUCT
         component_list[component_count] = construct
+    end
+
+    if on_set then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.ON_SET
+        component_list[component_count] = on_set
+    end
+
+    if on_assign then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.ON_ASSIGN
+        component_list[component_count] = on_assign
+    end
+
+    if on_insert then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.ON_INSERT
+        component_list[component_count] = on_insert
+    end
+
+    if on_remove then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.ON_REMOVE
+        component_list[component_count] = on_remove
     end
 
     if component_count == 0 then
