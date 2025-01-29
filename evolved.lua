@@ -94,6 +94,7 @@ local __defer_bytecode = {} ---@type any[]
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
+local __minor_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
@@ -493,45 +494,47 @@ end
 ---
 ---
 
----@param root_fragment evolved.fragment
+---@param chunk_parent? evolved.chunk
+---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
----@nodiscard
-local function __root_chunk(root_fragment)
-    do
-        local root_chunk = __root_chunks[root_fragment]
-        if root_chunk then return root_chunk end
-    end
+local function __new_chunk(chunk_parent, chunk_fragment)
+    local chunk_fragment_set = {} ---@type table<evolved.fragment, boolean>
+    local chunk_fragment_list = {} ---@type evolved.fragment[]
 
-    local has_defaults_or_constructs = evolved.has_any(root_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
-    local has_set_or_assign_hooks = evolved.has_any(root_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
-    local has_set_or_insert_hooks = evolved.has_any(root_fragment, evolved.ON_SET, evolved.ON_INSERT)
-    local has_remove_hooks = evolved.has(root_fragment, evolved.ON_REMOVE)
+    local chunk_fragment_count = 0 ---@type integer
+    local chunk_component_count = 0 ---@type integer
 
-    local root_fragment_set = {} ---@type table<evolved.fragment, boolean>
-    local root_fragment_list = {} ---@type evolved.fragment[]
+    local chunk_component_indices = {} ---@type table<evolved.fragment, integer>
+    local chunk_component_storages = {} ---@type evolved.component_storage[]
+    local chunk_component_fragments = {} ---@type evolved.fragment[]
 
-    local root_fragment_count = 0 ---@type integer
-    local root_component_count = 0 ---@type integer
+    local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
+        or evolved.has_any(chunk_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
 
-    local root_component_indices = {} ---@type table<evolved.fragment, integer>
-    local root_component_storages = {} ---@type evolved.component_storage[]
-    local root_component_fragments = {} ---@type evolved.fragment[]
+    local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
+        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+
+    local has_set_or_insert_hooks = (chunk_parent and chunk_parent.__has_set_or_insert_hooks)
+        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_INSERT)
+
+    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+        or evolved.has(chunk_fragment, evolved.ON_REMOVE)
 
     ---@type evolved.chunk
-    local root_chunk = {
-        __parent = nil,
+    local chunk = {
+        __parent = chunk_parent,
         __children = {},
         __child_count = 0,
         __entities = {},
         __entity_count = 0,
-        __fragment = root_fragment,
-        __fragment_set = root_fragment_set,
-        __fragment_list = root_fragment_list,
-        __fragment_count = root_fragment_count,
-        __component_count = root_component_count,
-        __component_indices = root_component_indices,
-        __component_storages = root_component_storages,
-        __component_fragments = root_component_fragments,
+        __fragment = chunk_fragment,
+        __fragment_set = chunk_fragment_set,
+        __fragment_list = chunk_fragment_list,
+        __fragment_count = chunk_fragment_count,
+        __component_count = chunk_component_count,
+        __component_indices = chunk_component_indices,
+        __component_storages = chunk_component_storages,
+        __component_fragments = chunk_component_fragments,
         __with_fragment_edges = {},
         __without_fragment_edges = {},
         __has_defaults_or_constructs = has_defaults_or_constructs,
@@ -540,181 +543,118 @@ local function __root_chunk(root_fragment)
         __has_remove_hooks = has_remove_hooks,
     }
 
-    do
-        root_fragment_count = root_fragment_count + 1
-        root_fragment_set[root_fragment] = true
-        root_fragment_list[root_fragment_count] = root_fragment
+    if chunk_parent then
+        local parent_fragment_list = chunk_parent.__fragment_list
+        local parent_fragment_count = chunk_parent.__fragment_count
 
-        if not evolved.has(root_fragment, evolved.TAG) then
-            root_component_count = root_component_count + 1
-            local storage = {}
-            local storage_index = root_component_count
-            root_component_indices[root_fragment] = storage_index
-            root_component_storages[storage_index] = storage
-            root_component_fragments[storage_index] = root_fragment
+        for parent_fragment_index = 1, parent_fragment_count do
+            local parent_fragment = parent_fragment_list[parent_fragment_index]
+
+            chunk_fragment_count = chunk_fragment_count + 1
+            chunk_fragment_set[parent_fragment] = true
+            chunk_fragment_list[chunk_fragment_count] = parent_fragment
+
+            if not evolved.has(parent_fragment, evolved.TAG) then
+                chunk_component_count = chunk_component_count + 1
+                local component_storage = {}
+                local component_storage_index = chunk_component_count
+                chunk_component_indices[parent_fragment] = component_storage_index
+                chunk_component_storages[component_storage_index] = component_storage
+                chunk_component_fragments[component_storage_index] = parent_fragment
+            end
+        end
+
+        local child_chunk_index = chunk_parent.__child_count + 1
+        chunk_parent.__children[child_chunk_index] = chunk
+        chunk_parent.__child_count = child_chunk_index
+
+        chunk_parent.__with_fragment_edges[chunk_fragment] = chunk
+        chunk.__without_fragment_edges[chunk_fragment] = chunk_parent
+    end
+
+    do
+        chunk_fragment_count = chunk_fragment_count + 1
+        chunk_fragment_set[chunk_fragment] = true
+        chunk_fragment_list[chunk_fragment_count] = chunk_fragment
+
+        if not evolved.has(chunk_fragment, evolved.TAG) then
+            chunk_component_count = chunk_component_count + 1
+            local component_storage = {}
+            local component_storage_index = chunk_component_count
+            chunk_component_indices[chunk_fragment] = component_storage_index
+            chunk_component_storages[component_storage_index] = component_storage
+            chunk_component_fragments[component_storage_index] = chunk_fragment
         end
     end
 
     do
-        root_chunk.__fragment_count = root_fragment_count
-        root_chunk.__component_count = root_component_count
+        chunk.__fragment_count = chunk_fragment_count
+        chunk.__component_count = chunk_component_count
+    end
+
+    if not chunk_parent then
+        local root_fragment = chunk_fragment
+        __root_chunks[root_fragment] = chunk
     end
 
     do
-        __root_chunks[root_fragment] = root_chunk
-    end
+        local major_fragment = chunk_fragment
+        local major_chunks = __major_chunks[major_fragment]
 
-    do
-        local fragment_chunks = __major_chunks[root_fragment]
-
-        if not fragment_chunks then
-            fragment_chunks = {}
-            __major_chunks[root_fragment] = fragment_chunks
+        if not major_chunks then
+            major_chunks = {}
+            __major_chunks[major_fragment] = major_chunks
         end
 
-        fragment_chunks[#fragment_chunks + 1] = root_chunk
+        major_chunks[#major_chunks + 1] = chunk
     end
 
-    return root_chunk
+    for i = 1, chunk_fragment_count do
+        local minor_fragment = chunk_fragment_list[i]
+        local minor_chunks = __minor_chunks[minor_fragment]
+
+        if not minor_chunks then
+            minor_chunks = {}
+            __minor_chunks[minor_fragment] = minor_chunks
+        end
+
+        minor_chunks[#minor_chunks + 1] = chunk
+    end
+
+    return chunk
 end
 
----@param parent_chunk? evolved.chunk
----@param child_fragment evolved.fragment
+---@param chunk? evolved.chunk
+---@param fragment evolved.fragment
 ---@return evolved.chunk
 ---@nodiscard
-local function __chunk_with_fragment(parent_chunk, child_fragment)
-    if not parent_chunk then
-        return __root_chunk(child_fragment)
+local function __chunk_with_fragment(chunk, fragment)
+    if not chunk then
+        local root_chunk = __root_chunks[fragment]
+        return root_chunk or __new_chunk(nil, fragment)
     end
 
-    if parent_chunk.__fragment_set[child_fragment] then
-        return parent_chunk
+    if chunk.__fragment_set[fragment] then
+        return chunk
     end
 
     do
-        local with_fragment_chunk = parent_chunk.__with_fragment_edges[child_fragment]
+        local with_fragment_chunk = chunk.__with_fragment_edges[fragment]
         if with_fragment_chunk then return with_fragment_chunk end
     end
 
-    if child_fragment < parent_chunk.__fragment then
+    if fragment < chunk.__fragment then
         local sibling_chunk = __chunk_with_fragment(
-            __chunk_with_fragment(parent_chunk.__parent, child_fragment),
-            parent_chunk.__fragment)
+            __chunk_with_fragment(chunk.__parent, fragment),
+            chunk.__fragment)
 
-        parent_chunk.__with_fragment_edges[child_fragment] = sibling_chunk
-        sibling_chunk.__without_fragment_edges[child_fragment] = parent_chunk
+        chunk.__with_fragment_edges[fragment] = sibling_chunk
+        sibling_chunk.__without_fragment_edges[fragment] = chunk
 
         return sibling_chunk
     end
 
-    local has_defaults_or_constructs = parent_chunk.__has_defaults_or_constructs
-        or evolved.has_any(child_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
-
-    local has_set_or_assign_hooks = parent_chunk.__has_set_or_assign_hooks
-        or evolved.has_any(child_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
-
-    local has_set_or_insert_hooks = parent_chunk.__has_set_or_insert_hooks
-        or evolved.has_any(child_fragment, evolved.ON_SET, evolved.ON_INSERT)
-
-    local has_remove_hooks = parent_chunk.__has_remove_hooks
-        or evolved.has(child_fragment, evolved.ON_REMOVE)
-
-    local child_fragment_set = {} ---@type table<evolved.fragment, boolean>
-    local child_fragment_list = {} ---@type evolved.fragment[]
-
-    local child_fragment_count = 0 ---@type integer
-    local child_component_count = 0 ---@type integer
-
-    local child_component_indices = {} ---@type table<evolved.fragment, integer>
-    local child_component_storages = {} ---@type evolved.component_storage[]
-    local child_component_fragments = {} ---@type evolved.fragment[]
-
-    ---@type evolved.chunk
-    local child_chunk = {
-        __parent = parent_chunk,
-        __children = {},
-        __child_count = 0,
-        __entities = {},
-        __entity_count = 0,
-        __fragment = child_fragment,
-        __fragment_set = child_fragment_set,
-        __fragment_list = child_fragment_list,
-        __fragment_count = child_fragment_count,
-        __component_count = child_component_count,
-        __component_indices = child_component_indices,
-        __component_storages = child_component_storages,
-        __component_fragments = child_component_fragments,
-        __with_fragment_edges = {},
-        __without_fragment_edges = {},
-        __has_defaults_or_constructs = has_defaults_or_constructs,
-        __has_set_or_assign_hooks = has_set_or_assign_hooks,
-        __has_set_or_insert_hooks = has_set_or_insert_hooks,
-        __has_remove_hooks = has_remove_hooks,
-    }
-
-    local parent_fragment_list = parent_chunk.__fragment_list
-    local parent_fragment_count = parent_chunk.__fragment_count
-
-    for parent_fragment_index = 1, parent_fragment_count do
-        local parent_fragment = parent_fragment_list[parent_fragment_index]
-
-        child_fragment_count = child_fragment_count + 1
-        child_fragment_set[parent_fragment] = true
-        child_fragment_list[child_fragment_count] = parent_fragment
-
-        if not evolved.has(parent_fragment, evolved.TAG) then
-            child_component_count = child_component_count + 1
-            local storage = {}
-            local storage_index = child_component_count
-            child_component_indices[parent_fragment] = storage_index
-            child_component_storages[storage_index] = storage
-            child_component_fragments[storage_index] = parent_fragment
-        end
-    end
-
-    do
-        child_fragment_count = child_fragment_count + 1
-        child_fragment_set[child_fragment] = true
-        child_fragment_list[child_fragment_count] = child_fragment
-
-        if not evolved.has(child_fragment, evolved.TAG) then
-            child_component_count = child_component_count + 1
-            local storage = {}
-            local storage_index = child_component_count
-            child_component_indices[child_fragment] = storage_index
-            child_component_storages[storage_index] = storage
-            child_component_fragments[storage_index] = child_fragment
-        end
-    end
-
-    do
-        local child_chunk_index = parent_chunk.__child_count + 1
-        parent_chunk.__children[child_chunk_index] = child_chunk
-        parent_chunk.__child_count = child_chunk_index
-    end
-
-    do
-        parent_chunk.__with_fragment_edges[child_fragment] = child_chunk
-        child_chunk.__without_fragment_edges[child_fragment] = parent_chunk
-    end
-
-    do
-        child_chunk.__fragment_count = child_fragment_count
-        child_chunk.__component_count = child_component_count
-    end
-
-    do
-        local fragment_chunks = __major_chunks[child_fragment]
-
-        if not fragment_chunks then
-            fragment_chunks = {}
-            __major_chunks[child_fragment] = fragment_chunks
-        end
-
-        fragment_chunks[#fragment_chunks + 1] = child_chunk
-    end
-
-    return child_chunk
+    return __new_chunk(chunk, fragment)
 end
 
 ---@param chunk? evolved.chunk
@@ -828,7 +768,7 @@ local function __chunk_fragments(...)
 
     local root_fragment = select(1, ...)
     local chunk = __root_chunks[root_fragment]
-        or __root_chunk(root_fragment)
+        or __chunk_with_fragment(nil, root_fragment)
 
     for i = 2, fragment_count do
         local child_fragment = select(i, ...)
@@ -851,7 +791,7 @@ local function __chunk_fragment_list(fragment_list)
 
     local root_fragment = fragment_list[1]
     local chunk = __root_chunks[root_fragment]
-        or __root_chunk(root_fragment)
+        or __chunk_with_fragment(nil, root_fragment)
 
     for i = 2, fragment_count do
         local child_fragment = fragment_list[i]
