@@ -462,7 +462,7 @@ end
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
 ---@param old_component evolved.component
-local function __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+local function __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
     ---@type evolved.set_hook?, evolved.assign_hook?
     local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
     if on_set then on_set(entity, fragment, new_component, old_component) end
@@ -472,7 +472,7 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
-local function __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+local function __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
     ---@type evolved.set_hook?, evolved.insert_hook?
     local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
     if on_set then on_set(entity, fragment, new_component) end
@@ -482,7 +482,7 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param old_component evolved.component
-local function __fragment_call_remove_hook(entity, fragment, old_component)
+local function __call_fragment_remove_hook(entity, fragment, old_component)
     ---@type evolved.remove_hook?
     local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
     if on_remove then on_remove(entity, fragment, old_component) end
@@ -1096,9 +1096,9 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
 
                 local new_component = component_storage[place]
 
-                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
             else
-                __fragment_call_set_and_insert_hooks(entity, fragment)
+                __call_fragment_set_and_insert_hooks(entity, fragment)
             end
         end
     end
@@ -1186,9 +1186,9 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
 
                 local new_component = component_storage[place]
 
-                __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
             else
-                __fragment_call_set_and_insert_hooks(entity, fragment)
+                __call_fragment_set_and_insert_hooks(entity, fragment)
             end
         end
     end
@@ -3618,7 +3618,7 @@ function evolved.set(entity, fragment, ...)
                 if old_chunk.__has_set_or_assign_hooks then
                     local old_component = old_component_storage[old_place]
                     old_component_storage[old_place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
                     old_component_storage[old_place] = new_component
                 end
@@ -3632,14 +3632,14 @@ function evolved.set(entity, fragment, ...)
                 if old_chunk.__has_set_or_assign_hooks then
                     local old_component = old_component_storage[old_place]
                     old_component_storage[old_place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
                     old_component_storage[old_place] = new_component
                 end
             end
         else
             if old_chunk.__has_set_or_assign_hooks then
-                __fragment_call_set_and_assign_hooks(entity, fragment)
+                __call_fragment_set_and_assign_hooks(entity, fragment)
             end
         end
     else
@@ -3684,7 +3684,7 @@ function evolved.set(entity, fragment, ...)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk.__has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 else
                     local new_component = ...
@@ -3696,12 +3696,12 @@ function evolved.set(entity, fragment, ...)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk.__has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 end
             else
                 if new_chunk.__has_set_or_insert_hooks then
-                    __fragment_call_set_and_insert_hooks(entity, fragment)
+                    __call_fragment_set_and_insert_hooks(entity, fragment)
                 end
             end
         end
@@ -3760,7 +3760,7 @@ function evolved.assign(entity, fragment, ...)
                 if chunk.__has_set_or_assign_hooks then
                     local old_component = component_storage[place]
                     component_storage[place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
                     component_storage[place] = new_component
                 end
@@ -3774,14 +3774,14 @@ function evolved.assign(entity, fragment, ...)
                 if chunk.__has_set_or_assign_hooks then
                     local old_component = component_storage[place]
                     component_storage[place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
                     component_storage[place] = new_component
                 end
             end
         else
             if chunk.__has_set_or_assign_hooks then
-                __fragment_call_set_and_assign_hooks(entity, fragment)
+                __call_fragment_set_and_assign_hooks(entity, fragment)
             end
         end
     end
@@ -3863,7 +3863,7 @@ function evolved.insert(entity, fragment, ...)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk.__has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 else
                     local new_component = ...
@@ -3875,12 +3875,12 @@ function evolved.insert(entity, fragment, ...)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk.__has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 end
             else
                 if new_chunk.__has_set_or_insert_hooks then
-                    __fragment_call_set_and_insert_hooks(entity, fragment)
+                    __call_fragment_set_and_insert_hooks(entity, fragment)
                 end
             end
         end
@@ -3944,9 +3944,9 @@ function evolved.remove(entity, ...)
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
                         local old_component = old_component_storage[old_place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
+                        __call_fragment_remove_hook(entity, fragment, old_component)
                     else
-                        __fragment_call_remove_hook(entity, fragment)
+                        __call_fragment_remove_hook(entity, fragment)
                     end
                 end
             end
@@ -4034,9 +4034,9 @@ function evolved.clear(entity)
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
                     local old_component = component_storage[place]
-                    __fragment_call_remove_hook(entity, fragment, old_component)
+                    __call_fragment_remove_hook(entity, fragment, old_component)
                 else
-                    __fragment_call_remove_hook(entity, fragment)
+                    __call_fragment_remove_hook(entity, fragment)
                 end
             end
         end
@@ -4093,9 +4093,9 @@ function evolved.destroy(entity)
                 if component_index then
                     local component_storage = chunk_component_storages[component_index]
                     local old_component = component_storage[place]
-                    __fragment_call_remove_hook(entity, fragment, old_component)
+                    __call_fragment_remove_hook(entity, fragment, old_component)
                 else
-                    __fragment_call_remove_hook(entity, fragment)
+                    __call_fragment_remove_hook(entity, fragment)
                 end
             end
         end
@@ -4182,13 +4182,13 @@ function evolved.multi_set(entity, fragments, components)
                 if old_chunk_has_set_or_assign_hooks then
                     local old_component = old_component_storage[old_place]
                     old_component_storage[old_place] = new_component
-                    __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                 else
                     old_component_storage[old_place] = new_component
                 end
             else
                 if old_chunk_has_set_or_assign_hooks then
-                    __fragment_call_set_and_assign_hooks(entity, fragment)
+                    __call_fragment_set_and_assign_hooks(entity, fragment)
                 end
             end
         end
@@ -4252,13 +4252,13 @@ function evolved.multi_set(entity, fragments, components)
                     if new_chunk_has_set_or_assign_hooks then
                         local old_component = new_component_storage[new_place]
                         new_component_storage[new_place] = new_component
-                        __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                     else
                         new_component_storage[new_place] = new_component
                     end
                 else
                     if new_chunk_has_set_or_assign_hooks then
-                        __fragment_call_set_and_assign_hooks(entity, fragment)
+                        __call_fragment_set_and_assign_hooks(entity, fragment)
                     end
                 end
             else
@@ -4282,11 +4282,11 @@ function evolved.multi_set(entity, fragments, components)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk_has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 else
                     if new_chunk_has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment)
+                        __call_fragment_set_and_insert_hooks(entity, fragment)
                     end
                 end
             end
@@ -4373,13 +4373,13 @@ function evolved.multi_assign(entity, fragments, components)
                     if chunk_has_set_or_assign_hooks then
                         local old_component = component_storage[place]
                         component_storage[place] = new_component
-                        __fragment_call_set_and_assign_hooks(entity, fragment, new_component, old_component)
+                        __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
                     else
                         component_storage[place] = new_component
                     end
                 else
                     if chunk_has_set_or_assign_hooks then
-                        __fragment_call_set_and_assign_hooks(entity, fragment)
+                        __call_fragment_set_and_assign_hooks(entity, fragment)
                     end
                 end
             end
@@ -4492,11 +4492,11 @@ function evolved.multi_insert(entity, fragments, components)
                     new_component_storage[new_place] = new_component
 
                     if new_chunk_has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment, new_component)
+                        __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
                     end
                 else
                     if new_chunk_has_set_or_insert_hooks then
-                        __fragment_call_set_and_insert_hooks(entity, fragment)
+                        __call_fragment_set_and_insert_hooks(entity, fragment)
                     end
                 end
             end
@@ -4569,9 +4569,9 @@ function evolved.multi_remove(entity, fragments)
                     if old_component_index then
                         local old_component_storage = old_component_storages[old_component_index]
                         local old_component = old_component_storage[old_place]
-                        __fragment_call_remove_hook(entity, fragment, old_component)
+                        __call_fragment_remove_hook(entity, fragment, old_component)
                     else
-                        __fragment_call_remove_hook(entity, fragment)
+                        __call_fragment_remove_hook(entity, fragment)
                     end
                 end
             end
