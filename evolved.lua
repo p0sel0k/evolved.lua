@@ -3908,7 +3908,7 @@ function evolved.remove(entity, ...)
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
-        return false, false
+        return true, false
     end
 
     local entity_chunks = __entity_chunks
@@ -4007,7 +4007,7 @@ function evolved.clear(entity)
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
-        return false, false
+        return true, false
     end
 
     local entity_chunks = __entity_chunks
@@ -4533,7 +4533,7 @@ function evolved.multi_remove(entity, fragments)
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
-        return false, false
+        return true, false
     end
 
     local entity_chunks = __entity_chunks

@@ -2587,7 +2587,7 @@ do
         end)
         :on_remove(function(e, f, c)
             f2_remove_count = f2_remove_count + 1
-            assert(evo.is_alive(e))
+            assert(evo.get(e, f) == nil)
             assert(evo.is_alive(f))
             assert(c == 82)
         end)
@@ -5065,11 +5065,13 @@ do
     assert(not evo.set(e, f1, 11))
     assert(not evo.assign(e, f1, 11))
     assert(not evo.insert(e, f1, 11))
+    assert(evo.remove(e, f1))
+    assert(evo.clear(e))
 
     assert(not evo.multi_set(e, { f1 }, { 11 }))
     assert(not evo.multi_assign(e, { f1 }, { 11 }))
     assert(not evo.multi_insert(e, { f1 }, { 11 }))
-    assert(not evo.multi_remove(e, { f1 }))
+    assert(evo.multi_remove(e, { f1 }))
 end
 
 do
@@ -5080,7 +5082,7 @@ do
     assert(evo.set(e, f1, 11))
     assert(evo.clear(e) and evo.clear(e))
     assert(evo.destroy(e) and evo.destroy(e))
-    assert(not evo.clear(e))
+    assert(evo.clear(e))
 end
 
 do
