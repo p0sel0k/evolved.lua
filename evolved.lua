@@ -766,7 +766,7 @@ local function __chunk_fragments(...)
         return
     end
 
-    local root_fragment = select(1, ...)
+    local root_fragment = ...
     local chunk = __root_chunks[root_fragment]
         or __chunk_with_fragment(nil, root_fragment)
 
@@ -923,14 +923,25 @@ local function __chunk_get_components(chunk, place, ...)
             i3 and storages[i3][place]
     end
 
-    do
-        local f1, f2, f3 = ...
-        local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        local i1, i2, i3, i4 = indices[f1], indices[f2], indices[f3], indices[f4]
         return
             i1 and storages[i1][place],
             i2 and storages[i2][place],
             i3 and storages[i3][place],
-            __chunk_get_components(chunk, place, select(4, ...))
+            i4 and storages[i4][place]
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        local i1, i2, i3, i4 = indices[f1], indices[f2], indices[f3], indices[f4]
+        return
+            i1 and storages[i1][place],
+            i2 and storages[i2][place],
+            i3 and storages[i3][place],
+            i4 and storages[i4][place],
+            __chunk_get_components(chunk, place, select(5, ...))
     end
 end
 
@@ -967,6 +978,7 @@ local __defer_batch_multi_remove
 local __defer_spawn_entity_at
 local __defer_spawn_entity_with
 
+local __defer_call_hook
 local __defer_assign_hook
 local __defer_insert_hook
 local __defer_remove_hook
@@ -1298,7 +1310,13 @@ local function __chunk_assign(chunk, fragment, ...)
 
                     component_storage[place] = new_component
 
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 end
             else
                 local new_component = ...
@@ -1310,13 +1328,26 @@ local function __chunk_assign(chunk, fragment, ...)
 
                     component_storage[place] = new_component
 
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 end
             end
         else
             for place = 1, chunk_entity_count do
                 local entity = chunk_entities[place]
-                __defer_assign_hook(entity, fragment)
+
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_assign then
+                    __defer_call_hook(fragment_on_assign, entity, fragment)
+                end
             end
         end
     else
@@ -1429,7 +1460,13 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    end
                 end
             else
                 local new_component = ...
@@ -1440,13 +1477,26 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    end
                 end
             end
         else
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entities[new_place]
-                __defer_insert_hook(entity, fragment)
+
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                end
             end
         end
     else
@@ -1541,12 +1591,12 @@ local function __chunk_remove(old_chunk, ...)
                         for old_place = 1, old_entity_count do
                             local entity = old_entities[old_place]
                             local old_component = old_component_storage[old_place]
-                            __defer_remove_hook(entity, fragment, old_component)
+                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
                         end
                     else
                         for old_place = 1, old_entity_count do
                             local entity = old_entities[old_place]
-                            __defer_remove_hook(entity, fragment)
+                            __defer_call_hook(fragment_on_remove, entity, fragment)
                         end
                     end
                 end
@@ -1637,12 +1687,12 @@ local function __chunk_clear(chunk)
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
                         local old_component = component_storage[place]
-                        __defer_remove_hook(entity, fragment, old_component)
+                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __defer_remove_hook(entity, fragment)
+                        __defer_call_hook(fragment_on_remove, entity, fragment)
                     end
                 end
             end
@@ -1698,12 +1748,12 @@ local function __chunk_destroy(chunk)
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
                         local old_component = component_storage[place]
-                        __defer_remove_hook(entity, fragment, old_component)
+                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __defer_remove_hook(entity, fragment)
+                        __defer_call_hook(fragment_on_remove, entity, fragment)
                     end
                 end
             end
@@ -1796,12 +1846,25 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                         old_component_storage[place] = new_component
 
-                        __defer_assign_hook(entity, fragment, new_component, old_component)
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                        end
                     end
                 else
                     for place = 1, old_entity_count do
                         local entity = old_entities[place]
-                        __defer_assign_hook(entity, fragment)
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment)
+                        end
                     end
                 end
             else
@@ -1888,12 +1951,25 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                             new_component_storage[new_place] = new_component
 
-                            __defer_assign_hook(entity, fragment, new_component, old_component)
+                            if fragment_on_set then
+                                __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                            end
+
+                            if fragment_on_assign then
+                                __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                            end
                         end
                     else
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
-                            __defer_assign_hook(entity, fragment)
+
+                            if fragment_on_set then
+                                __defer_call_hook(fragment_on_set, entity, fragment)
+                            end
+
+                            if fragment_on_assign then
+                                __defer_call_hook(fragment_on_assign, entity, fragment)
+                            end
                         end
                     end
                 else
@@ -1947,12 +2023,25 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                             new_component_storage[new_place] = new_component
 
-                            __defer_insert_hook(entity, fragment, new_component)
+                            if fragment_on_set then
+                                __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                            end
+
+                            if fragment_on_insert then
+                                __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                            end
                         end
                     else
                         for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                             local entity = new_entities[new_place]
-                            __defer_insert_hook(entity, fragment)
+
+                            if fragment_on_set then
+                                __defer_call_hook(fragment_on_set, entity, fragment)
+                            end
+
+                            if fragment_on_insert then
+                                __defer_call_hook(fragment_on_insert, entity, fragment)
+                            end
                         end
                     end
                 else
@@ -2059,12 +2148,25 @@ local function __chunk_multi_assign(chunk, fragments, components)
 
                         component_storage[place] = new_component
 
-                        __defer_assign_hook(entity, fragment, new_component, old_component)
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                        end
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entities[place]
-                        __defer_assign_hook(entity, fragment)
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment)
+                        end
                     end
                 end
             else
@@ -2184,12 +2286,25 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
                         new_component_storage[new_place] = new_component
 
-                        __defer_insert_hook(entity, fragment, new_component)
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                        end
                     end
                 else
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entities[new_place]
-                        __defer_insert_hook(entity, fragment)
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                        end
                     end
                 end
             else
@@ -2278,12 +2393,12 @@ local function __chunk_multi_remove(old_chunk, fragments)
                         for old_place = 1, old_entity_count do
                             local entity = old_entities[old_place]
                             local old_component = old_component_storage[old_place]
-                            __defer_remove_hook(entity, fragment, old_component)
+                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
                         end
                     else
                         for place = 1, old_entity_count do
                             local entity = old_entities[place]
-                            __defer_remove_hook(entity, fragment)
+                            __defer_call_hook(fragment_on_remove, entity, fragment)
                         end
                     end
                 end
@@ -2376,13 +2491,14 @@ local __defer_op = {
     spawn_entity_at = 21,
     spawn_entity_with = 22,
 
-    assign_hook = 23,
-    insert_hook = 24,
-    remove_hook = 25,
+    call_hook = 23,
+    assign_hook = 24,
+    insert_hook = 25,
+    remove_hook = 26,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
-local __defer_ops = __table_new(25, 0)
+local __defer_ops = __table_new(26, 0)
 
 ---@return boolean started
 local function __defer()
@@ -2439,23 +2555,30 @@ __defer_set = function(entity, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -2481,10 +2604,13 @@ __defer_ops[__defer_op.set] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         set(entity, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        set(entity, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        set(entity, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        set(entity, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -2507,23 +2633,30 @@ __defer_assign = function(entity, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -2549,10 +2682,13 @@ __defer_ops[__defer_op.assign] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         assign(entity, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        assign(entity, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        assign(entity, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        assign(entity, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -2575,23 +2711,30 @@ __defer_insert = function(entity, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -2617,10 +2760,13 @@ __defer_ops[__defer_op.insert] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         insert(entity, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        insert(entity, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        insert(entity, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        insert(entity, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -2642,23 +2788,30 @@ __defer_remove = function(entity, ...)
     if fragment_count == 0 then
         -- nothing
     elseif fragment_count == 1 then
-        local f1 = select(1, ...)
+        local f1 = ...
         bytecode[length + 4] = f1
     elseif fragment_count == 2 then
-        local f1, f2 = select(1, ...)
+        local f1, f2 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
     elseif fragment_count == 3 then
-        local f1, f2, f3 = select(1, ...)
+        local f1, f2, f3 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
         bytecode[length + 6] = f3
+    elseif fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+        bytecode[length + 7] = f4
     else
-        local f1, f2, f3 = select(1, ...)
+        local f1, f2, f3, f4 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
         bytecode[length + 6] = f3
-        for i = 4, fragment_count do
+        bytecode[length + 7] = f4
+        for i = 5, fragment_count do
             bytecode[length + 3 + i] = select(i, ...)
         end
     end
@@ -2683,10 +2836,13 @@ __defer_ops[__defer_op.remove] = function(bytes, index)
     elseif fragment_count == 3 then
         local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
         remove(entity, f1, f2, f3)
+    elseif fragment_count == 4 then
+        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        remove(entity, f1, f2, f3, f4)
     else
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        remove(entity, f1, f2, f3,
-            __table_unpack(bytes, index + 5, index + 1 + fragment_count))
+        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        remove(entity, f1, f2, f3, f4,
+            __table_unpack(bytes, index + 6, index + 1 + fragment_count))
     end
 
     return 2 + fragment_count
@@ -2860,23 +3016,30 @@ __defer_batch_set = function(query, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -2902,10 +3065,13 @@ __defer_ops[__defer_op.batch_set] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         batch_set(query, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_set(query, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        batch_set(query, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_set(query, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -2928,23 +3094,30 @@ __defer_batch_assign = function(query, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -2970,10 +3143,13 @@ __defer_ops[__defer_op.batch_assign] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         batch_assign(query, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_assign(query, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        batch_assign(query, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_assign(query, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -2996,23 +3172,30 @@ __defer_batch_insert = function(query, fragment, ...)
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
-        local a1 = select(1, ...)
+        local a1 = ...
         bytecode[length + 5] = a1
     elseif argument_count == 2 then
-        local a1, a2 = select(1, ...)
+        local a1, a2 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
     elseif argument_count == 3 then
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 5] = a1
+        bytecode[length + 6] = a2
+        bytecode[length + 7] = a3
+        bytecode[length + 8] = a4
     else
-        local a1, a2, a3 = select(1, ...)
+        local a1, a2, a3, a4 = ...
         bytecode[length + 5] = a1
         bytecode[length + 6] = a2
         bytecode[length + 7] = a3
-        for i = 4, argument_count do
+        bytecode[length + 8] = a4
+        for i = 5, argument_count do
             bytecode[length + 4 + i] = select(i, ...)
         end
     end
@@ -3038,10 +3221,13 @@ __defer_ops[__defer_op.batch_insert] = function(bytes, index)
     elseif argument_count == 3 then
         local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
         batch_insert(query, fragment, a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_insert(query, fragment, a1, a2, a3, a4)
     else
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        batch_insert(query, fragment, a1, a2, a3,
-            __table_unpack(bytes, index + 6, index + 2 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
+        batch_insert(query, fragment, a1, a2, a3, a4,
+            __table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
     return 3 + argument_count
@@ -3063,23 +3249,30 @@ __defer_batch_remove = function(query, ...)
     if fragment_count == 0 then
         -- nothing
     elseif fragment_count == 1 then
-        local f1 = select(1, ...)
+        local f1 = ...
         bytecode[length + 4] = f1
     elseif fragment_count == 2 then
-        local f1, f2 = select(1, ...)
+        local f1, f2 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
     elseif fragment_count == 3 then
-        local f1, f2, f3 = select(1, ...)
+        local f1, f2, f3 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
         bytecode[length + 6] = f3
+    elseif fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        bytecode[length + 4] = f1
+        bytecode[length + 5] = f2
+        bytecode[length + 6] = f3
+        bytecode[length + 7] = f4
     else
-        local f1, f2, f3 = select(1, ...)
+        local f1, f2, f3, f4 = ...
         bytecode[length + 4] = f1
         bytecode[length + 5] = f2
         bytecode[length + 6] = f3
-        for i = 4, fragment_count do
+        bytecode[length + 7] = f4
+        for i = 5, fragment_count do
             bytecode[length + 3 + i] = select(i, ...)
         end
     end
@@ -3104,10 +3297,13 @@ __defer_ops[__defer_op.batch_remove] = function(bytes, index)
     elseif fragment_count == 3 then
         local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
         batch_remove(query, f1, f2, f3)
+    elseif fragment_count == 4 then
+        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_remove(query, f1, f2, f3, f4)
     else
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        batch_remove(query, f1, f2, f3,
-            __table_unpack(bytes, index + 5, index + 1 + fragment_count))
+        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        batch_remove(query, f1, f2, f3, f4,
+            __table_unpack(bytes, index + 6, index + 1 + fragment_count))
     end
 
     return 2 + fragment_count
@@ -3340,6 +3536,79 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
     return 4
 end
 
+---@param hook fun(...)
+---@param ... any hook arguments
+__defer_call_hook = function(hook, ...)
+    local argument_count = select('#', ...)
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.call_hook
+    bytecode[length + 2] = hook
+    bytecode[length + 3] = argument_count
+
+    if argument_count == 0 then
+        -- nothing
+    elseif argument_count == 1 then
+        local a1 = ...
+        bytecode[length + 4] = a1
+    elseif argument_count == 2 then
+        local a1, a2 = ...
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+    elseif argument_count == 3 then
+        local a1, a2, a3 = ...
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
+    else
+        local a1, a2, a3, a4 = ...
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
+        for i = 5, argument_count do
+            bytecode[length + 3 + i] = select(i, ...)
+        end
+    end
+
+    __defer_length = length + 3 + argument_count
+end
+
+__defer_ops[__defer_op.call_hook] = function(bytes, index)
+    local hook = bytes[index + 0]
+    local argument_count = bytes[index + 1]
+
+    if argument_count == 0 then
+        hook()
+    elseif argument_count == 1 then
+        local a1 = bytes[index + 2]
+        hook(a1)
+    elseif argument_count == 2 then
+        local a1, a2 = bytes[index + 2], bytes[index + 3]
+        hook(a1, a2)
+    elseif argument_count == 3 then
+        local a1, a2, a3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        hook(a1, a2, a3)
+    elseif argument_count == 4 then
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4)
+    else
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4,
+            __table_unpack(bytes, index + 6, index + 1 + argument_count))
+    end
+
+    return 2 + argument_count
+end
+
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
@@ -3440,9 +3709,13 @@ function evolved.id(count)
         return __acquire_id(), __acquire_id(), __acquire_id()
     end
 
+    if count == 4 then
+        return __acquire_id(), __acquire_id(), __acquire_id(), __acquire_id()
+    end
+
     do
-        return __acquire_id(), __acquire_id(), __acquire_id(),
-            evolved.id(count - 3)
+        return __acquire_id(), __acquire_id(), __acquire_id(), __acquire_id(),
+            evolved.id(count - 4)
     end
 end
 
@@ -5159,14 +5432,25 @@ function evolved.select(chunk, ...)
             i3 and storages[i3] or empty_component_storage
     end
 
-    do
-        local f1, f2, f3 = ...
-        local i1, i2, i3 = indices[f1], indices[f2], indices[f3]
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        local i1, i2, i3, i4 = indices[f1], indices[f2], indices[f3], indices[f4]
         return
             i1 and storages[i1] or empty_component_storage,
             i2 and storages[i2] or empty_component_storage,
             i3 and storages[i3] or empty_component_storage,
-            evolved.select(chunk, select(4, ...))
+            i4 and storages[i4] or empty_component_storage
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        local i1, i2, i3, i4 = indices[f1], indices[f2], indices[f3], indices[f4]
+        return
+            i1 and storages[i1] or empty_component_storage,
+            i2 and storages[i2] or empty_component_storage,
+            i3 and storages[i3] or empty_component_storage,
+            i4 and storages[i4] or empty_component_storage,
+            evolved.select(chunk, select(5, ...))
     end
 end
 
