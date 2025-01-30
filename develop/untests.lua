@@ -699,7 +699,7 @@ do
     ---@param component evolved.component
     evo.set(f1, evo.ON_REMOVE, function(entity, fragment, component)
         assert(fragment == f1)
-        assert(evo.get(entity, f2) == component * 2)
+        assert(component == 21)
         evo.remove(entity, f2)
     end)
 
@@ -754,7 +754,7 @@ do
     ---@param component evolved.component
     evo.set(f1, evo.ON_REMOVE, function(entity, fragment, component)
         assert(fragment == f1)
-        assert(evo.get(entity, f2) == component * 2)
+        assert(component == 21)
         evo.remove(entity, f2)
     end)
 
@@ -5650,5 +5650,481 @@ do
         assert(evo.get(e2, f3) == nil)
         assert(evo.get(e1, f4) == nil)
         assert(evo.get(e2, f4) == nil)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local assign_count = 0
+    local insert_count = 0
+    local remove_count = 0
+
+    do
+        evo.set(f1, evo.ON_ASSIGN, function(e, f, c)
+            assign_count = assign_count + 1
+            assert(f == f1)
+            assert(evo.get(e, f1) == c)
+
+            do
+                local s, d = evo.assign(e, f2, c)
+                assert(s and not d)
+            end
+        end)
+
+        evo.set(f1, evo.ON_INSERT, function(e, f, c)
+            insert_count = insert_count + 1
+            assert(f == f1)
+            assert(evo.get(e, f1) == c)
+
+            do
+                local s, d = evo.insert(e, f2, c)
+                assert(s and not d)
+            end
+        end)
+
+        evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+            remove_count = remove_count + 1
+            assert(f == f1)
+            assert(c == 51)
+            assert(evo.get(e, f1) == nil)
+
+            do
+                local s, d = evo.remove(e, f2)
+                assert(s and not d)
+            end
+        end)
+    end
+
+    do
+        evo.set(f2, evo.ON_ASSIGN, function(e, f, c)
+            assign_count = assign_count + 1
+            assert(f == f2)
+            assert(evo.get(e, f1) == c)
+            assert(evo.get(e, f2) == c)
+        end)
+
+        evo.set(f2, evo.ON_INSERT, function(e, f, c)
+            insert_count = insert_count + 1
+            assert(f == f2)
+            assert(evo.get(e, f1) == c)
+            assert(evo.get(e, f2) == c)
+        end)
+
+        evo.set(f2, evo.ON_REMOVE, function(e, f, c)
+            remove_count = remove_count + 1
+            assert(f == f2)
+            assert(c == 51)
+            assert(evo.get(e, f2) == nil)
+        end)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.set(e, f1, 41))
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 41)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.set(e, f1, 51))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.remove(e, f1))
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.multi_set(e, { f1 }, { 41 }))
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 41)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.multi_set(e, { f1 }, { 51 }))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.multi_remove(e, { f1 }))
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 41))
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 41)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.assign(e, f1, 51))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.remove(e, f1))
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.multi_insert(e, { f1 }, { 41 }))
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 41)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.multi_assign(e, { f1 }, { 51 }))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.multi_remove(e, { f1 }))
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 51))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.clear(e))
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+
+        assert(evo.insert(e, f1, 51))
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 51)
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.destroy(e))
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 2)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local assign_count = 0
+    local insert_count = 0
+    local remove_count = 0
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, c)
+        assign_count = assign_count + 1
+        assert(f == f1)
+        assert(c == 51)
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 52)
+    end)
+
+    evo.set(f2, evo.ON_ASSIGN, function(e, f, c)
+        assign_count = assign_count + 1
+        assert(f == f2)
+        assert(c == 52)
+        assert(evo.get(e, f1) == 51)
+        assert(evo.get(e, f2) == 52)
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, c)
+        insert_count = insert_count + 1
+        assert(f == f1)
+        assert(c == 41)
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 42)
+    end)
+
+    evo.set(f2, evo.ON_INSERT, function(e, f, c)
+        insert_count = insert_count + 1
+        assert(f == f2)
+        assert(c == 42)
+        assert(evo.get(e, f1) == 41)
+        assert(evo.get(e, f2) == 42)
+    end)
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        remove_count = remove_count + 1
+        assert(f == f1)
+        assert(c == 51)
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+    end)
+
+    evo.set(f2, evo.ON_REMOVE, function(e, f, c)
+        remove_count = remove_count + 1
+        assert(f == f2)
+        assert(c == 52)
+        assert(evo.get(e, f1) == nil)
+        assert(evo.get(e, f2) == nil)
+    end)
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+        assert(evo.multi_set(e, { f1, f2 }, { 41, 42 }))
+
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41, 42 }))
+
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41, 42 }))
+        assert(evo.multi_assign(e, { f1, f2 }, { 51, 52 }))
+        assert(evo.multi_remove(e, { f1, f2 }))
+
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41, 42 }))
+        assert(evo.multi_assign(e, { f1, f2 }, { 51, 52 }))
+        assert(evo.clear(e))
+
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        local e = evo.id()
+        assert(evo.multi_insert(e, { f1, f2 }, { 41, 42 }))
+        assert(evo.multi_assign(e, { f1, f2 }, { 51, 52 }))
+        assert(evo.destroy(e))
+
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+    end
+end
+
+do
+    local f0, f1 = evo.id(2)
+    local q0 = evo.query():include(f0):build()
+
+    local assign_count = 0
+    local insert_count = 0
+    local remove_count = 0
+
+    local e1, e2 = evo.id(2)
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, c)
+        assign_count = assign_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(evo.get(e1, f1) == c)
+        assert(evo.get(e2, f1) == c)
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, c)
+        insert_count = insert_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(evo.get(e1, f1) == c)
+        assert(evo.get(e2, f1) == c)
+    end)
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        remove_count = remove_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(evo.get(e1, f1) == nil)
+        assert(evo.get(e2, f1) == nil)
+    end)
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        assert(evo.insert(e1, f0) and evo.insert(e2, f0))
+
+        assert(evo.batch_insert(q0, f1, 41))
+        assert(assign_count == 0 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.batch_assign(q0, f1, 51))
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 0)
+
+        assert(evo.batch_remove(q0, f1))
+        assert(assign_count == 2 and insert_count == 2 and remove_count == 2)
+
+        assert(evo.batch_insert(q0, f1, 41))
+        assert(assign_count == 2 and insert_count == 4 and remove_count == 2)
+
+        assert(evo.batch_clear(q0))
+        assert(assign_count == 2 and insert_count == 4 and remove_count == 4)
+
+        assert(evo.insert(e1, f0) and evo.insert(e2, f0))
+        assert(evo.batch_insert(q0, f1, 41))
+        assert(assign_count == 2 and insert_count == 6 and remove_count == 4)
+
+        assert(evo.batch_destroy(q0))
+        assert(assign_count == 2 and insert_count == 6 and remove_count == 6)
+    end
+end
+
+do
+    local f0, f1, f2 = evo.id(3)
+    local q0 = evo.query():include(f0):build()
+
+    local assign_count = 0
+    local insert_count = 0
+    local remove_count = 0
+
+    local e1, e2 = evo.id(2)
+
+    evo.set(f1, evo.ON_ASSIGN, function(e, f, c)
+        assign_count = assign_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(c == 51)
+        assert(evo.get(e1, f1) == 51)
+        assert(evo.get(e2, f1) == 51)
+        assert(evo.get(e1, f2) == 52)
+        assert(evo.get(e2, f2) == 52)
+    end)
+
+    evo.set(f2, evo.ON_ASSIGN, function(e, f, c)
+        assign_count = assign_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f2)
+        assert(c == 52)
+        assert(evo.get(e1, f1) == 51)
+        assert(evo.get(e2, f1) == 51)
+        assert(evo.get(e1, f2) == 52)
+        assert(evo.get(e2, f2) == 52)
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, c)
+        insert_count = insert_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(c == 41)
+        assert(evo.get(e1, f1) == 41)
+        assert(evo.get(e2, f1) == 41)
+        assert(evo.get(e1, f2) == 42)
+        assert(evo.get(e2, f2) == 42)
+    end)
+
+    evo.set(f2, evo.ON_INSERT, function(e, f, c)
+        insert_count = insert_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f2)
+        assert(c == 42)
+        assert(evo.get(e1, f1) == 41)
+        assert(evo.get(e2, f1) == 41)
+        assert(evo.get(e1, f2) == 42)
+        assert(evo.get(e2, f2) == 42)
+    end)
+
+    evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        remove_count = remove_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f1)
+        assert(c == 51)
+        assert(evo.get(e1, f1) == nil)
+        assert(evo.get(e2, f1) == nil)
+        assert(evo.get(e1, f2) == nil)
+        assert(evo.get(e2, f2) == nil)
+    end)
+
+    evo.set(f2, evo.ON_REMOVE, function(e, f, c)
+        remove_count = remove_count + 1
+        assert(e == e1 or e == e2)
+        assert(f == f2)
+        assert(c == 52)
+        assert(evo.get(e1, f2) == nil)
+        assert(evo.get(e2, f2) == nil)
+        assert(evo.get(e1, f1) == nil)
+        assert(evo.get(e2, f1) == nil)
+    end)
+
+    do
+        assign_count = 0
+        insert_count = 0
+        remove_count = 0
+
+        assert(evo.insert(e1, f0) and evo.insert(e2, f0))
+
+        assert(evo.batch_multi_insert(q0, { f1, f2 }, { 41, 42 }))
+        assert(assign_count == 0 and insert_count == 4 and remove_count == 0)
+
+        assert(evo.batch_multi_assign(q0, { f1, f2 }, { 51, 52 }))
+        assert(assign_count == 4 and insert_count == 4 and remove_count == 0)
+
+        assert(evo.batch_multi_remove(q0, { f1, f2 }))
+        assert(assign_count == 4 and insert_count == 4 and remove_count == 4)
+
+        assert(evo.batch_multi_set(q0, { f1, f2 }, { 41, 42 }))
+        assert(assign_count == 4 and insert_count == 8 and remove_count == 4)
+
+        assert(evo.batch_multi_set(q0, { f1, f2 }, { 51, 52 }))
+        assert(assign_count == 8 and insert_count == 8 and remove_count == 4)
+
+        assert(evo.batch_multi_remove(q0, { f1, f2 }))
+        assert(assign_count == 8 and insert_count == 8 and remove_count == 8)
     end
 end
