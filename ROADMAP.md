@@ -2,7 +2,8 @@
 
 ## Backlog
 
-- try to keep entity_chunks/places tables as arrays
+- singles addon
+- phase/pipeline addon
 
 ## After first release
 
@@ -10,3 +11,5 @@
 - add REQUIRES fragment trait
 - use compact prefix-tree for chunks
 - set/assign/insert/remove/clear/destroy for lists
+- optional ffi component storages
+- keep entity_chunks/places tables as arrays
