@@ -1044,8 +1044,8 @@ local function __detach_entity(chunk, place)
     if place == chunk_entity_count then
         chunk_entities[place] = nil
 
-        for i = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[i]
+        for component_index = 1, chunk_component_count do
+            local component_storage = chunk_component_storages[component_index]
             component_storage[place] = nil
         end
     else
@@ -1056,8 +1056,8 @@ local function __detach_entity(chunk, place)
         chunk_entities[place] = last_entity
         chunk_entities[chunk_entity_count] = nil
 
-        for i = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[i]
+        for component_index = 1, chunk_component_count do
+            local component_storage = chunk_component_storages[component_index]
             local last_component = component_storage[chunk_entity_count]
             component_storage[place] = last_component
             component_storage[chunk_entity_count] = nil
@@ -1079,8 +1079,8 @@ local function __detach_all_entities(chunk)
 
     __table_clear(entities)
 
-    for i = 1, component_count do
-        __table_clear(component_storages[i])
+    for component_index = 1, component_count do
+        __table_clear(component_storages[component_index])
     end
 
     chunk.__entity_count = 0
@@ -1112,9 +1112,9 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
     chunk_entities[place] = entity
 
     if chunk_has_defaults_or_constructs then
-        for i = 1, chunk_component_count do
-            local fragment = chunk_component_fragments[i]
-            local component_storage = chunk_component_storages[i]
+        for component_index = 1, chunk_component_count do
+            local fragment = chunk_component_fragments[component_index]
+            local component_storage = chunk_component_storages[component_index]
 
             local new_component = evolved.get(fragment, evolved.DEFAULT)
 
@@ -1125,8 +1125,8 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
             component_storage[place] = new_component
         end
     else
-        for i = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[i]
+        for component_index = 1, chunk_component_count do
+            local component_storage = chunk_component_storages[component_index]
 
             local new_component = true
 
@@ -1177,8 +1177,9 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
     if chunk_has_set_or_insert_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
-        for i = 1, chunk_fragment_count do
-            local fragment = chunk_fragment_list[i]
+
+        for fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[fragment_index]
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
@@ -1267,8 +1268,9 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
     if chunk_has_set_or_insert_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
-        for i = 1, chunk_fragment_count do
-            local fragment = chunk_fragment_list[i]
+
+        for fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[fragment_index]
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
@@ -1713,8 +1715,8 @@ local function __chunk_clear(chunk)
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
 
-        for i = 1, chunk_fragment_count do
-            local fragment = chunk_fragment_list[i]
+        for fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[fragment_index]
 
             ---@type evolved.remove_hook?
             local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
@@ -1774,8 +1776,8 @@ local function __chunk_destroy(chunk)
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
 
-        for i = 1, chunk_fragment_count do
-            local fragment = chunk_fragment_list[i]
+        for fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[fragment_index]
 
             ---@type evolved.remove_hook?
             local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
@@ -2156,6 +2158,7 @@ local function __chunk_multi_assign(chunk, fragments, components)
 
     for i = 1, fragment_count do
         local fragment = fragments[i]
+
         if chunk_fragment_set[fragment] then
             ---@type evolved.default?
             local fragment_default
@@ -2293,6 +2296,7 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
     for i = 1, fragment_count do
         local fragment = fragments[i]
+
         if not inserted_set[fragment] and not old_fragment_set[fragment] then
             inserted_set[fragment] = true
 
@@ -4353,8 +4357,8 @@ function evolved.clear(entity)
             local chunk_component_indices = chunk.__component_indices
             local chunk_component_storages = chunk.__component_storages
 
-            for i = 1, chunk_fragment_count do
-                local fragment = chunk_fragment_list[i]
+            for fragment_index = 1, chunk_fragment_count do
+                local fragment = chunk_fragment_list[fragment_index]
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
@@ -4414,8 +4418,8 @@ function evolved.destroy(entity)
             local chunk_component_indices = chunk.__component_indices
             local chunk_component_storages = chunk.__component_storages
 
-            for i = 1, chunk_fragment_count do
-                local fragment = chunk_fragment_list[i]
+            for fragment_index = 1, chunk_fragment_count do
+                local fragment = chunk_fragment_list[fragment_index]
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
