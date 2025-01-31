@@ -3,9 +3,7 @@
 ## Backlog
 
 - optimize batch operations for cases with moving entities to empty chunks
-- should we clear chunk's components by on_insert tag callback?
 - try to keep entity_chunks/places tables as arrays
-- update chunk precached hook flags after adding/removing hooks
 
 ## After first release
 

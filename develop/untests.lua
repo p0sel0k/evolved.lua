@@ -6237,3 +6237,165 @@ do
         assert(assign_count == 8 and insert_count == 8 and remove_count == 8)
     end
 end
+
+do
+    local f1, f2, f3, f4, f5 = evo.id(5)
+
+    local assign_count = 0
+
+    evo.set(f4, evo.ON_ASSIGN, function()
+        assign_count = assign_count + 1
+    end)
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e12 = evo.id()
+    assert(evo.insert(e12, f1, 41))
+    assert(evo.insert(e12, f2, 42))
+
+    local e35 = evo.id()
+    assert(evo.insert(e35, f3, 43))
+    assert(evo.insert(e35, f5, 45))
+
+    local e34 = evo.id()
+    assert(evo.insert(e34, f3, 43))
+    assert(evo.insert(e34, f4, 44))
+
+    evo.set(f1, evo.ON_ASSIGN, function()
+        assign_count = assign_count + 1
+    end)
+
+    evo.set(f3, evo.ON_ASSIGN, function()
+        assign_count = assign_count + 1
+    end)
+
+    assert(assign_count == 0)
+
+    assert(evo.assign(e1, f1, 41))
+    assert(assign_count == 1)
+
+    assert(evo.assign(e12, f1, 42))
+    assert(assign_count == 2)
+
+    assert(evo.assign(e34, f3, 43))
+    assert(assign_count == 3)
+
+    assert(evo.assign(e35, f3, 43))
+    assert(assign_count == 4)
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+    local set_count = 0
+
+    evo.set(f1, evo.ON_SET, function() set_count = set_count + 1 end)
+    evo.set(f2, evo.ON_SET, function() set_count = set_count + 1 end)
+    evo.set(f3, evo.ON_SET, function() set_count = set_count + 1 end)
+
+    local e13 = evo.id()
+    assert(evo.set(e13, f1, 41) and evo.set(e13, f3, 43))
+    assert(set_count == 2)
+
+    local e123 = evo.id()
+    assert(evo.set(e123, f1, 41) and evo.set(e123, f2, 42) and evo.set(e123, f3, 43))
+    assert(set_count == 5)
+
+    assert(evo.assign(e123, f1, 41) and evo.assign(e123, f2, 42) and evo.assign(e123, f3, 43))
+    assert(set_count == 8)
+
+    do
+        set_count = 0
+
+        assert(evo.remove(f1, evo.ON_SET))
+
+        evo.set(e13, f1, 41)
+        assert(set_count == 0)
+        evo.set(e13, f3, 43)
+        assert(set_count == 1)
+
+        evo.set(e123, f1, 41)
+        assert(set_count == 1)
+        evo.set(e123, f2, 42)
+        assert(set_count == 2)
+        evo.set(e123, f3, 43)
+        assert(set_count == 3)
+    end
+
+    do
+        set_count = 0
+
+        assert(evo.remove(f2, evo.ON_SET))
+
+        evo.set(e13, f1, 41)
+        assert(set_count == 0)
+        evo.set(e13, f3, 43)
+        assert(set_count == 1)
+
+        evo.set(e123, f1, 41)
+        assert(set_count == 1)
+        evo.set(e123, f2, 42)
+        assert(set_count == 1)
+        evo.set(e123, f3, 43)
+        assert(set_count == 2)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+    assert(evo.insert(e1, f2, 42))
+
+    evo.set(f1, evo.DEFAULT, 51)
+    evo.set(f2, evo.CONSTRUCT, function() return 52 end)
+
+    assert(evo.assign(e1, f1))
+    assert(evo.assign(e1, f2))
+
+    assert(evo.get(e1, f1) == 51)
+    assert(evo.get(e1, f2) == 52)
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local e1 = evo.id()
+    assert(evo.insert(e1, f1, 41))
+
+    local e2 = evo.id()
+    assert(evo.insert(e2, f1, 41))
+    assert(evo.insert(e2, f2, 42))
+
+    assert(evo.get(e1, f1) == 41)
+    assert(evo.get(e2, f1) == 41)
+    assert(evo.get(e2, f2) == 42)
+
+    assert(evo.insert(f1, evo.TAG))
+    assert(evo.get(e1, f1) == nil)
+    assert(evo.get(e2, f1) == nil)
+    assert(evo.get(e2, f2) == 42)
+
+    assert(evo.remove(f1, evo.TAG))
+    assert(evo.get(e1, f1) == true)
+    assert(evo.get(e2, f1) == true)
+    assert(evo.get(e2, f2) == 42)
+
+    assert(evo.insert(f2, evo.TAG))
+    assert(evo.get(e1, f1) == true)
+    assert(evo.get(e2, f1) == true)
+    assert(evo.get(e2, f2) == nil)
+
+    assert(evo.insert(f2, evo.DEFAULT, 42))
+    assert(evo.remove(f2, evo.TAG))
+    assert(evo.get(e1, f1) == true)
+    assert(evo.get(e2, f1) == true)
+    assert(evo.get(e2, f2) == 42)
+
+    assert(evo.set(f1, evo.DEFAULT, 81))
+    assert(evo.set(f2, evo.DEFAULT, 82))
+    assert(evo.get(e1, f1) == true)
+    assert(evo.get(e2, f1) == true)
+    assert(evo.get(e2, f2) == 42)
+end

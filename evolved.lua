@@ -458,6 +458,47 @@ local function __component_construct(fragment, ...)
     return component == nil and true or component
 end
 
+---@param fragment evolved.fragment
+---@param trace fun(chunk: evolved.chunk, ...: any): boolean
+---@param ... any additional trace arguments
+local function __trace_fragment_chunks(fragment, trace, ...)
+    local major_chunks = __major_chunks[fragment]
+
+    if not major_chunks then
+        return
+    end
+
+    ---@type evolved.chunk[]
+    local chunk_stack = __acquire_table(__TABLE_POOL_TAG__CHUNK_STACK)
+    local chunk_stack_size = 0
+
+    for i = 1, #major_chunks do
+        local major_chunk = major_chunks[i]
+        chunk_stack_size = chunk_stack_size + 1
+        chunk_stack[chunk_stack_size] = major_chunk
+    end
+
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
+
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
+
+        if trace(chunk, ...) then
+            local chunk_children = chunk.__children
+            local chunk_child_count = chunk.__child_count
+
+            for i = 1, chunk_child_count do
+                local chunk_child = chunk_children[i]
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = chunk_child
+            end
+        end
+    end
+
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_stack, true)
+end
+
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param new_component evolved.component
@@ -5273,10 +5314,138 @@ end
 ---
 ---
 
-evolved.set(evolved.TAG, evolved.TAG)
+---@param chunk evolved.chunk
+---@return boolean
+local function __update_chunk_caches_trace(chunk)
+    local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
+
+    local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
+        or evolved.has_any(chunk_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+
+    local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
+        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+
+    local has_set_or_insert_hooks = (chunk_parent and chunk_parent.__has_set_or_insert_hooks)
+        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_INSERT)
+
+    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+        or evolved.has(chunk_fragment, evolved.ON_REMOVE)
+
+    chunk.__has_defaults_or_constructs = has_defaults_or_constructs
+    chunk.__has_set_or_assign_hooks = has_set_or_assign_hooks
+    chunk.__has_set_or_insert_hooks = has_set_or_insert_hooks
+    chunk.__has_remove_hooks = has_remove_hooks
+
+    return true
+end
+
+---@param fragment evolved.fragment
+local function __update_fragment_hooks(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
+assert(evolved.insert(evolved.ON_SET, evolved.ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_ASSIGN, evolved.ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_INSERT, evolved.ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_REMOVE, evolved.ON_INSERT, __update_fragment_hooks))
+
+assert(evolved.insert(evolved.ON_SET, evolved.ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_ASSIGN, evolved.ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_INSERT, evolved.ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(evolved.ON_REMOVE, evolved.ON_REMOVE, __update_fragment_hooks))
+
+---
+---
+---
+---
+---
+
+---@param chunk evolved.chunk
+---@param fragment evolved.fragment
+---@return boolean
+local function __update_chunk_tags_trace(chunk, fragment)
+    local component_count = chunk.__component_count
+    local component_indices = chunk.__component_indices
+    local component_storages = chunk.__component_storages
+    local component_fragments = chunk.__component_fragments
+
+    local component_index = component_indices[fragment]
+
+    if component_index and evolved.has(fragment, evolved.TAG) then
+        if component_index ~= component_count then
+            local last_component_storage = component_storages[component_count]
+            local last_component_fragment = component_fragments[component_count]
+            component_indices[last_component_fragment] = component_index
+            component_storages[component_index] = last_component_storage
+            component_fragments[component_index] = last_component_fragment
+        end
+
+        component_indices[fragment] = nil
+        component_storages[component_count] = nil
+        component_fragments[component_count] = nil
+
+        component_count = component_count - 1
+        chunk.__component_count = component_count
+    end
+
+    if not component_index and not evolved.has(fragment, evolved.TAG) then
+        component_count = component_count + 1
+        chunk.__component_count = component_count
+
+        local storage = {}
+        local storage_index = component_count
+
+        component_indices[fragment] = storage_index
+        component_storages[storage_index] = storage
+        component_fragments[storage_index] = fragment
+
+        local new_component = evolved.get(fragment, evolved.DEFAULT)
+
+        if new_component == nil then
+            new_component = true
+        end
+
+        for i = 1, chunk.__entity_count do
+            storage[i] = new_component
+        end
+    end
+
+    return true
+end
+
+local function __update_fragment_tags(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_tags_trace, fragment)
+end
+
+---@param fragment evolved.fragment
+local function __update_fragment_defaults(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
+---@param fragment evolved.fragment
+local function __update_fragment_constructs(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
+assert(evolved.insert(evolved.TAG, evolved.ON_INSERT, __update_fragment_tags))
+assert(evolved.insert(evolved.TAG, evolved.ON_REMOVE, __update_fragment_tags))
+
+assert(evolved.insert(evolved.DEFAULT, evolved.ON_INSERT, __update_fragment_defaults))
+assert(evolved.insert(evolved.DEFAULT, evolved.ON_REMOVE, __update_fragment_defaults))
+
+assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_INSERT, __update_fragment_constructs))
+assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_REMOVE, __update_fragment_constructs))
+
+---
+---
+---
+---
+---
+
+assert(evolved.insert(evolved.TAG, evolved.TAG))
 
 ---@param ... evolved.fragment
-evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
+assert(evolved.insert(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -5291,11 +5460,11 @@ evolved.set(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
     end
 
     return include_list
-end)
+end))
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-evolved.set(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
+assert(evolved.insert(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
     local include_list_size = #include_list
 
     ---@type table<evolved.fragment, boolean>
@@ -5318,14 +5487,14 @@ evolved.set(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
 
     evolved.set(query, __INCLUDE_SET, include_set)
     evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
-end)
+end))
 
-evolved.set(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
+assert(evolved.insert(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
-end)
+end))
 
 ---@param ... evolved.fragment
-evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
+assert(evolved.insert(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
@@ -5340,11 +5509,11 @@ evolved.set(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
     end
 
     return exclude_list
-end)
+end))
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-evolved.set(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
+assert(evolved.insert(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
     local exclude_list_size = #exclude_list
 
     ---@type table<evolved.fragment, boolean>
@@ -5367,11 +5536,11 @@ evolved.set(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
 
     evolved.set(query, __EXCLUDE_SET, exclude_set)
     evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
-end)
+end))
 
-evolved.set(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
+assert(evolved.insert(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
-end)
+end))
 
 ---
 ---
