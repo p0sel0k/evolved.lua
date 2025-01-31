@@ -2,7 +2,6 @@
 
 ## Backlog
 
-- optimize batch operations for cases with moving entities to empty chunks
 - try to keep entity_chunks/places tables as arrays
 
 ## After first release
