@@ -6508,3 +6508,20 @@ do
         assert(evo.select(c3, f3)[3] == 3 and evo.select(c3, f3)[4] == 33)
     end
 end
+
+do
+    do
+        local f = evo.fragment():default():build()
+        assert(not evo.has(f, evo.DEFAULT))
+    end
+
+    do
+        local f = evo.fragment():single():build()
+        assert(not evo.has(f, f))
+    end
+
+    do
+        local f = evo.fragment():single(42):build()
+        assert(evo.has(f, f) and evo.get(f, f) == 42)
+    end
+end
