@@ -5044,7 +5044,7 @@ function evolved.batch_set(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
 end
 
@@ -5079,7 +5079,7 @@ function evolved.batch_assign(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
 end
 
@@ -5114,7 +5114,7 @@ function evolved.batch_insert(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
 end
 
@@ -5148,7 +5148,7 @@ function evolved.batch_remove(query, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
 end
 
@@ -5181,7 +5181,7 @@ function evolved.batch_clear(query)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return cleared_count, false
 end
 
@@ -5214,7 +5214,7 @@ function evolved.batch_destroy(query)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return destroyed_count, false
 end
 
@@ -5253,7 +5253,7 @@ function evolved.batch_multi_set(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
 end
 
@@ -5292,7 +5292,7 @@ function evolved.batch_multi_assign(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
 end
 
@@ -5331,7 +5331,7 @@ function evolved.batch_multi_insert(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
 end
 
@@ -5365,7 +5365,7 @@ function evolved.batch_multi_remove(query, fragments)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
 end
 
