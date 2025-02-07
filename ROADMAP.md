@@ -2,7 +2,7 @@
 
 ## Backlog
 
-- singles addon
+- INDEX fragment trait
 - phase/pipeline addon
 
 ## After first release
