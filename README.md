@@ -99,6 +99,7 @@ entity_builder:build :: entity, boolean
 ```
 fragment :: fragment_builder
 fragment_builder:tag :: fragment_builder
+fragment_builder:single :: component -> fragment_builder
 fragment_builder:default :: component -> fragment_builder
 fragment_builder:construct :: {any... -> component} -> fragment_builder
 fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment_builder

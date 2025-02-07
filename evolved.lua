@@ -5044,7 +5044,7 @@ function evolved.batch_set(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
 end
 
@@ -5079,7 +5079,7 @@ function evolved.batch_assign(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
 end
 
@@ -5114,7 +5114,7 @@ function evolved.batch_insert(query, fragment, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
 end
 
@@ -5148,7 +5148,7 @@ function evolved.batch_remove(query, ...)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
 end
 
@@ -5181,7 +5181,7 @@ function evolved.batch_clear(query)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return cleared_count, false
 end
 
@@ -5214,7 +5214,7 @@ function evolved.batch_destroy(query)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return destroyed_count, false
 end
 
@@ -5253,7 +5253,7 @@ function evolved.batch_multi_set(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
 end
 
@@ -5292,7 +5292,7 @@ function evolved.batch_multi_assign(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
 end
 
@@ -5331,7 +5331,7 @@ function evolved.batch_multi_insert(query, fragments, components)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
 end
 
@@ -5365,7 +5365,7 @@ function evolved.batch_multi_remove(query, fragments)
     end
     __defer_commit()
 
-    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list, true)
+    __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
 end
 
@@ -5696,6 +5696,7 @@ end
 
 ---@class (evact) evolved.__fragment_builder
 ---@field package __tag boolean
+---@field package __single? evolved.component
 ---@field package __default? evolved.component
 ---@field package __construct? fun(...): evolved.component
 ---@field package __on_set? evolved.set_hook
@@ -5713,6 +5714,7 @@ function evolved.fragment()
     ---@type evolved.__fragment_builder
     local builder = {
         __tag = false,
+        __single = nil,
         __default = nil,
         __construct = nil,
         __on_set = nil,
@@ -5727,6 +5729,13 @@ end
 ---@return evolved.fragment_builder builder
 function evolved_fragment_builder:tag()
     self.__tag = true
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:single(single)
+    self.__single = single
     return self
 end
 
@@ -5776,6 +5785,7 @@ end
 ---@return boolean is_deferred
 function evolved_fragment_builder:build()
     local tag = self.__tag
+    local single = self.__single
     local default = self.__default
     local construct = self.__construct
 
@@ -5785,6 +5795,7 @@ function evolved_fragment_builder:build()
     local on_remove = self.__on_remove
 
     self.__tag = false
+    self.__single = nil
     self.__default = nil
     self.__construct = nil
 
@@ -5792,6 +5803,8 @@ function evolved_fragment_builder:build()
     self.__on_assign = nil
     self.__on_insert = nil
     self.__on_remove = nil
+
+    local fragment = evolved.id()
 
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
@@ -5801,6 +5814,12 @@ function evolved_fragment_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = evolved.TAG
         component_list[component_count] = true
+    end
+
+    if single ~= nil then
+        component_count = component_count + 1
+        fragment_list[component_count] = fragment
+        component_list[component_count] = single
     end
 
     if default ~= nil then
@@ -5843,7 +5862,7 @@ function evolved_fragment_builder:build()
         return evolved.id(), false
     end
 
-    local fragment, is_deferred = evolved.spawn_with(fragment_list, component_list)
+    local _, is_deferred = evolved.multi_set(fragment, fragment_list, component_list)
 
     __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
