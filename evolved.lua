@@ -362,7 +362,7 @@ local function __execute_iterator(execute_state)
         local chunk_children = chunk.__children
         local chunk_child_count = chunk.__child_count
 
-        for i = 1, chunk_child_count do
+        for i = chunk_child_count, 1, -1 do
             local chunk_child = chunk_children[i]
             local chunk_child_fragment = chunk_child.__fragment
 
@@ -488,7 +488,7 @@ local function __trace_fragment_chunks(fragment, trace, ...)
             local chunk_children = chunk.__children
             local chunk_child_count = chunk.__child_count
 
-            for i = 1, chunk_child_count do
+            for i = chunk_child_count, 1, -1 do
                 local chunk_child = chunk_children[i]
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = chunk_child
