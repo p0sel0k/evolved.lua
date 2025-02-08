@@ -4,6 +4,7 @@
 
 - INDEX fragment trait
 - phase/pipeline addon
+- don't allow destroying fragments
 
 ## After first release
 
