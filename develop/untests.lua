@@ -2524,7 +2524,8 @@ do
     ---@return evolved.entity[]
     local function collect_entities(q)
         local entities = {}
-        for _, es in evo.execute(q) do
+        for _, es, es_count in evo.execute(q) do
+            assert(#es == es_count)
             for _, e in ipairs(es) do
                 entities[#entities + 1] = e
             end

@@ -77,7 +77,7 @@ local evolved = {
 ---@field package [3] table<evolved.fragment, boolean> exclude_set
 
 ---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
----@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?
+---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?, integer?
 
 ---
 ---
@@ -376,7 +376,7 @@ local function __execute_iterator(execute_state)
         local chunk_entity_count = chunk.__entity_count
 
         if chunk_entity_count > 0 then
-            return chunk, chunk_entities
+            return chunk, chunk_entities, chunk_entity_count
         end
     end
 
