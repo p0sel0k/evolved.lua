@@ -46,6 +46,9 @@ local evolved = {
 ---@alias evolved.insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
 ---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
 
+---@alias evolved.system_process fun()
+---@alias evolved.system_execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+
 ---@class (exact) evolved.chunk
 ---@field package __parent? evolved.chunk
 ---@field package __children evolved.chunk[]
@@ -403,6 +406,11 @@ evolved.ON_SET = __acquire_id()
 evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
+
+evolved.PHASE = __acquire_id()
+evolved.QUERY = __acquire_id()
+evolved.PROCESS = __acquire_id()
+evolved.EXECUTE = __acquire_id()
 
 ---
 ---
@@ -6021,6 +6029,10 @@ end
 ---
 
 ---@class (exact) evolved.__system_builder
+---@field package __phase? evolved.phase
+---@field package __query? evolved.query
+---@field package __process? evolved.system_process
+---@field package __execute? evolved.system_execute
 
 ---@class evolved.system_builder : evolved.__system_builder
 local evolved_system_builder = {}
@@ -6030,15 +6042,91 @@ evolved_system_builder.__index = evolved_system_builder
 ---@nodiscard
 function evolved.system()
     ---@type evolved.__system_builder
-    local builder = {}
+    local builder = {
+        __phase = nil,
+        __query = nil,
+        __process = nil,
+        __execute = nil,
+    }
     ---@cast builder evolved.system_builder
     return setmetatable(builder, evolved_system_builder)
+end
+
+---@param phase evolved.phase
+function evolved_system_builder:phase(phase)
+    self.__phase = phase
+    return self
+end
+
+---@param query evolved.query
+function evolved_system_builder:query(query)
+    self.__query = query
+    return self
+end
+
+---@param process evolved.system_process
+function evolved_system_builder:process(process)
+    self.__process = process
+    return self
+end
+
+---@param execute evolved.system_execute
+function evolved_system_builder:execute(execute)
+    self.__execute = execute
+    return self
 end
 
 ---@return evolved.system system
 ---@return boolean is_deferred
 function evolved_system_builder:build()
-    return evolved.id(), false
+    local phase = self.__phase
+    local query = self.__query
+    local process = self.__process
+    local execute = self.__execute
+
+    self.__phase = nil
+    self.__query = nil
+    self.__process = nil
+    self.__execute = nil
+
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    local component_count = 0
+
+    if phase then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PHASE
+        component_list[component_count] = phase
+    end
+
+    if query then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.QUERY
+        component_list[component_count] = query
+    end
+
+    if process then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PROCESS
+        component_list[component_count] = process
+    end
+
+    if execute then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.EXECUTE
+        component_list[component_count] = execute
+    end
+
+    if component_count == 0 then
+        return evolved.id(), false
+    end
+
+    local system, is_deferred = evolved.spawn_with(fragment_list, component_list)
+
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
+
+    return system, is_deferred
 end
 
 ---

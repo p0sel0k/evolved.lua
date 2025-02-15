@@ -123,6 +123,10 @@ phase_builder:build :: phase, boolean
 
 ```
 system :: system_builder
+system_builder:phase :: phase -> system_builder
+system_builder:query :: query -> system_builder
+system_builder:process :: {} -> system_builder
+system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:build :: system, boolean
 ```
 
