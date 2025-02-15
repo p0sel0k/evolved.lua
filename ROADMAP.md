@@ -2,13 +2,13 @@
 
 ## Backlog
 
-- INDEX fragment trait
-- phase/pipeline addon
+- add simple phase/systems
 - don't allow destroying fragments
 
 ## After first release
 
 - auto chunk count reducing
+- add INDEX fragment trait
 - add REQUIRES fragment trait
 - use compact prefix-tree for chunks
 - set/assign/insert/remove/clear/destroy for lists
