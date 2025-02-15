@@ -32,6 +32,8 @@ local evolved = {
 ---@alias evolved.entity evolved.id
 ---@alias evolved.fragment evolved.id
 ---@alias evolved.query evolved.id
+---@alias evolved.phase evolved.id
+---@alias evolved.system evolved.id
 
 ---@alias evolved.component any
 ---@alias evolved.component_storage evolved.component[]
@@ -5983,6 +5985,60 @@ function evolved_query_builder:build()
     __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
 
     return query, is_deferred
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__phase_builder
+
+---@class evolved.phase_builder : evolved.__phase_builder
+local evolved_phase_builder = {}
+evolved_phase_builder.__index = evolved_phase_builder
+
+---@return evolved.phase_builder builder
+---@nodiscard
+function evolved.phase()
+    ---@type evolved.__phase_builder
+    local builder = {}
+    ---@cast builder evolved.phase_builder
+    return setmetatable(builder, evolved_phase_builder)
+end
+
+---@return evolved.phase phase
+---@return boolean is_deferred
+function evolved_phase_builder:build()
+    return evolved.id(), false
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__system_builder
+
+---@class evolved.system_builder : evolved.__system_builder
+local evolved_system_builder = {}
+evolved_system_builder.__index = evolved_system_builder
+
+---@return evolved.system_builder builder
+---@nodiscard
+function evolved.system()
+    ---@type evolved.__system_builder
+    local builder = {}
+    ---@cast builder evolved.system_builder
+    return setmetatable(builder, evolved_system_builder)
+end
+
+---@return evolved.system system
+---@return boolean is_deferred
+function evolved_system_builder:build()
+    return evolved.id(), false
 end
 
 ---

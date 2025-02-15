@@ -116,4 +116,14 @@ query_builder:exclude :: fragment... -> query_builder
 query_builder:build :: query, boolean
 ```
 
+```
+phase :: phase_builder
+phase_builder:build :: phase, boolean
+```
+
+```
+system :: system_builder
+system_builder:build :: system, boolean
+```
+
 ## [License (MIT)](./LICENSE.md)
