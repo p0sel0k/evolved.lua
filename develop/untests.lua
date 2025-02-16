@@ -6526,3 +6526,29 @@ do
         assert(evo.has(f, f) and evo.get(f, f) == 42)
     end
 end
+
+do
+    local s1 = evo.system():build()
+    do
+        local after = evo.get(s1, evo.AFTER)
+        local before = evo.get(s1, evo.BEFORE)
+        assert(after == nil)
+        assert(before == nil)
+    end
+
+    local s2 = evo.system():after(s1):build()
+    do
+        local after = evo.get(s2, evo.AFTER)
+        local before = evo.get(s2, evo.BEFORE)
+        assert(#after == 1 and after[1] == s1)
+        assert(before == nil)
+    end
+
+    local s0 = evo.system():before(s1, s2):build()
+    do
+        local after = evo.get(s0, evo.AFTER)
+        local before = evo.get(s0, evo.BEFORE)
+        assert(after == nil)
+        assert(#before == 2 and before[1] == s1 and before[2] == s2)
+    end
+end

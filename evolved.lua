@@ -106,6 +106,9 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
+local __system_after_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
+local __system_before_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
+
 ---
 ---
 ---
@@ -396,6 +399,7 @@ end
 ---
 
 evolved.TAG = __acquire_id()
+
 evolved.DEFAULT = __acquire_id()
 evolved.CONSTRUCT = __acquire_id()
 
@@ -406,6 +410,9 @@ evolved.ON_SET = __acquire_id()
 evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
+
+evolved.AFTER = __acquire_id()
+evolved.BEFORE = __acquire_id()
 
 evolved.PHASE = __acquire_id()
 evolved.QUERY = __acquire_id()
@@ -6029,6 +6036,8 @@ end
 ---
 
 ---@class (exact) evolved.__system_builder
+---@field package __after? evolved.system[]
+---@field package __before? evolved.system[]
 ---@field package __phase? evolved.phase
 ---@field package __query? evolved.query
 ---@field package __process? evolved.process
@@ -6043,6 +6052,8 @@ evolved_system_builder.__index = evolved_system_builder
 function evolved.system()
     ---@type evolved.__system_builder
     local builder = {
+        __after = nil,
+        __before = nil,
         __phase = nil,
         __query = nil,
         __process = nil,
@@ -6050,6 +6061,58 @@ function evolved.system()
     }
     ---@cast builder evolved.system_builder
     return setmetatable(builder, evolved_system_builder)
+end
+
+---@param ... evolved.system systems
+---@return evolved.system_builder builder
+function evolved_system_builder:after(...)
+    local system_count = select('#', ...)
+
+    if system_count == 0 then
+        return self
+    end
+
+    local after = self.__after
+
+    if not after then
+        after = __table_new(math.max(4, system_count), 0)
+        self.__after = after
+    end
+
+    local after_count = #after
+
+    for i = 1, system_count do
+        after_count = after_count + 1
+        after[after_count] = select(i, ...)
+    end
+
+    return self
+end
+
+---@param ... evolved.system systems
+---@return evolved.system_builder builder
+function evolved_system_builder:before(...)
+    local system_count = select('#', ...)
+
+    if system_count == 0 then
+        return self
+    end
+
+    local before = self.__before
+
+    if not before then
+        before = __table_new(math.max(4, system_count), 0)
+        self.__before = before
+    end
+
+    local before_count = #before
+
+    for i = 1, system_count do
+        before_count = before_count + 1
+        before[before_count] = select(i, ...)
+    end
+
+    return self
 end
 
 ---@param phase evolved.phase
@@ -6079,11 +6142,15 @@ end
 ---@return evolved.system system
 ---@return boolean is_deferred
 function evolved_system_builder:build()
+    local after = self.__after
+    local before = self.__before
     local phase = self.__phase
     local query = self.__query
     local process = self.__process
     local execute = self.__execute
 
+    self.__after = nil
+    self.__before = nil
     self.__phase = nil
     self.__query = nil
     self.__process = nil
@@ -6092,6 +6159,18 @@ function evolved_system_builder:build()
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
     local component_count = 0
+
+    if after then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.AFTER
+        component_list[component_count] = after
+    end
+
+    if before then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.BEFORE
+        component_list[component_count] = before
+    end
 
     if phase then
         component_count = component_count + 1
@@ -6361,6 +6440,130 @@ end))
 
 assert(evolved.insert(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
     evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
+end))
+
+---
+---
+---
+---
+---
+
+---@param ... evolved.system
+assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, function(...)
+    local system_count = select('#', ...)
+
+    if system_count == 0 then
+        return {}
+    end
+
+    ---@type evolved.system[]
+    local after_list = __table_new(system_count, 0)
+
+    for i = 1, system_count do
+        after_list[i] = select(i, ...)
+    end
+
+    return after_list
+end))
+
+---@param system evolved.system
+---@param new_after_list evolved.system[]
+---@param old_after_list? evolved.system[]
+assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_after_list, old_after_list)
+    if old_after_list then
+        for i = 1, #old_after_list do
+            local old_after = old_after_list[i]
+            __system_before_sets[old_after][system] = nil
+        end
+    end
+
+    local new_after_set = {}
+    __system_after_sets[system] = new_after_set
+
+    for i = 1, #new_after_list do
+        local new_after = new_after_list[i]
+        new_after_set[new_after] = true
+
+        local new_after_before_set = __system_before_sets[new_after]
+
+        if not new_after_before_set then
+            new_after_before_set = {}
+            __system_before_sets[new_after] = new_after_before_set
+        end
+
+        new_after_before_set[system] = true
+    end
+end))
+
+---@param system evolved.system
+---@param old_after_list evolved.system[]
+assert(evolved.insert(evolved.AFTER, evolved.ON_REMOVE, function(system, _, old_after_list)
+    for i = 1, #old_after_list do
+        local old_after = old_after_list[i]
+        __system_before_sets[old_after][system] = nil
+    end
+
+    local new_after_set = nil
+    __system_after_sets[system] = new_after_set
+end))
+
+---@param ... evolved.system
+assert(evolved.insert(evolved.BEFORE, evolved.CONSTRUCT, function(...)
+    local system_count = select('#', ...)
+
+    if system_count == 0 then
+        return {}
+    end
+
+    ---@type evolved.system[]
+    local before_list = __table_new(system_count, 0)
+
+    for i = 1, system_count do
+        before_list[i] = select(i, ...)
+    end
+
+    return before_list
+end))
+
+---@param system evolved.system
+---@param new_before_list evolved.system[]
+---@param old_before_list? evolved.system[]
+assert(evolved.insert(evolved.BEFORE, evolved.ON_SET, function(system, _, new_before_list, old_before_list)
+    if old_before_list then
+        for i = 1, #old_before_list do
+            local old_before = old_before_list[i]
+            __system_after_sets[old_before][system] = nil
+        end
+    end
+
+    local new_before_set = {}
+    __system_before_sets[system] = new_before_set
+
+    for i = 1, #new_before_list do
+        local new_before = new_before_list[i]
+        new_before_set[new_before] = true
+
+        local new_before_after_set = __system_after_sets[new_before]
+
+        if not new_before_after_set then
+            new_before_after_set = {}
+            __system_after_sets[new_before] = new_before_after_set
+        end
+
+        new_before_after_set[system] = true
+    end
+end))
+
+---@param system evolved.system
+---@param old_before_list evolved.system[]
+assert(evolved.insert(evolved.BEFORE, evolved.ON_REMOVE, function(system, _, old_before_list)
+    for i = 1, #old_before_list do
+        local old_before = old_before_list[i]
+        __system_after_sets[old_before][system] = nil
+    end
+
+    local new_before_set = nil
+    __system_before_sets[system] = new_before_set
 end))
 
 ---
