@@ -41,13 +41,13 @@ local evolved = {
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
 
+---@alias evolved.process fun()
+---@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+
 ---@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
 ---@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
 ---@alias evolved.insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
 ---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
-
----@alias evolved.system_process fun()
----@alias evolved.system_execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
 
 ---@class (exact) evolved.chunk
 ---@field package __parent? evolved.chunk
@@ -6031,8 +6031,8 @@ end
 ---@class (exact) evolved.__system_builder
 ---@field package __phase? evolved.phase
 ---@field package __query? evolved.query
----@field package __process? evolved.system_process
----@field package __execute? evolved.system_execute
+---@field package __process? evolved.process
+---@field package __execute? evolved.execute
 
 ---@class evolved.system_builder : evolved.__system_builder
 local evolved_system_builder = {}
@@ -6064,13 +6064,13 @@ function evolved_system_builder:query(query)
     return self
 end
 
----@param process evolved.system_process
+---@param process evolved.process
 function evolved_system_builder:process(process)
     self.__process = process
     return self
 end
 
----@param execute evolved.system_execute
+---@param execute evolved.execute
 function evolved_system_builder:execute(execute)
     self.__execute = execute
     return self
