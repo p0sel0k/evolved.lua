@@ -2,8 +2,10 @@
 
 ## Backlog
 
-- add simple phase/systems
-- don't allow destroying fragments
+- `prologue`, `epilogue` instead `progress` for systems
+- add system groups (for disabling for example)
+- deterministic system execution
+- add destroing policies (fragments, phases, systems)
 
 ## After first release
 
