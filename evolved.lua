@@ -431,6 +431,11 @@ local __EXCLUDE_SET = __acquire_id()
 local __SORTED_INCLUDE_LIST = __acquire_id()
 local __SORTED_EXCLUDE_LIST = __acquire_id()
 
+---@type table
+local __EMPTY_TABLE = setmetatable({}, {
+    __newindex = function() error('attempt to modify empty table') end
+})
+
 ---@type table<evolved.fragment, boolean>
 local __EMPTY_FRAGMENT_SET = setmetatable({}, {
     __newindex = function() error('attempt to modify empty fragment set') end
@@ -2586,6 +2591,108 @@ local function __chunk_multi_remove(old_chunk, fragments)
 
     __structural_changes = __structural_changes + old_entity_count
     return old_entity_count
+end
+
+---
+---
+---
+---
+---
+
+---@param system evolved.system
+local function __system_process(system)
+    ---@type evolved.query?, evolved.process?, evolved.execute?
+    local query, process, execute = evolved.get(system,
+        evolved.QUERY, evolved.PROCESS, evolved.EXECUTE)
+
+    if process then
+        local success, result = pcall(process)
+
+        if not success then
+            error(string.format('system processing failed: %s', result), 2)
+        end
+    end
+
+    if query and execute then
+        evolved.defer()
+        do
+            for chunk, entities, entity_count in evolved.execute(query) do
+                local success, result = pcall(execute, chunk, entities, entity_count)
+
+                if not success then
+                    evolved.commit()
+                    error(string.format('system execution failed: %s', result), 2)
+                end
+            end
+        end
+        evolved.commit()
+    end
+end
+
+---@param phase evolved.phase
+local function __phase_process(phase)
+    local phase_system_set = __phase_system_sets[phase]
+
+    if not phase_system_set then
+        return
+    end
+
+    ---@type evolved.system[]
+    local topological_sorting_stack = {}
+    local topological_sorting_stack_size = 0
+
+    for system in pairs(phase_system_set) do
+        topological_sorting_stack_size = topological_sorting_stack_size + 1
+        topological_sorting_stack[topological_sorting_stack_size] = system
+    end
+
+    ---@type evolved.system[]
+    local processing_system_list = {}
+    local processing_system_list_size = 0
+
+    ---@type table<evolved.system, integer>
+    local topological_sorting_marks = {}
+
+    while topological_sorting_stack_size > 0 do
+        local system = topological_sorting_stack[topological_sorting_stack_size]
+
+        local system_mark = topological_sorting_marks[system]
+
+        if not system_mark then
+            topological_sorting_marks[system] = 1
+
+            local system_dependency_set = __system_after_sets[system] or __EMPTY_TABLE
+
+            for system_dependency in pairs(system_dependency_set) do
+                local system_dependency_mark = topological_sorting_marks[system_dependency]
+
+                if not system_dependency_mark then
+                    topological_sorting_stack_size = topological_sorting_stack_size + 1
+                    topological_sorting_stack[topological_sorting_stack_size] = system_dependency
+                elseif system_dependency_mark == 1 then
+                    error('cyclic dependency detected', 2)
+                elseif system_dependency_mark == 2 then
+                    -- nothing, dependency has already been placed
+                end
+            end
+        elseif system_mark == 1 then
+            topological_sorting_marks[system] = 2
+
+            processing_system_list_size = processing_system_list_size + 1
+            processing_system_list[processing_system_list_size] = system
+
+            topological_sorting_stack[topological_sorting_stack_size] = nil
+            topological_sorting_stack_size = topological_sorting_stack_size - 1
+        elseif system_mark == 2 then
+            topological_sorting_stack[topological_sorting_stack_size] = nil
+            topological_sorting_stack_size = topological_sorting_stack_size - 1
+        end
+    end
+
+    for i = 1, processing_system_list_size do
+        local system = processing_system_list[i]
+        __system_process(system)
+    end
 end
 
 ---
@@ -5552,6 +5659,20 @@ function evolved.execute(query)
     end
 
     return __execute_iterator, execute_state
+end
+
+---@param ... evolved.phase phases
+function evolved.process(...)
+    local phase_count = select('#', ...)
+
+    if phase_count == 0 then
+        return
+    end
+
+    for i = 1, phase_count do
+        local phase = select(i, ...)
+        __phase_process(phase)
+    end
 end
 
 ---
