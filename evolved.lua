@@ -419,12 +419,13 @@ evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
 
+evolved.PHASE = __acquire_id()
 evolved.AFTER = __acquire_id()
 evolved.BEFORE = __acquire_id()
 
-evolved.PHASE = __acquire_id()
 evolved.QUERY = __acquire_id()
 evolved.EXECUTE = __acquire_id()
+
 evolved.PROLOGUE = __acquire_id()
 evolved.EPILOGUE = __acquire_id()
 
@@ -6179,9 +6180,9 @@ end
 ---
 
 ---@class (exact) evolved.__system_builder
+---@field package __phase? evolved.phase
 ---@field package __after? evolved.system[]
 ---@field package __before? evolved.system[]
----@field package __phase? evolved.phase
 ---@field package __query? evolved.query
 ---@field package __execute? evolved.execute
 ---@field package __prologue? evolved.prologue
@@ -6196,9 +6197,9 @@ evolved_system_builder.__index = evolved_system_builder
 function evolved.system()
     ---@type evolved.__system_builder
     local builder = {
+        __phase = nil,
         __after = nil,
         __before = nil,
-        __phase = nil,
         __query = nil,
         __execute = nil,
         __prologue = nil,
@@ -6206,6 +6207,12 @@ function evolved.system()
     }
     ---@cast builder evolved.system_builder
     return setmetatable(builder, evolved_system_builder)
+end
+
+---@param phase evolved.phase
+function evolved_system_builder:phase(phase)
+    self.__phase = phase
+    return self
 end
 
 ---@param ... evolved.system systems
@@ -6260,12 +6267,6 @@ function evolved_system_builder:before(...)
     return self
 end
 
----@param phase evolved.phase
-function evolved_system_builder:phase(phase)
-    self.__phase = phase
-    return self
-end
-
 ---@param query evolved.query
 function evolved_system_builder:query(query)
     self.__query = query
@@ -6293,17 +6294,17 @@ end
 ---@return evolved.system system
 ---@return boolean is_deferred
 function evolved_system_builder:build()
+    local phase = self.__phase
     local after = self.__after
     local before = self.__before
-    local phase = self.__phase
     local query = self.__query
     local execute = self.__execute
     local prologue = self.__prologue
     local epilogue = self.__epilogue
 
+    self.__phase = nil
     self.__after = nil
     self.__before = nil
-    self.__phase = nil
     self.__query = nil
     self.__execute = nil
     self.__prologue = nil
@@ -6312,6 +6313,12 @@ function evolved_system_builder:build()
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
     local component_count = 0
+
+    if phase then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PHASE
+        component_list[component_count] = phase
+    end
 
     if after then
         component_count = component_count + 1
@@ -6323,12 +6330,6 @@ function evolved_system_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = evolved.BEFORE
         component_list[component_count] = before
-    end
-
-    if phase then
-        component_count = component_count + 1
-        fragment_list[component_count] = evolved.PHASE
-        component_list[component_count] = phase
     end
 
     if query then
