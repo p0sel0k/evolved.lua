@@ -106,6 +106,7 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
+local __phase_system_sets = {} ---@type table<evolved.phase, table<evolved.system, boolean>>
 local __system_after_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
 local __system_before_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
 
@@ -6447,6 +6448,46 @@ end))
 ---
 ---
 ---
+
+---@param system evolved.system
+---@param new_phase evolved.phase
+---@param old_phase? evolved.phase
+assert(evolved.insert(evolved.PHASE, evolved.ON_SET, function(system, _, new_phase, old_phase)
+    if old_phase then
+        local old_phase_system_set = __phase_system_sets[old_phase]
+
+        if old_phase_system_set then
+            old_phase_system_set[system] = nil
+
+            if next(old_phase_system_set) == nil then
+                __phase_system_sets[old_phase] = nil
+            end
+        end
+    end
+
+    local new_phase_system_set = __phase_system_sets[new_phase]
+
+    if not new_phase_system_set then
+        new_phase_system_set = {}
+        __phase_system_sets[new_phase] = new_phase_system_set
+    end
+
+    new_phase_system_set[system] = true
+end))
+
+---@param system evolved.system
+---@param old_phase evolved.phase
+assert(evolved.insert(evolved.PHASE, evolved.ON_REMOVE, function(system, _, old_phase)
+    local old_phase_system_set = __phase_system_sets[old_phase]
+
+    if old_phase_system_set then
+        old_phase_system_set[system] = nil
+
+        if next(old_phase_system_set) == nil then
+            __phase_system_sets[old_phase] = nil
+        end
+    end
+end))
 
 ---@param ... evolved.system
 assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, function(...)
