@@ -250,6 +250,9 @@ end
 ---| `__TABLE_POOL_TAG__FRAGMENT_SET`
 ---| `__TABLE_POOL_TAG__FRAGMENT_LIST`
 ---| `__TABLE_POOL_TAG__COMPONENT_LIST`
+---| `__TABLE_POOL_TAG__SYSTEM_LIST`
+---| `__TABLE_POOL_TAG__SORTING_STACK`
+---| `__TABLE_POOL_TAG__SORTING_MARKS`
 
 local __TABLE_POOL_TAG__BYTECODE = 1
 local __TABLE_POOL_TAG__CHUNK_STACK = 2
@@ -258,7 +261,10 @@ local __TABLE_POOL_TAG__EXECUTE_STATE = 4
 local __TABLE_POOL_TAG__FRAGMENT_SET = 5
 local __TABLE_POOL_TAG__FRAGMENT_LIST = 6
 local __TABLE_POOL_TAG__COMPONENT_LIST = 7
-local __TABLE_POOL_TAG__COUNT = 7
+local __TABLE_POOL_TAG__SYSTEM_LIST = 8
+local __TABLE_POOL_TAG__SORTING_STACK = 9
+local __TABLE_POOL_TAG__SORTING_MARKS = 10
+local __TABLE_POOL_TAG__COUNT = 10
 
 ---@class (exact) evolved.table_pool
 ---@field package __size integer
@@ -432,11 +438,6 @@ local __INCLUDE_SET = __acquire_id()
 local __EXCLUDE_SET = __acquire_id()
 local __SORTED_INCLUDE_LIST = __acquire_id()
 local __SORTED_EXCLUDE_LIST = __acquire_id()
-
----@type table
-local __EMPTY_TABLE = setmetatable({}, {
-    __newindex = function() error('attempt to modify empty table') end
-})
 
 ---@type table<evolved.fragment, boolean>
 local __EMPTY_FRAGMENT_SET = setmetatable({}, {
@@ -2647,61 +2648,72 @@ local function __phase_process(phase)
     end
 
     ---@type evolved.system[]
-    local topological_sorting_stack = {}
-    local topological_sorting_stack_size = 0
+    local sorting_stack = __acquire_table(__TABLE_POOL_TAG__SORTING_STACK)
+    local sorting_stack_size = 0
+
+    ---@type table<evolved.system, integer>
+    local sorting_marks = __acquire_table(__TABLE_POOL_TAG__SORTING_MARKS)
 
     for system in pairs(phase_system_set) do
-        topological_sorting_stack_size = topological_sorting_stack_size + 1
-        topological_sorting_stack[topological_sorting_stack_size] = system
+        sorting_stack_size = sorting_stack_size + 1
+        sorting_stack[sorting_stack_size] = system
+        sorting_marks[system] = 0
     end
 
     ---@type evolved.system[]
-    local processing_system_list = {}
-    local processing_system_list_size = 0
+    local sorted_list = __acquire_table(__TABLE_POOL_TAG__SYSTEM_LIST)
+    local sorted_list_size = 0
 
-    ---@type table<evolved.system, integer>
-    local topological_sorting_marks = {}
+    while sorting_stack_size > 0 do
+        local system = sorting_stack[sorting_stack_size]
 
-    while topological_sorting_stack_size > 0 do
-        local system = topological_sorting_stack[topological_sorting_stack_size]
-
-        local system_mark = topological_sorting_marks[system]
+        local system_mark = sorting_marks[system]
 
         if not system_mark then
-            topological_sorting_marks[system] = 1
+            -- nothing, the system is not from this phrase
+        elseif system_mark == 0 then
+            sorting_marks[system] = 1
 
-            local system_dependency_set = __system_after_sets[system] or __EMPTY_TABLE
+            local dependency_set = __system_after_sets[system]
 
-            for system_dependency in pairs(system_dependency_set) do
-                local system_dependency_mark = topological_sorting_marks[system_dependency]
+            if dependency_set then
+                for dependency in pairs(dependency_set) do
+                    local dependency_mark = sorting_marks[dependency]
 
-                if not system_dependency_mark then
-                    topological_sorting_stack_size = topological_sorting_stack_size + 1
-                    topological_sorting_stack[topological_sorting_stack_size] = system_dependency
-                elseif system_dependency_mark == 1 then
-                    error('cyclic dependency detected', 2)
-                elseif system_dependency_mark == 2 then
-                    -- nothing, dependency has already been placed
+                    if not dependency_mark then
+                        -- nothing, the dependency is not from this phrase
+                    elseif dependency_mark == 0 then
+                        sorting_stack_size = sorting_stack_size + 1
+                        sorting_stack[sorting_stack_size] = dependency
+                    elseif dependency_mark == 1 then
+                        error('system sorting failed: cyclic dependency detected', 2)
+                    elseif dependency_mark == 2 then
+                        -- nothing, the dependency has already been added to the sorted list
+                    end
                 end
             end
         elseif system_mark == 1 then
-            topological_sorting_marks[system] = 2
+            sorting_marks[system] = 2
 
-            processing_system_list_size = processing_system_list_size + 1
-            processing_system_list[processing_system_list_size] = system
+            sorted_list_size = sorted_list_size + 1
+            sorted_list[sorted_list_size] = system
 
-            topological_sorting_stack[topological_sorting_stack_size] = nil
-            topological_sorting_stack_size = topological_sorting_stack_size - 1
+            sorting_stack[sorting_stack_size] = nil
+            sorting_stack_size = sorting_stack_size - 1
         elseif system_mark == 2 then
-            topological_sorting_stack[topological_sorting_stack_size] = nil
-            topological_sorting_stack_size = topological_sorting_stack_size - 1
+            sorting_stack[sorting_stack_size] = nil
+            sorting_stack_size = sorting_stack_size - 1
         end
     end
 
-    for i = 1, processing_system_list_size do
-        local system = processing_system_list[i]
+    for i = 1, sorted_list_size do
+        local system = sorted_list[i]
         __system_process(system)
     end
+
+    __release_table(__TABLE_POOL_TAG__SYSTEM_LIST, sorted_list)
+    __release_table(__TABLE_POOL_TAG__SORTING_MARKS, sorting_marks)
+    __release_table(__TABLE_POOL_TAG__SORTING_STACK, sorting_stack, true)
 end
 
 ---
