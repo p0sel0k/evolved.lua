@@ -2,7 +2,6 @@
 
 ## Backlog
 
-- `prologue`, `epilogue` instead `progress` for systems
 - add system groups (for disabling for example)
 - deterministic system execution
 - add destroing policies (fragments, phases, systems)

@@ -39,8 +39,9 @@ BEFORE :: fragment
 
 PHASE :: fragment
 QUERY :: fragment
-PROCESS :: fragment
 EXECUTE :: fragment
+PROLOGUE :: fragment
+EPILOGUE :: fragment
 ```
 
 ## Functions
@@ -137,8 +138,9 @@ system_builder:after :: system... -> system_builder
 system_builder:before :: system... -> system_builder
 system_builder:phase :: phase -> system_builder
 system_builder:query :: query -> system_builder
-system_builder:process :: {} -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
+system_builder:prologue :: {} -> system_builder
+system_builder:epilogue :: {} -> system_builder
 system_builder:build :: system, boolean
 ```
 

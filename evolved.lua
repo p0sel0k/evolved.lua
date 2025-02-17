@@ -41,8 +41,9 @@ local evolved = {
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
 
----@alias evolved.process fun()
 ---@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+---@alias evolved.prologue fun()
+---@alias evolved.epilogue fun()
 
 ---@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
 ---@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
@@ -417,8 +418,9 @@ evolved.BEFORE = __acquire_id()
 
 evolved.PHASE = __acquire_id()
 evolved.QUERY = __acquire_id()
-evolved.PROCESS = __acquire_id()
 evolved.EXECUTE = __acquire_id()
+evolved.PROLOGUE = __acquire_id()
+evolved.EPILOGUE = __acquire_id()
 
 ---
 ---
@@ -2601,15 +2603,14 @@ end
 
 ---@param system evolved.system
 local function __system_process(system)
-    ---@type evolved.query?, evolved.process?, evolved.execute?
-    local query, process, execute = evolved.get(system,
-        evolved.QUERY, evolved.PROCESS, evolved.EXECUTE)
+    local query, execute, prologue, epilogue = evolved.get(system,
+        evolved.QUERY, evolved.EXECUTE, evolved.PROLOGUE, evolved.EPILOGUE)
 
-    if process then
-        local success, result = pcall(process)
+    if prologue then
+        local success, result = pcall(prologue)
 
         if not success then
-            error(string.format('system processing failed: %s', result), 2)
+            error(string.format('system prologue failed: %s', result), 2)
         end
     end
 
@@ -2626,6 +2627,14 @@ local function __system_process(system)
             end
         end
         evolved.commit()
+    end
+
+    if epilogue then
+        local success, result = pcall(epilogue)
+
+        if not success then
+            error(string.format('system epilogue failed: %s', result), 2)
+        end
     end
 end
 
@@ -6162,8 +6171,9 @@ end
 ---@field package __before? evolved.system[]
 ---@field package __phase? evolved.phase
 ---@field package __query? evolved.query
----@field package __process? evolved.process
 ---@field package __execute? evolved.execute
+---@field package __prologue? evolved.prologue
+---@field package __epilogue? evolved.epilogue
 
 ---@class evolved.system_builder : evolved.__system_builder
 local evolved_system_builder = {}
@@ -6178,8 +6188,9 @@ function evolved.system()
         __before = nil,
         __phase = nil,
         __query = nil,
-        __process = nil,
         __execute = nil,
+        __prologue = nil,
+        __epilogue = nil,
     }
     ---@cast builder evolved.system_builder
     return setmetatable(builder, evolved_system_builder)
@@ -6249,15 +6260,21 @@ function evolved_system_builder:query(query)
     return self
 end
 
----@param process evolved.process
-function evolved_system_builder:process(process)
-    self.__process = process
-    return self
-end
-
 ---@param execute evolved.execute
 function evolved_system_builder:execute(execute)
     self.__execute = execute
+    return self
+end
+
+---@param prologue evolved.prologue
+function evolved_system_builder:prologue(prologue)
+    self.__prologue = prologue
+    return self
+end
+
+---@param epilogue evolved.epilogue
+function evolved_system_builder:epilogue(epilogue)
+    self.__epilogue = epilogue
     return self
 end
 
@@ -6268,15 +6285,17 @@ function evolved_system_builder:build()
     local before = self.__before
     local phase = self.__phase
     local query = self.__query
-    local process = self.__process
     local execute = self.__execute
+    local prologue = self.__prologue
+    local epilogue = self.__epilogue
 
     self.__after = nil
     self.__before = nil
     self.__phase = nil
     self.__query = nil
-    self.__process = nil
     self.__execute = nil
+    self.__prologue = nil
+    self.__epilogue = nil
 
     local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
     local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
@@ -6306,16 +6325,22 @@ function evolved_system_builder:build()
         component_list[component_count] = query
     end
 
-    if process then
-        component_count = component_count + 1
-        fragment_list[component_count] = evolved.PROCESS
-        component_list[component_count] = process
-    end
-
     if execute then
         component_count = component_count + 1
         fragment_list[component_count] = evolved.EXECUTE
         component_list[component_count] = execute
+    end
+
+    if prologue then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PROLOGUE
+        component_list[component_count] = prologue
+    end
+
+    if epilogue then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.EPILOGUE
+        component_list[component_count] = epilogue
     end
 
     if component_count == 0 then

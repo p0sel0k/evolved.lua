@@ -39,8 +39,8 @@ local queries = {
 
 local awake_system = evo.system()
     :phase(phases.awake)
-    :process(function()
-        print '-= Awake =-'
+    :prologue(function()
+        print '-= | Awake | =-'
         evo.entity()
             :set(fragments.force, vector2(0, 0))
             :set(fragments.position, vector2(0, 0))
@@ -105,15 +105,15 @@ local graphics_system = evo.system()
             local entity, position = entities[i], positions[i]
 
             print(string.format(
-                '- {entity %d} at {%.4f, %.4f}',
+                '|-> {entity %d} at {%.4f, %.4f}',
                 entity, position.x, position.y))
         end
     end):build()
 
 local shutdown_system = evo.system()
     :phase(phases.shutdown)
-    :process(function()
-        print '-= Shutdown =-'
+    :epilogue(function()
+        print '-= | Shutdown | =-'
         evo.batch_destroy(queries.bodies)
     end):build()
 
