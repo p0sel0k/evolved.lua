@@ -58,16 +58,14 @@ local integrate_forces_system = evo.system()
             evo.get(singles.physics_gravity, singles.physics_gravity)
 
         ---@type vector2[], vector2[]
-        local forces, velocities = evo.select(chunk, fragments.force, fragments.velocity)
+        local forces, velocities = evo.select(chunk,
+            fragments.force, fragments.velocity)
 
         for i = 1, entity_count do
             local force, velocity = forces[i], velocities[i]
 
-            force.x = force.x + physics_gravity.x * delta_time
-            force.y = force.y + physics_gravity.y * delta_time
-
-            velocity.x = velocity.x + force.x * delta_time
-            velocity.y = velocity.y + force.y * delta_time
+            velocity.x = (physics_gravity.x + force.x) * delta_time
+            velocity.y = (physics_gravity.y + force.y) * delta_time
         end
     end):build()
 
@@ -80,14 +78,18 @@ local integrate_velocities_system = evo.system()
         local delta_time =
             evo.get(singles.delta_time, singles.delta_time)
 
-        ---@type vector2[], vector2[]
-        local positions, velocities = evo.select(chunk, fragments.position, fragments.velocity)
+        ---@type vector2[], vector2[], vector2[]
+        local forces, positions, velocities = evo.select(chunk,
+            fragments.force, fragments.position, fragments.velocity)
 
         for i = 1, entity_count do
-            local position, velocity = positions[i], velocities[i]
+            local force, position, velocity = forces[i], positions[i], velocities[i]
 
             position.x = position.x + velocity.x * delta_time
             position.y = position.y + velocity.y * delta_time
+
+            force.x = 0
+            force.y = 0
         end
     end):build()
 
@@ -96,7 +98,8 @@ local graphics_system = evo.system()
     :query(queries.bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type vector2[]
-        local positions = evo.select(chunk, fragments.position)
+        local positions = evo.select(chunk,
+            fragments.position)
 
         for i = 1, entity_count do
             local entity, position = entities[i], positions[i]
