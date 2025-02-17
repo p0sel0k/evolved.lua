@@ -8,6 +8,8 @@ local evo = require 'evolved'
 
 ---@param x number
 ---@param y number
+---@return vector2
+---@nodiscard
 local function vector2(x, y)
     ---@type vector2
     return { x = x, y = y }
@@ -32,7 +34,7 @@ local fragments = {
 }
 
 local queries = {
-    bodies = evo.query()
+    physics_bodies = evo.query()
         :include(fragments.force, fragments.position, fragments.velocity)
         :build(),
 }
@@ -50,7 +52,7 @@ local awake_system = evo.system()
 
 local integrate_forces_system = evo.system()
     :phase(phases.physics)
-    :query(queries.bodies)
+    :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type number, vector2
         local delta_time, physics_gravity =
@@ -72,7 +74,7 @@ local integrate_forces_system = evo.system()
 local integrate_velocities_system = evo.system()
     :phase(phases.physics)
     :after(integrate_forces_system)
-    :query(queries.bodies)
+    :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type number
         local delta_time =
@@ -95,7 +97,7 @@ local integrate_velocities_system = evo.system()
 
 local graphics_system = evo.system()
     :phase(phases.graphics)
-    :query(queries.bodies)
+    :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type vector2[]
         local positions = evo.select(chunk,
@@ -114,7 +116,7 @@ local shutdown_system = evo.system()
     :phase(phases.shutdown)
     :epilogue(function()
         print '-= | Shutdown | =-'
-        evo.batch_destroy(queries.bodies)
+        evo.batch_destroy(queries.physics_bodies)
     end):build()
 
 do
