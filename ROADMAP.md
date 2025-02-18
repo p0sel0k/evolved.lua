@@ -5,6 +5,7 @@
 - add system groups (for disabling for example)
 - deterministic system execution
 - add destroing policies (fragments, phases, systems)
+- print cyclic dependency paths in error messages
 
 ## After first release
 

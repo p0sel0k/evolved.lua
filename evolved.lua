@@ -107,9 +107,9 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __phase_system_sets = {} ---@type table<evolved.phase, table<evolved.system, boolean>>
-local __system_after_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
-local __system_before_sets = {} ---@type table<evolved.system, table<evolved.system, boolean>>
+local __phase_system_alists = {} ---@type table<evolved.phase, evolved.assoc_list>
+local __system_after_alists = {} ---@type table<evolved.system, evolved.assoc_list>
+local __system_before_alists = {} ---@type table<evolved.system, evolved.assoc_list>
 
 ---
 ---
@@ -2729,68 +2729,86 @@ end
 
 ---@param phase evolved.phase
 local function __phase_process(phase)
-    local phase_system_set = __phase_system_sets[phase]
+    local phase_system_alist = __phase_system_alists[phase]
 
-    if not phase_system_set then
+    if not phase_system_alist then
         return
     end
 
-    ---@type evolved.system[]
-    local sorting_stack = __acquire_table(__TABLE_POOL_TAG__SORTING_STACK)
-    local sorting_stack_size = 0
-
-    ---@type table<evolved.system, integer>
-    local sorting_marks = __acquire_table(__TABLE_POOL_TAG__SORTING_MARKS)
-
-    for system in pairs(phase_system_set) do
-        sorting_stack_size = sorting_stack_size + 1
-        sorting_stack[sorting_stack_size] = system
-        sorting_marks[system] = 0
-    end
+    local phase_system_set = phase_system_alist.__item_set
+    local phase_system_list = phase_system_alist.__item_list
+    local phase_system_list_size = phase_system_alist.__item_count
 
     ---@type evolved.system[]
     local sorted_list = __acquire_table(__TABLE_POOL_TAG__SYSTEM_LIST)
     local sorted_list_size = 0
 
+    ---@type integer[]
+    local sorting_marks = __acquire_table(__TABLE_POOL_TAG__SORTING_MARKS)
+
+    for phase_system_index = 1, phase_system_list_size do
+        sorting_marks[phase_system_index] = 0
+    end
+
+    ---@type evolved.system[]
+    local sorting_stack = __table_move(
+        phase_system_list, 1, phase_system_list_size,
+        1, __acquire_table(__TABLE_POOL_TAG__SORTING_STACK))
+    local sorting_stack_size = phase_system_list_size
+
     while sorting_stack_size > 0 do
         local system = sorting_stack[sorting_stack_size]
+        local system_mark_index = phase_system_set[system]
 
-        local system_mark = sorting_marks[system]
+        if not system_mark_index then
+            -- the system is not from this phase
+            sorting_stack[sorting_stack_size] = nil
+            sorting_stack_size = sorting_stack_size - 1
+        else
+            local system_mark = sorting_marks[system_mark_index]
 
-        if not system_mark then
-            -- nothing, the system is not from this phrase
-        elseif system_mark == 0 then
-            sorting_marks[system] = 1
+            if not system_mark then
+                -- the system has already been added to the sorted list
+                sorting_stack[sorting_stack_size] = nil
+                sorting_stack_size = sorting_stack_size - 1
+            elseif system_mark == 0 then
+                sorting_marks[system_mark_index] = 1
 
-            local dependency_set = __system_after_sets[system]
+                local dependency_alist = __system_after_alists[system]
 
-            if dependency_set then
-                for dependency in pairs(dependency_set) do
-                    local dependency_mark = sorting_marks[dependency]
+                if dependency_alist then
+                    local dependency_list = dependency_alist.__item_list
+                    local dependency_list_size = dependency_alist.__item_count
 
-                    if not dependency_mark then
-                        -- nothing, the dependency is not from this phrase
-                    elseif dependency_mark == 0 then
-                        sorting_stack_size = sorting_stack_size + 1
-                        sorting_stack[sorting_stack_size] = dependency
-                    elseif dependency_mark == 1 then
-                        error('system sorting failed: cyclic dependency detected', 2)
-                    elseif dependency_mark == 2 then
-                        -- nothing, the dependency has already been added to the sorted list
+                    for dependency_index = 1, dependency_list_size do
+                        local dependency = dependency_list[dependency_index]
+                        local dependency_mark_index = phase_system_set[dependency]
+
+                        if not dependency_mark_index then
+                            -- the dependency is not from this phase
+                        else
+                            local dependency_mark = sorting_marks[dependency_mark_index]
+
+                            if not dependency_mark then
+                                -- the dependency has already been added to the sorted list
+                            elseif dependency_mark == 0 then
+                                sorting_stack_size = sorting_stack_size + 1
+                                sorting_stack[sorting_stack_size] = dependency
+                            elseif dependency_mark == 1 then
+                                error('system sorting failed: cyclic dependency detected', 2)
+                            end
+                        end
                     end
                 end
+            elseif system_mark == 1 then
+                sorting_marks[system_mark_index] = nil
+
+                sorted_list_size = sorted_list_size + 1
+                sorted_list[sorted_list_size] = system
+
+                sorting_stack[sorting_stack_size] = nil
+                sorting_stack_size = sorting_stack_size - 1
             end
-        elseif system_mark == 1 then
-            sorting_marks[system] = 2
-
-            sorted_list_size = sorted_list_size + 1
-            sorted_list[sorted_list_size] = system
-
-            sorting_stack[sorting_stack_size] = nil
-            sorting_stack_size = sorting_stack_size - 1
-        elseif system_mark == 2 then
-            sorting_stack[sorting_stack_size] = nil
-            sorting_stack_size = sorting_stack_size - 1
         end
     end
 
@@ -2800,7 +2818,7 @@ local function __phase_process(phase)
     end
 
     __release_table(__TABLE_POOL_TAG__SYSTEM_LIST, sorted_list)
-    __release_table(__TABLE_POOL_TAG__SORTING_MARKS, sorting_marks)
+    __release_table(__TABLE_POOL_TAG__SORTING_MARKS, sorting_marks, true)
     __release_table(__TABLE_POOL_TAG__SORTING_STACK, sorting_stack, true)
 end
 
@@ -6699,39 +6717,39 @@ end))
 ---@param new_phase evolved.phase
 ---@param old_phase? evolved.phase
 assert(evolved.insert(evolved.PHASE, evolved.ON_SET, function(system, _, new_phase, old_phase)
+    if new_phase == old_phase then
+        return
+    end
+
     if old_phase then
-        local old_phase_system_set = __phase_system_sets[old_phase]
+        local old_phase_system_alist = __phase_system_alists[old_phase]
 
-        if old_phase_system_set then
-            old_phase_system_set[system] = nil
+        __assoc_list_remove(old_phase_system_alist, system)
 
-            if next(old_phase_system_set) == nil then
-                __phase_system_sets[old_phase] = nil
-            end
+        if old_phase_system_alist.__item_count == 0 then
+            __phase_system_alists[old_phase] = nil
         end
     end
 
-    local new_phase_system_set = __phase_system_sets[new_phase]
+    local new_phase_system_set = __phase_system_alists[new_phase]
 
     if not new_phase_system_set then
-        new_phase_system_set = {}
-        __phase_system_sets[new_phase] = new_phase_system_set
+        new_phase_system_set = __assoc_list_new(4)
+        __phase_system_alists[new_phase] = new_phase_system_set
     end
 
-    new_phase_system_set[system] = true
+    __assoc_list_insert(new_phase_system_set, system)
 end))
 
 ---@param system evolved.system
 ---@param old_phase evolved.phase
 assert(evolved.insert(evolved.PHASE, evolved.ON_REMOVE, function(system, _, old_phase)
-    local old_phase_system_set = __phase_system_sets[old_phase]
+    local old_phase_system_alist = __phase_system_alists[old_phase]
 
-    if old_phase_system_set then
-        old_phase_system_set[system] = nil
+    __assoc_list_remove(old_phase_system_alist, system)
 
-        if next(old_phase_system_set) == nil then
-            __phase_system_sets[old_phase] = nil
-        end
+    if old_phase_system_alist.__item_count == 0 then
+        __phase_system_alists[old_phase] = nil
     end
 end))
 
@@ -6760,25 +6778,33 @@ assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_aft
     if old_after_list then
         for i = 1, #old_after_list do
             local old_after = old_after_list[i]
-            __system_before_sets[old_after][system] = nil
+            local old_after_before_alist = __system_before_alists[old_after]
+
+            __assoc_list_remove(old_after_before_alist, system)
+
+            if old_after_before_alist.__item_count == 0 then
+                __system_before_alists[old_after] = nil
+            end
         end
     end
 
-    local new_after_set = {}
-    __system_after_sets[system] = new_after_set
+    local new_after_list_size = #new_after_list
 
-    for i = 1, #new_after_list do
+    local new_after_alist = __assoc_list_new(math.max(4, new_after_list_size))
+    __system_after_alists[system] = new_after_alist
+
+    for i = 1, new_after_list_size do
         local new_after = new_after_list[i]
-        new_after_set[new_after] = true
+        __assoc_list_insert(new_after_alist, new_after)
 
-        local new_after_before_set = __system_before_sets[new_after]
+        local new_after_before_alist = __system_before_alists[new_after]
 
-        if not new_after_before_set then
-            new_after_before_set = {}
-            __system_before_sets[new_after] = new_after_before_set
+        if not new_after_before_alist then
+            new_after_before_alist = __assoc_list_new(4)
+            __system_before_alists[new_after] = new_after_before_alist
         end
 
-        new_after_before_set[system] = true
+        __assoc_list_insert(new_after_before_alist, system)
     end
 end))
 
@@ -6787,11 +6813,16 @@ end))
 assert(evolved.insert(evolved.AFTER, evolved.ON_REMOVE, function(system, _, old_after_list)
     for i = 1, #old_after_list do
         local old_after = old_after_list[i]
-        __system_before_sets[old_after][system] = nil
+        local old_after_before_alist = __system_before_alists[old_after]
+
+        __assoc_list_remove(old_after_before_alist, system)
+
+        if old_after_before_alist.__item_count == 0 then
+            __system_before_alists[old_after] = nil
+        end
     end
 
-    local new_after_set = nil
-    __system_after_sets[system] = new_after_set
+    __system_after_alists[system] = nil
 end))
 
 ---@param ... evolved.system
@@ -6819,25 +6850,33 @@ assert(evolved.insert(evolved.BEFORE, evolved.ON_SET, function(system, _, new_be
     if old_before_list then
         for i = 1, #old_before_list do
             local old_before = old_before_list[i]
-            __system_after_sets[old_before][system] = nil
+            local old_before_after_alist = __system_after_alists[old_before]
+
+            __assoc_list_remove(old_before_after_alist, system)
+
+            if old_before_after_alist.__item_count == 0 then
+                __system_after_alists[old_before] = nil
+            end
         end
     end
 
-    local new_before_set = {}
-    __system_before_sets[system] = new_before_set
+    local new_before_list_size = #new_before_list
 
-    for i = 1, #new_before_list do
+    local new_before_alist = __assoc_list_new(math.max(4, new_before_list_size))
+    __system_before_alists[system] = new_before_alist
+
+    for i = 1, new_before_list_size do
         local new_before = new_before_list[i]
-        new_before_set[new_before] = true
+        __assoc_list_insert(new_before_alist, new_before)
 
-        local new_before_after_set = __system_after_sets[new_before]
+        local new_before_after_alist = __system_after_alists[new_before]
 
-        if not new_before_after_set then
-            new_before_after_set = {}
-            __system_after_sets[new_before] = new_before_after_set
+        if not new_before_after_alist then
+            new_before_after_alist = __assoc_list_new(4)
+            __system_after_alists[new_before] = new_before_after_alist
         end
 
-        new_before_after_set[system] = true
+        __assoc_list_insert(new_before_after_alist, system)
     end
 end))
 
@@ -6846,11 +6885,16 @@ end))
 assert(evolved.insert(evolved.BEFORE, evolved.ON_REMOVE, function(system, _, old_before_list)
     for i = 1, #old_before_list do
         local old_before = old_before_list[i]
-        __system_after_sets[old_before][system] = nil
+        local old_before_after_alist = __system_after_alists[old_before]
+
+        __assoc_list_remove(old_before_after_alist, system)
+
+        if old_before_after_alist.__item_count == 0 then
+            __system_after_alists[old_before] = nil
+        end
     end
 
-    local new_before_set = nil
-    __system_before_sets[system] = new_before_set
+    __system_before_alists[system] = nil
 end))
 
 ---
