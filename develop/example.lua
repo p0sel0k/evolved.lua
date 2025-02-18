@@ -66,8 +66,8 @@ local integrate_forces_system = evo.system()
         for i = 1, entity_count do
             local force, velocity = forces[i], velocities[i]
 
-            velocity.x = (physics_gravity.x + force.x) * delta_time
-            velocity.y = (physics_gravity.y + force.y) * delta_time
+            velocity.x = velocity.x + (physics_gravity.x + force.x) * delta_time
+            velocity.y = velocity.y + (physics_gravity.y + force.y) * delta_time
         end
     end):build()
 
