@@ -152,10 +152,6 @@ local __table_move = (function()
     end
 end)()
 
-local __table_unpack = (function()
-    return table.unpack or unpack
-end)()
-
 ---@type fun(narray: integer, nhash: integer): table
 local __table_new = (function()
     local table_new_loader = package.preload['table.new']
@@ -174,6 +170,9 @@ local __table_clear = (function()
         for k in pairs(tab) do tab[k] = nil end
     end
 end)()
+
+local __table_sort = table.sort
+local __table_unpack = table.unpack or unpack
 
 ---
 ---
@@ -318,6 +317,94 @@ local function __release_table(tag, table, no_clear)
     local new_table_pool_size = table_pool_size + 1
     table_pool[new_table_pool_size] = table
     table_pool.__size = new_table_pool_size
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.assoc_list
+---@field package __item_set table<any, integer>
+---@field package __item_list any[]
+---@field package __item_count integer
+
+---@param reserve? integer
+---@return evolved.assoc_list
+---@nodiscard
+local function __assoc_list_new(reserve)
+    ---@type evolved.assoc_list
+    return {
+        __item_set = __table_new(0, reserve or 0),
+        __item_list = __table_new(reserve or 0, 0),
+        __item_count = 0,
+    }
+end
+
+---@param al evolved.assoc_list
+---@param comp? fun(a: any, b: any): boolean
+local function __assoc_list_sort(al, comp)
+    local al_item_count = al.__item_count
+
+    if al_item_count == 0 then
+        return
+    end
+
+    local al_item_set, al_item_list = al.__item_set, al.__item_list
+
+    __table_sort(al_item_list, comp)
+
+    for al_item_index = 1, al_item_count do
+        local al_item = al_item_list[al_item_index]
+        al_item_set[al_item] = al_item_index
+    end
+end
+
+---@param al evolved.assoc_list
+---@param item any
+local function __assoc_list_insert(al, item)
+    local al_item_set = al.__item_set
+
+    local item_index = al_item_set[item]
+
+    if item_index then
+        return
+    end
+
+    local al_item_list, al_item_count = al.__item_list, al.__item_count
+
+    al_item_count = al_item_count + 1
+    al_item_set[item] = al_item_count
+    al_item_list[al_item_count] = item
+
+    al.__item_count = al_item_count
+end
+
+---@param al evolved.assoc_list
+---@param item any
+local function __assoc_list_remove(al, item)
+    local al_item_set = al.__item_set
+
+    local item_index = al_item_set[item]
+
+    if not item_index then
+        return
+    end
+
+    local al_item_list, al_item_count = al.__item_list, al.__item_count
+
+    if item_index ~= al_item_count then
+        local al_last_item = al_item_list[al_item_count]
+        al_item_set[al_last_item] = item_index
+        al_item_list[item_index] = al_last_item
+    end
+
+    al_item_set[item] = nil
+    al_item_list[al_item_count] = nil
+    al_item_count = al_item_count - 1
+
+    al.__item_count = al_item_count
 end
 
 ---
