@@ -36,7 +36,6 @@ ON_REMOVE :: fragment
 
 PHASE :: fragment
 AFTER :: fragment
-BEFORE :: fragment
 
 QUERY :: fragment
 EXECUTE :: fragment
@@ -137,7 +136,6 @@ phase_builder:build :: phase, boolean
 system :: system_builder
 system_builder:phase :: phase -> system_builder
 system_builder:after :: system... -> system_builder
-system_builder:before :: system... -> system_builder
 system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:prologue :: {} -> system_builder

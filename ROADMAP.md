@@ -3,9 +3,8 @@
 ## Backlog
 
 - add system groups (for disabling for example)
-- deterministic system execution
 - add destroing policies (fragments, phases, systems)
-- print cyclic dependency paths in error messages
+- replace __INCLUDE/EXCLUDE_SET and __SORTED_INCLUDE/EXCLUDE_LIST with assoc lists
 
 ## After first release
 
