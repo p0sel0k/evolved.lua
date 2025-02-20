@@ -4,7 +4,6 @@
 
 - add system groups (for disabling for example)
 - add destroing policies (fragments, phases, systems)
-- replace __INCLUDE/EXCLUDE_SET and __SORTED_INCLUDE/EXCLUDE_LIST with assoc lists
 
 ## After first release
 

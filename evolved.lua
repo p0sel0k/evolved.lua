@@ -83,7 +83,7 @@ local evolved = {
 ---@class (exact) evolved.execute_state
 ---@field package [1] integer structural_changes
 ---@field package [2] evolved.chunk[] chunk_stack
----@field package [3] table<evolved.fragment, boolean> exclude_set
+---@field package [3] table<evolved.fragment, integer>? exclude_set
 
 ---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
 ---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?, integer?
@@ -110,8 +110,11 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __phase_system_alists = {} ---@type table<evolved.phase, evolved.assoc_list>
-local __system_dependency_alists = {} ---@type table<evolved.system, evolved.assoc_list>
+local __phase_systems = {} ---@type table<evolved.phase, evolved.assoc_list>
+local __system_dependencies = {} ---@type table<evolved.system, evolved.assoc_list>
+
+local __query_sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
 
 ---
 ---
@@ -497,7 +500,7 @@ local function __execute_iterator(execute_state)
             local chunk_child = chunk_children[i]
             local chunk_child_fragment = chunk_child.__fragment
 
-            if not exclude_set[chunk_child_fragment] then
+            if not exclude_set or not exclude_set[chunk_child_fragment] then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = chunk_child
             end
@@ -548,11 +551,6 @@ evolved.EPILOGUE = __acquire_id()
 ---
 ---
 ---
-
-local __INCLUDE_SET = __acquire_id()
-local __EXCLUDE_SET = __acquire_id()
-local __SORTED_INCLUDE_LIST = __acquire_id()
-local __SORTED_EXCLUDE_LIST = __acquire_id()
 
 ---@type table<evolved.fragment, boolean>
 local __EMPTY_FRAGMENT_SET = setmetatable({}, {
@@ -1035,12 +1033,13 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_all_fragment_list(chunk, fragment_list)
+local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
     local fragment_set = chunk.__fragment_set
 
-    for i = 1, #fragment_list do
+    for i = 1, fragment_count do
         local fragment = fragment_list[i]
         if not fragment_set[fragment] then
             return false
@@ -1069,12 +1068,13 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_any_fragment_list(chunk, fragment_list)
+local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
     local fragment_set = chunk.__fragment_set
 
-    for i = 1, #fragment_list do
+    for i = 1, fragment_count do
         local fragment = fragment_list[i]
         if fragment_set[fragment] then
             return true
@@ -2342,7 +2342,7 @@ local function __chunk_multi_assign(chunk, fragments, components)
         return 0
     end
 
-    if not __chunk_has_any_fragment_list(chunk, fragments) then
+    if not __chunk_has_any_fragment_list(chunk, fragments, fragment_count) then
         return 0
     end
 
@@ -2774,15 +2774,15 @@ end
 
 ---@param phase evolved.phase
 local function __phase_process(phase)
-    local phase_system_alist = __phase_system_alists[phase]
+    local phase_systems = __phase_systems[phase]
 
-    if not phase_system_alist then
+    if not phase_systems then
         return
     end
 
-    local phase_system_set = phase_system_alist.__item_set
-    local phase_system_list = phase_system_alist.__item_list
-    local phase_system_list_size = phase_system_alist.__item_count
+    local phase_system_set = phase_systems.__item_set
+    local phase_system_list = phase_systems.__item_list
+    local phase_system_count = phase_systems.__item_count
 
     ---@type evolved.system[]
     local sorted_list = __acquire_table(__TABLE_POOL_TAG__SYSTEM_LIST)
@@ -2793,11 +2793,11 @@ local function __phase_process(phase)
 
     ---@type evolved.system[]
     local sorting_stack = __acquire_table(__TABLE_POOL_TAG__SORTING_STACK)
-    local sorting_stack_size = phase_system_list_size
+    local sorting_stack_size = phase_system_count
 
-    for phase_system_index = 1, phase_system_list_size do
+    for phase_system_index = 1, phase_system_count do
         sorting_marks[phase_system_index] = 0
-        local phase_system_rev_index = phase_system_list_size - phase_system_index + 1
+        local phase_system_rev_index = phase_system_count - phase_system_index + 1
         sorting_stack[phase_system_index] = phase_system_list[phase_system_rev_index]
     end
 
@@ -2814,13 +2814,13 @@ local function __phase_process(phase)
         elseif system_mark == 0 then
             sorting_marks[system_mark_index] = 1
 
-            local dependency_alist = __system_dependency_alists[system]
+            local dependencies = __system_dependencies[system]
 
-            if dependency_alist then
-                local dependency_list = dependency_alist.__item_list
-                local dependency_list_size = dependency_alist.__item_count
+            if dependencies then
+                local dependency_list = dependencies.__item_list
+                local dependency_count = dependencies.__item_count
 
-                for dependency_index = dependency_list_size, 1, -1 do
+                for dependency_index = dependency_count, 1, -1 do
                     local dependency = dependency_list[dependency_index]
                     local dependency_mark_index = phase_system_set[dependency]
 
@@ -5040,7 +5040,7 @@ function evolved.multi_assign(entity, fragments, components)
     local chunk = entity_chunks[entity_index]
     local place = entity_places[entity_index]
 
-    if not chunk or not __chunk_has_any_fragment_list(chunk, fragments) then
+    if not chunk or not __chunk_has_any_fragment_list(chunk, fragments, fragment_count) then
         return false, false
     end
 
@@ -5803,45 +5803,57 @@ function evolved.execute(query)
         return __execute_iterator
     end
 
-    ---@type table<evolved.fragment, boolean>?, evolved.fragment[]?, evolved.fragment[]?
-    local exclude_set, include_list, exclude_list = evolved.get(query,
-        __EXCLUDE_SET, __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
+    local query_includes = __query_sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count
 
-    if not exclude_set then exclude_set = __EMPTY_FRAGMENT_SET end
-    if not include_list then include_list = __EMPTY_FRAGMENT_LIST end
-    if not exclude_list then exclude_list = __EMPTY_FRAGMENT_LIST end
-
-    if #include_list == 0 then
+    if not query_include_list or query_include_count == 0 then
         return __execute_iterator
     end
 
-    local major_fragment = include_list[#include_list]
+    local major_fragment = query_include_list[query_include_count]
     local major_fragment_chunks = __major_chunks[major_fragment]
 
     if not major_fragment_chunks then
         return __execute_iterator
     end
 
+    local query_excludes = __query_sorted_excludes[query]
+    local query_exclude_set = query_excludes and query_excludes.__item_set
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count
+
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__TABLE_POOL_TAG__CHUNK_STACK)
     local chunk_stack_size = 0
+
+    for major_fragment_chunk_index = 1, #major_fragment_chunks do
+        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
+
+        local is_major_fragment_chunk_matched = true
+
+        if query_include_list and query_include_count > 1 then
+            is_major_fragment_chunk_matched = __chunk_has_all_fragment_list(
+                major_fragment_chunk, query_include_list, query_include_count - 1)
+        end
+
+        if query_exclude_list and query_exclude_count > 0 then
+            is_major_fragment_chunk_matched = not __chunk_has_any_fragment_list(
+                major_fragment_chunk, query_exclude_list, query_exclude_count)
+        end
+
+        if is_major_fragment_chunk_matched then
+            chunk_stack_size = chunk_stack_size + 1
+            chunk_stack[chunk_stack_size] = major_fragment_chunk
+        end
+    end
 
     ---@type evolved.execute_state
     local execute_state = __acquire_table(__TABLE_POOL_TAG__EXECUTE_STATE)
 
     execute_state[1] = __structural_changes
     execute_state[2] = chunk_stack
-    execute_state[3] = exclude_set
-
-    for major_fragment_chunk_index = 1, #major_fragment_chunks do
-        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
-        if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
-            if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = major_fragment_chunk
-            end
-        end
-    end
+    execute_state[3] = query_exclude_set
 
     return __execute_iterator, execute_state
 end
@@ -6647,30 +6659,24 @@ assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, __component_list))
 assert(evolved.insert(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
     local include_list_size = #include_list
 
-    ---@type table<evolved.fragment, boolean>
-    local include_set = __table_new(0, include_list_size)
-
-    for i = 1, include_list_size do
-        include_set[include_list[i]] = true
+    if include_list_size == 0 then
+        __query_sorted_includes[query] = nil
+        return
     end
 
-    ---@type evolved.fragment[]
-    local sorted_include_list = __table_new(include_list_size, 0)
-    local sorted_include_list_size = 0
+    local sorted_includes = __assoc_list_new(include_list_size)
 
-    for f, _ in pairs(include_set) do
-        sorted_include_list[sorted_include_list_size + 1] = f
-        sorted_include_list_size = sorted_include_list_size + 1
+    for include_index = 1, include_list_size do
+        local include = include_list[include_index]
+        __assoc_list_insert(sorted_includes, include)
     end
 
-    table.sort(sorted_include_list)
-
-    evolved.set(query, __INCLUDE_SET, include_set)
-    evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
+    __assoc_list_sort(sorted_includes)
+    __query_sorted_includes[query] = sorted_includes
 end))
 
 assert(evolved.insert(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
+    __query_sorted_includes[query] = nil
 end))
 
 ---
@@ -6684,30 +6690,24 @@ end))
 assert(evolved.insert(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
     local exclude_list_size = #exclude_list
 
-    ---@type table<evolved.fragment, boolean>
-    local exclude_set = __table_new(0, exclude_list_size)
-
-    for i = 1, exclude_list_size do
-        exclude_set[exclude_list[i]] = true
+    if exclude_list_size == 0 then
+        __query_sorted_excludes[query] = nil
+        return
     end
 
-    ---@type evolved.fragment[]
-    local sorted_exclude_list = __table_new(exclude_list_size, 0)
-    local sorted_exclude_list_size = 0
+    local sorted_excludes = __assoc_list_new(exclude_list_size)
 
-    for f, _ in pairs(exclude_set) do
-        sorted_exclude_list[sorted_exclude_list_size + 1] = f
-        sorted_exclude_list_size = sorted_exclude_list_size + 1
+    for exclude_index = 1, exclude_list_size do
+        local exclude = exclude_list[exclude_index]
+        __assoc_list_insert(sorted_excludes, exclude)
     end
 
-    table.sort(sorted_exclude_list)
-
-    evolved.set(query, __EXCLUDE_SET, exclude_set)
-    evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
+    __assoc_list_sort(sorted_excludes)
+    __query_sorted_excludes[query] = sorted_excludes
 end))
 
 assert(evolved.insert(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
+    __query_sorted_excludes[query] = nil
 end))
 
 ---
@@ -6725,37 +6725,37 @@ assert(evolved.insert(evolved.PHASE, evolved.ON_SET, function(system, _, new_pha
     end
 
     if old_phase then
-        local old_phase_system_alist = __phase_system_alists[old_phase]
+        local old_phase_systems = __phase_systems[old_phase]
 
-        if old_phase_system_alist then
-            __assoc_list_remove_ordered(old_phase_system_alist, system)
+        if old_phase_systems then
+            __assoc_list_remove_ordered(old_phase_systems, system)
 
-            if old_phase_system_alist.__item_count == 0 then
-                __phase_system_alists[old_phase] = nil
+            if old_phase_systems.__item_count == 0 then
+                __phase_systems[old_phase] = nil
             end
         end
     end
 
-    local new_phase_system_alist = __phase_system_alists[new_phase]
+    local new_phase_systems = __phase_systems[new_phase]
 
-    if not new_phase_system_alist then
-        new_phase_system_alist = __assoc_list_new(4)
-        __phase_system_alists[new_phase] = new_phase_system_alist
+    if not new_phase_systems then
+        new_phase_systems = __assoc_list_new(4)
+        __phase_systems[new_phase] = new_phase_systems
     end
 
-    __assoc_list_insert(new_phase_system_alist, system)
+    __assoc_list_insert(new_phase_systems, system)
 end))
 
 ---@param system evolved.system
 ---@param old_phase evolved.phase
 assert(evolved.insert(evolved.PHASE, evolved.ON_REMOVE, function(system, _, old_phase)
-    local old_phase_system_alist = __phase_system_alists[old_phase]
+    local old_phase_systems = __phase_systems[old_phase]
 
-    if old_phase_system_alist then
-        __assoc_list_remove_ordered(old_phase_system_alist, system)
+    if old_phase_systems then
+        __assoc_list_remove_ordered(old_phase_systems, system)
 
-        if old_phase_system_alist.__item_count == 0 then
-            __phase_system_alists[old_phase] = nil
+        if old_phase_systems.__item_count == 0 then
+            __phase_systems[old_phase] = nil
         end
     end
 end))
@@ -6772,23 +6772,23 @@ assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_aft
     local new_after_list_size = #new_after_list
 
     if new_after_list_size == 0 then
-        __system_dependency_alists[system] = nil
+        __system_dependencies[system] = nil
         return
     end
 
-    local new_dependency_alist = __assoc_list_new(new_after_list_size)
+    local new_dependencies = __assoc_list_new(new_after_list_size)
 
     for new_after_index = 1, new_after_list_size do
         local new_after = new_after_list[new_after_index]
-        __assoc_list_insert(new_dependency_alist, new_after)
+        __assoc_list_insert(new_dependencies, new_after)
     end
 
-    __system_dependency_alists[system] = new_dependency_alist
+    __system_dependencies[system] = new_dependencies
 end))
 
 ---@param system evolved.system
 assert(evolved.insert(evolved.AFTER, evolved.ON_REMOVE, function(system)
-    __system_dependency_alists[system] = nil
+    __system_dependencies[system] = nil
 end))
 
 ---
