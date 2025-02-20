@@ -2,16 +2,16 @@
 
 local evo = require 'evolved'
 
----@class vector2
+---@class evolved.vector2
 ---@field x number
 ---@field y number
 
 ---@param x number
 ---@param y number
----@return vector2
+---@return evolved.vector2
 ---@nodiscard
 local function vector2(x, y)
-    ---@type vector2
+    ---@type evolved.vector2
     return { x = x, y = y }
 end
 
@@ -54,12 +54,12 @@ local integrate_forces_system = evo.system()
     :phase(phases.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type number, vector2
+        ---@type number, evolved.vector2
         local delta_time, physics_gravity =
             evo.get(singles.delta_time, singles.delta_time),
             evo.get(singles.physics_gravity, singles.physics_gravity)
 
-        ---@type vector2[], vector2[]
+        ---@type evolved.vector2[], evolved.vector2[]
         local forces, velocities = evo.select(chunk,
             fragments.force, fragments.velocity)
 
@@ -80,7 +80,7 @@ local integrate_velocities_system = evo.system()
         local delta_time =
             evo.get(singles.delta_time, singles.delta_time)
 
-        ---@type vector2[], vector2[], vector2[]
+        ---@type evolved.vector2[], evolved.vector2[], evolved.vector2[]
         local forces, positions, velocities = evo.select(chunk,
             fragments.force, fragments.position, fragments.velocity)
 
@@ -99,7 +99,7 @@ local graphics_system = evo.system()
     :phase(phases.graphics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type vector2[]
+        ---@type evolved.vector2[]
         local positions = evo.select(chunk,
             fragments.position)
 
