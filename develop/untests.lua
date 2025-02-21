@@ -2524,7 +2524,8 @@ do
     ---@return evolved.entity[]
     local function collect_entities(q)
         local entities = {}
-        for _, es in evo.execute(q) do
+        for _, es, es_count in evo.execute(q) do
+            assert(#es == es_count)
             for _, e in ipairs(es) do
                 entities[#entities + 1] = e
             end
@@ -6523,5 +6524,25 @@ do
     do
         local f = evo.fragment():single(42):build()
         assert(evo.has(f, f) and evo.get(f, f) == 42)
+    end
+end
+
+do
+    local s1 = evo.system():build()
+    do
+        local after = evo.get(s1, evo.AFTER)
+        assert(after == nil)
+    end
+
+    local s2 = evo.system():after(s1):build()
+    do
+        local after = evo.get(s2, evo.AFTER)
+        assert(#after == 1 and after[1] == s1)
+    end
+
+    local s3 = evo.system():after(s1, s2):build()
+    do
+        local after = evo.get(s3, evo.AFTER)
+        assert(#after == 2 and after[1] == s1 and after[2] == s2)
     end
 end

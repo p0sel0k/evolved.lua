@@ -1,3 +1,6 @@
+---@diagnostic disable: unused-function
+---@diagnostic disable: unused-local
+
 local evolved = {
     __HOMEPAGE = 'https://github.com/BlackMATov/evolved.lua',
     __DESCRIPTION = 'Evolved ECS (Entity-Component-System) for Lua',
@@ -32,12 +35,18 @@ local evolved = {
 ---@alias evolved.entity evolved.id
 ---@alias evolved.fragment evolved.id
 ---@alias evolved.query evolved.id
+---@alias evolved.phase evolved.id
+---@alias evolved.system evolved.id
 
 ---@alias evolved.component any
 ---@alias evolved.component_storage evolved.component[]
 
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
+
+---@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+---@alias evolved.prologue fun()
+---@alias evolved.epilogue fun()
 
 ---@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
 ---@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
@@ -74,10 +83,10 @@ local evolved = {
 ---@class (exact) evolved.execute_state
 ---@field package [1] integer structural_changes
 ---@field package [2] evolved.chunk[] chunk_stack
----@field package [3] table<evolved.fragment, boolean> exclude_set
+---@field package [3] table<evolved.fragment, integer>? exclude_set
 
 ---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
----@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?
+---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?, integer?
 
 ---
 ---
@@ -100,6 +109,12 @@ local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
+
+local __phase_systems = {} ---@type table<evolved.phase, evolved.assoc_list>
+local __system_dependencies = {} ---@type table<evolved.system, evolved.assoc_list>
+
+local __query_sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
 
 ---
 ---
@@ -142,10 +157,6 @@ local __table_move = (function()
     end
 end)()
 
-local __table_unpack = (function()
-    return table.unpack or unpack
-end)()
-
 ---@type fun(narray: integer, nhash: integer): table
 local __table_new = (function()
     local table_new_loader = package.preload['table.new']
@@ -164,6 +175,9 @@ local __table_clear = (function()
         for k in pairs(tab) do tab[k] = nil end
     end
 end)()
+
+local __table_sort = table.sort
+local __table_unpack = table.unpack or unpack
 
 ---
 ---
@@ -240,6 +254,9 @@ end
 ---| `__TABLE_POOL_TAG__FRAGMENT_SET`
 ---| `__TABLE_POOL_TAG__FRAGMENT_LIST`
 ---| `__TABLE_POOL_TAG__COMPONENT_LIST`
+---| `__TABLE_POOL_TAG__SYSTEM_LIST`
+---| `__TABLE_POOL_TAG__SORTING_STACK`
+---| `__TABLE_POOL_TAG__SORTING_MARKS`
 
 local __TABLE_POOL_TAG__BYTECODE = 1
 local __TABLE_POOL_TAG__CHUNK_STACK = 2
@@ -248,7 +265,10 @@ local __TABLE_POOL_TAG__EXECUTE_STATE = 4
 local __TABLE_POOL_TAG__FRAGMENT_SET = 5
 local __TABLE_POOL_TAG__FRAGMENT_LIST = 6
 local __TABLE_POOL_TAG__COMPONENT_LIST = 7
-local __TABLE_POOL_TAG__COUNT = 7
+local __TABLE_POOL_TAG__SYSTEM_LIST = 8
+local __TABLE_POOL_TAG__SORTING_STACK = 9
+local __TABLE_POOL_TAG__SORTING_MARKS = 10
+local __TABLE_POOL_TAG__COUNT = 10
 
 ---@class (exact) evolved.table_pool
 ---@field package __size integer
@@ -310,6 +330,120 @@ end
 ---
 ---
 
+---@class (exact) evolved.assoc_list
+---@field package __item_set table<any, integer>
+---@field package __item_list any[]
+---@field package __item_count integer
+
+---@param reserve? integer
+---@return evolved.assoc_list
+---@nodiscard
+local function __assoc_list_new(reserve)
+    ---@type evolved.assoc_list
+    return {
+        __item_set = __table_new(0, reserve or 0),
+        __item_list = __table_new(reserve or 0, 0),
+        __item_count = 0,
+    }
+end
+
+---@param al evolved.assoc_list
+---@param comp? fun(a: any, b: any): boolean
+local function __assoc_list_sort(al, comp)
+    local al_item_count = al.__item_count
+
+    if al_item_count == 0 then
+        return
+    end
+
+    local al_item_set, al_item_list = al.__item_set, al.__item_list
+
+    __table_sort(al_item_list, comp)
+
+    for al_item_index = 1, al_item_count do
+        local al_item = al_item_list[al_item_index]
+        al_item_set[al_item] = al_item_index
+    end
+end
+
+---@param al evolved.assoc_list
+---@param item any
+local function __assoc_list_insert(al, item)
+    local al_item_set = al.__item_set
+
+    local item_index = al_item_set[item]
+
+    if item_index then
+        return
+    end
+
+    local al_item_list, al_item_count = al.__item_list, al.__item_count
+
+    al_item_count = al_item_count + 1
+    al_item_set[item] = al_item_count
+    al_item_list[al_item_count] = item
+
+    al.__item_count = al_item_count
+end
+
+---@param al evolved.assoc_list
+---@param item any
+local function __assoc_list_remove_ordered(al, item)
+    local al_item_set = al.__item_set
+
+    local item_index = al_item_set[item]
+
+    if not item_index then
+        return
+    end
+
+    local al_item_list, al_item_count = al.__item_list, al.__item_count
+
+    for al_item_index = item_index, al_item_count - 1 do
+        local al_next_item = al_item_list[al_item_index + 1]
+        al_item_set[al_next_item] = al_item_index
+        al_item_list[al_item_index] = al_next_item
+    end
+
+    al_item_set[item] = nil
+    al_item_list[al_item_count] = nil
+    al_item_count = al_item_count - 1
+
+    al.__item_count = al_item_count
+end
+
+---@param al evolved.assoc_list
+---@param item any
+local function __assoc_list_remove_unordered(al, item)
+    local al_item_set = al.__item_set
+
+    local item_index = al_item_set[item]
+
+    if not item_index then
+        return
+    end
+
+    local al_item_list, al_item_count = al.__item_list, al.__item_count
+
+    if item_index ~= al_item_count then
+        local al_last_item = al_item_list[al_item_count]
+        al_item_set[al_last_item] = item_index
+        al_item_list[item_index] = al_last_item
+    end
+
+    al_item_set[item] = nil
+    al_item_list[al_item_count] = nil
+    al_item_count = al_item_count - 1
+
+    al.__item_count = al_item_count
+end
+
+---
+---
+---
+---
+---
+
 ---@type evolved.each_iterator
 local function __each_iterator(each_state)
     if not each_state then return end
@@ -362,11 +496,11 @@ local function __execute_iterator(execute_state)
         local chunk_children = chunk.__children
         local chunk_child_count = chunk.__child_count
 
-        for i = 1, chunk_child_count do
+        for i = chunk_child_count, 1, -1 do
             local chunk_child = chunk_children[i]
             local chunk_child_fragment = chunk_child.__fragment
 
-            if not exclude_set[chunk_child_fragment] then
+            if not exclude_set or not exclude_set[chunk_child_fragment] then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = chunk_child
             end
@@ -376,7 +510,7 @@ local function __execute_iterator(execute_state)
         local chunk_entity_count = chunk.__entity_count
 
         if chunk_entity_count > 0 then
-            return chunk, chunk_entities
+            return chunk, chunk_entities, chunk_entity_count
         end
     end
 
@@ -391,6 +525,7 @@ end
 ---
 
 evolved.TAG = __acquire_id()
+
 evolved.DEFAULT = __acquire_id()
 evolved.CONSTRUCT = __acquire_id()
 
@@ -402,16 +537,20 @@ evolved.ON_ASSIGN = __acquire_id()
 evolved.ON_INSERT = __acquire_id()
 evolved.ON_REMOVE = __acquire_id()
 
----
----
----
----
----
+evolved.PHASE = __acquire_id()
+evolved.AFTER = __acquire_id()
 
-local __INCLUDE_SET = __acquire_id()
-local __EXCLUDE_SET = __acquire_id()
-local __SORTED_INCLUDE_LIST = __acquire_id()
-local __SORTED_EXCLUDE_LIST = __acquire_id()
+evolved.QUERY = __acquire_id()
+evolved.EXECUTE = __acquire_id()
+
+evolved.PROLOGUE = __acquire_id()
+evolved.EPILOGUE = __acquire_id()
+
+---
+---
+---
+---
+---
 
 ---@type table<evolved.fragment, boolean>
 local __EMPTY_FRAGMENT_SET = setmetatable({}, {
@@ -438,6 +577,24 @@ local __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
 ---
 ---
 ---
+
+---@param ... any component arguments
+---@return evolved.component
+local function __component_list(...)
+    local argument_count = select('#', ...)
+
+    if argument_count == 0 then
+        return {}
+    end
+
+    local argument_list = __table_new(argument_count, 0)
+
+    for argument_index = 1, argument_count do
+        argument_list[argument_index] = select(argument_index, ...)
+    end
+
+    return argument_list
+end
 
 ---@param ... any component arguments
 ---@return evolved.component
@@ -488,7 +645,7 @@ local function __trace_fragment_chunks(fragment, trace, ...)
             local chunk_children = chunk.__children
             local chunk_child_count = chunk.__child_count
 
-            for i = 1, chunk_child_count do
+            for i = chunk_child_count, 1, -1 do
                 local chunk_child = chunk_children[i]
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = chunk_child
@@ -876,12 +1033,13 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_all_fragment_list(chunk, fragment_list)
+local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
     local fragment_set = chunk.__fragment_set
 
-    for i = 1, #fragment_list do
+    for i = 1, fragment_count do
         local fragment = fragment_list[i]
         if not fragment_set[fragment] then
             return false
@@ -910,12 +1068,13 @@ end
 
 ---@param chunk evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_any_fragment_list(chunk, fragment_list)
+local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
     local fragment_set = chunk.__fragment_set
 
-    for i = 1, #fragment_list do
+    for i = 1, fragment_count do
         local fragment = fragment_list[i]
         if fragment_set[fragment] then
             return true
@@ -1033,46 +1192,42 @@ local __defer_remove_hook
 ---@param chunk evolved.chunk
 ---@param place integer
 local function __detach_entity(chunk, place)
-    local chunk_entities = chunk.__entities
-    local chunk_entity_count = chunk.__entity_count
+    local entities = chunk.__entities
+    local entity_count = chunk.__entity_count
 
-    local chunk_component_count = chunk.__component_count
-    local chunk_component_storages = chunk.__component_storages
+    local component_count = chunk.__component_count
+    local component_storages = chunk.__component_storages
 
-    chunk.__entity_count = chunk_entity_count - 1
+    if place == entity_count then
+        entities[place] = nil
 
-    if place == chunk_entity_count then
-        chunk_entities[place] = nil
-
-        for component_index = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[component_index]
+        for component_index = 1, component_count do
+            local component_storage = component_storages[component_index]
             component_storage[place] = nil
         end
     else
-        local last_entity = chunk_entities[chunk_entity_count]
+        local last_entity = entities[entity_count]
         local last_entity_index = last_entity % 0x100000
         __entity_places[last_entity_index] = place
 
-        chunk_entities[place] = last_entity
-        chunk_entities[chunk_entity_count] = nil
+        entities[place] = last_entity
+        entities[entity_count] = nil
 
-        for component_index = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[component_index]
-            local last_component = component_storage[chunk_entity_count]
+        for component_index = 1, component_count do
+            local component_storage = component_storages[component_index]
+            local last_component = component_storage[entity_count]
             component_storage[place] = last_component
-            component_storage[chunk_entity_count] = nil
+            component_storage[entity_count] = nil
         end
     end
+
+    chunk.__entity_count = entity_count - 1
 end
 
 ---@param chunk evolved.chunk
 local function __detach_all_entities(chunk)
     local entities = chunk.__entities
     local entity_count = chunk.__entity_count
-
-    if entity_count == 0 then
-        return
-    end
 
     local component_count = chunk.__component_count
     local component_storages = chunk.__component_storages
@@ -2183,7 +2338,7 @@ local function __chunk_multi_assign(chunk, fragments, components)
         return 0
     end
 
-    if not __chunk_has_any_fragment_list(chunk, fragments) then
+    if not __chunk_has_any_fragment_list(chunk, fragments, fragment_count) then
         return 0
     end
 
@@ -2568,6 +2723,157 @@ local function __chunk_multi_remove(old_chunk, fragments)
 
     __structural_changes = __structural_changes + old_entity_count
     return old_entity_count
+end
+
+---
+---
+---
+---
+---
+
+---@param system evolved.system
+local function __system_process(system)
+    local query, execute, prologue, epilogue = evolved.get(system,
+        evolved.QUERY, evolved.EXECUTE, evolved.PROLOGUE, evolved.EPILOGUE)
+
+    if prologue then
+        local success, result = pcall(prologue)
+
+        if not success then
+            error(string.format('system prologue failed: %s', result), 2)
+        end
+    end
+
+    if query and execute then
+        evolved.defer()
+        do
+            for chunk, entities, entity_count in evolved.execute(query) do
+                local success, result = pcall(execute, chunk, entities, entity_count)
+
+                if not success then
+                    evolved.commit()
+                    error(string.format('system execution failed: %s', result), 2)
+                end
+            end
+        end
+        evolved.commit()
+    end
+
+    if epilogue then
+        local success, result = pcall(epilogue)
+
+        if not success then
+            error(string.format('system epilogue failed: %s', result), 2)
+        end
+    end
+end
+
+---@param phase evolved.phase
+local function __phase_process(phase)
+    local phase_systems = __phase_systems[phase]
+
+    if not phase_systems then
+        return
+    end
+
+    local phase_system_set = phase_systems.__item_set
+    local phase_system_list = phase_systems.__item_list
+    local phase_system_count = phase_systems.__item_count
+
+    ---@type evolved.system[]
+    local sorted_list = __acquire_table(__TABLE_POOL_TAG__SYSTEM_LIST)
+    local sorted_list_size = 0
+
+    ---@type integer[]
+    local sorting_marks = __acquire_table(__TABLE_POOL_TAG__SORTING_MARKS)
+
+    ---@type evolved.system[]
+    local sorting_stack = __acquire_table(__TABLE_POOL_TAG__SORTING_STACK)
+    local sorting_stack_size = phase_system_count
+
+    for phase_system_index = 1, phase_system_count do
+        sorting_marks[phase_system_index] = 0
+        local phase_system_rev_index = phase_system_count - phase_system_index + 1
+        sorting_stack[phase_system_index] = phase_system_list[phase_system_rev_index]
+    end
+
+    while sorting_stack_size > 0 do
+        local system = sorting_stack[sorting_stack_size]
+
+        local system_mark_index = phase_system_set[system]
+        local system_mark = sorting_marks[system_mark_index]
+
+        if not system_mark then
+            -- the system has already been added to the sorted list
+            sorting_stack[sorting_stack_size] = nil
+            sorting_stack_size = sorting_stack_size - 1
+        elseif system_mark == 0 then
+            sorting_marks[system_mark_index] = 1
+
+            local dependencies = __system_dependencies[system]
+
+            if dependencies then
+                local dependency_list = dependencies.__item_list
+                local dependency_count = dependencies.__item_count
+
+                for dependency_index = dependency_count, 1, -1 do
+                    local dependency = dependency_list[dependency_index]
+                    local dependency_mark_index = phase_system_set[dependency]
+
+                    if not dependency_mark_index then
+                        -- the dependency is not from this phase
+                    else
+                        local dependency_mark = sorting_marks[dependency_mark_index]
+
+                        if not dependency_mark then
+                            -- the dependency has already been added to the sorted list
+                        elseif dependency_mark == 0 then
+                            sorting_stack_size = sorting_stack_size + 1
+                            sorting_stack[sorting_stack_size] = dependency
+                        elseif dependency_mark == 1 then
+                            local sorting_cycle_path = '' .. dependency
+
+                            for cycled_system_index = sorting_stack_size, 1, -1 do
+                                local cycled_system = sorting_stack[cycled_system_index]
+
+                                local cycled_system_mark_index = phase_system_set[cycled_system]
+                                local cycled_system_mark = sorting_marks[cycled_system_mark_index]
+
+                                if cycled_system_mark == 1 then
+                                    sorting_cycle_path = string.format('%s -> %s',
+                                        sorting_cycle_path, cycled_system)
+
+                                    if cycled_system == dependency then
+                                        break
+                                    end
+                                end
+                            end
+
+                            error(string.format('system sorting failed: cyclic dependency detected (%s)',
+                                sorting_cycle_path))
+                        end
+                    end
+                end
+            end
+        elseif system_mark == 1 then
+            sorting_marks[system_mark_index] = nil
+
+            sorted_list_size = sorted_list_size + 1
+            sorted_list[sorted_list_size] = system
+
+            sorting_stack[sorting_stack_size] = nil
+            sorting_stack_size = sorting_stack_size - 1
+        end
+    end
+
+    for i = 1, sorted_list_size do
+        local system = sorted_list[i]
+        __system_process(system)
+    end
+
+    __release_table(__TABLE_POOL_TAG__SYSTEM_LIST, sorted_list)
+    __release_table(__TABLE_POOL_TAG__SORTING_MARKS, sorting_marks, true)
+    __release_table(__TABLE_POOL_TAG__SORTING_STACK, sorting_stack, true)
 end
 
 ---
@@ -4730,7 +5036,7 @@ function evolved.multi_assign(entity, fragments, components)
     local chunk = entity_chunks[entity_index]
     local place = entity_places[entity_index]
 
-    if not chunk or not __chunk_has_any_fragment_list(chunk, fragments) then
+    if not chunk or not __chunk_has_any_fragment_list(chunk, fragments, fragment_count) then
         return false, false
     end
 
@@ -5493,47 +5799,73 @@ function evolved.execute(query)
         return __execute_iterator
     end
 
-    ---@type table<evolved.fragment, boolean>?, evolved.fragment[]?, evolved.fragment[]?
-    local exclude_set, include_list, exclude_list = evolved.get(query,
-        __EXCLUDE_SET, __SORTED_INCLUDE_LIST, __SORTED_EXCLUDE_LIST)
+    local query_includes = __query_sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count
 
-    if not exclude_set then exclude_set = __EMPTY_FRAGMENT_SET end
-    if not include_list then include_list = __EMPTY_FRAGMENT_LIST end
-    if not exclude_list then exclude_list = __EMPTY_FRAGMENT_LIST end
-
-    if #include_list == 0 then
+    if not query_include_list or query_include_count == 0 then
         return __execute_iterator
     end
 
-    local major_fragment = include_list[#include_list]
+    local major_fragment = query_include_list[query_include_count]
     local major_fragment_chunks = __major_chunks[major_fragment]
 
     if not major_fragment_chunks then
         return __execute_iterator
     end
 
+    local query_excludes = __query_sorted_excludes[query]
+    local query_exclude_set = query_excludes and query_excludes.__item_set
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count
+
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__TABLE_POOL_TAG__CHUNK_STACK)
     local chunk_stack_size = 0
+
+    for major_fragment_chunk_index = 1, #major_fragment_chunks do
+        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
+
+        local is_major_fragment_chunk_matched = true
+
+        if query_include_list and query_include_count > 1 then
+            is_major_fragment_chunk_matched = __chunk_has_all_fragment_list(
+                major_fragment_chunk, query_include_list, query_include_count - 1)
+        end
+
+        if query_exclude_list and query_exclude_count > 0 then
+            is_major_fragment_chunk_matched = not __chunk_has_any_fragment_list(
+                major_fragment_chunk, query_exclude_list, query_exclude_count)
+        end
+
+        if is_major_fragment_chunk_matched then
+            chunk_stack_size = chunk_stack_size + 1
+            chunk_stack[chunk_stack_size] = major_fragment_chunk
+        end
+    end
 
     ---@type evolved.execute_state
     local execute_state = __acquire_table(__TABLE_POOL_TAG__EXECUTE_STATE)
 
     execute_state[1] = __structural_changes
     execute_state[2] = chunk_stack
-    execute_state[3] = exclude_set
-
-    for major_fragment_chunk_index = 1, #major_fragment_chunks do
-        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
-        if __chunk_has_all_fragment_list(major_fragment_chunk, include_list) then
-            if not __chunk_has_any_fragment_list(major_fragment_chunk, exclude_list) then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = major_fragment_chunk
-            end
-        end
-    end
+    execute_state[3] = query_exclude_set
 
     return __execute_iterator, execute_state
+end
+
+---@param ... evolved.phase phases
+function evolved.process(...)
+    local phase_count = select('#', ...)
+
+    if phase_count == 0 then
+        return
+    end
+
+    for i = 1, phase_count do
+        local phase = select(i, ...)
+        __phase_process(phase)
+    end
 end
 
 ---
@@ -5991,6 +6323,192 @@ end
 ---
 ---
 
+---@class (exact) evolved.__phase_builder
+
+---@class evolved.phase_builder : evolved.__phase_builder
+local evolved_phase_builder = {}
+evolved_phase_builder.__index = evolved_phase_builder
+
+---@return evolved.phase_builder builder
+---@nodiscard
+function evolved.phase()
+    ---@type evolved.__phase_builder
+    local builder = {}
+    ---@cast builder evolved.phase_builder
+    return setmetatable(builder, evolved_phase_builder)
+end
+
+---@return evolved.phase phase
+---@return boolean is_deferred
+function evolved_phase_builder:build()
+    return evolved.id(), false
+end
+
+---
+---
+---
+---
+---
+
+---@class (exact) evolved.__system_builder
+---@field package __phase? evolved.phase
+---@field package __after? evolved.system[]
+---@field package __query? evolved.query
+---@field package __execute? evolved.execute
+---@field package __prologue? evolved.prologue
+---@field package __epilogue? evolved.epilogue
+
+---@class evolved.system_builder : evolved.__system_builder
+local evolved_system_builder = {}
+evolved_system_builder.__index = evolved_system_builder
+
+---@return evolved.system_builder builder
+---@nodiscard
+function evolved.system()
+    ---@type evolved.__system_builder
+    local builder = {
+        __phase = nil,
+        __after = nil,
+        __query = nil,
+        __execute = nil,
+        __prologue = nil,
+        __epilogue = nil,
+    }
+    ---@cast builder evolved.system_builder
+    return setmetatable(builder, evolved_system_builder)
+end
+
+---@param phase evolved.phase
+function evolved_system_builder:phase(phase)
+    self.__phase = phase
+    return self
+end
+
+---@param ... evolved.system systems
+---@return evolved.system_builder builder
+function evolved_system_builder:after(...)
+    local system_count = select('#', ...)
+
+    if system_count == 0 then
+        return self
+    end
+
+    local after = self.__after
+
+    if not after then
+        after = __table_new(math.max(4, system_count), 0)
+        self.__after = after
+    end
+
+    local after_count = #after
+
+    for i = 1, system_count do
+        after_count = after_count + 1
+        after[after_count] = select(i, ...)
+    end
+
+    return self
+end
+
+---@param query evolved.query
+function evolved_system_builder:query(query)
+    self.__query = query
+    return self
+end
+
+---@param execute evolved.execute
+function evolved_system_builder:execute(execute)
+    self.__execute = execute
+    return self
+end
+
+---@param prologue evolved.prologue
+function evolved_system_builder:prologue(prologue)
+    self.__prologue = prologue
+    return self
+end
+
+---@param epilogue evolved.epilogue
+function evolved_system_builder:epilogue(epilogue)
+    self.__epilogue = epilogue
+    return self
+end
+
+---@return evolved.system system
+---@return boolean is_deferred
+function evolved_system_builder:build()
+    local phase = self.__phase
+    local after = self.__after
+    local query = self.__query
+    local execute = self.__execute
+    local prologue = self.__prologue
+    local epilogue = self.__epilogue
+
+    self.__phase = nil
+    self.__after = nil
+    self.__query = nil
+    self.__execute = nil
+    self.__prologue = nil
+    self.__epilogue = nil
+
+    local fragment_list = __acquire_table(__TABLE_POOL_TAG__FRAGMENT_LIST)
+    local component_list = __acquire_table(__TABLE_POOL_TAG__COMPONENT_LIST)
+    local component_count = 0
+
+    if phase then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PHASE
+        component_list[component_count] = phase
+    end
+
+    if after then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.AFTER
+        component_list[component_count] = after
+    end
+
+    if query then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.QUERY
+        component_list[component_count] = query
+    end
+
+    if execute then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.EXECUTE
+        component_list[component_count] = execute
+    end
+
+    if prologue then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.PROLOGUE
+        component_list[component_count] = prologue
+    end
+
+    if epilogue then
+        component_count = component_count + 1
+        fragment_list[component_count] = evolved.EPILOGUE
+        component_list[component_count] = epilogue
+    end
+
+    if component_count == 0 then
+        return evolved.id(), false
+    end
+
+    local system, is_deferred = evolved.spawn_with(fragment_list, component_list)
+
+    __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragment_list)
+    __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, component_list)
+
+    return system, is_deferred
+end
+
+---
+---
+---
+---
+---
+
 ---@param chunk evolved.chunk
 ---@return boolean
 local function __update_chunk_caches_trace(chunk)
@@ -6121,102 +6639,152 @@ assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_REMOVE, __update_fragment_co
 
 assert(evolved.insert(evolved.TAG, evolved.TAG))
 
----@param ... evolved.fragment
-assert(evolved.insert(evolved.INCLUDES, evolved.CONSTRUCT, function(...)
-    local fragment_count = select('#', ...)
+assert(evolved.insert(evolved.INCLUDES, evolved.CONSTRUCT, __component_list))
+assert(evolved.insert(evolved.EXCLUDES, evolved.CONSTRUCT, __component_list))
 
-    if fragment_count == 0 then
-        return {}
-    end
+assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, __component_list))
 
-    ---@type evolved.fragment[]
-    local include_list = __table_new(fragment_count, 0)
-
-    for i = 1, fragment_count do
-        include_list[i] = select(i, ...)
-    end
-
-    return include_list
-end))
+---
+---
+---
+---
+---
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
 assert(evolved.insert(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
     local include_list_size = #include_list
 
-    ---@type table<evolved.fragment, boolean>
-    local include_set = __table_new(0, include_list_size)
-
-    for i = 1, include_list_size do
-        include_set[include_list[i]] = true
+    if include_list_size == 0 then
+        __query_sorted_includes[query] = nil
+        return
     end
 
-    ---@type evolved.fragment[]
-    local sorted_include_list = __table_new(include_list_size, 0)
-    local sorted_include_list_size = 0
+    local sorted_includes = __assoc_list_new(include_list_size)
 
-    for f, _ in pairs(include_set) do
-        sorted_include_list[sorted_include_list_size + 1] = f
-        sorted_include_list_size = sorted_include_list_size + 1
+    for include_index = 1, include_list_size do
+        local include = include_list[include_index]
+        __assoc_list_insert(sorted_includes, include)
     end
 
-    table.sort(sorted_include_list)
-
-    evolved.set(query, __INCLUDE_SET, include_set)
-    evolved.set(query, __SORTED_INCLUDE_LIST, sorted_include_list)
+    __assoc_list_sort(sorted_includes)
+    __query_sorted_includes[query] = sorted_includes
 end))
 
 assert(evolved.insert(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __INCLUDE_SET, __SORTED_INCLUDE_LIST)
+    __query_sorted_includes[query] = nil
 end))
 
----@param ... evolved.fragment
-assert(evolved.insert(evolved.EXCLUDES, evolved.CONSTRUCT, function(...)
-    local fragment_count = select('#', ...)
-
-    if fragment_count == 0 then
-        return {}
-    end
-
-    ---@type evolved.fragment[]
-    local exclude_list = __table_new(fragment_count, 0)
-
-    for i = 1, fragment_count do
-        exclude_list[i] = select(i, ...)
-    end
-
-    return exclude_list
-end))
+---
+---
+---
+---
+---
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
 assert(evolved.insert(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
     local exclude_list_size = #exclude_list
 
-    ---@type table<evolved.fragment, boolean>
-    local exclude_set = __table_new(0, exclude_list_size)
-
-    for i = 1, exclude_list_size do
-        exclude_set[exclude_list[i]] = true
+    if exclude_list_size == 0 then
+        __query_sorted_excludes[query] = nil
+        return
     end
 
-    ---@type evolved.fragment[]
-    local sorted_exclude_list = __table_new(exclude_list_size, 0)
-    local sorted_exclude_list_size = 0
+    local sorted_excludes = __assoc_list_new(exclude_list_size)
 
-    for f, _ in pairs(exclude_set) do
-        sorted_exclude_list[sorted_exclude_list_size + 1] = f
-        sorted_exclude_list_size = sorted_exclude_list_size + 1
+    for exclude_index = 1, exclude_list_size do
+        local exclude = exclude_list[exclude_index]
+        __assoc_list_insert(sorted_excludes, exclude)
     end
 
-    table.sort(sorted_exclude_list)
-
-    evolved.set(query, __EXCLUDE_SET, exclude_set)
-    evolved.set(query, __SORTED_EXCLUDE_LIST, sorted_exclude_list)
+    __assoc_list_sort(sorted_excludes)
+    __query_sorted_excludes[query] = sorted_excludes
 end))
 
 assert(evolved.insert(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
-    evolved.remove(query, __EXCLUDE_SET, __SORTED_EXCLUDE_LIST)
+    __query_sorted_excludes[query] = nil
+end))
+
+---
+---
+---
+---
+---
+
+---@param system evolved.system
+---@param new_phase evolved.phase
+---@param old_phase? evolved.phase
+assert(evolved.insert(evolved.PHASE, evolved.ON_SET, function(system, _, new_phase, old_phase)
+    if new_phase == old_phase then
+        return
+    end
+
+    if old_phase then
+        local old_phase_systems = __phase_systems[old_phase]
+
+        if old_phase_systems then
+            __assoc_list_remove_ordered(old_phase_systems, system)
+
+            if old_phase_systems.__item_count == 0 then
+                __phase_systems[old_phase] = nil
+            end
+        end
+    end
+
+    local new_phase_systems = __phase_systems[new_phase]
+
+    if not new_phase_systems then
+        new_phase_systems = __assoc_list_new(4)
+        __phase_systems[new_phase] = new_phase_systems
+    end
+
+    __assoc_list_insert(new_phase_systems, system)
+end))
+
+---@param system evolved.system
+---@param old_phase evolved.phase
+assert(evolved.insert(evolved.PHASE, evolved.ON_REMOVE, function(system, _, old_phase)
+    local old_phase_systems = __phase_systems[old_phase]
+
+    if old_phase_systems then
+        __assoc_list_remove_ordered(old_phase_systems, system)
+
+        if old_phase_systems.__item_count == 0 then
+            __phase_systems[old_phase] = nil
+        end
+    end
+end))
+
+---
+---
+---
+---
+---
+
+---@param system evolved.system
+---@param new_after_list evolved.system[]
+assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_after_list)
+    local new_after_list_size = #new_after_list
+
+    if new_after_list_size == 0 then
+        __system_dependencies[system] = nil
+        return
+    end
+
+    local new_dependencies = __assoc_list_new(new_after_list_size)
+
+    for new_after_index = 1, new_after_list_size do
+        local new_after = new_after_list[new_after_index]
+        __assoc_list_insert(new_dependencies, new_after)
+    end
+
+    __system_dependencies[system] = new_dependencies
+end))
+
+---@param system evolved.system
+assert(evolved.insert(evolved.AFTER, evolved.ON_REMOVE, function(system)
+    __system_dependencies[system] = nil
 end))
 
 ---

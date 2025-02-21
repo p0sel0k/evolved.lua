@@ -33,6 +33,15 @@ ON_SET :: fragment
 ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
+
+PHASE :: fragment
+AFTER :: fragment
+
+QUERY :: fragment
+EXECUTE :: fragment
+
+PROLOGUE :: fragment
+EPILOGUE :: fragment
 ```
 
 ## Functions
@@ -82,7 +91,9 @@ chunk :: fragment... -> chunk?, entity[]?
 select :: chunk, fragment... -> component[]...
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
-execute :: query -> {execute_state? -> chunk?, entity[]?}, execute_state?
+execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
+
+process :: phase... -> ()
 ```
 
 ```
@@ -114,6 +125,22 @@ query :: query_builder
 query_builder:include :: fragment... -> query_builder
 query_builder:exclude :: fragment... -> query_builder
 query_builder:build :: query, boolean
+```
+
+```
+phase :: phase_builder
+phase_builder:build :: phase, boolean
+```
+
+```
+system :: system_builder
+system_builder:phase :: phase -> system_builder
+system_builder:after :: system... -> system_builder
+system_builder:query :: query -> system_builder
+system_builder:execute :: {chunk, entity[], integer} -> system_builder
+system_builder:prologue :: {} -> system_builder
+system_builder:epilogue :: {} -> system_builder
+system_builder:build :: system, boolean
 ```
 
 ## [License (MIT)](./LICENSE.md)
