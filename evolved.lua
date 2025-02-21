@@ -1192,46 +1192,42 @@ local __defer_remove_hook
 ---@param chunk evolved.chunk
 ---@param place integer
 local function __detach_entity(chunk, place)
-    local chunk_entities = chunk.__entities
-    local chunk_entity_count = chunk.__entity_count
+    local entities = chunk.__entities
+    local entity_count = chunk.__entity_count
 
-    local chunk_component_count = chunk.__component_count
-    local chunk_component_storages = chunk.__component_storages
+    local component_count = chunk.__component_count
+    local component_storages = chunk.__component_storages
 
-    chunk.__entity_count = chunk_entity_count - 1
+    if place == entity_count then
+        entities[place] = nil
 
-    if place == chunk_entity_count then
-        chunk_entities[place] = nil
-
-        for component_index = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[component_index]
+        for component_index = 1, component_count do
+            local component_storage = component_storages[component_index]
             component_storage[place] = nil
         end
     else
-        local last_entity = chunk_entities[chunk_entity_count]
+        local last_entity = entities[entity_count]
         local last_entity_index = last_entity % 0x100000
         __entity_places[last_entity_index] = place
 
-        chunk_entities[place] = last_entity
-        chunk_entities[chunk_entity_count] = nil
+        entities[place] = last_entity
+        entities[entity_count] = nil
 
-        for component_index = 1, chunk_component_count do
-            local component_storage = chunk_component_storages[component_index]
-            local last_component = component_storage[chunk_entity_count]
+        for component_index = 1, component_count do
+            local component_storage = component_storages[component_index]
+            local last_component = component_storage[entity_count]
             component_storage[place] = last_component
-            component_storage[chunk_entity_count] = nil
+            component_storage[entity_count] = nil
         end
     end
+
+    chunk.__entity_count = entity_count - 1
 end
 
 ---@param chunk evolved.chunk
 local function __detach_all_entities(chunk)
     local entities = chunk.__entities
     local entity_count = chunk.__entity_count
-
-    if entity_count == 0 then
-        return
-    end
 
     local component_count = chunk.__component_count
     local component_storages = chunk.__component_storages
