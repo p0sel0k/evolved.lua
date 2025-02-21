@@ -5684,6 +5684,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.chunk? chunk
 ---@return evolved.entity[]? entities
+---@return integer? entity_count
 function evolved.chunk(...)
     local chunk = __chunk_fragments(...)
 
@@ -5691,7 +5692,7 @@ function evolved.chunk(...)
         return
     end
 
-    return chunk, chunk.__entities
+    return chunk, chunk.__entities, chunk.__entity_count
 end
 
 ---@param chunk evolved.chunk
