@@ -6546,3 +6546,24 @@ do
         assert(#after == 2 and after[1] == s1 and after[2] == s2)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12 = evo.entity():set(f1, 3):set(f2, 4):build()
+
+    do
+        local c1, c1_es, c1_ec = evo.chunk(f1)
+        assert(c1 and c1_es and c1_ec)
+        assert(c1_ec == 2 and #c1_es == 2 and c1_es[1] == e1a and c1_es[2] == e1b)
+    end
+
+    do
+        local c12, c12_es, c12_ec = evo.chunk(f1, f2)
+        assert(c12 and c12_es and c12_ec)
+        assert(c12_ec == 1 and #c12_es == 1 and c12_es[1] == e12)
+    end
+end

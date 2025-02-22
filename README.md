@@ -87,7 +87,7 @@ batch_multi_assign :: query, fragment[], component[]? -> integer, boolean
 batch_multi_insert :: query, fragment[], component[]? -> integer, boolean
 batch_multi_remove :: query, fragment[] -> integer, boolean
 
-chunk :: fragment... -> chunk?, entity[]?
+chunk :: fragment... -> chunk?, entity[]?, integer?
 select :: chunk, fragment... -> component[]...
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
