@@ -281,11 +281,13 @@ local __table_pool_tag = {
 ---@type table<evolved.table_pool_tag, evolved.table_pool>
 local __tagged_table_pools = (function()
     local table_pools = __lua_table_new(__table_pool_tag.__count, 0)
+    local table_pool_reserve = 16
 
     for tag = 1, __table_pool_tag.__count do
         ---@type evolved.table_pool
-        local table_pool = __lua_table_new(16, 1)
-        table_pool.__size = 0
+        local table_pool = __lua_table_new(table_pool_reserve, 1)
+        for i = 1, table_pool_reserve do table_pool[i] = {} end
+        table_pool.__size = table_pool_reserve
         table_pools[tag] = table_pool
     end
 
@@ -305,10 +307,10 @@ local function __acquire_table(tag)
 
     local table = table_pool[table_pool_size]
 
-    local new_table_pool_size = table_pool_size - 1
     table_pool[table_pool_size] = nil
-    table_pool.__size = new_table_pool_size
+    table_pool_size = table_pool_size - 1
 
+    table_pool.__size = table_pool_size
     return table
 end
 
@@ -323,9 +325,10 @@ local function __release_table(tag, table, no_clear)
         __lua_table_clear(table)
     end
 
-    local new_table_pool_size = table_pool_size + 1
-    table_pool[new_table_pool_size] = table
-    table_pool.__size = new_table_pool_size
+    table_pool_size = table_pool_size + 1
+    table_pool[table_pool_size] = table
+
+    table_pool.__size = table_pool_size
 end
 
 ---
