@@ -524,27 +524,49 @@ end
 ---
 ---
 
-evolved.TAG = __acquire_id()
+local __TAG = __acquire_id()
 
-evolved.DEFAULT = __acquire_id()
-evolved.CONSTRUCT = __acquire_id()
+local __DEFAULT = __acquire_id()
+local __CONSTRUCT = __acquire_id()
 
-evolved.INCLUDES = __acquire_id()
-evolved.EXCLUDES = __acquire_id()
+local __INCLUDES = __acquire_id()
+local __EXCLUDES = __acquire_id()
 
-evolved.ON_SET = __acquire_id()
-evolved.ON_ASSIGN = __acquire_id()
-evolved.ON_INSERT = __acquire_id()
-evolved.ON_REMOVE = __acquire_id()
+local __ON_SET = __acquire_id()
+local __ON_ASSIGN = __acquire_id()
+local __ON_INSERT = __acquire_id()
+local __ON_REMOVE = __acquire_id()
 
-evolved.PHASE = __acquire_id()
-evolved.AFTER = __acquire_id()
+local __PHASE = __acquire_id()
+local __AFTER = __acquire_id()
 
-evolved.QUERY = __acquire_id()
-evolved.EXECUTE = __acquire_id()
+local __QUERY = __acquire_id()
+local __EXECUTE = __acquire_id()
 
-evolved.PROLOGUE = __acquire_id()
-evolved.EPILOGUE = __acquire_id()
+local __PROLOGUE = __acquire_id()
+local __EPILOGUE = __acquire_id()
+
+evolved.TAG = __TAG
+
+evolved.DEFAULT = __DEFAULT
+evolved.CONSTRUCT = __CONSTRUCT
+
+evolved.INCLUDES = __INCLUDES
+evolved.EXCLUDES = __EXCLUDES
+
+evolved.ON_SET = __ON_SET
+evolved.ON_ASSIGN = __ON_ASSIGN
+evolved.ON_INSERT = __ON_INSERT
+evolved.ON_REMOVE = __ON_REMOVE
+
+evolved.PHASE = __PHASE
+evolved.AFTER = __AFTER
+
+evolved.QUERY = __QUERY
+evolved.EXECUTE = __EXECUTE
+
+evolved.PROLOGUE = __PROLOGUE
+evolved.EPILOGUE = __EPILOGUE
 
 ---
 ---
@@ -600,7 +622,7 @@ end
 ---@return evolved.component
 local function __component_construct(fragment, ...)
     ---@type evolved.default, evolved.construct
-    local default, construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+    local default, construct = evolved.get(fragment, __DEFAULT, __CONSTRUCT)
 
     local component = ...
 
@@ -662,7 +684,7 @@ end
 ---@param old_component evolved.component
 local function __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
     ---@type evolved.set_hook?, evolved.assign_hook?
-    local on_set, on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+    local on_set, on_assign = evolved.get(fragment, __ON_SET, __ON_ASSIGN)
     if on_set then on_set(entity, fragment, new_component, old_component) end
     if on_assign then on_assign(entity, fragment, new_component, old_component) end
 end
@@ -672,7 +694,7 @@ end
 ---@param new_component evolved.component
 local function __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
     ---@type evolved.set_hook?, evolved.insert_hook?
-    local on_set, on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+    local on_set, on_insert = evolved.get(fragment, __ON_SET, __ON_INSERT)
     if on_set then on_set(entity, fragment, new_component) end
     if on_insert then on_insert(entity, fragment, new_component) end
 end
@@ -682,7 +704,7 @@ end
 ---@param old_component evolved.component
 local function __call_fragment_remove_hook(entity, fragment, old_component)
     ---@type evolved.remove_hook?
-    local on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+    local on_remove = evolved.get(fragment, __ON_REMOVE)
     if on_remove then on_remove(entity, fragment, old_component) end
 end
 
@@ -707,16 +729,16 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_fragments = {} ---@type evolved.fragment[]
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
-        or evolved.has_any(chunk_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+        or evolved.has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
 
     local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
-        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+        or evolved.has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
     local has_set_or_insert_hooks = (chunk_parent and chunk_parent.__has_set_or_insert_hooks)
-        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_INSERT)
+        or evolved.has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
     local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
-        or evolved.has(chunk_fragment, evolved.ON_REMOVE)
+        or evolved.has(chunk_fragment, __ON_REMOVE)
 
     ---@type evolved.chunk
     local chunk = {
@@ -752,7 +774,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
             chunk_fragment_set[parent_fragment] = true
             chunk_fragment_list[chunk_fragment_count] = parent_fragment
 
-            if not evolved.has(parent_fragment, evolved.TAG) then
+            if not evolved.has(parent_fragment, __TAG) then
                 chunk_component_count = chunk_component_count + 1
                 local component_storage = {}
                 local component_storage_index = chunk_component_count
@@ -775,7 +797,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         chunk_fragment_set[chunk_fragment] = true
         chunk_fragment_list[chunk_fragment_count] = chunk_fragment
 
-        if not evolved.has(chunk_fragment, evolved.TAG) then
+        if not evolved.has(chunk_fragment, __TAG) then
             chunk_component_count = chunk_component_count + 1
             local component_storage = {}
             local component_storage_index = chunk_component_count
@@ -1151,6 +1173,9 @@ end
 ---
 ---
 
+local __defer
+local __commit
+
 local __defer_set
 local __defer_assign
 local __defer_insert
@@ -1271,7 +1296,7 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
             local fragment = chunk_component_fragments[component_index]
             local component_storage = chunk_component_storages[component_index]
 
-            local new_component = evolved.get(fragment, evolved.DEFAULT)
+            local new_component = evolved.get(fragment, __DEFAULT)
 
             if new_component == nil then
                 new_component = true
@@ -1300,7 +1325,7 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
                 local new_component = components[i]
 
                 if new_component == nil then
-                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                    new_component = evolved.get(fragment, __DEFAULT)
                 end
 
                 if new_component == nil then
@@ -1391,7 +1416,7 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
                 local new_component = components[i]
 
                 if new_component == nil then
-                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                    new_component = evolved.get(fragment, __DEFAULT)
                 end
 
                 if new_component == nil then
@@ -1482,11 +1507,11 @@ local function __chunk_assign(chunk, fragment, ...)
 
     do
         if chunk.__has_defaults_or_constructs then
-            fragment_default, fragment_construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+            fragment_default, fragment_construct = evolved.get(fragment, __DEFAULT, __CONSTRUCT)
         end
 
         if chunk.__has_set_or_assign_hooks then
-            fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+            fragment_on_set, fragment_on_assign = evolved.get(fragment, __ON_SET, __ON_ASSIGN)
         end
     end
 
@@ -1615,11 +1640,11 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
     do
         if new_chunk.__has_defaults_or_constructs then
-            fragment_default, fragment_construct = evolved.get(fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+            fragment_default, fragment_construct = evolved.get(fragment, __DEFAULT, __CONSTRUCT)
         end
 
         if new_chunk.__has_set_or_insert_hooks then
-            fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+            fragment_on_set, fragment_on_insert = evolved.get(fragment, __ON_SET, __ON_INSERT)
         end
     end
 
@@ -1791,7 +1816,7 @@ local function __chunk_remove(old_chunk, ...)
                 removed_set[fragment] = true
 
                 ---@type evolved.remove_hook?
-                local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+                local fragment_on_remove = evolved.get(fragment, __ON_REMOVE)
 
                 if fragment_on_remove then
                     local old_component_index = old_component_indices[fragment]
@@ -1902,7 +1927,7 @@ local function __chunk_clear(chunk)
             local fragment = chunk_fragment_list[fragment_index]
 
             ---@type evolved.remove_hook?
-            local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+            local fragment_on_remove = evolved.get(fragment, __ON_REMOVE)
 
             if fragment_on_remove then
                 local component_index = chunk_component_indices[fragment]
@@ -1963,7 +1988,7 @@ local function __chunk_destroy(chunk)
             local fragment = chunk_fragment_list[fragment_index]
 
             ---@type evolved.remove_hook?
-            local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+            local fragment_on_remove = evolved.get(fragment, __ON_REMOVE)
 
             if fragment_on_remove then
                 local component_index = chunk_component_indices[fragment]
@@ -2048,11 +2073,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
             do
                 if old_chunk_has_defaults_or_constructs then
-                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                    fragment_default = evolved.get(fragment, __DEFAULT)
                 end
 
                 if old_chunk_has_set_or_assign_hooks then
-                    fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                    fragment_on_set, fragment_on_assign = evolved.get(fragment, __ON_SET, __ON_ASSIGN)
                 end
             end
 
@@ -2167,11 +2192,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                 do
                     if new_chunk_has_defaults_or_constructs then
-                        fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                        fragment_default = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_chunk_has_set_or_assign_hooks then
-                        fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                        fragment_on_set, fragment_on_assign = evolved.get(fragment, __ON_SET, __ON_ASSIGN)
                     end
                 end
 
@@ -2239,11 +2264,11 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
                 do
                     if new_chunk_has_defaults_or_constructs then
-                        fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                        fragment_default = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_chunk_has_set_or_insert_hooks then
-                        fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+                        fragment_on_set, fragment_on_insert = evolved.get(fragment, __ON_SET, __ON_INSERT)
                     end
                 end
 
@@ -2364,11 +2389,11 @@ local function __chunk_multi_assign(chunk, fragments, components)
 
             do
                 if chunk_has_defaults_or_constructs then
-                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                    fragment_default = evolved.get(fragment, __DEFAULT)
                 end
 
                 if chunk_has_set_or_assign_hooks then
-                    fragment_on_set, fragment_on_assign = evolved.get(fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+                    fragment_on_set, fragment_on_assign = evolved.get(fragment, __ON_SET, __ON_ASSIGN)
                 end
             end
 
@@ -2517,11 +2542,11 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
             do
                 if new_chunk_has_defaults_or_constructs then
-                    fragment_default = evolved.get(fragment, evolved.DEFAULT)
+                    fragment_default = evolved.get(fragment, __DEFAULT)
                 end
 
                 if new_chunk_has_set_or_insert_hooks then
-                    fragment_on_set, fragment_on_insert = evolved.get(fragment, evolved.ON_SET, evolved.ON_INSERT)
+                    fragment_on_set, fragment_on_insert = evolved.get(fragment, __ON_SET, __ON_INSERT)
                 end
             end
 
@@ -2636,7 +2661,7 @@ local function __chunk_multi_remove(old_chunk, fragments)
                 removed_set[fragment] = true
 
                 ---@type evolved.remove_hook?
-                local fragment_on_remove = evolved.get(fragment, evolved.ON_REMOVE)
+                local fragment_on_remove = evolved.get(fragment, __ON_REMOVE)
 
                 if fragment_on_remove then
                     local old_component_index = old_component_indices[fragment]
@@ -2734,7 +2759,7 @@ end
 ---@param system evolved.system
 local function __system_process(system)
     local query, execute, prologue, epilogue = evolved.get(system,
-        evolved.QUERY, evolved.EXECUTE, evolved.PROLOGUE, evolved.EPILOGUE)
+        __QUERY, __EXECUTE, __PROLOGUE, __EPILOGUE)
 
     if prologue then
         local success, result = pcall(prologue)
@@ -2745,18 +2770,18 @@ local function __system_process(system)
     end
 
     if query and execute then
-        evolved.defer()
+        __defer()
         do
             for chunk, entities, entity_count in evolved.execute(query) do
                 local success, result = pcall(execute, chunk, entities, entity_count)
 
                 if not success then
-                    evolved.commit()
+                    __commit()
                     error(string.format('system execution failed: %s', result), 2)
                 end
             end
         end
-        evolved.commit()
+        __commit()
     end
 
     if epilogue then
@@ -2921,13 +2946,13 @@ local __defer_op = {
 local __defer_ops = __table_new(26, 0)
 
 ---@return boolean started
-local function __defer()
+__defer = function()
     __defer_depth = __defer_depth + 1
     return __defer_depth == 1
 end
 
 ---@return boolean committed
-local function __defer_commit()
+__commit = function()
     if __defer_depth <= 0 then
         error('unbalanced defer/commit', 2)
     end
@@ -3914,7 +3939,7 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
         __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
         __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
     end
-    __defer_commit()
+    __commit()
     return 4
 end
 
@@ -3952,7 +3977,7 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
         __release_table(__TABLE_POOL_TAG__FRAGMENT_LIST, fragments)
         __release_table(__TABLE_POOL_TAG__COMPONENT_LIST, components)
     end
-    __defer_commit()
+    __commit()
     return 4
 end
 
@@ -4173,7 +4198,7 @@ end
 
 ---@return boolean committed
 function evolved.commit()
-    return __defer_commit()
+    return __commit()
 end
 
 ---@param entity evolved.entity
@@ -4413,7 +4438,7 @@ function evolved.set(entity, fragment, ...)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4487,7 +4512,7 @@ function evolved.assign(entity, fragment, ...)
         end
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4590,7 +4615,7 @@ function evolved.insert(entity, fragment, ...)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4688,7 +4713,7 @@ function evolved.remove(entity, ...)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4748,7 +4773,7 @@ function evolved.clear(entity)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4810,7 +4835,7 @@ function evolved.destroy(entity)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -4873,7 +4898,7 @@ function evolved.multi_set(entity, fragments, components)
                 local new_component = components[i]
 
                 if old_chunk_has_defaults_or_constructs and new_component == nil then
-                    new_component = evolved.get(fragment, evolved.DEFAULT)
+                    new_component = evolved.get(fragment, __DEFAULT)
                 end
 
                 if new_component == nil then
@@ -4941,7 +4966,7 @@ function evolved.multi_set(entity, fragments, components)
                     local new_component = components[i]
 
                     if new_chunk_has_defaults_or_constructs and new_component == nil then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
+                        new_component = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_component == nil then
@@ -4971,7 +4996,7 @@ function evolved.multi_set(entity, fragments, components)
                     local new_component = components[i]
 
                     if new_chunk_has_defaults_or_constructs and new_component == nil then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
+                        new_component = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_component == nil then
@@ -4999,7 +5024,7 @@ function evolved.multi_set(entity, fragments, components)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -5062,7 +5087,7 @@ function evolved.multi_assign(entity, fragments, components)
                     local new_component = components[i]
 
                     if chunk_has_defaults_or_constructs and new_component == nil then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
+                        new_component = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_component == nil then
@@ -5085,7 +5110,7 @@ function evolved.multi_assign(entity, fragments, components)
         end
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -5179,7 +5204,7 @@ function evolved.multi_insert(entity, fragments, components)
                     local new_component = components[i]
 
                     if new_chunk_has_defaults_or_constructs and new_component == nil then
-                        new_component = evolved.get(fragment, evolved.DEFAULT)
+                        new_component = evolved.get(fragment, __DEFAULT)
                     end
 
                     if new_component == nil then
@@ -5207,7 +5232,7 @@ function evolved.multi_insert(entity, fragments, components)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -5311,7 +5336,7 @@ function evolved.multi_remove(entity, fragments)
         __structural_changes = __structural_changes + 1
     end
 
-    __defer_commit()
+    __commit()
     return true, false
 end
 
@@ -5348,7 +5373,7 @@ function evolved.batch_set(query, fragment, ...)
             end
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
@@ -5383,7 +5408,7 @@ function evolved.batch_assign(query, fragment, ...)
             assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
@@ -5418,7 +5443,7 @@ function evolved.batch_insert(query, fragment, ...)
             inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
@@ -5452,7 +5477,7 @@ function evolved.batch_remove(query, ...)
             removed_count = removed_count + __chunk_remove(chunk, ...)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
@@ -5485,7 +5510,7 @@ function evolved.batch_clear(query)
             cleared_count = cleared_count + __chunk_clear(chunk)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return cleared_count, false
@@ -5518,7 +5543,7 @@ function evolved.batch_destroy(query)
             destroyed_count = destroyed_count + __chunk_destroy(chunk)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return destroyed_count, false
@@ -5557,7 +5582,7 @@ function evolved.batch_multi_set(query, fragments, components)
             set_count = set_count + __chunk_multi_set(chunk, fragments, components)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return set_count, false
@@ -5596,7 +5621,7 @@ function evolved.batch_multi_assign(query, fragments, components)
             assigned_count = assigned_count + __chunk_multi_assign(chunk, fragments, components)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return assigned_count, false
@@ -5635,7 +5660,7 @@ function evolved.batch_multi_insert(query, fragments, components)
             inserted_count = inserted_count + __chunk_multi_insert(chunk, fragments, components)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return inserted_count, false
@@ -5669,7 +5694,7 @@ function evolved.batch_multi_remove(query, fragments)
             removed_count = removed_count + __chunk_multi_remove(chunk, fragments)
         end
     end
-    __defer_commit()
+    __commit()
 
     __release_table(__TABLE_POOL_TAG__CHUNK_STACK, chunk_list)
     return removed_count, false
@@ -5906,7 +5931,7 @@ function evolved.spawn_at(chunk, fragments, components)
         __spawn_entity_at(entity, chunk, fragments, components)
     end
 
-    __defer_commit()
+    __commit()
     return entity, false
 end
 
@@ -5940,7 +5965,7 @@ function evolved.spawn_with(fragments, components)
         __spawn_entity_with(entity, chunk, fragments, components)
     end
 
-    __defer_commit()
+    __commit()
     return entity, false
 end
 
@@ -6145,7 +6170,7 @@ function evolved_fragment_builder:build()
 
     if tag then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.TAG
+        fragment_list[component_count] = __TAG
         component_list[component_count] = true
     end
 
@@ -6157,37 +6182,37 @@ function evolved_fragment_builder:build()
 
     if default ~= nil then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.DEFAULT
+        fragment_list[component_count] = __DEFAULT
         component_list[component_count] = default
     end
 
     if construct then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.CONSTRUCT
+        fragment_list[component_count] = __CONSTRUCT
         component_list[component_count] = construct
     end
 
     if on_set then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.ON_SET
+        fragment_list[component_count] = __ON_SET
         component_list[component_count] = on_set
     end
 
     if on_assign then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.ON_ASSIGN
+        fragment_list[component_count] = __ON_ASSIGN
         component_list[component_count] = on_assign
     end
 
     if on_insert then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.ON_INSERT
+        fragment_list[component_count] = __ON_INSERT
         component_list[component_count] = on_insert
     end
 
     if on_remove then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.ON_REMOVE
+        fragment_list[component_count] = __ON_REMOVE
         component_list[component_count] = on_remove
     end
 
@@ -6296,13 +6321,13 @@ function evolved_query_builder:build()
 
     if include_list then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.INCLUDES
+        fragment_list[component_count] = __INCLUDES
         component_list[component_count] = include_list
     end
 
     if exclude_list then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.EXCLUDES
+        fragment_list[component_count] = __EXCLUDES
         component_list[component_count] = exclude_list
     end
 
@@ -6458,37 +6483,37 @@ function evolved_system_builder:build()
 
     if phase then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.PHASE
+        fragment_list[component_count] = __PHASE
         component_list[component_count] = phase
     end
 
     if after then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.AFTER
+        fragment_list[component_count] = __AFTER
         component_list[component_count] = after
     end
 
     if query then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.QUERY
+        fragment_list[component_count] = __QUERY
         component_list[component_count] = query
     end
 
     if execute then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.EXECUTE
+        fragment_list[component_count] = __EXECUTE
         component_list[component_count] = execute
     end
 
     if prologue then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.PROLOGUE
+        fragment_list[component_count] = __PROLOGUE
         component_list[component_count] = prologue
     end
 
     if epilogue then
         component_count = component_count + 1
-        fragment_list[component_count] = evolved.EPILOGUE
+        fragment_list[component_count] = __EPILOGUE
         component_list[component_count] = epilogue
     end
 
@@ -6516,16 +6541,16 @@ local function __update_chunk_caches_trace(chunk)
     local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
-        or evolved.has_any(chunk_fragment, evolved.DEFAULT, evolved.CONSTRUCT)
+        or evolved.has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
 
     local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
-        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_ASSIGN)
+        or evolved.has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
     local has_set_or_insert_hooks = (chunk_parent and chunk_parent.__has_set_or_insert_hooks)
-        or evolved.has_any(chunk_fragment, evolved.ON_SET, evolved.ON_INSERT)
+        or evolved.has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
     local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
-        or evolved.has(chunk_fragment, evolved.ON_REMOVE)
+        or evolved.has(chunk_fragment, __ON_REMOVE)
 
     chunk.__has_defaults_or_constructs = has_defaults_or_constructs
     chunk.__has_set_or_assign_hooks = has_set_or_assign_hooks
@@ -6540,15 +6565,15 @@ local function __update_fragment_hooks(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(evolved.insert(evolved.ON_SET, evolved.ON_INSERT, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_ASSIGN, evolved.ON_INSERT, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_INSERT, evolved.ON_INSERT, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_REMOVE, evolved.ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(__ON_SET, __ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
+assert(evolved.insert(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
 
-assert(evolved.insert(evolved.ON_SET, evolved.ON_REMOVE, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_ASSIGN, evolved.ON_REMOVE, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_INSERT, evolved.ON_REMOVE, __update_fragment_hooks))
-assert(evolved.insert(evolved.ON_REMOVE, evolved.ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
+assert(evolved.insert(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
 
 ---
 ---
@@ -6567,7 +6592,7 @@ local function __update_chunk_tags_trace(chunk, fragment)
 
     local component_index = component_indices[fragment]
 
-    if component_index and evolved.has(fragment, evolved.TAG) then
+    if component_index and evolved.has(fragment, __TAG) then
         if component_index ~= component_count then
             local last_component_storage = component_storages[component_count]
             local last_component_fragment = component_fragments[component_count]
@@ -6584,7 +6609,7 @@ local function __update_chunk_tags_trace(chunk, fragment)
         chunk.__component_count = component_count
     end
 
-    if not component_index and not evolved.has(fragment, evolved.TAG) then
+    if not component_index and not evolved.has(fragment, __TAG) then
         component_count = component_count + 1
         chunk.__component_count = component_count
 
@@ -6595,7 +6620,7 @@ local function __update_chunk_tags_trace(chunk, fragment)
         component_storages[storage_index] = storage
         component_fragments[storage_index] = fragment
 
-        local new_component = evolved.get(fragment, evolved.DEFAULT)
+        local new_component = evolved.get(fragment, __DEFAULT)
 
         if new_component == nil then
             new_component = true
@@ -6623,14 +6648,14 @@ local function __update_fragment_constructs(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(evolved.insert(evolved.TAG, evolved.ON_INSERT, __update_fragment_tags))
-assert(evolved.insert(evolved.TAG, evolved.ON_REMOVE, __update_fragment_tags))
+assert(evolved.insert(__TAG, __ON_INSERT, __update_fragment_tags))
+assert(evolved.insert(__TAG, __ON_REMOVE, __update_fragment_tags))
 
-assert(evolved.insert(evolved.DEFAULT, evolved.ON_INSERT, __update_fragment_defaults))
-assert(evolved.insert(evolved.DEFAULT, evolved.ON_REMOVE, __update_fragment_defaults))
+assert(evolved.insert(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
+assert(evolved.insert(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
 
-assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_INSERT, __update_fragment_constructs))
-assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_REMOVE, __update_fragment_constructs))
+assert(evolved.insert(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
+assert(evolved.insert(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
 
 ---
 ---
@@ -6638,12 +6663,12 @@ assert(evolved.insert(evolved.CONSTRUCT, evolved.ON_REMOVE, __update_fragment_co
 ---
 ---
 
-assert(evolved.insert(evolved.TAG, evolved.TAG))
+assert(evolved.insert(__TAG, __TAG))
 
-assert(evolved.insert(evolved.INCLUDES, evolved.CONSTRUCT, __component_list))
-assert(evolved.insert(evolved.EXCLUDES, evolved.CONSTRUCT, __component_list))
+assert(evolved.insert(__INCLUDES, __CONSTRUCT, __component_list))
+assert(evolved.insert(__EXCLUDES, __CONSTRUCT, __component_list))
 
-assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, __component_list))
+assert(evolved.insert(__AFTER, __CONSTRUCT, __component_list))
 
 ---
 ---
@@ -6653,7 +6678,7 @@ assert(evolved.insert(evolved.AFTER, evolved.CONSTRUCT, __component_list))
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-assert(evolved.insert(evolved.INCLUDES, evolved.ON_SET, function(query, _, include_list)
+assert(evolved.insert(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_list_size = #include_list
 
     if include_list_size == 0 then
@@ -6672,7 +6697,7 @@ assert(evolved.insert(evolved.INCLUDES, evolved.ON_SET, function(query, _, inclu
     __query_sorted_includes[query] = sorted_includes
 end))
 
-assert(evolved.insert(evolved.INCLUDES, evolved.ON_REMOVE, function(query)
+assert(evolved.insert(__INCLUDES, __ON_REMOVE, function(query)
     __query_sorted_includes[query] = nil
 end))
 
@@ -6684,7 +6709,7 @@ end))
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-assert(evolved.insert(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclude_list)
+assert(evolved.insert(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_list_size = #exclude_list
 
     if exclude_list_size == 0 then
@@ -6703,7 +6728,7 @@ assert(evolved.insert(evolved.EXCLUDES, evolved.ON_SET, function(query, _, exclu
     __query_sorted_excludes[query] = sorted_excludes
 end))
 
-assert(evolved.insert(evolved.EXCLUDES, evolved.ON_REMOVE, function(query)
+assert(evolved.insert(__EXCLUDES, __ON_REMOVE, function(query)
     __query_sorted_excludes[query] = nil
 end))
 
@@ -6716,7 +6741,7 @@ end))
 ---@param system evolved.system
 ---@param new_phase evolved.phase
 ---@param old_phase? evolved.phase
-assert(evolved.insert(evolved.PHASE, evolved.ON_SET, function(system, _, new_phase, old_phase)
+assert(evolved.insert(__PHASE, __ON_SET, function(system, _, new_phase, old_phase)
     if new_phase == old_phase then
         return
     end
@@ -6745,7 +6770,7 @@ end))
 
 ---@param system evolved.system
 ---@param old_phase evolved.phase
-assert(evolved.insert(evolved.PHASE, evolved.ON_REMOVE, function(system, _, old_phase)
+assert(evolved.insert(__PHASE, __ON_REMOVE, function(system, _, old_phase)
     local old_phase_systems = __phase_systems[old_phase]
 
     if old_phase_systems then
@@ -6765,7 +6790,7 @@ end))
 
 ---@param system evolved.system
 ---@param new_after_list evolved.system[]
-assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_after_list)
+assert(evolved.insert(__AFTER, __ON_SET, function(system, _, new_after_list)
     local new_after_list_size = #new_after_list
 
     if new_after_list_size == 0 then
@@ -6784,7 +6809,7 @@ assert(evolved.insert(evolved.AFTER, evolved.ON_SET, function(system, _, new_aft
 end))
 
 ---@param system evolved.system
-assert(evolved.insert(evolved.AFTER, evolved.ON_REMOVE, function(system)
+assert(evolved.insert(__AFTER, __ON_REMOVE, function(system)
     __system_dependencies[system] = nil
 end))
 
