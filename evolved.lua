@@ -97,7 +97,8 @@ local evolved = {
 local __debug_mode = true ---@type boolean
 
 local __freelist_ids = {} ---@type integer[]
-local __available_idx = 0 ---@type integer
+local __acquired_count = 0 ---@type integer
+local __available_index = 0 ---@type integer
 
 local __defer_depth = 0 ---@type integer
 local __defer_length = 0 ---@type integer
@@ -198,29 +199,32 @@ end)()
 ---@nodiscard
 local function __acquire_id()
     local freelist_ids = __freelist_ids
-    local available_idx = __available_idx
+    local available_index = __available_index
 
-    if available_idx ~= 0 then
-        local acquired_index = available_idx
+    if available_index ~= 0 then
+        local acquired_index = available_index
         local freelist_id = freelist_ids[acquired_index]
 
-        local next_available_idx = freelist_id % 0x100000
-        local shifted_version = freelist_id - next_available_idx
+        local next_available_index = freelist_id % 0x100000
+        local shifted_version = freelist_id - next_available_index
 
-        __available_idx = next_available_idx
+        __available_index = next_available_index
 
         local acquired_id = acquired_index + shifted_version
         freelist_ids[acquired_index] = acquired_id
 
         return acquired_id --[[@as evolved.id]]
     else
-        local freelist_size = #freelist_ids
+        local acquired_count = __acquired_count
 
-        if freelist_size == 0xFFFFF then
+        if acquired_count == 0xFFFFF then
             __lua_error('id index overflow')
         end
 
-        local acquired_index = freelist_size + 1
+        acquired_count = acquired_count + 1
+        __acquired_count = acquired_count
+
+        local acquired_index = acquired_count
         local shifted_version = 0x100000
 
         local acquired_id = acquired_index + shifted_version
@@ -245,8 +249,8 @@ local function __release_id(id)
         and 0x100000
         or shifted_version + 0x100000
 
-    freelist_ids[acquired_index] = __available_idx + shifted_version
-    __available_idx = acquired_index
+    freelist_ids[acquired_index] = __available_index + shifted_version
+    __available_index = acquired_index
 end
 
 ---
@@ -4701,7 +4705,7 @@ __evolved_remove = function(entity, ...)
         if old_chunk.__has_remove_hooks then
             local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
-            for i = 1, __lua_select('#', ...) do
+            for i = 1, fragment_count do
                 local fragment = __lua_select(i, ...)
 
                 if not removed_set[fragment] and old_fragment_set[fragment] then
