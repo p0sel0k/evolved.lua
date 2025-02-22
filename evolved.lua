@@ -217,7 +217,7 @@ local function __acquire_id()
         local freelist_size = #freelist_ids
 
         if freelist_size == 0xFFFFF then
-            __lua_error('id index overflow', 2)
+            __lua_error('id index overflow')
         end
 
         local acquired_index = freelist_size + 1
@@ -238,7 +238,7 @@ local function __release_id(id)
     local freelist_ids = __freelist_ids
 
     if freelist_ids[acquired_index] ~= id then
-        __lua_error('id is not acquired or already released', 2)
+        __lua_error('id is not acquired or already released')
     end
 
     shifted_version = shifted_version == 0x7FF00000
@@ -454,7 +454,7 @@ local function __each_iterator(each_state)
     local fragment_index = each_state[4]
 
     if structural_changes ~= __structural_changes then
-        __lua_error('structural changes are prohibited during iteration', 2)
+        __lua_error('structural changes are prohibited during iteration')
     end
 
     local entity_chunk_fragment_list = entity_chunk.__fragment_list
@@ -482,7 +482,7 @@ local function __execute_iterator(execute_state)
     local exclude_set = execute_state[3]
 
     if structural_changes ~= __structural_changes then
-        __lua_error('structural changes are prohibited during iteration', 2)
+        __lua_error('structural changes are prohibited during iteration')
     end
 
     local chunk_stack_size = #chunk_stack
@@ -1289,7 +1289,7 @@ end
 ---@param components evolved.component[]
 local function __spawn_entity_at(entity, chunk, fragments, components)
     if __defer_depth <= 0 then
-        __lua_error('spawn entity operations should be deferred', 2)
+        __lua_error('spawn entity operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
@@ -1405,7 +1405,7 @@ end
 ---@param components evolved.component[]
 local function __spawn_entity_with(entity, chunk, fragments, components)
     if __defer_depth <= 0 then
-        __lua_error('spawn entity operations should be deferred', 2)
+        __lua_error('spawn entity operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
@@ -1503,7 +1503,7 @@ end
 ---@nodiscard
 local function __chunk_assign(chunk, fragment, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     if not chunk.__fragment_set[fragment] then
@@ -1627,7 +1627,7 @@ end
 ---@nodiscard
 local function __chunk_insert(old_chunk, fragment, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
@@ -1801,7 +1801,7 @@ end
 ---@nodiscard
 local function __chunk_remove(old_chunk, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local fragment_count = __lua_select('#', ...)
@@ -1927,7 +1927,7 @@ end
 ---@nodiscard
 local function __chunk_clear(chunk)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
@@ -1988,7 +1988,7 @@ end
 ---@nodiscard
 local function __chunk_destroy(chunk)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
@@ -2051,7 +2051,7 @@ end
 ---@return integer set_count
 local function __chunk_multi_set(old_chunk, fragments, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local fragment_count = #fragments
@@ -2371,7 +2371,7 @@ end
 ---@return integer assigned_count
 local function __chunk_multi_assign(chunk, fragments, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local fragment_count = #fragments
@@ -2480,7 +2480,7 @@ end
 ---@return integer inserted_count
 local function __chunk_multi_insert(old_chunk, fragments, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local fragment_count = #fragments
@@ -2646,7 +2646,7 @@ end
 ---@return integer removed_count
 local function __chunk_multi_remove(old_chunk, fragments)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred', 2)
+        __lua_error('batched chunk operations should be deferred')
     end
 
     local fragment_count = #fragments
@@ -2782,7 +2782,7 @@ local function __system_process(system)
         local success, result = __lua_pcall(prologue)
 
         if not success then
-            __lua_error(__lua_string_format('system prologue failed: %s', result), 2)
+            __lua_error(__lua_string_format('system prologue failed: %s', result))
         end
     end
 
@@ -2794,7 +2794,7 @@ local function __system_process(system)
 
                 if not success then
                     __commit()
-                    __lua_error(__lua_string_format('system execution failed: %s', result), 2)
+                    __lua_error(__lua_string_format('system execution failed: %s', result))
                 end
             end
         end
@@ -2805,7 +2805,7 @@ local function __system_process(system)
         local success, result = __lua_pcall(epilogue)
 
         if not success then
-            __lua_error(__lua_string_format('system epilogue failed: %s', result), 2)
+            __lua_error(__lua_string_format('system epilogue failed: %s', result))
         end
     end
 end
@@ -2973,7 +2973,7 @@ end
 ---@return boolean committed
 __commit = function()
     if __defer_depth <= 0 then
-        __lua_error('unbalanced defer/commit', 2)
+        __lua_error('unbalanced defer/commit')
     end
 
     __defer_depth = __defer_depth - 1
@@ -4173,11 +4173,11 @@ end
 ---@nodiscard
 __evolved_pack = function(index, version)
     if index < 1 or index > 0xFFFFF then
-        __lua_error('id index out of range [1;0xFFFFF]', 2)
+        __lua_error('id index out of range [1;0xFFFFF]')
     end
 
     if version < 1 or version > 0x7FF then
-        __lua_error('id version out of range [1;0x7FF]', 2)
+        __lua_error('id version out of range [1;0x7FF]')
     end
 
     local shifted_version = version * 0x100000
@@ -4322,7 +4322,7 @@ __evolved_set = function(entity, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be set', 2)
+            __lua_error('the fragment is not alive and cannot be set')
         end
     end
 
@@ -4468,7 +4468,7 @@ __evolved_assign = function(entity, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be assigned', 2)
+            __lua_error('the fragment is not alive and cannot be assigned')
         end
     end
 
@@ -4550,7 +4550,7 @@ __evolved_insert = function(entity, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be inserted', 2)
+            __lua_error('the fragment is not alive and cannot be inserted')
         end
     end
 
@@ -4668,7 +4668,7 @@ __evolved_remove = function(entity, ...)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed', 2)
+                __lua_error('a fragment is not alive and cannot be removed')
             end
         end
     end
@@ -4910,7 +4910,7 @@ __evolved_multi_set = function(entity, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be set', 2)
+                __lua_error('a fragment is not alive and cannot be set')
             end
         end
     end
@@ -5110,7 +5110,7 @@ __evolved_multi_assign = function(entity, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be assigned', 2)
+                __lua_error('a fragment is not alive and cannot be assigned')
             end
         end
     end
@@ -5207,7 +5207,7 @@ __evolved_multi_insert = function(entity, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be inserted', 2)
+                __lua_error('a fragment is not alive and cannot be inserted')
             end
         end
     end
@@ -5335,7 +5335,7 @@ __evolved_multi_remove = function(entity, fragments)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed', 2)
+                __lua_error('a fragment is not alive and cannot be removed')
             end
         end
     end
@@ -5443,7 +5443,7 @@ __evolved_batch_set = function(query, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be set', 2)
+            __lua_error('the fragment is not alive and cannot be set')
         end
     end
 
@@ -5490,7 +5490,7 @@ __evolved_batch_assign = function(query, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be assigned', 2)
+            __lua_error('the fragment is not alive and cannot be assigned')
         end
     end
 
@@ -5533,7 +5533,7 @@ __evolved_batch_insert = function(query, fragment, ...)
         local fragment_index = fragment % 0x100000
 
         if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be inserted', 2)
+            __lua_error('the fragment is not alive and cannot be inserted')
         end
     end
 
@@ -5583,7 +5583,7 @@ __evolved_batch_remove = function(query, ...)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed', 2)
+                __lua_error('a fragment is not alive and cannot be removed')
             end
         end
     end
@@ -5705,7 +5705,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be set', 2)
+                __lua_error('a fragment is not alive and cannot be set')
             end
         end
     end
@@ -5761,7 +5761,7 @@ __evolved_batch_multi_assign = function(query, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be assigned', 2)
+                __lua_error('a fragment is not alive and cannot be assigned')
             end
         end
     end
@@ -5817,7 +5817,7 @@ __evolved_batch_multi_insert = function(query, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be inserted', 2)
+                __lua_error('a fragment is not alive and cannot be inserted')
             end
         end
     end
@@ -5868,7 +5868,7 @@ __evolved_batch_multi_remove = function(query, fragments)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed', 2)
+                __lua_error('a fragment is not alive and cannot be removed')
             end
         end
     end
@@ -5920,7 +5920,7 @@ __evolved_chunk = function(...)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be used in a chunk', 2)
+                __lua_error('a fragment is not alive and cannot be used in a chunk')
             end
         end
     end
@@ -5955,7 +5955,7 @@ __evolved_select = function(chunk, ...)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be used in a chunk', 2)
+                __lua_error('a fragment is not alive and cannot be used in a chunk')
             end
         end
     end
@@ -6123,7 +6123,7 @@ __evolved_process = function(...)
             local phase_index = phase % 0x100000
 
             if __freelist_ids[phase_index] ~= phase then
-                __lua_error('a phase is not alive and cannot be processed', 2)
+                __lua_error('a phase is not alive and cannot be processed')
             end
         end
     end
@@ -6171,7 +6171,7 @@ __evolved_spawn_at = function(chunk, fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be spawned', 2)
+                __lua_error('a fragment is not alive and cannot be spawned')
             end
         end
     end
@@ -6215,7 +6215,7 @@ __evolved_spawn_with = function(fragments, components)
             local fragment_index = fragment % 0x100000
 
             if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be spawned', 2)
+                __lua_error('a fragment is not alive and cannot be spawned')
             end
         end
     end
