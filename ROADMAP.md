@@ -3,6 +3,7 @@
 ## Backlog
 
 - add destroing policies (fragments, phases, systems)
+- add debug view for chunks with help of NAME fragment traits
 
 ## Known issues
 
