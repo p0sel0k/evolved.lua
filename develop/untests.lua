@@ -6567,3 +6567,87 @@ do
         assert(c12_ec == 1 and #c12_es == 1 and c12_es[1] == e12)
     end
 end
+
+do
+    local f = evo.fragment():build()
+    assert(evo.get(f, evo.NAME) == nil)
+
+    local q = evo.query():build()
+    assert(evo.get(q, evo.NAME) == nil)
+
+    local p = evo.phase():build()
+    assert(evo.get(p, evo.NAME) == nil)
+
+    local s = evo.system():build()
+    assert(evo.get(s, evo.NAME) == nil)
+end
+
+do
+    local fb = evo.fragment()
+    local qb = evo.query()
+    local pb = evo.phase()
+    local sb = evo.system()
+
+    do
+        local f = fb:name('fragment'):build()
+        assert(evo.get(f, evo.NAME) == 'fragment')
+
+        local q = qb:name('query'):build()
+        assert(evo.get(q, evo.NAME) == 'query')
+
+        local p = pb:name('phase'):build()
+        assert(evo.get(p, evo.NAME) == 'phase')
+
+        local s = sb:name('system'):build()
+        assert(evo.get(s, evo.NAME) == 'system')
+    end
+
+    do
+        local f = fb:build()
+        assert(evo.get(f, evo.NAME) == nil)
+
+        local q = qb:build()
+        assert(evo.get(q, evo.NAME) == nil)
+
+        local p = pb:build()
+        assert(evo.get(p, evo.NAME) == nil)
+
+        local s = sb:build()
+        assert(evo.get(s, evo.NAME) == nil)
+    end
+end
+
+do
+    local fb = evo.fragment()
+    local qb = evo.query()
+    local pb = evo.phase()
+    local sb = evo.system()
+
+    do
+        local f = fb:single(false):build()
+        assert(evo.get(f, f) == false)
+
+        local q = qb:single(false):build()
+        assert(evo.get(q, q) == false)
+
+        local p = pb:single(false):build()
+        assert(evo.get(p, p) == false)
+
+        local s = sb:single(false):build()
+        assert(evo.get(s, s) == false)
+    end
+
+    do
+        local f = fb:build()
+        assert(evo.get(f, f) == nil)
+
+        local q = qb:build()
+        assert(evo.get(q, q) == nil)
+
+        local p = pb:build()
+        assert(evo.get(p, p) == nil)
+
+        local s = sb:build()
+        assert(evo.get(s, s) == nil)
+    end
+end

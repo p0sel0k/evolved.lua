@@ -533,6 +533,7 @@ end
 
 local __TAG = __acquire_id()
 
+local __NAME = __acquire_id()
 local __DEFAULT = __acquire_id()
 local __CONSTRUCT = __acquire_id()
 
@@ -6319,8 +6320,9 @@ end
 ---
 ---
 
----@class (evact) evolved.__fragment_builder
+---@class (exact) evolved.__fragment_builder
 ---@field package __tag boolean
+---@field package __name? string
 ---@field package __single? evolved.component
 ---@field package __default? evolved.component
 ---@field package __construct? fun(...): evolved.component
@@ -6339,6 +6341,7 @@ __evolved_fragment = function()
     ---@type evolved.__fragment_builder
     local builder = {
         __tag = false,
+        __name = nil,
         __single = nil,
         __default = nil,
         __construct = nil,
@@ -6354,6 +6357,13 @@ end
 ---@return evolved.fragment_builder builder
 function evolved_fragment_builder:tag()
     self.__tag = true
+    return self
+end
+
+---@param name string
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:name(name)
+    self.__name = name
     return self
 end
 
@@ -6410,6 +6420,7 @@ end
 ---@return boolean is_deferred
 function evolved_fragment_builder:build()
     local tag = self.__tag
+    local name = self.__name
     local single = self.__single
     local default = self.__default
     local construct = self.__construct
@@ -6420,6 +6431,7 @@ function evolved_fragment_builder:build()
     local on_remove = self.__on_remove
 
     self.__tag = false
+    self.__name = nil
     self.__single = nil
     self.__default = nil
     self.__construct = nil
@@ -6439,6 +6451,12 @@ function evolved_fragment_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __TAG
         component_list[component_count] = true
+    end
+
+    if name then
+        component_count = component_count + 1
+        fragment_list[component_count] = __NAME
+        component_list[component_count] = name
     end
 
     if single ~= nil then
@@ -6483,10 +6501,6 @@ function evolved_fragment_builder:build()
         component_list[component_count] = on_remove
     end
 
-    if component_count == 0 then
-        return __evolved_id(), false
-    end
-
     local _, is_deferred = __evolved_multi_set(fragment, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
@@ -6502,6 +6516,8 @@ end
 ---
 
 ---@class (exact) evolved.__query_builder
+---@field package __name? string
+---@field package __single? evolved.component
 ---@field package __include_list? evolved.fragment[]
 ---@field package __exclude_list? evolved.fragment[]
 
@@ -6514,11 +6530,27 @@ evolved_query_builder.__index = evolved_query_builder
 __evolved_query = function()
     ---@type evolved.__query_builder
     local builder = {
+        __name = nil,
+        __single = nil,
         __include_list = nil,
         __exclude_list = nil,
     }
     ---@cast builder evolved.query_builder
     return __lua_setmetatable(builder, evolved_query_builder)
+end
+
+---@param name string
+---@return evolved.query_builder builder
+function evolved_query_builder:name(name)
+    self.__name = name
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.query_builder builder
+function evolved_query_builder:single(single)
+    self.__single = single
+    return self
 end
 
 ---@param ... evolved.fragment fragments
@@ -6576,15 +6608,33 @@ end
 ---@return evolved.query query
 ---@return boolean is_deferred
 function evolved_query_builder:build()
+    local name = self.__name
+    local single = self.__single
     local include_list = self.__include_list
     local exclude_list = self.__exclude_list
 
+    self.__name = nil
+    self.__single = nil
     self.__include_list = nil
     self.__exclude_list = nil
+
+    local query = __evolved_id()
 
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     local component_list = __acquire_table(__table_pool_tag.component_list)
     local component_count = 0
+
+    if name then
+        component_count = component_count + 1
+        fragment_list[component_count] = __NAME
+        component_list[component_count] = name
+    end
+
+    if single ~= nil then
+        component_count = component_count + 1
+        fragment_list[component_count] = query
+        component_list[component_count] = single
+    end
 
     if include_list then
         component_count = component_count + 1
@@ -6598,11 +6648,7 @@ function evolved_query_builder:build()
         component_list[component_count] = exclude_list
     end
 
-    if component_count == 0 then
-        return __evolved_id(), false
-    end
-
-    local query, is_deferred = __evolved_spawn_with(fragment_list, component_list)
+    local _, is_deferred = __evolved_multi_set(query, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
@@ -6617,6 +6663,8 @@ end
 ---
 
 ---@class (exact) evolved.__phase_builder
+---@field package __name? string
+---@field package __single? evolved.component
 
 ---@class evolved.phase_builder : evolved.__phase_builder
 local evolved_phase_builder = {}
@@ -6626,15 +6674,61 @@ evolved_phase_builder.__index = evolved_phase_builder
 ---@nodiscard
 __evolved_phase = function()
     ---@type evolved.__phase_builder
-    local builder = {}
+    local builder = {
+        __name = nil,
+        __single = nil,
+    }
     ---@cast builder evolved.phase_builder
     return __lua_setmetatable(builder, evolved_phase_builder)
+end
+
+---@param name string
+---@return evolved.phase_builder builder
+function evolved_phase_builder:name(name)
+    self.__name = name
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.phase_builder builder
+function evolved_phase_builder:single(single)
+    self.__single = single
+    return self
 end
 
 ---@return evolved.phase phase
 ---@return boolean is_deferred
 function evolved_phase_builder:build()
-    return __evolved_id(), false
+    local name = self.__name
+    local single = self.__single
+
+    self.__name = nil
+    self.__single = nil
+
+    local phase = __evolved_id()
+
+    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+    local component_list = __acquire_table(__table_pool_tag.component_list)
+    local component_count = 0
+
+    if name then
+        component_count = component_count + 1
+        fragment_list[component_count] = __NAME
+        component_list[component_count] = name
+    end
+
+    if single ~= nil then
+        component_count = component_count + 1
+        fragment_list[component_count] = phase
+        component_list[component_count] = single
+    end
+
+    local _, is_deferred = __evolved_multi_set(phase, fragment_list, component_list)
+
+    __release_table(__table_pool_tag.fragment_list, fragment_list)
+    __release_table(__table_pool_tag.component_list, component_list)
+
+    return phase, is_deferred
 end
 
 ---
@@ -6644,6 +6738,8 @@ end
 ---
 
 ---@class (exact) evolved.__system_builder
+---@field package __name? string
+---@field package __single? evolved.component
 ---@field package __phase? evolved.phase
 ---@field package __after? evolved.system[]
 ---@field package __query? evolved.query
@@ -6660,6 +6756,8 @@ evolved_system_builder.__index = evolved_system_builder
 __evolved_system = function()
     ---@type evolved.__system_builder
     local builder = {
+        __name = nil,
+        __single = nil,
         __phase = nil,
         __after = nil,
         __query = nil,
@@ -6669,6 +6767,20 @@ __evolved_system = function()
     }
     ---@cast builder evolved.system_builder
     return __lua_setmetatable(builder, evolved_system_builder)
+end
+
+---@param name string
+---@return evolved.system_builder builder
+function evolved_system_builder:name(name)
+    self.__name = name
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.system_builder builder
+function evolved_system_builder:single(single)
+    self.__single = single
+    return self
 end
 
 ---@param phase evolved.phase
@@ -6730,6 +6842,8 @@ end
 ---@return evolved.system system
 ---@return boolean is_deferred
 function evolved_system_builder:build()
+    local name = self.__name
+    local single = self.__single
     local phase = self.__phase
     local after = self.__after
     local query = self.__query
@@ -6737,6 +6851,8 @@ function evolved_system_builder:build()
     local prologue = self.__prologue
     local epilogue = self.__epilogue
 
+    self.__name = nil
+    self.__single = nil
     self.__phase = nil
     self.__after = nil
     self.__query = nil
@@ -6744,9 +6860,23 @@ function evolved_system_builder:build()
     self.__prologue = nil
     self.__epilogue = nil
 
+    local system = __evolved_id()
+
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     local component_list = __acquire_table(__table_pool_tag.component_list)
     local component_count = 0
+
+    if name then
+        component_count = component_count + 1
+        fragment_list[component_count] = __NAME
+        component_list[component_count] = name
+    end
+
+    if single ~= nil then
+        component_count = component_count + 1
+        fragment_list[component_count] = system
+        component_list[component_count] = single
+    end
 
     if phase then
         component_count = component_count + 1
@@ -6784,11 +6914,7 @@ function evolved_system_builder:build()
         component_list[component_count] = epilogue
     end
 
-    if component_count == 0 then
-        return __evolved_id(), false
-    end
-
-    local system, is_deferred = __evolved_spawn_with(fragment_list, component_list)
+    local _, is_deferred = __evolved_multi_set(system, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
@@ -7088,6 +7214,7 @@ end))
 
 evolved.TAG = __TAG
 
+evolved.NAME = __NAME
 evolved.DEFAULT = __DEFAULT
 evolved.CONSTRUCT = __CONSTRUCT
 

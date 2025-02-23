@@ -110,6 +110,7 @@ entity_builder:build :: entity, boolean
 ```
 fragment :: fragment_builder
 fragment_builder:tag :: fragment_builder
+fragment_builder:name :: string -> fragment_builder
 fragment_builder:single :: component -> fragment_builder
 fragment_builder:default :: component -> fragment_builder
 fragment_builder:construct :: {any... -> component} -> fragment_builder
@@ -122,6 +123,8 @@ fragment_builder:build :: fragment, boolean
 
 ```
 query :: query_builder
+query_builder:name :: string -> query_builder
+query_builder:single :: component -> query_builder
 query_builder:include :: fragment... -> query_builder
 query_builder:exclude :: fragment... -> query_builder
 query_builder:build :: query, boolean
@@ -129,11 +132,15 @@ query_builder:build :: query, boolean
 
 ```
 phase :: phase_builder
+phase_builder:name :: string -> phase_builder
+phase_builder:single :: component -> phase_builder
 phase_builder:build :: phase, boolean
 ```
 
 ```
 system :: system_builder
+system_builder:name :: string -> system_builder
+system_builder:single :: component -> system_builder
 system_builder:phase :: phase -> system_builder
 system_builder:after :: system... -> system_builder
 system_builder:query :: query -> system_builder
