@@ -7056,6 +7056,35 @@ __lua_assert(__evolved_insert(__CONSTRUCT, __ON_REMOVE, __update_fragment_constr
 ---
 ---
 
+__lua_assert(__evolved_insert(__TAG, __NAME, 'TAG'))
+
+__lua_assert(__evolved_insert(__NAME, __NAME, 'NAME'))
+__lua_assert(__evolved_insert(__DEFAULT, __NAME, 'DEFAULT'))
+__lua_assert(__evolved_insert(__CONSTRUCT, __NAME, 'CONSTRUCT'))
+
+__lua_assert(__evolved_insert(__INCLUDES, __NAME, 'INCLUDES'))
+__lua_assert(__evolved_insert(__EXCLUDES, __NAME, 'EXCLUDES'))
+
+__lua_assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
+__lua_assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
+__lua_assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
+__lua_assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
+
+__lua_assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
+__lua_assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
+
+__lua_assert(__evolved_insert(__QUERY, __NAME, 'QUERY'))
+__lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
+
+__lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
+__lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
+
+---
+---
+---
+---
+---
+
 __lua_assert(__evolved_insert(__TAG, __TAG))
 
 __lua_assert(__evolved_insert(__INCLUDES, __CONSTRUCT, __component_list))
