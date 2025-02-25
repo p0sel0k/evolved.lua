@@ -34,6 +34,7 @@ ON_SET :: fragment
 ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
+ON_DESTROY :: fragment
 
 PHASE :: fragment
 AFTER :: fragment
@@ -43,6 +44,10 @@ EXECUTE :: fragment
 
 PROLOGUE :: fragment
 EPILOGUE :: fragment
+
+THROW_ERROR_POLICY :: id
+DESTROY_ENTITY_POLICY :: id
+REMOVE_FRAGMENT_POLICY :: id
 ```
 
 ## Functions

@@ -542,6 +542,7 @@ local __ON_SET = __acquire_id()
 local __ON_ASSIGN = __acquire_id()
 local __ON_INSERT = __acquire_id()
 local __ON_REMOVE = __acquire_id()
+local __ON_DESTROY = __acquire_id()
 
 local __PHASE = __acquire_id()
 local __AFTER = __acquire_id()
@@ -551,6 +552,10 @@ local __EXECUTE = __acquire_id()
 
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
+
+local __THROW_ERROR_POLICY = __acquire_id()
+local __DESTROY_ENTITY_POLICY = __acquire_id()
+local __REMOVE_FRAGMENT_POLICY = __acquire_id()
 
 ---
 ---
@@ -7405,6 +7410,7 @@ evolved.ON_SET = __ON_SET
 evolved.ON_ASSIGN = __ON_ASSIGN
 evolved.ON_INSERT = __ON_INSERT
 evolved.ON_REMOVE = __ON_REMOVE
+evolved.ON_DESTROY = __ON_DESTROY
 
 evolved.PHASE = __PHASE
 evolved.AFTER = __AFTER
@@ -7414,6 +7420,10 @@ evolved.EXECUTE = __EXECUTE
 
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
+
+evolved.THROW_ERROR_POLICY = __THROW_ERROR_POLICY
+evolved.DESTROY_ENTITY_POLICY = __DESTROY_ENTITY_POLICY
+evolved.REMOVE_FRAGMENT_POLICY = __REMOVE_FRAGMENT_POLICY
 
 evolved.id = __evolved_id
 
