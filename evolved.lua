@@ -7225,6 +7225,7 @@ __lua_assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
 __lua_assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
 __lua_assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
 __lua_assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
+__lua_assert(__evolved_insert(__ON_DESTROY, __NAME, 'ON_DESTROY'))
 
 __lua_assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
 __lua_assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
@@ -7234,6 +7235,10 @@ __lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
 
 __lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
 __lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
+
+__lua_assert(__evolved_insert(__THROW_ERROR_POLICY, __NAME, 'THROW_ERROR_POLICY'))
+__lua_assert(__evolved_insert(__DESTROY_ENTITY_POLICY, __NAME, 'DESTROY_ENTITY_POLICY'))
+__lua_assert(__evolved_insert(__REMOVE_FRAGMENT_POLICY, __NAME, 'REMOVE_FRAGMENT_POLICY'))
 
 ---
 ---
