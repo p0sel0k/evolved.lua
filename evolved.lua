@@ -57,7 +57,7 @@ local evolved = {
 ---@field package __entities evolved.entity[]
 ---@field package __entity_count integer
 ---@field package __fragment evolved.fragment
----@field package __fragment_set table<evolved.fragment, boolean>
+---@field package __fragment_set table<evolved.fragment, integer>
 ---@field package __fragment_list evolved.fragment[]
 ---@field package __fragment_count integer
 ---@field package __component_count integer
@@ -124,11 +124,14 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 
 local __lua_assert = assert
 local __lua_error = error
+local __lua_ipairs = ipairs
 local __lua_next = next
+local __lua_pairs = pairs
 local __lua_pcall = pcall
 local __lua_select = select
 local __lua_setmetatable = setmetatable
 local __lua_string_format = string.format
+local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -563,7 +566,7 @@ local __REMOVE_FRAGMENT_POLICY = __acquire_id()
 ---
 ---
 
----@type table<evolved.fragment, boolean>
+---@type table<evolved.fragment, integer>
 local __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
     __newindex = function() __lua_error('attempt to modify empty fragment set') end
 })
@@ -652,6 +655,21 @@ local __evolved_system
 ---
 ---
 
+---@param id evolved.id
+---@return string
+---@nodiscard
+local function __id_name(id)
+    ---@type string?
+    local id_name = __evolved_get(id, __NAME)
+
+    if id_name then
+        return id_name
+    end
+
+    local id_index, id_version = __evolved_unpack(id)
+    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
+end
+
 ---@param ... any component arguments
 ---@return evolved.component
 local function __component_list(...)
@@ -736,19 +754,110 @@ end
 ---
 ---
 
+local __chunk_mt = {} ---@type metatable
+
+local __chunk_fragment_set_mt = {} ---@type metatable
+local __chunk_fragment_list_mt = {} ---@type metatable
+
+local __chunk_component_indices_mt = {} ---@type metatable
+local __chunk_component_storages_mt = {} ---@type metatable
+local __chunk_component_fragments_mt = {} ---@type metatable
+
+---@param self evolved.chunk
+function __chunk_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment_index, fragment in __lua_ipairs(self.__fragment_list) do
+        items[fragment_index] = __id_name(fragment)
+    end
+
+    return __lua_string_format('<%s>', __lua_table_concat(items, ', '))
+end
+
+---@param self table<evolved.fragment, integer>
+function __chunk_fragment_set_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment, fragment_index in __lua_pairs(self) do
+        items[fragment_index] = __lua_string_format('(%s -> %d)',
+            __id_name(fragment), fragment_index)
+    end
+
+    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+end
+
+---@param self evolved.fragment[]
+function __chunk_fragment_list_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment_index, fragment in __lua_ipairs(self) do
+        items[fragment_index] = __lua_string_format('(%d -> %s)',
+            fragment_index, __id_name(fragment))
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+end
+
+---@param self table<evolved.fragment, integer>
+function __chunk_component_indices_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_fragment, component_index in __lua_pairs(self) do
+        items[component_index] = __lua_string_format('(%s -> %d)',
+            __id_name(component_fragment), component_index)
+    end
+
+    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+end
+
+---@param self evolved.component_storage[]
+function __chunk_component_storages_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_index, component_storage in __lua_ipairs(self) do
+        items[component_index] = __lua_string_format('(%d -> #%d)',
+            component_index, #component_storage)
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+end
+
+---@param self evolved.fragment[]
+function __chunk_component_fragments_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_index, component_fragment in __lua_ipairs(self) do
+        items[component_index] = __lua_string_format('(%d -> %s)',
+            component_index, __id_name(component_fragment))
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+end
+
 ---@param chunk_parent? evolved.chunk
 ---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
 local function __new_chunk(chunk_parent, chunk_fragment)
-    local chunk_fragment_set = {} ---@type table<evolved.fragment, boolean>
-    local chunk_fragment_list = {} ---@type evolved.fragment[]
+    ---@type table<evolved.fragment, integer>
+    local chunk_fragment_set = __lua_setmetatable({}, __chunk_fragment_set_mt)
 
-    local chunk_fragment_count = 0 ---@type integer
-    local chunk_component_count = 0 ---@type integer
+    ---@type evolved.fragment[]
+    local chunk_fragment_list = __lua_setmetatable({}, __chunk_fragment_list_mt)
 
-    local chunk_component_indices = {} ---@type table<evolved.fragment, integer>
-    local chunk_component_storages = {} ---@type evolved.component_storage[]
-    local chunk_component_fragments = {} ---@type evolved.fragment[]
+    ---@type integer
+    local chunk_fragment_count = 0
+
+    ---@type integer
+    local chunk_component_count = 0
+
+    ---@type table<evolved.fragment, integer>
+    local chunk_component_indices = __lua_setmetatable({}, __chunk_component_indices_mt)
+
+    ---@type evolved.component_storage[]
+    local chunk_component_storages = __lua_setmetatable({}, __chunk_component_storages_mt)
+
+    ---@type evolved.fragment[]
+    local chunk_component_fragments = __lua_setmetatable({}, __chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
@@ -763,7 +872,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
     ---@type evolved.chunk
-    local chunk = {
+    local chunk = __lua_setmetatable({
         __parent = chunk_parent,
         __children = {},
         __child_count = 0,
@@ -783,7 +892,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
-    }
+    }, __chunk_mt)
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -793,7 +902,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
             local parent_fragment = parent_fragment_list[parent_fragment_index]
 
             chunk_fragment_count = chunk_fragment_count + 1
-            chunk_fragment_set[parent_fragment] = true
+            chunk_fragment_set[parent_fragment] = chunk_fragment_count
             chunk_fragment_list[chunk_fragment_count] = parent_fragment
 
             if not __evolved_has(parent_fragment, __TAG) then
@@ -816,7 +925,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
     do
         chunk_fragment_count = chunk_fragment_count + 1
-        chunk_fragment_set[chunk_fragment] = true
+        chunk_fragment_set[chunk_fragment] = chunk_fragment_count
         chunk_fragment_list[chunk_fragment_count] = chunk_fragment
 
         if not __evolved_has(chunk_fragment, __TAG) then
@@ -1032,7 +1141,7 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_fragment(chunk, fragment)
-    return chunk.__fragment_set[fragment]
+    return chunk.__fragment_set[fragment] ~= nil
 end
 
 ---@param chunk evolved.chunk
@@ -1510,12 +1619,29 @@ end
 ---
 ---
 
+local __chunk_assign
+local __chunk_insert
+local __chunk_remove
+local __chunk_clear
+local __chunk_destroy
+
+local __chunk_multi_set
+local __chunk_multi_assign
+local __chunk_multi_insert
+local __chunk_multi_remove
+
+---
+---
+---
+---
+---
+
 ---@param chunk evolved.chunk
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
 ---@return integer assigned_count
 ---@nodiscard
-local function __chunk_assign(chunk, fragment, ...)
+__chunk_assign = function(chunk, fragment, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1639,7 +1765,7 @@ end
 ---@param ... any component arguments
 ---@return integer inserted_count
 ---@nodiscard
-local function __chunk_insert(old_chunk, fragment, ...)
+__chunk_insert = function(old_chunk, fragment, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1815,7 +1941,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return integer removed_count
 ---@nodiscard
-local function __chunk_remove(old_chunk, ...)
+__chunk_remove = function(old_chunk, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1948,7 +2074,7 @@ end
 ---@param chunk evolved.chunk
 ---@return integer cleared_count
 ---@nodiscard
-local function __chunk_clear(chunk)
+__chunk_clear = function(chunk)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2011,7 +2137,7 @@ end
 ---@param chunk evolved.chunk
 ---@return integer destroyed_count
 ---@nodiscard
-local function __chunk_destroy(chunk)
+__chunk_destroy = function(chunk)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2076,7 +2202,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer set_count
-local function __chunk_multi_set(old_chunk, fragments, components)
+__chunk_multi_set = function(old_chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2398,7 +2524,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer assigned_count
-local function __chunk_multi_assign(chunk, fragments, components)
+__chunk_multi_assign = function(chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2507,7 +2633,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer inserted_count
-local function __chunk_multi_insert(old_chunk, fragments, components)
+__chunk_multi_insert = function(old_chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2675,7 +2801,7 @@ end
 ---@param old_chunk evolved.chunk
 ---@param fragments evolved.fragment[]
 ---@return integer removed_count
-local function __chunk_multi_remove(old_chunk, fragments)
+__chunk_multi_remove = function(old_chunk, fragments)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
