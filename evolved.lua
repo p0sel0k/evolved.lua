@@ -556,7 +556,6 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
-local __THROW_ERROR_POLICY = __acquire_id()
 local __DESTROY_ENTITY_POLICY = __acquire_id()
 local __REMOVE_FRAGMENT_POLICY = __acquire_id()
 
@@ -7362,7 +7361,6 @@ __lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
 __lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
 __lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
 
-__lua_assert(__evolved_insert(__THROW_ERROR_POLICY, __NAME, 'THROW_ERROR_POLICY'))
 __lua_assert(__evolved_insert(__DESTROY_ENTITY_POLICY, __NAME, 'DESTROY_ENTITY_POLICY'))
 __lua_assert(__evolved_insert(__REMOVE_FRAGMENT_POLICY, __NAME, 'REMOVE_FRAGMENT_POLICY'))
 
@@ -7552,7 +7550,6 @@ evolved.EXECUTE = __EXECUTE
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
 
-evolved.THROW_ERROR_POLICY = __THROW_ERROR_POLICY
 evolved.DESTROY_ENTITY_POLICY = __DESTROY_ENTITY_POLICY
 evolved.REMOVE_FRAGMENT_POLICY = __REMOVE_FRAGMENT_POLICY
 

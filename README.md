@@ -45,7 +45,6 @@ EXECUTE :: fragment
 PROLOGUE :: fragment
 EPILOGUE :: fragment
 
-THROW_ERROR_POLICY :: id
 DESTROY_ENTITY_POLICY :: id
 REMOVE_FRAGMENT_POLICY :: id
 ```
