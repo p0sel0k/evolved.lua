@@ -633,6 +633,7 @@ local __evolved_batch_multi_remove
 
 local __evolved_chunk
 local __evolved_select
+local __evolved_entities
 
 local __evolved_each
 local __evolved_execute
@@ -4997,12 +4998,10 @@ __evolved_clear = function(entity)
             end
         end
 
-        do
-            __detach_entity(chunk, place)
+        __detach_entity(chunk, place)
 
-            entity_chunks[entity_index] = nil
-            entity_places[entity_index] = nil
-        end
+        entity_chunks[entity_index] = nil
+        entity_places[entity_index] = nil
 
         __structural_changes = __structural_changes + 1
     end
@@ -5066,8 +5065,8 @@ __evolved_destroy = function(entity)
             end
         end
 
-        __detach_entity(chunk, place)
         __release_id(entity)
+        __detach_entity(chunk, place)
 
         entity_chunks[entity_index] = nil
         entity_places[entity_index] = nil
@@ -6196,6 +6195,7 @@ end
 ---@return evolved.chunk? chunk
 ---@return evolved.entity[]? entities
 ---@return integer? entity_count
+---@nodiscard
 __evolved_chunk = function(...)
     local fragment_count = __lua_select('#', ...)
 
@@ -6298,6 +6298,14 @@ __evolved_select = function(chunk, ...)
             i4 and storages[i4] or empty_component_storage,
             __evolved_select(chunk, __lua_select(5, ...))
     end
+end
+
+---@param chunk evolved.chunk
+---@return evolved.entity[] entities
+---@return integer entity_count
+---@nodiscard
+__evolved_entities = function(chunk)
+    return chunk.__entities, chunk.__entity_count
 end
 
 ---@param entity evolved.entity
@@ -7595,6 +7603,7 @@ evolved.batch_multi_remove = __evolved_batch_multi_remove
 
 evolved.chunk = __evolved_chunk
 evolved.select = __evolved_select
+evolved.entities = __evolved_entities
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute

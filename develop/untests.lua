@@ -6651,3 +6651,46 @@ do
         assert(evo.get(s, s) == nil)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = evo.chunk(f1)
+    local c2 = evo.chunk(f2)
+    local c12 = evo.chunk(f1, f2)
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 2 and c1_ec == 2)
+        assert(c1_es[1] == e1a and c1_es[2] == e1b)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b)
+    end
+
+    assert(evo.remove(e12a, f1) and evo.remove(e12b, f1))
+    assert(evo.insert(e1a, f2, 7) and evo.insert(e1b, f2, 8))
+
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 2 and c2_ec == 2)
+        assert(c2_es[1] == e12a and c2_es[2] == e12b)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es[1] == e1a and c12_es[2] == e1b)
+    end
+end
