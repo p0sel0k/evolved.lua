@@ -6655,9 +6655,9 @@ end
 do
     local f1, f2 = evo.id(2)
 
-    local c1 = evo.chunk(f1)
-    local c2 = evo.chunk(f2)
-    local c12 = evo.chunk(f1, f2)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    local c12 = assert(evo.chunk(f1, f2))
 
     local e1a = evo.entity():set(f1, 1):build()
     local e1b = evo.entity():set(f1, 2):build()
@@ -6692,5 +6692,418 @@ do
         local c12_es, c12_ec = evo.entities(c12)
         assert(c12_es and #c12_es == 2 and c12_ec == 2)
         assert(c12_es[1] == e1a and c12_es[2] == e1b)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local c1 = assert(evo.chunk(f1))
+    assert(evo.set(f2, f1))
+    assert(evo.destroy(f1))
+    do
+        assert(not evo.is_alive(f1))
+        assert(evo.is_alive(f2))
+        assert(evo.is_empty(f2))
+
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+    end
+end
+
+do
+    local f1 = evo.id()
+    local c1 = assert(evo.chunk(f1))
+    assert(evo.set(f1, f1))
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    local c12 = assert(evo.chunk(f1, f2))
+    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f1, f1))
+    assert(evo.set(f2, f1))
+    assert(evo.set(f2, f2))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 1 and c12_ec == 1)
+        assert(c12_es[1] == f2)
+    end
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f2)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 0 and c12_ec == 0)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    local c12 = assert(evo.chunk(f1, f2))
+    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f1, f1))
+    assert(evo.set(f2, f1))
+    assert(evo.set(f2, f2))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 1 and c12_ec == 1)
+        assert(c12_es[1] == f2)
+    end
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 0 and c12_ec == 0)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    assert(evo.set(f2, f1))
+    assert(evo.set(f3, f2))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es[1] == f2)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f3)
+    end
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f3)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f2, f1))
+    assert(evo.set(f3, f2))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es[1] == f2)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f3)
+    end
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f3)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+    local c1 = assert(evo.chunk(f1))
+    local c2 = assert(evo.chunk(f2))
+    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f2, f1))
+    assert(evo.set(f3, f2))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es[1] == f2)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es[1] == f3)
+    end
+    assert(evo.destroy(f1))
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+
+        local c2_es, c2_ec = evo.entities(c2)
+        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+    end
+end
+
+do
+    local f1, f2, f3, f4, ft = evo.id(5)
+    assert(evo.set(f1, ft))
+    assert(evo.set(f2, ft))
+    assert(evo.set(f3, ft))
+    assert(evo.set(f3, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    local qt = evo.query():include(ft):build()
+
+    local c4 = assert(evo.chunk(f4))
+    local c14 = assert(evo.chunk(f1, f4))
+    local c24 = assert(evo.chunk(f2, f4))
+    local c234 = assert(evo.chunk(f2, f3, f4))
+    local c124 = assert(evo.chunk(f1, f2, f4))
+
+    local e14 = evo.entity():set(f1, 1):set(f4, 2):build()
+    local e24 = evo.entity():set(f2, 3):set(f4, 4):build()
+    local e234 = evo.entity():set(f2, 5):set(f3, 6):set(f4, 7):build()
+    local e124 = evo.entity():set(f1, 8):set(f2, 6):set(f4, 9):build()
+
+    assert(evo.batch_destroy(qt))
+
+    do
+        local c4_es, c4_ec = evo.entities(c4)
+        assert(c4_es and #c4_es == 3 and c4_ec == 3)
+        assert(c4_es[1] == e14 and c4_es[2] == e24 and c4_es[3] == e124)
+    end
+
+    assert(#evo.entities(c14) == 0)
+    assert(#evo.entities(c24) == 0)
+    assert(#evo.entities(c124) == 0)
+    assert(#evo.entities(c234) == 0)
+
+    assert(evo.is_alive(e14) and not evo.is_empty(e14))
+    assert(evo.is_alive(e24) and not evo.is_empty(e24))
+    assert(not evo.is_alive(e234) and evo.is_empty(e234))
+    assert(evo.is_alive(e124) and not evo.is_empty(e124))
+end
+
+do
+    local f1 = evo.id()
+    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f1, f1, f1))
+
+    local remove_count = 0
+    assert(evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        assert(e == f1)
+        assert(f == f1)
+        assert(c == f1)
+        remove_count = remove_count + 1
+    end))
+
+    local c1 = assert(evo.chunk(f1))
+
+    assert(evo.destroy(f1))
+
+    do
+        assert(not evo.is_alive(f1))
+        assert(remove_count == 1)
+
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+    end
+end
+
+do
+    local f1 = evo.id()
+    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f1, f1, f1))
+
+    local remove_count = 0
+    assert(evo.set(f1, evo.ON_REMOVE, function(e, f, c)
+        assert(e == f1)
+        assert(f == f1)
+        assert(c == f1)
+        remove_count = remove_count + 1
+    end))
+
+    local c1 = assert(evo.chunk(f1))
+
+    assert(evo.destroy(f1))
+
+    do
+        assert(not evo.is_alive(f1))
+        assert(remove_count == 1)
+
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    assert(evo.set(f1, evo.NAME, 'f1'))
+    assert(evo.set(f2, evo.NAME, 'f2'))
+    assert(evo.set(f3, evo.NAME, 'f3'))
+
+    local c1 = evo.chunk(f1)
+    local c12 = evo.chunk(f1, f2)
+    local c13 = evo.chunk(f1, f3)
+    local c123 = evo.chunk(f1, f2, f3)
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    local e123a = evo.entity():set(f1, 7):set(f2, 8):set(f3, 9):build()
+    local e123b = evo.entity():set(f1, 10):set(f2, 11):set(f3, 12):build()
+
+    assert(evo.destroy(f2))
+
+    do
+        assert(c1 and c12 and c13 and c123)
+    end
+
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1 and c1_es and c1_ec)
+        assert(c1_ec == 4 and #c1_es == 4)
+        assert(c1_es[1] == e1a and c1_es[2] == e1b and c1_es[3] == e12a and c1_es[4] == e12b)
+    end
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12 and c12_es and c12_ec)
+        assert(c12_ec == 0 and #c12_es == 0)
+    end
+
+    do
+        local c13_es, c13_ec = evo.entities(c13)
+        assert(c13 and c13_es and c13_ec)
+        assert(c13_ec == 2 and #c13_es == 2)
+        assert(c13_es[1] == e123a and c13_es[2] == e123b)
+    end
+
+    do
+        local c123_es, c123_ec = evo.entities(c123)
+        assert(c123 and c123_es and c123_ec)
+        assert(c123_ec == 0 and #c123_es == 0)
+    end
+end
+
+do
+    do
+        local f1, f2 = evo.id(2)
+        evo.set(f1, f1)
+        evo.set(f2, f1)
+        evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY)
+        assert(evo.destroy(f1))
+        assert(not evo.is_alive(f1))
+        assert(not evo.is_alive(f2))
+    end
+
+    do
+        local f1, f2 = evo.id(2)
+        evo.set(f1, f1)
+        evo.set(f2, f1)
+        evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY)
+        assert(evo.destroy(f1))
+        assert(not evo.is_alive(f1))
+        assert(evo.is_alive(f2) and evo.is_empty(f2))
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY)
+
+    local e12a = evo.entity():set(f1, 1):set(f2, 2):build()
+    local e12b = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e_e12a_e12b = evo.entity():set(e12a, 11):set(e12b, 22):build()
+
+    local e2a = evo.entity():set(f2, 5):build()
+    local e2b = evo.entity():set(f2, 6):build()
+    local e_e2a_e2b = evo.entity():set(e2a, 55):set(e2b, 66):build()
+
+    assert(evo.destroy(f1))
+
+    do
+        assert(not evo.is_alive(e12a) and not evo.is_alive(e12b))
+        assert(evo.is_alive(e_e12a_e12b) and evo.is_empty(e_e12a_e12b))
+
+        assert(evo.is_alive(e2a) and evo.is_alive(e2b))
+        assert(evo.is_alive(e_e2a_e2b) and not evo.is_empty(e_e2a_e2b))
+    end
+
+    do
+        local c2, c2_es, c2_ec = evo.chunk(f2)
+        assert(c2 and c2_es and c2_ec)
+        assert(#c2_es == 2 and c2_ec == 2)
+        assert(c2_es[1] == e2a and c2_es[2] == e2b)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    evo.set(f1, evo.NAME, "f1")
+    evo.set(f2, evo.NAME, "f2")
+
+    do
+        local c12 = evo.chunk(f1, f2)
+
+        local f3 = evo.id()
+        evo.set(f3, evo.TAG)
+        local c123 = evo.chunk(f2, f1, f3)
+        evo.spawn_at(c123)
+
+        assert(c12, c123)
+    end
+
+    evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY)
+
+    local e12a = evo.entity():set(f1, 1):set(f2, 2):build()
+    local e12b = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e_e12a_e12b = evo.entity():set(e12a, 11):set(e12b, 22):build()
+
+    local e2a = evo.entity():set(f2, 5):build()
+    local e2b = evo.entity():set(f2, 6):build()
+    local e_e2a_e2b = evo.entity():set(e2a, 55):set(e2b, 66):build()
+
+    assert(evo.destroy(f1))
+
+    do
+        assert(evo.is_alive(e12a) and evo.is_alive(e12b))
+        assert(evo.is_alive(e_e12a_e12b) and not evo.is_empty(e_e12a_e12b))
+        assert(evo.is_alive(e2a) and evo.is_alive(e2b))
+        assert(evo.is_alive(e_e2a_e2b) and not evo.is_empty(e_e2a_e2b))
+    end
+
+    do
+        local c2, c2_es, c2_ec = evo.chunk(f2)
+        assert(c2 and c2_es and c2_ec)
+        assert(#c2_es == 4 and c2_ec == 4)
+        assert(c2_es[1] == e2a and c2_es[2] == e2b and c2_es[3] == e12a and c2_es[4] == e12b)
     end
 end
