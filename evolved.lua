@@ -1721,6 +1721,10 @@ __chunk_assign = function(chunk, fragment, ...)
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
 
+    if chunk_entity_count == 0 then
+        return 0
+    end
+
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
@@ -1846,6 +1850,10 @@ __chunk_insert = function(old_chunk, fragment, ...)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_component_count = old_chunk.__component_count
     local old_component_storages = old_chunk.__component_storages
@@ -2001,7 +2009,7 @@ __chunk_insert = function(old_chunk, fragment, ...)
         end
     end
 
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -2028,6 +2036,10 @@ __chunk_remove = function(old_chunk, ...)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_indices = old_chunk.__component_indices
@@ -2135,7 +2147,7 @@ __chunk_remove = function(old_chunk, ...)
         __detach_all_entities(old_chunk)
     end
 
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -2149,6 +2161,10 @@ __chunk_clear = function(chunk)
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
@@ -2198,7 +2214,7 @@ __chunk_clear = function(chunk)
         __detach_all_entities(chunk)
     end
 
-    __structural_changes = __structural_changes + chunk_entity_count
+    __structural_changes = __structural_changes + 1
     return chunk_entity_count
 end
 
@@ -2212,6 +2228,10 @@ __chunk_destroy = function(chunk)
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
@@ -2282,7 +2302,7 @@ __chunk_destroy = function(chunk)
         __release_table(__table_pool_tag.fragment_list, purging_policies)
     end
 
-    __structural_changes = __structural_changes + chunk_entity_count
+    __structural_changes = __structural_changes + 1
     return chunk_entity_count
 end
 
@@ -2309,6 +2329,10 @@ __chunk_multi_set = function(old_chunk, fragments, components)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_count = old_chunk.__component_count
@@ -2602,7 +2626,7 @@ __chunk_multi_set = function(old_chunk, fragments, components)
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
 
-        __structural_changes = __structural_changes + old_entity_count
+        __structural_changes = __structural_changes + 1
     end
 
     return old_entity_count
@@ -2629,6 +2653,10 @@ __chunk_multi_assign = function(chunk, fragments, components)
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_fragment_set = chunk.__fragment_set
     local chunk_component_indices = chunk.__component_indices
@@ -2740,6 +2768,10 @@ __chunk_multi_insert = function(old_chunk, fragments, components)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_count = old_chunk.__component_count
@@ -2882,7 +2914,7 @@ __chunk_multi_insert = function(old_chunk, fragments, components)
 
     __release_table(__table_pool_tag.fragment_set, inserted_set)
 
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -2908,6 +2940,10 @@ __chunk_multi_remove = function(old_chunk, fragments)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_indices = old_chunk.__component_indices
@@ -3015,7 +3051,7 @@ __chunk_multi_remove = function(old_chunk, fragments)
         __detach_all_entities(old_chunk)
     end
 
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -4617,6 +4653,8 @@ __evolved_set = function(entity, fragment, ...)
         do
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
         end
 
         do
@@ -4664,8 +4702,6 @@ __evolved_set = function(entity, fragment, ...)
                 end
             end
         end
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -4860,6 +4896,8 @@ __evolved_insert = function(entity, fragment, ...)
         do
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
         end
 
         do
@@ -4907,8 +4945,6 @@ __evolved_insert = function(entity, fragment, ...)
                 end
             end
         end
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5023,9 +5059,9 @@ __evolved_remove = function(entity, ...)
 
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_chunk and new_chunk.__entity_count
-        end
 
-        __structural_changes = __structural_changes + 1
+            __structural_changes = __structural_changes + 1
+        end
     end
 
     __commit()
@@ -5323,6 +5359,8 @@ __evolved_multi_set = function(entity, fragments, components)
         do
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
         end
 
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
@@ -5424,8 +5462,6 @@ __evolved_multi_set = function(entity, fragments, components)
         end
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5636,6 +5672,8 @@ __evolved_multi_insert = function(entity, fragments, components)
         do
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
         end
 
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
@@ -5690,8 +5728,6 @@ __evolved_multi_insert = function(entity, fragments, components)
         end
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5806,9 +5842,9 @@ __evolved_multi_remove = function(entity, fragments)
 
             entity_chunks[entity_index] = new_chunk
             entity_places[entity_index] = new_chunk and new_chunk.__entity_count
-        end
 
-        __structural_changes = __structural_changes + 1
+            __structural_changes = __structural_changes + 1
+        end
     end
 
     __commit()
