@@ -7107,3 +7107,15 @@ do
         assert(c2_es[1] == e2a and c2_es[2] == e2b and c2_es[3] == e12a and c2_es[4] == e12b)
     end
 end
+
+do
+    local fb = evo.fragment()
+
+    local f1 = fb:build()
+    local f2 = fb:on_destroy(evo.DESTROY_ENTITY_POLICY):build()
+    local f3 = fb:on_destroy(evo.REMOVE_FRAGMENT_POLICY):build()
+
+    assert(evo.get(f1, evo.ON_DESTROY) == nil)
+    assert(evo.get(f2, evo.ON_DESTROY) == evo.DESTROY_ENTITY_POLICY)
+    assert(evo.get(f3, evo.ON_DESTROY) == evo.REMOVE_FRAGMENT_POLICY)
+end

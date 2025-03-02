@@ -6754,6 +6754,7 @@ end
 ---@field package __on_assign? evolved.set_hook
 ---@field package __on_insert? evolved.set_hook
 ---@field package __on_remove? evolved.remove_hook
+---@field package __on_destroy? evolved.id
 
 ---@class evolved.fragment_builder : evolved.__fragment_builder
 local evolved_fragment_builder = {}
@@ -6773,6 +6774,7 @@ __evolved_fragment = function()
         __on_assign = nil,
         __on_insert = nil,
         __on_remove = nil,
+        __on_destroy = nil,
     }
     ---@cast builder evolved.fragment_builder
     return __lua_setmetatable(builder, evolved_fragment_builder)
@@ -6840,6 +6842,13 @@ function evolved_fragment_builder:on_remove(on_remove)
     return self
 end
 
+---@param on_destroy evolved.id
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_destroy(on_destroy)
+    self.__on_destroy = on_destroy
+    return self
+end
+
 ---@return evolved.fragment fragment
 ---@return boolean is_deferred
 function evolved_fragment_builder:build()
@@ -6853,6 +6862,7 @@ function evolved_fragment_builder:build()
     local on_assign = self.__on_assign
     local on_insert = self.__on_insert
     local on_remove = self.__on_remove
+    local on_destroy = self.__on_destroy
 
     self.__tag = false
     self.__name = nil
@@ -6864,6 +6874,7 @@ function evolved_fragment_builder:build()
     self.__on_assign = nil
     self.__on_insert = nil
     self.__on_remove = nil
+    self.__on_destroy = nil
 
     local fragment = __evolved_id()
 
@@ -6923,6 +6934,12 @@ function evolved_fragment_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __ON_REMOVE
         component_list[component_count] = on_remove
+    end
+
+    if on_destroy then
+        component_count = component_count + 1
+        fragment_list[component_count] = __ON_DESTROY
+        component_list[component_count] = on_destroy
     end
 
     local _, is_deferred = __evolved_multi_set(fragment, fragment_list, component_list)

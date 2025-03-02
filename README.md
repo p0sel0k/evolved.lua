@@ -124,6 +124,7 @@ fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment
 fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
 fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder
 fragment_builder:on_remove :: {entity, fragment} -> fragment_builder
+fragment_builder:on_destroy :: id -> fragment_builder
 fragment_builder:build :: fragment, boolean
 ```
 
