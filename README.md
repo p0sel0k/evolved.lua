@@ -94,7 +94,9 @@ batch_multi_remove :: query, fragment[] -> integer, boolean
 
 chunk :: fragment... -> chunk?, entity[]?, integer?
 select :: chunk, fragment... -> component[]...
+
 entities :: chunk -> entity[], integer
+fragments :: chunk -> fragment[], integer
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?

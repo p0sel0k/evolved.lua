@@ -635,6 +635,7 @@ local __evolved_batch_multi_remove
 local __evolved_chunk
 local __evolved_select
 local __evolved_entities
+local __evolved_fragments
 
 local __evolved_each
 local __evolved_execute
@@ -6443,6 +6444,14 @@ __evolved_entities = function(chunk)
     return chunk.__entities, chunk.__entity_count
 end
 
+---@param chunk evolved.chunk
+---@return evolved.fragment[] fragments
+---@return integer fragment_count
+---@nodiscard
+__evolved_fragments = function(chunk)
+    return chunk.__fragment_list, chunk.__fragment_count
+end
+
 ---@param entity evolved.entity
 ---@return evolved.each_iterator iterator
 ---@return evolved.each_state? iterator_state
@@ -7755,7 +7764,9 @@ evolved.batch_multi_remove = __evolved_batch_multi_remove
 
 evolved.chunk = __evolved_chunk
 evolved.select = __evolved_select
+
 evolved.entities = __evolved_entities
+evolved.fragments = __evolved_fragments
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute

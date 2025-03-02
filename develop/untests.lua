@@ -7119,3 +7119,19 @@ do
     assert(evo.get(f2, evo.ON_DESTROY) == evo.DESTROY_ENTITY_POLICY)
     assert(evo.get(f3, evo.ON_DESTROY) == evo.REMOVE_FRAGMENT_POLICY)
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    local c1 = evo.chunk(f1)
+    local c23 = evo.chunk(f2, f3)
+
+    assert(c1 and c23)
+
+    assert(#evo.fragments(c1) == 1)
+    assert(evo.fragments(c1)[1] == f1)
+
+    assert(#evo.fragments(c23) == 2)
+    assert(evo.fragments(c23)[1] == f2)
+    assert(evo.fragments(c23)[2] == f3)
+end
