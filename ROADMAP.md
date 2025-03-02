@@ -2,6 +2,7 @@
 
 ## Backlog
 
+- add manual gc for unreachable chunks
 - add destroing policies (fragments, phases, systems)
 - add debug view for chunks with help of NAME fragment traits
 

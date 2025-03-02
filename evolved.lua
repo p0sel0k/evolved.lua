@@ -1,6 +1,3 @@
----@diagnostic disable: unused-function
----@diagnostic disable: unused-local
-
 local evolved = {
     __HOMEPAGE = 'https://github.com/BlackMATov/evolved.lua',
     __DESCRIPTION = 'Evolved ECS (Entity-Component-System) for Lua',
@@ -60,7 +57,7 @@ local evolved = {
 ---@field package __entities evolved.entity[]
 ---@field package __entity_count integer
 ---@field package __fragment evolved.fragment
----@field package __fragment_set table<evolved.fragment, boolean>
+---@field package __fragment_set table<evolved.fragment, integer>
 ---@field package __fragment_list evolved.fragment[]
 ---@field package __fragment_count integer
 ---@field package __component_count integer
@@ -127,11 +124,15 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 
 local __lua_assert = assert
 local __lua_error = error
+local __lua_ipairs = ipairs
 local __lua_next = next
+local __lua_pairs = pairs
 local __lua_pcall = pcall
+local __lua_print = print
 local __lua_select = select
 local __lua_setmetatable = setmetatable
 local __lua_string_format = string.format
+local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -421,6 +422,7 @@ end
 
 ---@param al evolved.assoc_list
 ---@param item any
+---@diagnostic disable-next-line: unused-function, unused-local
 local function __assoc_list_remove_unordered(al, item)
     local al_item_set = al.__item_set
 
@@ -544,6 +546,7 @@ local __ON_SET = __acquire_id()
 local __ON_ASSIGN = __acquire_id()
 local __ON_INSERT = __acquire_id()
 local __ON_REMOVE = __acquire_id()
+local __ON_DESTROY = __acquire_id()
 
 local __PHASE = __acquire_id()
 local __AFTER = __acquire_id()
@@ -554,13 +557,16 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
+local __DESTROY_ENTITY_POLICY = __acquire_id()
+local __REMOVE_FRAGMENT_POLICY = __acquire_id()
+
 ---
 ---
 ---
 ---
 ---
 
----@type table<evolved.fragment, boolean>
+---@type table<evolved.fragment, integer>
 local __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
     __newindex = function() __lua_error('attempt to modify empty fragment set') end
 })
@@ -628,6 +634,7 @@ local __evolved_batch_multi_remove
 
 local __evolved_chunk
 local __evolved_select
+local __evolved_entities
 
 local __evolved_each
 local __evolved_execute
@@ -648,6 +655,21 @@ local __evolved_system
 ---
 ---
 ---
+
+---@param id evolved.id
+---@return string
+---@nodiscard
+local function __id_name(id)
+    ---@type string?
+    local id_name = __evolved_get(id, __NAME)
+
+    if id_name then
+        return id_name
+    end
+
+    local id_index, id_version = __evolved_unpack(id)
+    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
+end
 
 ---@param ... any component arguments
 ---@return evolved.component
@@ -727,55 +749,116 @@ local function __trace_fragment_chunks(fragment, trace, ...)
     __release_table(__table_pool_tag.chunk_stack, chunk_stack, true)
 end
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param new_component evolved.component
----@param old_component evolved.component
-local function __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
-    ---@type evolved.set_hook?, evolved.assign_hook?
-    local on_set, on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
-    if on_set then on_set(entity, fragment, new_component, old_component) end
-    if on_assign then on_assign(entity, fragment, new_component, old_component) end
+---
+---
+---
+---
+---
+
+local __chunk_mt = {} ---@type metatable
+
+local __chunk_fragment_set_mt = {} ---@type metatable
+local __chunk_fragment_list_mt = {} ---@type metatable
+
+local __chunk_component_indices_mt = {} ---@type metatable
+local __chunk_component_storages_mt = {} ---@type metatable
+local __chunk_component_fragments_mt = {} ---@type metatable
+
+---@param self evolved.chunk
+function __chunk_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment_index, fragment in __lua_ipairs(self.__fragment_list) do
+        items[fragment_index] = __id_name(fragment)
+    end
+
+    return __lua_string_format('<%s>', __lua_table_concat(items, ', '))
 end
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param new_component evolved.component
-local function __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
-    ---@type evolved.set_hook?, evolved.insert_hook?
-    local on_set, on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
-    if on_set then on_set(entity, fragment, new_component) end
-    if on_insert then on_insert(entity, fragment, new_component) end
+---@param self table<evolved.fragment, integer>
+function __chunk_fragment_set_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment, fragment_index in __lua_pairs(self) do
+        items[fragment_index] = __lua_string_format('(%s -> %d)',
+            __id_name(fragment), fragment_index)
+    end
+
+    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
 end
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param old_component evolved.component
-local function __call_fragment_remove_hook(entity, fragment, old_component)
-    ---@type evolved.remove_hook?
-    local on_remove = __evolved_get(fragment, __ON_REMOVE)
-    if on_remove then on_remove(entity, fragment, old_component) end
+---@param self evolved.fragment[]
+function __chunk_fragment_list_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for fragment_index, fragment in __lua_ipairs(self) do
+        items[fragment_index] = __lua_string_format('(%d -> %s)',
+            fragment_index, __id_name(fragment))
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
 end
 
----
----
----
----
----
+---@param self table<evolved.fragment, integer>
+function __chunk_component_indices_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_fragment, component_index in __lua_pairs(self) do
+        items[component_index] = __lua_string_format('(%s -> %d)',
+            __id_name(component_fragment), component_index)
+    end
+
+    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+end
+
+---@param self evolved.component_storage[]
+function __chunk_component_storages_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_index, component_storage in __lua_ipairs(self) do
+        items[component_index] = __lua_string_format('(%d -> #%d)',
+            component_index, #component_storage)
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+end
+
+---@param self evolved.fragment[]
+function __chunk_component_fragments_mt.__tostring(self)
+    local items = {} ---@type string[]
+
+    for component_index, component_fragment in __lua_ipairs(self) do
+        items[component_index] = __lua_string_format('(%d -> %s)',
+            component_index, __id_name(component_fragment))
+    end
+
+    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+end
 
 ---@param chunk_parent? evolved.chunk
 ---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
 local function __new_chunk(chunk_parent, chunk_fragment)
-    local chunk_fragment_set = {} ---@type table<evolved.fragment, boolean>
-    local chunk_fragment_list = {} ---@type evolved.fragment[]
+    ---@type table<evolved.fragment, integer>
+    local chunk_fragment_set = __lua_setmetatable({}, __chunk_fragment_set_mt)
 
-    local chunk_fragment_count = 0 ---@type integer
-    local chunk_component_count = 0 ---@type integer
+    ---@type evolved.fragment[]
+    local chunk_fragment_list = __lua_setmetatable({}, __chunk_fragment_list_mt)
 
-    local chunk_component_indices = {} ---@type table<evolved.fragment, integer>
-    local chunk_component_storages = {} ---@type evolved.component_storage[]
-    local chunk_component_fragments = {} ---@type evolved.fragment[]
+    ---@type integer
+    local chunk_fragment_count = 0
+
+    ---@type integer
+    local chunk_component_count = 0
+
+    ---@type table<evolved.fragment, integer>
+    local chunk_component_indices = __lua_setmetatable({}, __chunk_component_indices_mt)
+
+    ---@type evolved.component_storage[]
+    local chunk_component_storages = __lua_setmetatable({}, __chunk_component_storages_mt)
+
+    ---@type evolved.fragment[]
+    local chunk_component_fragments = __lua_setmetatable({}, __chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
@@ -790,7 +873,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
     ---@type evolved.chunk
-    local chunk = {
+    local chunk = __lua_setmetatable({
         __parent = chunk_parent,
         __children = {},
         __child_count = 0,
@@ -810,7 +893,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
-    }
+    }, __chunk_mt)
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -820,7 +903,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
             local parent_fragment = parent_fragment_list[parent_fragment_index]
 
             chunk_fragment_count = chunk_fragment_count + 1
-            chunk_fragment_set[parent_fragment] = true
+            chunk_fragment_set[parent_fragment] = chunk_fragment_count
             chunk_fragment_list[chunk_fragment_count] = parent_fragment
 
             if not __evolved_has(parent_fragment, __TAG) then
@@ -843,7 +926,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
     do
         chunk_fragment_count = chunk_fragment_count + 1
-        chunk_fragment_set[chunk_fragment] = true
+        chunk_fragment_set[chunk_fragment] = chunk_fragment_count
         chunk_fragment_list[chunk_fragment_count] = chunk_fragment
 
         if not __evolved_has(chunk_fragment, __TAG) then
@@ -1059,7 +1142,7 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_fragment(chunk, fragment)
-    return chunk.__fragment_set[fragment]
+    return chunk.__fragment_set[fragment] ~= nil
 end
 
 ---@param chunk evolved.chunk
@@ -1230,9 +1313,6 @@ local __defer_spawn_entity_at
 local __defer_spawn_entity_with
 
 local __defer_call_hook
-local __defer_assign_hook
-local __defer_insert_hook
-local __defer_remove_hook
 
 ---
 ---
@@ -1316,6 +1396,15 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
 
     chunk_entities[place] = entity
 
+    do
+        local entity_index = entity % 0x100000
+
+        __entity_chunks[entity_index] = chunk
+        __entity_places[entity_index] = place
+
+        __structural_changes = __structural_changes + 1
+    end
+
     if chunk_has_defaults_or_constructs then
         for component_index = 1, chunk_component_count do
             local fragment = chunk_component_fragments[component_index]
@@ -1385,6 +1474,10 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
 
         for fragment_index = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[fragment_index]
+
+            ---@type evolved.set_hook?, evolved.insert_hook?
+            local fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
+
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
@@ -1392,19 +1485,24 @@ local function __spawn_entity_at(entity, chunk, fragments, components)
 
                 local new_component = component_storage[place]
 
-                __defer_insert_hook(entity, fragment, new_component)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                end
             else
-                __defer_insert_hook(entity, fragment)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                end
             end
         end
     end
-
-    local entity_index = entity % 0x100000
-
-    __entity_chunks[entity_index] = chunk
-    __entity_places[entity_index] = place
-
-    __structural_changes = __structural_changes + 1
 end
 
 ---@param entity evolved.entity
@@ -1429,6 +1527,15 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
     chunk.__entity_count = place
 
     chunk_entities[place] = entity
+
+    do
+        local entity_index = entity % 0x100000
+
+        __entity_chunks[entity_index] = chunk
+        __entity_places[entity_index] = place
+
+        __structural_changes = __structural_changes + 1
+    end
 
     if chunk_has_defaults_or_constructs then
         for i = 1, #fragments do
@@ -1476,6 +1583,10 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
 
         for fragment_index = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[fragment_index]
+
+            ---@type evolved.set_hook?, evolved.insert_hook?
+            local fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
+
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
@@ -1483,19 +1594,108 @@ local function __spawn_entity_with(entity, chunk, fragments, components)
 
                 local new_component = component_storage[place]
 
-                __defer_insert_hook(entity, fragment, new_component)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                end
             else
-                __defer_insert_hook(entity, fragment)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                end
             end
         end
     end
+end
 
-    local entity_index = entity % 0x100000
+---
+---
+---
+---
+---
 
-    __entity_chunks[entity_index] = chunk
-    __entity_places[entity_index] = place
+local __chunk_assign
+local __chunk_insert
+local __chunk_remove
+local __chunk_clear
+local __chunk_destroy
 
-    __structural_changes = __structural_changes + 1
+local __chunk_multi_set
+local __chunk_multi_assign
+local __chunk_multi_insert
+local __chunk_multi_remove
+
+---
+---
+---
+---
+---
+
+---@param fragment evolved.fragment
+---@param policy evolved.id
+---@return integer purged_count
+local function __purge_fragment(fragment, policy)
+    if __defer_depth <= 0 then
+        __lua_error('purge operations should be deferred')
+    end
+
+    local minor_chunks = __minor_chunks[fragment]
+
+    if not minor_chunks then
+        return 0
+    end
+
+    local purged_count = 0
+
+    if policy == __DESTROY_ENTITY_POLICY then
+        for minor_chunk_index = #minor_chunks, 1, -1 do
+            local minor_chunk = minor_chunks[minor_chunk_index]
+            purged_count = purged_count + __chunk_destroy(minor_chunk)
+        end
+    elseif policy == __REMOVE_FRAGMENT_POLICY then
+        for minor_chunk_index = #minor_chunks, 1, -1 do
+            local minor_chunk = minor_chunks[minor_chunk_index]
+            purged_count = purged_count + __chunk_remove(minor_chunk, fragment)
+        end
+    else
+        __lua_print(__lua_string_format('| evolved.lua | unknown ON_DESTROY policy (%s) on (%s)',
+            __id_name(policy), __id_name(fragment)))
+    end
+
+    return purged_count
+end
+
+---@param fragments evolved.fragment[]
+---@param policies evolved.id[]
+---@param count integer
+---@return integer purged_count
+local function __purge_fragments(fragments, policies, count)
+    if __defer_depth <= 0 then
+        __lua_error('purge operations should be deferred')
+    end
+
+    local purged_count = 0
+
+    for index = 1, count do
+        local fragment, policy = fragments[index], policies[index]
+
+        if policy == __DESTROY_ENTITY_POLICY then
+            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_ENTITY_POLICY)
+        elseif policy == __REMOVE_FRAGMENT_POLICY then
+            purged_count = purged_count + __purge_fragment(fragment, __REMOVE_FRAGMENT_POLICY)
+        else
+            __lua_print(__lua_string_format('| evolved.lua | unknown ON_DESTROY policy (%s) on (%s)',
+                __id_name(policy), __id_name(fragment)))
+        end
+    end
+
+    return purged_count
 end
 
 ---
@@ -1509,7 +1709,7 @@ end
 ---@param ... any component arguments
 ---@return integer assigned_count
 ---@nodiscard
-local function __chunk_assign(chunk, fragment, ...)
+__chunk_assign = function(chunk, fragment, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1520,6 +1720,10 @@ local function __chunk_assign(chunk, fragment, ...)
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
@@ -1633,7 +1837,7 @@ end
 ---@param ... any component arguments
 ---@return integer inserted_count
 ---@nodiscard
-local function __chunk_insert(old_chunk, fragment, ...)
+__chunk_insert = function(old_chunk, fragment, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1646,6 +1850,10 @@ local function __chunk_insert(old_chunk, fragment, ...)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_component_count = old_chunk.__component_count
     local old_component_storages = old_chunk.__component_storages
@@ -1702,6 +1910,20 @@ local function __chunk_insert(old_chunk, fragment, ...)
         end
 
         new_chunk.__entity_count = new_entity_count + old_entity_count
+    end
+
+    do
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
+        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+            local entity = new_entities[new_place]
+            local entity_index = entity % 0x100000
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+        end
+
+        __detach_all_entities(old_chunk)
     end
 
     if fragment_on_set or fragment_on_insert then
@@ -1787,19 +2009,7 @@ local function __chunk_insert(old_chunk, fragment, ...)
         end
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
-    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-        local entity = new_entities[new_place]
-        local entity_index = entity % 0x100000
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-    end
-
-    __detach_all_entities(old_chunk)
-
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -1807,7 +2017,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return integer removed_count
 ---@nodiscard
-local function __chunk_remove(old_chunk, ...)
+__chunk_remove = function(old_chunk, ...)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -1826,6 +2036,10 @@ local function __chunk_remove(old_chunk, ...)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_indices = old_chunk.__component_indices
@@ -1867,9 +2081,6 @@ local function __chunk_remove(old_chunk, ...)
         __release_table(__table_pool_tag.fragment_set, removed_set)
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
     if new_chunk then
         local new_entities = new_chunk.__entities
         local new_entity_count = new_chunk.__entity_count
@@ -1909,37 +2120,51 @@ local function __chunk_remove(old_chunk, ...)
             new_chunk.__entity_count = new_entity_count + old_entity_count
         end
 
-        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-            local entity = new_entities[new_place]
-            local entity_index = entity % 0x100000
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
+        do
+            local entity_chunks = __entity_chunks
+            local entity_places = __entity_places
+
+            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                local entity = new_entities[new_place]
+                local entity_index = entity % 0x100000
+                entity_chunks[entity_index] = new_chunk
+                entity_places[entity_index] = new_place
+            end
+
+            __detach_all_entities(old_chunk)
         end
     else
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
         for old_place = 1, old_entity_count do
             local entity = old_entities[old_place]
             local entity_index = entity % 0x100000
             entity_chunks[entity_index] = nil
             entity_places[entity_index] = nil
         end
+
+        __detach_all_entities(old_chunk)
     end
 
-    __detach_all_entities(old_chunk)
-
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
 ---@param chunk evolved.chunk
 ---@return integer cleared_count
 ---@nodiscard
-local function __chunk_clear(chunk)
+__chunk_clear = function(chunk)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
@@ -1975,32 +2200,38 @@ local function __chunk_clear(chunk)
         end
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
+    do
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
 
-    for place = 1, chunk_entity_count do
-        local entity = chunk_entities[place]
-        local entity_index = entity % 0x100000
-        entity_chunks[entity_index] = nil
-        entity_places[entity_index] = nil
+        for place = 1, chunk_entity_count do
+            local entity = chunk_entities[place]
+            local entity_index = entity % 0x100000
+            entity_chunks[entity_index] = nil
+            entity_places[entity_index] = nil
+        end
+
+        __detach_all_entities(chunk)
     end
 
-    __detach_all_entities(chunk)
-
-    __structural_changes = __structural_changes + chunk_entity_count
+    __structural_changes = __structural_changes + 1
     return chunk_entity_count
 end
 
 ---@param chunk evolved.chunk
 ---@return integer destroyed_count
 ---@nodiscard
-local function __chunk_destroy(chunk)
+__chunk_destroy = function(chunk)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
@@ -2036,20 +2267,42 @@ local function __chunk_destroy(chunk)
         end
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
+    do
+        local purging_fragments = __acquire_table(__table_pool_tag.fragment_list)
+        local purging_policies = __acquire_table(__table_pool_tag.fragment_list)
+        local purging_count = 0
 
-    for place = 1, chunk_entity_count do
-        local entity = chunk_entities[place]
-        local entity_index = entity % 0x100000
-        entity_chunks[entity_index] = nil
-        entity_places[entity_index] = nil
-        __release_id(entity)
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
+        for place = 1, chunk_entity_count do
+            local entity = chunk_entities[place]
+            local entity_index = entity % 0x100000
+
+            if __minor_chunks[entity] then
+                purging_count = purging_count + 1
+                purging_policies[purging_count] = __chunk_get_components(chunk, place, __ON_DESTROY)
+                    or __REMOVE_FRAGMENT_POLICY
+                purging_fragments[purging_count] = entity
+            end
+
+            entity_chunks[entity_index] = nil
+            entity_places[entity_index] = nil
+
+            __release_id(entity)
+        end
+
+        __detach_all_entities(chunk)
+
+        if purging_count > 0 then
+            __purge_fragments(purging_fragments, purging_policies, purging_count)
+        end
+
+        __release_table(__table_pool_tag.fragment_list, purging_fragments)
+        __release_table(__table_pool_tag.fragment_list, purging_policies)
     end
 
-    __detach_all_entities(chunk)
-
-    __structural_changes = __structural_changes + chunk_entity_count
+    __structural_changes = __structural_changes + 1
     return chunk_entity_count
 end
 
@@ -2057,7 +2310,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer set_count
-local function __chunk_multi_set(old_chunk, fragments, components)
+__chunk_multi_set = function(old_chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2076,6 +2329,10 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_count = old_chunk.__component_count
@@ -2201,6 +2458,20 @@ local function __chunk_multi_set(old_chunk, fragments, components)
             end
 
             new_chunk.__entity_count = new_entity_count + old_entity_count
+        end
+
+        do
+            local entity_chunks = __entity_chunks
+            local entity_places = __entity_places
+
+            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                local entity = new_entities[new_place]
+                local entity_index = entity % 0x100000
+                entity_chunks[entity_index] = new_chunk
+                entity_places[entity_index] = new_place
+            end
+
+            __detach_all_entities(old_chunk)
         end
 
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
@@ -2355,19 +2626,7 @@ local function __chunk_multi_set(old_chunk, fragments, components)
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
 
-        local entity_chunks = __entity_chunks
-        local entity_places = __entity_places
-
-        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-            local entity = new_entities[new_place]
-            local entity_index = entity % 0x100000
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
-        end
-
-        __detach_all_entities(old_chunk)
-
-        __structural_changes = __structural_changes + old_entity_count
+        __structural_changes = __structural_changes + 1
     end
 
     return old_entity_count
@@ -2377,7 +2636,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer assigned_count
-local function __chunk_multi_assign(chunk, fragments, components)
+__chunk_multi_assign = function(chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2394,6 +2653,10 @@ local function __chunk_multi_assign(chunk, fragments, components)
 
     local chunk_entities = chunk.__entities
     local chunk_entity_count = chunk.__entity_count
+
+    if chunk_entity_count == 0 then
+        return 0
+    end
 
     local chunk_fragment_set = chunk.__fragment_set
     local chunk_component_indices = chunk.__component_indices
@@ -2486,7 +2749,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param components evolved.component[]
 ---@return integer inserted_count
-local function __chunk_multi_insert(old_chunk, fragments, components)
+__chunk_multi_insert = function(old_chunk, fragments, components)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2505,6 +2768,10 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_count = old_chunk.__component_count
@@ -2549,6 +2816,20 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
         end
 
         new_chunk.__entity_count = new_entity_count + old_entity_count
+    end
+
+    do
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
+        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+            local entity = new_entities[new_place]
+            local entity_index = entity % 0x100000
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+        end
+
+        __detach_all_entities(old_chunk)
     end
 
     local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
@@ -2633,26 +2914,14 @@ local function __chunk_multi_insert(old_chunk, fragments, components)
 
     __release_table(__table_pool_tag.fragment_set, inserted_set)
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
-    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-        local entity = new_entities[new_place]
-        local entity_index = entity % 0x100000
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-    end
-
-    __detach_all_entities(old_chunk)
-
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
 ---@param old_chunk evolved.chunk
 ---@param fragments evolved.fragment[]
 ---@return integer removed_count
-local function __chunk_multi_remove(old_chunk, fragments)
+__chunk_multi_remove = function(old_chunk, fragments)
     if __defer_depth <= 0 then
         __lua_error('batched chunk operations should be deferred')
     end
@@ -2671,6 +2940,10 @@ local function __chunk_multi_remove(old_chunk, fragments)
 
     local old_entities = old_chunk.__entities
     local old_entity_count = old_chunk.__entity_count
+
+    if old_entity_count == 0 then
+        return 0
+    end
 
     local old_fragment_set = old_chunk.__fragment_set
     local old_component_indices = old_chunk.__component_indices
@@ -2712,9 +2985,6 @@ local function __chunk_multi_remove(old_chunk, fragments)
         __release_table(__table_pool_tag.fragment_set, removed_set)
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
     if new_chunk then
         local new_entities = new_chunk.__entities
         local new_entity_count = new_chunk.__entity_count
@@ -2754,24 +3024,34 @@ local function __chunk_multi_remove(old_chunk, fragments)
             new_chunk.__entity_count = new_entity_count + old_entity_count
         end
 
-        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-            local entity = new_entities[new_place]
-            local entity_index = entity % 0x100000
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
+        do
+            local entity_chunks = __entity_chunks
+            local entity_places = __entity_places
+
+            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                local entity = new_entities[new_place]
+                local entity_index = entity % 0x100000
+                entity_chunks[entity_index] = new_chunk
+                entity_places[entity_index] = new_place
+            end
+
+            __detach_all_entities(old_chunk)
         end
     else
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
         for old_place = 1, old_entity_count do
             local entity = old_entities[old_place]
             local entity_index = entity % 0x100000
             entity_chunks[entity_index] = nil
             entity_places[entity_index] = nil
         end
+
+        __detach_all_entities(old_chunk)
     end
 
-    __detach_all_entities(old_chunk)
-
-    __structural_changes = __structural_changes + old_entity_count
+    __structural_changes = __structural_changes + 1
     return old_entity_count
 end
 
@@ -2962,11 +3242,8 @@ local __defer_op = {
     spawn_entity_with = 22,
 
     call_hook = 23,
-    assign_hook = 24,
-    insert_hook = 25,
-    remove_hook = 26,
 
-    __count = 26,
+    __count = 23,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
@@ -4065,78 +4342,6 @@ __defer_ops[__defer_op.call_hook] = function(bytes, index)
     return 2 + argument_count
 end
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param new_component evolved.component
----@param old_component evolved.component
-__defer_assign_hook = function(entity, fragment, new_component, old_component)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.assign_hook
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = new_component
-    bytecode[length + 5] = old_component
-
-    __defer_length = length + 5
-end
-
-__defer_ops[__defer_op.assign_hook] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local new_component = bytes[index + 2]
-    local old_component = bytes[index + 3]
-    __call_fragment_set_and_assign_hooks(entity, fragment, new_component, old_component)
-    return 4
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param new_component evolved.component
-__defer_insert_hook = function(entity, fragment, new_component)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.insert_hook
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = new_component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.insert_hook] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local new_component = bytes[index + 2]
-    __call_fragment_set_and_insert_hooks(entity, fragment, new_component)
-    return 3
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param old_component evolved.component
-__defer_remove_hook = function(entity, fragment, old_component)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.remove_hook
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = old_component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.remove_hook] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local old_component = bytes[index + 2]
-    __call_fragment_remove_hook(entity, fragment, old_component)
-    return 3
-end
-
 ---
 ---
 ---
@@ -4348,6 +4553,14 @@ __evolved_set = function(entity, fragment, ...)
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
+    ---@type evolved.set_hook?, evolved.assign_hook?, evolved.insert_hook?
+    local fragment_on_set, fragment_on_assign, fragment_on_insert
+
+    if new_chunk.__has_set_or_assign_hooks or new_chunk.__has_set_or_insert_hooks then
+        fragment_on_set, fragment_on_assign, fragment_on_insert = __evolved_get(fragment,
+            __ON_SET, __ON_ASSIGN, __ON_INSERT)
+    end
+
     __defer()
 
     if old_chunk == new_chunk then
@@ -4362,10 +4575,18 @@ __evolved_set = function(entity, fragment, ...)
             if old_chunk.__has_defaults_or_constructs then
                 local new_component = __component_construct(fragment, ...)
 
-                if old_chunk.__has_set_or_assign_hooks then
+                if fragment_on_set or fragment_on_assign then
                     local old_component = old_component_storage[old_place]
+
                     old_component_storage[old_place] = new_component
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 else
                     old_component_storage[old_place] = new_component
                 end
@@ -4376,17 +4597,29 @@ __evolved_set = function(entity, fragment, ...)
                     new_component = true
                 end
 
-                if old_chunk.__has_set_or_assign_hooks then
+                if fragment_on_set or fragment_on_assign then
                     local old_component = old_component_storage[old_place]
+
                     old_component_storage[old_place] = new_component
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 else
                     old_component_storage[old_place] = new_component
                 end
             end
         else
-            if old_chunk.__has_set_or_assign_hooks then
-                __defer_assign_hook(entity, fragment)
+            if fragment_on_set then
+                __defer_call_hook(fragment_on_set, entity, fragment)
+            end
+
+            if fragment_on_assign then
+                __defer_call_hook(fragment_on_assign, entity, fragment)
             end
         end
     else
@@ -4418,6 +4651,13 @@ __evolved_set = function(entity, fragment, ...)
         end
 
         do
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
+        end
+
+        do
             local new_component_index = new_component_indices[fragment]
 
             if new_component_index then
@@ -4428,8 +4668,12 @@ __evolved_set = function(entity, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk.__has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 else
                     local new_component = ...
@@ -4440,21 +4684,24 @@ __evolved_set = function(entity, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk.__has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 end
             else
-                if new_chunk.__has_set_or_insert_hooks then
-                    __defer_insert_hook(entity, fragment)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment)
                 end
             end
         end
-
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -4496,6 +4743,14 @@ __evolved_assign = function(entity, fragment, ...)
         return false, false
     end
 
+    ---@type evolved.set_hook?, evolved.assign_hook?
+    local fragment_on_set, fragment_on_assign
+
+    if chunk.__has_set_or_assign_hooks then
+        fragment_on_set, fragment_on_assign = __evolved_get(fragment,
+            __ON_SET, __ON_ASSIGN)
+    end
+
     __defer()
 
     do
@@ -4510,10 +4765,18 @@ __evolved_assign = function(entity, fragment, ...)
             if chunk.__has_defaults_or_constructs then
                 local new_component = __component_construct(fragment, ...)
 
-                if chunk.__has_set_or_assign_hooks then
+                if fragment_on_set or fragment_on_assign then
                     local old_component = component_storage[place]
+
                     component_storage[place] = new_component
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 else
                     component_storage[place] = new_component
                 end
@@ -4524,17 +4787,29 @@ __evolved_assign = function(entity, fragment, ...)
                     new_component = true
                 end
 
-                if chunk.__has_set_or_assign_hooks then
+                if fragment_on_set or fragment_on_assign then
                     local old_component = component_storage[place]
+
                     component_storage[place] = new_component
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 else
                     component_storage[place] = new_component
                 end
             end
         else
-            if chunk.__has_set_or_assign_hooks then
-                __defer_assign_hook(entity, fragment)
+            if fragment_on_set then
+                __defer_call_hook(fragment_on_set, entity, fragment)
+            end
+
+            if fragment_on_assign then
+                __defer_call_hook(fragment_on_assign, entity, fragment)
             end
         end
     end
@@ -4580,6 +4855,14 @@ __evolved_insert = function(entity, fragment, ...)
         return false, false
     end
 
+    ---@type evolved.set_hook?, evolved.insert_hook?
+    local fragment_on_set, fragment_on_insert
+
+    if new_chunk.__has_set_or_insert_hooks then
+        fragment_on_set, fragment_on_insert = __evolved_get(fragment,
+            __ON_SET, __ON_INSERT)
+    end
+
     __defer()
 
     do
@@ -4611,6 +4894,13 @@ __evolved_insert = function(entity, fragment, ...)
         end
 
         do
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
+        end
+
+        do
             local new_component_index = new_component_indices[fragment]
 
             if new_component_index then
@@ -4621,8 +4911,12 @@ __evolved_insert = function(entity, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk.__has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 else
                     local new_component = ...
@@ -4633,21 +4927,24 @@ __evolved_insert = function(entity, fragment, ...)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk.__has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 end
             else
-                if new_chunk.__has_set_or_insert_hooks then
-                    __defer_insert_hook(entity, fragment)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_insert then
+                    __defer_call_hook(fragment_on_insert, entity, fragment)
                 end
             end
         end
-
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -4715,14 +5012,19 @@ __evolved_remove = function(entity, ...)
                 if not removed_set[fragment] and old_fragment_set[fragment] then
                     removed_set[fragment] = true
 
-                    local old_component_index = old_component_indices[fragment]
+                    ---@type evolved.remove_hook?
+                    local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
 
-                    if old_component_index then
-                        local old_component_storage = old_component_storages[old_component_index]
-                        local old_component = old_component_storage[old_place]
-                        __defer_remove_hook(entity, fragment, old_component)
-                    else
-                        __defer_remove_hook(entity, fragment)
+                    if fragment_on_remove then
+                        local old_component_index = old_component_indices[fragment]
+
+                        if old_component_index then
+                            local old_component_storage = old_component_storages[old_component_index]
+                            local old_component = old_component_storage[old_place]
+                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                        else
+                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                        end
                     end
                 end
             end
@@ -4750,19 +5052,16 @@ __evolved_remove = function(entity, ...)
                 local old_cs = old_component_storages[old_ci]
                 new_cs[new_place] = old_cs[old_place]
             end
+        end
 
+        do
             __detach_entity(old_chunk, old_place)
 
             entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
-        else
-            __detach_entity(old_chunk, old_place)
+            entity_places[entity_index] = new_chunk and new_chunk.__entity_count
 
-            entity_chunks[entity_index] = nil
-            entity_places[entity_index] = nil
+            __structural_changes = __structural_changes + 1
         end
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -4790,14 +5089,10 @@ __evolved_clear = function(entity)
     local chunk = entity_chunks[entity_index]
     local place = entity_places[entity_index]
 
-    if not chunk then
-        return true, false
-    end
-
     __defer()
 
     do
-        if chunk.__has_remove_hooks then
+        if chunk and chunk.__has_remove_hooks then
             local chunk_fragment_list = chunk.__fragment_list
             local chunk_fragment_count = chunk.__fragment_count
             local chunk_component_indices = chunk.__component_indices
@@ -4805,24 +5100,32 @@ __evolved_clear = function(entity)
 
             for fragment_index = 1, chunk_fragment_count do
                 local fragment = chunk_fragment_list[fragment_index]
-                local component_index = chunk_component_indices[fragment]
 
-                if component_index then
-                    local component_storage = chunk_component_storages[component_index]
-                    local old_component = component_storage[place]
-                    __defer_remove_hook(entity, fragment, old_component)
-                else
-                    __defer_remove_hook(entity, fragment)
+                ---@type evolved.remove_hook?
+                local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
+
+                if fragment_on_remove then
+                    local component_index = chunk_component_indices[fragment]
+
+                    if component_index then
+                        local component_storage = chunk_component_storages[component_index]
+                        local old_component = component_storage[place]
+                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                    else
+                        __defer_call_hook(fragment_on_remove, entity, fragment)
+                    end
                 end
             end
         end
 
-        __detach_entity(chunk, place)
+        if chunk then
+            __detach_entity(chunk, place)
 
-        entity_chunks[entity_index] = nil
-        entity_places[entity_index] = nil
+            entity_chunks[entity_index] = nil
+            entity_places[entity_index] = nil
 
-        __structural_changes = __structural_changes + 1
+            __structural_changes = __structural_changes + 1
+        end
     end
 
     __commit()
@@ -4850,15 +5153,10 @@ __evolved_destroy = function(entity)
     local chunk = entity_chunks[entity_index]
     local place = entity_places[entity_index]
 
-    if not chunk then
-        __release_id(entity)
-        return true, false
-    end
-
     __defer()
 
     do
-        if chunk.__has_remove_hooks then
+        if chunk and chunk.__has_remove_hooks then
             local chunk_fragment_list = chunk.__fragment_list
             local chunk_fragment_count = chunk.__fragment_count
             local chunk_component_indices = chunk.__component_indices
@@ -4866,25 +5164,49 @@ __evolved_destroy = function(entity)
 
             for fragment_index = 1, chunk_fragment_count do
                 local fragment = chunk_fragment_list[fragment_index]
-                local component_index = chunk_component_indices[fragment]
 
-                if component_index then
-                    local component_storage = chunk_component_storages[component_index]
-                    local old_component = component_storage[place]
-                    __defer_remove_hook(entity, fragment, old_component)
-                else
-                    __defer_remove_hook(entity, fragment)
+                ---@type evolved.remove_hook?
+                local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
+
+                if fragment_on_remove then
+                    local component_index = chunk_component_indices[fragment]
+
+                    if component_index then
+                        local component_storage = chunk_component_storages[component_index]
+                        local old_component = component_storage[place]
+                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                    else
+                        __defer_call_hook(fragment_on_remove, entity, fragment)
+                    end
                 end
             end
         end
 
-        __detach_entity(chunk, place)
-        __release_id(entity)
+        do
+            local purging_fragment ---@type evolved.fragment?
+            local purging_policy ---@type evolved.id?
 
-        entity_chunks[entity_index] = nil
-        entity_places[entity_index] = nil
+            if __minor_chunks[entity] then
+                purging_fragment = entity
+                purging_policy = chunk and __chunk_get_components(chunk, place, __ON_DESTROY)
+                    or __REMOVE_FRAGMENT_POLICY
+            end
 
-        __structural_changes = __structural_changes + 1
+            if chunk then
+                __detach_entity(chunk, place)
+
+                entity_chunks[entity_index] = nil
+                entity_places[entity_index] = nil
+
+                __structural_changes = __structural_changes + 1
+            end
+
+            __release_id(entity)
+
+            if purging_fragment then
+                __purge_fragment(purging_fragment, purging_policy)
+            end
+        end
     end
 
     __commit()
@@ -4953,6 +5275,13 @@ __evolved_multi_set = function(entity, fragments, components)
         for i = 1, fragment_count do
             local fragment = fragments[i]
 
+            ---@type evolved.set_hook?, evolved.assign_hook?
+            local fragment_on_set, fragment_on_assign
+
+            if old_chunk_has_set_or_assign_hooks then
+                fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
+            end
+
             local old_component_index = old_component_indices[fragment]
 
             if old_component_index then
@@ -4968,16 +5297,28 @@ __evolved_multi_set = function(entity, fragments, components)
                     new_component = true
                 end
 
-                if old_chunk_has_set_or_assign_hooks then
+                if fragment_on_set or fragment_on_assign then
                     local old_component = old_component_storage[old_place]
+
                     old_component_storage[old_place] = new_component
-                    __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                    end
                 else
                     old_component_storage[old_place] = new_component
                 end
             else
-                if old_chunk_has_set_or_assign_hooks then
-                    __defer_assign_hook(entity, fragment)
+                if fragment_on_set then
+                    __defer_call_hook(fragment_on_set, entity, fragment)
+                end
+
+                if fragment_on_assign then
+                    __defer_call_hook(fragment_on_assign, entity, fragment)
                 end
             end
         end
@@ -5015,12 +5356,26 @@ __evolved_multi_set = function(entity, fragments, components)
             __detach_entity(old_chunk, old_place)
         end
 
+        do
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
+        end
+
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
             local fragment = fragments[i]
 
             if inserted_set[fragment] or old_fragment_set[fragment] then
+                ---@type evolved.set_hook?, evolved.assign_hook?
+                local fragment_on_set, fragment_on_assign
+
+                if new_chunk_has_set_or_assign_hooks then
+                    fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
+                end
+
                 local new_component_index = new_component_indices[fragment]
 
                 if new_component_index then
@@ -5036,20 +5391,39 @@ __evolved_multi_set = function(entity, fragments, components)
                         new_component = true
                     end
 
-                    if new_chunk_has_set_or_assign_hooks then
+                    if fragment_on_set or fragment_on_assign then
                         local old_component = new_component_storage[new_place]
+
                         new_component_storage[new_place] = new_component
-                        __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                        end
                     else
                         new_component_storage[new_place] = new_component
                     end
                 else
-                    if new_chunk_has_set_or_assign_hooks then
-                        __defer_assign_hook(entity, fragment)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment)
                     end
                 end
             else
                 inserted_set[fragment] = true
+
+                ---@type evolved.set_hook?, evolved.insert_hook?
+                local fragment_on_set, fragment_on_insert
+
+                if new_chunk_has_set_or_insert_hooks then
+                    fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
+                end
 
                 local new_component_index = new_component_indices[fragment]
 
@@ -5068,23 +5442,26 @@ __evolved_multi_set = function(entity, fragments, components)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk_has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 else
-                    if new_chunk_has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment)
                     end
                 end
             end
         end
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
-
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5153,6 +5530,13 @@ __evolved_multi_assign = function(entity, fragments, components)
             local fragment = fragments[i]
 
             if chunk_fragment_set[fragment] then
+                ---@type evolved.set_hook?, evolved.assign_hook?
+                local fragment_on_set, fragment_on_assign
+
+                if chunk_has_set_or_assign_hooks then
+                    fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
+                end
+
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
@@ -5168,16 +5552,28 @@ __evolved_multi_assign = function(entity, fragments, components)
                         new_component = true
                     end
 
-                    if chunk_has_set_or_assign_hooks then
+                    if fragment_on_set or fragment_on_assign then
                         local old_component = component_storage[place]
+
                         component_storage[place] = new_component
-                        __defer_assign_hook(entity, fragment, new_component, old_component)
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
+                        end
+
+                        if fragment_on_assign then
+                            __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
+                        end
                     else
                         component_storage[place] = new_component
                     end
                 else
-                    if chunk_has_set_or_assign_hooks then
-                        __defer_assign_hook(entity, fragment)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment)
+                    end
+
+                    if fragment_on_assign then
+                        __defer_call_hook(fragment_on_assign, entity, fragment)
                     end
                 end
             end
@@ -5273,6 +5669,13 @@ __evolved_multi_insert = function(entity, fragments, components)
             __detach_entity(old_chunk, old_place)
         end
 
+        do
+            entity_chunks[entity_index] = new_chunk
+            entity_places[entity_index] = new_place
+
+            __structural_changes = __structural_changes + 1
+        end
+
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -5280,6 +5683,13 @@ __evolved_multi_insert = function(entity, fragments, components)
 
             if not inserted_set[fragment] and not old_fragment_set[fragment] then
                 inserted_set[fragment] = true
+
+                ---@type evolved.set_hook?, evolved.insert_hook?
+                local fragment_on_set, fragment_on_insert
+
+                if new_chunk_has_set_or_insert_hooks then
+                    fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
+                end
 
                 local new_component_index = new_component_indices[fragment]
 
@@ -5298,23 +5708,26 @@ __evolved_multi_insert = function(entity, fragments, components)
 
                     new_component_storage[new_place] = new_component
 
-                    if new_chunk_has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment, new_component)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
                     end
                 else
-                    if new_chunk_has_set_or_insert_hooks then
-                        __defer_insert_hook(entity, fragment)
+                    if fragment_on_set then
+                        __defer_call_hook(fragment_on_set, entity, fragment)
+                    end
+
+                    if fragment_on_insert then
+                        __defer_call_hook(fragment_on_insert, entity, fragment)
                     end
                 end
             end
         end
 
         __release_table(__table_pool_tag.fragment_set, inserted_set)
-
-        entity_chunks[entity_index] = new_chunk
-        entity_places[entity_index] = new_place
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5382,14 +5795,19 @@ __evolved_multi_remove = function(entity, fragments)
                 if not removed_set[fragment] and old_fragment_set[fragment] then
                     removed_set[fragment] = true
 
-                    local old_component_index = old_component_indices[fragment]
+                    ---@type evolved.remove_hook?
+                    local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
 
-                    if old_component_index then
-                        local old_component_storage = old_component_storages[old_component_index]
-                        local old_component = old_component_storage[old_place]
-                        __defer_remove_hook(entity, fragment, old_component)
-                    else
-                        __defer_remove_hook(entity, fragment)
+                    if fragment_on_remove then
+                        local old_component_index = old_component_indices[fragment]
+
+                        if old_component_index then
+                            local old_component_storage = old_component_storages[old_component_index]
+                            local old_component = old_component_storage[old_place]
+                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                        else
+                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                        end
                     end
                 end
             end
@@ -5417,19 +5835,16 @@ __evolved_multi_remove = function(entity, fragments)
                 local old_cs = old_component_storages[old_ci]
                 new_cs[new_place] = old_cs[old_place]
             end
+        end
 
+        do
             __detach_entity(old_chunk, old_place)
 
             entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
-        else
-            __detach_entity(old_chunk, old_place)
+            entity_places[entity_index] = new_chunk and new_chunk.__entity_count
 
-            entity_chunks[entity_index] = nil
-            entity_places[entity_index] = nil
+            __structural_changes = __structural_changes + 1
         end
-
-        __structural_changes = __structural_changes + 1
     end
 
     __commit()
@@ -5915,6 +6330,7 @@ end
 ---@return evolved.chunk? chunk
 ---@return evolved.entity[]? entities
 ---@return integer? entity_count
+---@nodiscard
 __evolved_chunk = function(...)
     local fragment_count = __lua_select('#', ...)
 
@@ -6017,6 +6433,14 @@ __evolved_select = function(chunk, ...)
             i4 and storages[i4] or empty_component_storage,
             __evolved_select(chunk, __lua_select(5, ...))
     end
+end
+
+---@param chunk evolved.chunk
+---@return evolved.entity[] entities
+---@return integer entity_count
+---@nodiscard
+__evolved_entities = function(chunk)
+    return chunk.__entities, chunk.__entity_count
 end
 
 ---@param entity evolved.entity
@@ -6330,6 +6754,7 @@ end
 ---@field package __on_assign? evolved.set_hook
 ---@field package __on_insert? evolved.set_hook
 ---@field package __on_remove? evolved.remove_hook
+---@field package __on_destroy? evolved.id
 
 ---@class evolved.fragment_builder : evolved.__fragment_builder
 local evolved_fragment_builder = {}
@@ -6349,6 +6774,7 @@ __evolved_fragment = function()
         __on_assign = nil,
         __on_insert = nil,
         __on_remove = nil,
+        __on_destroy = nil,
     }
     ---@cast builder evolved.fragment_builder
     return __lua_setmetatable(builder, evolved_fragment_builder)
@@ -6416,6 +6842,13 @@ function evolved_fragment_builder:on_remove(on_remove)
     return self
 end
 
+---@param on_destroy evolved.id
+---@return evolved.fragment_builder builder
+function evolved_fragment_builder:on_destroy(on_destroy)
+    self.__on_destroy = on_destroy
+    return self
+end
+
 ---@return evolved.fragment fragment
 ---@return boolean is_deferred
 function evolved_fragment_builder:build()
@@ -6429,6 +6862,7 @@ function evolved_fragment_builder:build()
     local on_assign = self.__on_assign
     local on_insert = self.__on_insert
     local on_remove = self.__on_remove
+    local on_destroy = self.__on_destroy
 
     self.__tag = false
     self.__name = nil
@@ -6440,6 +6874,7 @@ function evolved_fragment_builder:build()
     self.__on_assign = nil
     self.__on_insert = nil
     self.__on_remove = nil
+    self.__on_destroy = nil
 
     local fragment = __evolved_id()
 
@@ -6499,6 +6934,12 @@ function evolved_fragment_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __ON_REMOVE
         component_list[component_count] = on_remove
+    end
+
+    if on_destroy then
+        component_count = component_count + 1
+        fragment_list[component_count] = __ON_DESTROY
+        component_list[component_count] = on_destroy
     end
 
     local _, is_deferred = __evolved_multi_set(fragment, fragment_list, component_list)
@@ -7069,6 +7510,7 @@ __lua_assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
 __lua_assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
 __lua_assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
 __lua_assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
+__lua_assert(__evolved_insert(__ON_DESTROY, __NAME, 'ON_DESTROY'))
 
 __lua_assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
 __lua_assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
@@ -7078,6 +7520,9 @@ __lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
 
 __lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
 __lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
+
+__lua_assert(__evolved_insert(__DESTROY_ENTITY_POLICY, __NAME, 'DESTROY_ENTITY_POLICY'))
+__lua_assert(__evolved_insert(__REMOVE_FRAGMENT_POLICY, __NAME, 'REMOVE_FRAGMENT_POLICY'))
 
 ---
 ---
@@ -7254,6 +7699,7 @@ evolved.ON_SET = __ON_SET
 evolved.ON_ASSIGN = __ON_ASSIGN
 evolved.ON_INSERT = __ON_INSERT
 evolved.ON_REMOVE = __ON_REMOVE
+evolved.ON_DESTROY = __ON_DESTROY
 
 evolved.PHASE = __PHASE
 evolved.AFTER = __AFTER
@@ -7263,6 +7709,9 @@ evolved.EXECUTE = __EXECUTE
 
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
+
+evolved.DESTROY_ENTITY_POLICY = __DESTROY_ENTITY_POLICY
+evolved.REMOVE_FRAGMENT_POLICY = __REMOVE_FRAGMENT_POLICY
 
 evolved.id = __evolved_id
 
@@ -7306,6 +7755,7 @@ evolved.batch_multi_remove = __evolved_batch_multi_remove
 
 evolved.chunk = __evolved_chunk
 evolved.select = __evolved_select
+evolved.entities = __evolved_entities
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute
