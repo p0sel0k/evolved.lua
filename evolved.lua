@@ -36,7 +36,7 @@ local evolved = {
 ---@alias evolved.system evolved.id
 
 ---@alias evolved.component any
----@alias evolved.component_storage evolved.component[]
+---@alias evolved.storage evolved.component[]
 
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
@@ -62,7 +62,7 @@ local evolved = {
 ---@field package __fragment_count integer
 ---@field package __component_count integer
 ---@field package __component_indices table<evolved.fragment, integer>
----@field package __component_storages evolved.component_storage[]
+---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
@@ -674,6 +674,7 @@ end
 
 ---@param ... any component arguments
 ---@return evolved.component
+---@nodiscard
 local function __component_list(...)
     local argument_count = __lua_select('#', ...)
 
@@ -690,8 +691,17 @@ local function __component_list(...)
     return argument_list
 end
 
+---@param fragment evolved.fragment
+---@return evolved.storage
+---@nodiscard
+---@diagnostic disable-next-line: unused-local
+local function __component_storage(fragment)
+    return {}
+end
+
 ---@param ... any component arguments
 ---@return evolved.component
+---@nodiscard
 local function __component_construct(fragment, ...)
     ---@type evolved.default, evolved.construct
     local default, construct = __evolved_get(fragment, __DEFAULT, __CONSTRUCT)
@@ -812,7 +822,7 @@ function __chunk_component_indices_mt.__tostring(self)
     return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
 end
 
----@param self evolved.component_storage[]
+---@param self evolved.storage[]
 function __chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
@@ -839,6 +849,7 @@ end
 ---@param chunk_parent? evolved.chunk
 ---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
+---@nodiscard
 local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
     local chunk_fragment_set = __lua_setmetatable({}, __chunk_fragment_set_mt)
@@ -855,7 +866,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
     local chunk_component_indices = __lua_setmetatable({}, __chunk_component_indices_mt)
 
-    ---@type evolved.component_storage[]
+    ---@type evolved.storage[]
     local chunk_component_storages = __lua_setmetatable({}, __chunk_component_storages_mt)
 
     ---@type evolved.fragment[]
@@ -909,7 +920,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
             if not __evolved_has(parent_fragment, __TAG) then
                 chunk_component_count = chunk_component_count + 1
-                local component_storage = {}
+                local component_storage = __component_storage(parent_fragment)
                 local component_storage_index = chunk_component_count
                 chunk_component_indices[parent_fragment] = component_storage_index
                 chunk_component_storages[component_storage_index] = component_storage
@@ -932,7 +943,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
         if not __evolved_has(chunk_fragment, __TAG) then
             chunk_component_count = chunk_component_count + 1
-            local component_storage = {}
+            local component_storage = __component_storage(chunk_fragment)
             local component_storage_index = chunk_component_count
             chunk_component_indices[chunk_fragment] = component_storage_index
             chunk_component_storages[component_storage_index] = component_storage
@@ -6365,7 +6376,7 @@ end
 
 ---@param chunk evolved.chunk
 ---@param ... evolved.fragment fragments
----@return evolved.component_storage ... component_storages
+---@return evolved.storage ... storages
 ---@nodiscard
 __evolved_select = function(chunk, ...)
     local fragment_count = __lua_select('#', ...)
