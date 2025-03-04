@@ -102,8 +102,8 @@ local __defer_length = 0 ---@type integer
 local __defer_bytecode = {} ---@type any[]
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
-local __major_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
-local __minor_chunks = {} ---@type table<evolved.fragment, evolved.chunk[]>
+local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
@@ -505,7 +505,7 @@ local function __execute_iterator(execute_state)
         local chunk_child_list = chunk.__child_list
         local chunk_child_count = chunk.__child_count
 
-        for i = chunk_child_count, 1, -1 do
+        for i = 1, chunk_child_count do
             local chunk_child = chunk_child_list[i]
             local chunk_child_fragment = chunk_child.__fragment
 
@@ -733,10 +733,15 @@ local function __trace_fragment_chunks(fragment, trace, ...)
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
     local chunk_stack_size = 0
 
-    for i = 1, #major_chunks do
-        local major_chunk = major_chunks[i]
-        chunk_stack_size = chunk_stack_size + 1
-        chunk_stack[chunk_stack_size] = major_chunk
+    do
+        local major_chunk_list = major_chunks.__item_list
+        local major_chunk_count = major_chunks.__item_count
+
+        __lua_table_move(
+            major_chunk_list, 1, major_chunk_count,
+            chunk_stack_size + 1, chunk_stack)
+
+        chunk_stack_size = chunk_stack_size + major_chunk_count
     end
 
     while chunk_stack_size > 0 do
@@ -749,11 +754,11 @@ local function __trace_fragment_chunks(fragment, trace, ...)
             local chunk_child_list = chunk.__child_list
             local chunk_child_count = chunk.__child_count
 
-            for i = chunk_child_count, 1, -1 do
-                local chunk_child = chunk_child_list[i]
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = chunk_child
-            end
+            __lua_table_move(
+                chunk_child_list, 1, chunk_child_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + chunk_child_count
         end
     end
 
@@ -966,11 +971,11 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         local major_chunks = __major_chunks[major_fragment]
 
         if not major_chunks then
-            major_chunks = {}
+            major_chunks = __assoc_list_new(4)
             __major_chunks[major_fragment] = major_chunks
         end
 
-        major_chunks[#major_chunks + 1] = chunk
+        __assoc_list_insert(major_chunks, chunk)
     end
 
     for i = 1, chunk_fragment_count do
@@ -978,11 +983,11 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         local minor_chunks = __minor_chunks[minor_fragment]
 
         if not minor_chunks then
-            minor_chunks = {}
+            minor_chunks = __assoc_list_new(4)
             __minor_chunks[minor_fragment] = minor_chunks
         end
 
-        minor_chunks[#minor_chunks + 1] = chunk
+        __assoc_list_insert(minor_chunks, chunk)
     end
 
     return chunk
@@ -1665,14 +1670,17 @@ local function __purge_fragment(fragment, policy)
 
     local purged_count = 0
 
+    local minor_chunk_list = minor_chunks.__item_list
+    local minor_chunk_count = minor_chunks.__item_count
+
     if policy == __DESTROY_ENTITY_POLICY then
-        for minor_chunk_index = #minor_chunks, 1, -1 do
-            local minor_chunk = minor_chunks[minor_chunk_index]
+        for minor_chunk_index = minor_chunk_count, 1, -1 do
+            local minor_chunk = minor_chunk_list[minor_chunk_index]
             purged_count = purged_count + __chunk_destroy(minor_chunk)
         end
     elseif policy == __REMOVE_FRAGMENT_POLICY then
-        for minor_chunk_index = #minor_chunks, 1, -1 do
-            local minor_chunk = minor_chunks[minor_chunk_index]
+        for minor_chunk_index = minor_chunk_count, 1, -1 do
+            local minor_chunk = minor_chunk_list[minor_chunk_index]
             purged_count = purged_count + __chunk_remove(minor_chunk, fragment)
         end
     else
@@ -6530,8 +6538,11 @@ __evolved_execute = function(query)
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
     local chunk_stack_size = 0
 
-    for major_fragment_chunk_index = 1, #major_fragment_chunks do
-        local major_fragment_chunk = major_fragment_chunks[major_fragment_chunk_index]
+    local major_fragment_chunk_list = major_fragment_chunks.__item_list
+    local major_fragment_chunk_count = major_fragment_chunks.__item_count
+
+    for major_fragment_chunk_index = 1, major_fragment_chunk_count do
+        local major_fragment_chunk = major_fragment_chunk_list[major_fragment_chunk_index]
 
         local is_major_fragment_chunk_matched = true
 
