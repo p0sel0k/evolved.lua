@@ -360,7 +360,7 @@ end
 local function __assoc_list_sort(al, comp)
     local al_item_count = al.__item_count
 
-    if al_item_count == 0 then
+    if al_item_count < 2 then
         return
     end
 
