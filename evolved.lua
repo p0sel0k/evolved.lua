@@ -1037,11 +1037,10 @@ end
 
 ---@param chunk? evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_with_fragment_list(chunk, fragment_list)
-    local fragment_count = #fragment_list
-
+local function __chunk_with_fragment_list(chunk, fragment_list, fragment_count)
     if fragment_count == 0 then
         return chunk
     end
@@ -1111,11 +1110,10 @@ end
 
 ---@param chunk? evolved.chunk
 ---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_without_fragment_list(chunk, fragment_list)
-    local fragment_count = #fragment_list
-
+local function __chunk_without_fragment_list(chunk, fragment_list, fragment_count)
     if fragment_count == 0 then
         return chunk
     end
@@ -2350,7 +2348,7 @@ __chunk_multi_set = function(old_chunk, fragments, components)
         return 0
     end
 
-    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments, fragment_count)
 
     if not new_chunk then
         return 0
@@ -2789,7 +2787,7 @@ __chunk_multi_insert = function(old_chunk, fragments, components)
         return 0
     end
 
-    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments, fragment_count)
 
     if not new_chunk or old_chunk == new_chunk then
         return 0
@@ -2961,7 +2959,7 @@ __chunk_multi_remove = function(old_chunk, fragments)
         return 0
     end
 
-    local new_chunk = __chunk_without_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_without_fragment_list(old_chunk, fragments, fragment_count)
 
     if old_chunk == new_chunk then
         return 0
@@ -5286,7 +5284,7 @@ __evolved_multi_set = function(entity, fragments, components)
     local old_chunk = entity_chunks[entity_index]
     local old_place = entity_places[entity_index]
 
-    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments, fragment_count)
 
     if not new_chunk then
         return false, false
@@ -5657,7 +5655,7 @@ __evolved_multi_insert = function(entity, fragments, components)
     local old_chunk = entity_chunks[entity_index]
     local old_place = entity_places[entity_index]
 
-    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_with_fragment_list(old_chunk, fragments, fragment_count)
 
     if not new_chunk or old_chunk == new_chunk then
         return false, false
@@ -5802,7 +5800,7 @@ __evolved_multi_remove = function(entity, fragments)
     local old_chunk = entity_chunks[entity_index]
     local old_place = entity_places[entity_index]
 
-    local new_chunk = __chunk_without_fragment_list(old_chunk, fragments)
+    local new_chunk = __chunk_without_fragment_list(old_chunk, fragments, fragment_count)
 
     if old_chunk == new_chunk then
         return true, false
