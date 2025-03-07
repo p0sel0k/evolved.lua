@@ -7135,3 +7135,52 @@ do
     assert(evo.fragments(c23)[1] == f2)
     assert(evo.fragments(c23)[2] == f3)
 end
+
+do
+    local f0, f1, f2, f3 = evo.id(4)
+
+    local e1 = evo.entity():set(f0, 0):set(f1, 1):build()
+    local e12 = evo.entity():set(f0, 0):set(f1, 2):set(f2, 3):build()
+    local e123 = evo.entity():set(f0, 0):set(f1, 4):set(f2, 5):set(f3, 6):build()
+
+    evo.entity():set(f1, 41):build()
+    evo.entity():set(f1, 42):set(f2, 43):build()
+
+    do
+        local q1 = evo.query():include(f0, f1):build()
+
+        local iter, state = evo.execute(q1)
+
+        local chunk, entity_list = iter(state)
+        assert(entity_list and #entity_list == 1)
+        assert(chunk == evo.chunk(f0, f1) and entity_list[1] == e1)
+
+        chunk, entity_list = iter(state)
+        assert(entity_list and #entity_list == 1)
+        assert(chunk == evo.chunk(f0, f1, f2) and entity_list[1] == e12)
+
+        chunk, entity_list = iter(state)
+        assert(entity_list and #entity_list == 1)
+        assert(chunk == evo.chunk(f0, f1, f2, f3) and entity_list[1] == e123)
+
+        chunk, entity_list = iter(state)
+        assert(not chunk and not entity_list)
+    end
+
+    do
+        local q1 = evo.query():include(f0, f1):exclude(f3):build()
+
+        local iter, state = evo.execute(q1)
+
+        local chunk, entity_list = iter(state)
+        assert(entity_list and #entity_list == 1)
+        assert(chunk == evo.chunk(f0, f1) and entity_list[1] == e1)
+
+        chunk, entity_list = iter(state)
+        assert(entity_list and #entity_list == 1)
+        assert(chunk == evo.chunk(f0, f1, f2) and entity_list[1] == e12)
+
+        chunk, entity_list = iter(state)
+        assert(not chunk and not entity_list)
+    end
+end

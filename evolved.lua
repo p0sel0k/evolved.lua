@@ -80,7 +80,8 @@ local evolved = {
 ---@class (exact) evolved.execute_state
 ---@field package [1] integer structural_changes
 ---@field package [2] evolved.chunk[] chunk_stack
----@field package [3] table<evolved.fragment, integer>? exclude_set
+---@field package [3] integer chunk_stack_size
+---@field package [4] table<evolved.fragment, integer>? exclude_set
 
 ---@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
 ---@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?, integer?
@@ -488,13 +489,12 @@ local function __execute_iterator(execute_state)
 
     local structural_changes = execute_state[1]
     local chunk_stack = execute_state[2]
-    local exclude_set = execute_state[3]
+    local chunk_stack_size = execute_state[3]
+    local exclude_set = execute_state[4]
 
     if structural_changes ~= __structural_changes then
         __lua_error('structural changes are prohibited during iteration')
     end
-
-    local chunk_stack_size = #chunk_stack
 
     while chunk_stack_size > 0 do
         local chunk = chunk_stack[chunk_stack_size]
@@ -505,20 +505,29 @@ local function __execute_iterator(execute_state)
         local chunk_child_list = chunk.__child_list
         local chunk_child_count = chunk.__child_count
 
-        for i = 1, chunk_child_count do
-            local chunk_child = chunk_child_list[i]
-            local chunk_child_fragment = chunk_child.__fragment
+        if exclude_set then
+            for i = 1, chunk_child_count do
+                local chunk_child = chunk_child_list[i]
+                local chunk_child_fragment = chunk_child.__fragment
 
-            if not exclude_set or not exclude_set[chunk_child_fragment] then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = chunk_child
+                if not exclude_set[chunk_child_fragment] then
+                    chunk_stack_size = chunk_stack_size + 1
+                    chunk_stack[chunk_stack_size] = chunk_child
+                end
             end
+        else
+            __lua_table_move(
+                chunk_child_list, 1, chunk_child_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + chunk_child_count
         end
 
         local chunk_entity_list = chunk.__entity_list
         local chunk_entity_count = chunk.__entity_count
 
         if chunk_entity_count > 0 then
+            execute_state[3] = chunk_stack_size
             return chunk, chunk_entity_list, chunk_entity_count
         end
     end
@@ -1008,8 +1017,8 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     do
-        local with_fragment_chunk = chunk.__with_fragment_edges[fragment]
-        if with_fragment_chunk then return with_fragment_chunk end
+        local with_fragment_edge = chunk.__with_fragment_edges[fragment]
+        if with_fragment_edge then return with_fragment_edge end
     end
 
     if fragment < chunk.__fragment then
@@ -6546,12 +6555,12 @@ __evolved_execute = function(query)
 
         local is_major_fragment_chunk_matched = true
 
-        if query_include_list and query_include_count > 1 then
+        if is_major_fragment_chunk_matched and query_include_list and query_include_count > 1 then
             is_major_fragment_chunk_matched = __chunk_has_all_fragment_list(
                 major_fragment_chunk, query_include_list, query_include_count - 1)
         end
 
-        if query_exclude_list and query_exclude_count > 0 then
+        if is_major_fragment_chunk_matched and query_exclude_list and query_exclude_count > 0 then
             is_major_fragment_chunk_matched = not __chunk_has_any_fragment_list(
                 major_fragment_chunk, query_exclude_list, query_exclude_count)
         end
@@ -6567,7 +6576,8 @@ __evolved_execute = function(query)
 
     execute_state[1] = __structural_changes
     execute_state[2] = chunk_stack
-    execute_state[3] = query_exclude_set
+    execute_state[3] = chunk_stack_size
+    execute_state[4] = query_exclude_set
 
     return __execute_iterator, execute_state
 end
