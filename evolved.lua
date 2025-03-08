@@ -555,7 +555,6 @@ local __ON_SET = __acquire_id()
 local __ON_ASSIGN = __acquire_id()
 local __ON_INSERT = __acquire_id()
 local __ON_REMOVE = __acquire_id()
-local __ON_DESTROY = __acquire_id()
 
 local __PHASE = __acquire_id()
 local __AFTER = __acquire_id()
@@ -566,8 +565,9 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
-local __DESTROY_ENTITY_POLICY = __acquire_id()
-local __REMOVE_FRAGMENT_POLICY = __acquire_id()
+local __DESTROY_POLICY = __acquire_id()
+local __DESTROY_POLICY_DESTROY_ENTITY = __acquire_id()
+local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 
 ---
 ---
@@ -1681,18 +1681,18 @@ local function __purge_fragment(fragment, policy)
     local minor_chunk_list = minor_chunks.__item_list
     local minor_chunk_count = minor_chunks.__item_count
 
-    if policy == __DESTROY_ENTITY_POLICY then
+    if policy == __DESTROY_POLICY_DESTROY_ENTITY then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
             local minor_chunk = minor_chunk_list[minor_chunk_index]
             purged_count = purged_count + __chunk_destroy(minor_chunk)
         end
-    elseif policy == __REMOVE_FRAGMENT_POLICY then
+    elseif policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
             local minor_chunk = minor_chunk_list[minor_chunk_index]
             purged_count = purged_count + __chunk_remove(minor_chunk, fragment)
         end
     else
-        __lua_print(__lua_string_format('| evolved.lua | unknown ON_DESTROY policy (%s) on (%s)',
+        __lua_print(__lua_string_format('| evolved.lua | unknown DESTROY_POLICY policy (%s) on (%s)',
             __id_name(policy), __id_name(fragment)))
     end
 
@@ -1713,12 +1713,12 @@ local function __purge_fragments(fragments, policies, count)
     for index = 1, count do
         local fragment, policy = fragments[index], policies[index]
 
-        if policy == __DESTROY_ENTITY_POLICY then
-            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_ENTITY_POLICY)
-        elseif policy == __REMOVE_FRAGMENT_POLICY then
-            purged_count = purged_count + __purge_fragment(fragment, __REMOVE_FRAGMENT_POLICY)
+        if policy == __DESTROY_POLICY_DESTROY_ENTITY then
+            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_POLICY_DESTROY_ENTITY)
+        elseif policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
+            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_POLICY_REMOVE_FRAGMENT)
         else
-            __lua_print(__lua_string_format('| evolved.lua | unknown ON_DESTROY policy (%s) on (%s)',
+            __lua_print(__lua_string_format('| evolved.lua | unknown DESTROY_POLICY policy (%s) on (%s)',
                 __id_name(policy), __id_name(fragment)))
         end
     end
@@ -2309,8 +2309,8 @@ __chunk_destroy = function(chunk)
 
             if __minor_chunks[entity] then
                 purging_count = purging_count + 1
-                purging_policies[purging_count] = __chunk_get_components(chunk, place, __ON_DESTROY)
-                    or __REMOVE_FRAGMENT_POLICY
+                purging_policies[purging_count] = __chunk_get_components(chunk, place, __DESTROY_POLICY)
+                    or __DESTROY_POLICY_REMOVE_FRAGMENT
                 purging_fragments[purging_count] = entity
             end
 
@@ -5233,8 +5233,8 @@ __evolved_destroy = function(entity)
 
             if __minor_chunks[entity] then
                 purging_fragment = entity
-                purging_policy = chunk and __chunk_get_components(chunk, place, __ON_DESTROY)
-                    or __REMOVE_FRAGMENT_POLICY
+                purging_policy = chunk and __chunk_get_components(chunk, place, __DESTROY_POLICY)
+                    or __DESTROY_POLICY_REMOVE_FRAGMENT
             end
 
             if chunk then
@@ -6821,7 +6821,7 @@ end
 ---@field package __on_assign? evolved.set_hook
 ---@field package __on_insert? evolved.set_hook
 ---@field package __on_remove? evolved.remove_hook
----@field package __on_destroy? evolved.id
+---@field package __destroy_policy? evolved.id
 
 ---@class evolved.fragment_builder : evolved.__fragment_builder
 local evolved_fragment_builder = {}
@@ -6841,7 +6841,7 @@ __evolved_fragment = function()
         __on_assign = nil,
         __on_insert = nil,
         __on_remove = nil,
-        __on_destroy = nil,
+        __destroy_policy = nil,
     }
     ---@cast builder evolved.fragment_builder
     return __lua_setmetatable(builder, evolved_fragment_builder)
@@ -6909,10 +6909,10 @@ function evolved_fragment_builder:on_remove(on_remove)
     return self
 end
 
----@param on_destroy evolved.id
+---@param destroy_policy evolved.id
 ---@return evolved.fragment_builder builder
-function evolved_fragment_builder:on_destroy(on_destroy)
-    self.__on_destroy = on_destroy
+function evolved_fragment_builder:destroy_policy(destroy_policy)
+    self.__destroy_policy = destroy_policy
     return self
 end
 
@@ -6929,7 +6929,7 @@ function evolved_fragment_builder:build()
     local on_assign = self.__on_assign
     local on_insert = self.__on_insert
     local on_remove = self.__on_remove
-    local on_destroy = self.__on_destroy
+    local destroy_policy = self.__destroy_policy
 
     self.__tag = false
     self.__name = nil
@@ -6941,7 +6941,7 @@ function evolved_fragment_builder:build()
     self.__on_assign = nil
     self.__on_insert = nil
     self.__on_remove = nil
-    self.__on_destroy = nil
+    self.__destroy_policy = nil
 
     local fragment = __evolved_id()
 
@@ -7003,10 +7003,10 @@ function evolved_fragment_builder:build()
         component_list[component_count] = on_remove
     end
 
-    if on_destroy then
+    if destroy_policy then
         component_count = component_count + 1
-        fragment_list[component_count] = __ON_DESTROY
-        component_list[component_count] = on_destroy
+        fragment_list[component_count] = __DESTROY_POLICY
+        component_list[component_count] = destroy_policy
     end
 
     local _, is_deferred = __evolved_multi_set(fragment, fragment_list, component_list)
@@ -7577,7 +7577,6 @@ __lua_assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
 __lua_assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
 __lua_assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
 __lua_assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
-__lua_assert(__evolved_insert(__ON_DESTROY, __NAME, 'ON_DESTROY'))
 
 __lua_assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
 __lua_assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
@@ -7588,8 +7587,9 @@ __lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
 __lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
 __lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
 
-__lua_assert(__evolved_insert(__DESTROY_ENTITY_POLICY, __NAME, 'DESTROY_ENTITY_POLICY'))
-__lua_assert(__evolved_insert(__REMOVE_FRAGMENT_POLICY, __NAME, 'REMOVE_FRAGMENT_POLICY'))
+__lua_assert(__evolved_insert(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
+__lua_assert(__evolved_insert(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
+__lua_assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
 
 ---
 ---
@@ -7766,7 +7766,6 @@ evolved.ON_SET = __ON_SET
 evolved.ON_ASSIGN = __ON_ASSIGN
 evolved.ON_INSERT = __ON_INSERT
 evolved.ON_REMOVE = __ON_REMOVE
-evolved.ON_DESTROY = __ON_DESTROY
 
 evolved.PHASE = __PHASE
 evolved.AFTER = __AFTER
@@ -7777,8 +7776,9 @@ evolved.EXECUTE = __EXECUTE
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
 
-evolved.DESTROY_ENTITY_POLICY = __DESTROY_ENTITY_POLICY
-evolved.REMOVE_FRAGMENT_POLICY = __REMOVE_FRAGMENT_POLICY
+evolved.DESTROY_POLICY = __DESTROY_POLICY
+evolved.DESTROY_POLICY_DESTROY_ENTITY = __DESTROY_POLICY_DESTROY_ENTITY
+evolved.DESTROY_POLICY_REMOVE_FRAGMENT = __DESTROY_POLICY_REMOVE_FRAGMENT
 
 evolved.id = __evolved_id
 

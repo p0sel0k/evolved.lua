@@ -6726,7 +6726,7 @@ do
     local c1 = assert(evo.chunk(f1))
     local c2 = assert(evo.chunk(f2))
     local c12 = assert(evo.chunk(f1, f2))
-    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT))
     assert(evo.set(f1, f1))
     assert(evo.set(f2, f1))
     assert(evo.set(f2, f2))
@@ -6760,7 +6760,7 @@ do
     local c1 = assert(evo.chunk(f1))
     local c2 = assert(evo.chunk(f2))
     local c12 = assert(evo.chunk(f1, f2))
-    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY))
     assert(evo.set(f1, f1))
     assert(evo.set(f2, f1))
     assert(evo.set(f2, f2))
@@ -6818,7 +6818,7 @@ do
     local f1, f2, f3 = evo.id(3)
     local c1 = assert(evo.chunk(f1))
     local c2 = assert(evo.chunk(f2))
-    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT))
     assert(evo.set(f2, f1))
     assert(evo.set(f3, f2))
     do
@@ -6845,7 +6845,7 @@ do
     local f1, f2, f3 = evo.id(3)
     local c1 = assert(evo.chunk(f1))
     local c2 = assert(evo.chunk(f2))
-    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY))
     assert(evo.set(f2, f1))
     assert(evo.set(f3, f2))
     do
@@ -6872,7 +6872,7 @@ do
     assert(evo.set(f1, ft))
     assert(evo.set(f2, ft))
     assert(evo.set(f3, ft))
-    assert(evo.set(f3, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f3, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY))
     local qt = evo.query():include(ft):build()
 
     local c4 = assert(evo.chunk(f4))
@@ -6907,7 +6907,7 @@ end
 
 do
     local f1 = evo.id()
-    assert(evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY))
     assert(evo.set(f1, f1, f1))
 
     local remove_count = 0
@@ -6933,7 +6933,7 @@ end
 
 do
     local f1 = evo.id()
-    assert(evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY))
+    assert(evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT))
     assert(evo.set(f1, f1, f1))
 
     local remove_count = 0
@@ -7016,7 +7016,7 @@ do
         local f1, f2 = evo.id(2)
         evo.set(f1, f1)
         evo.set(f2, f1)
-        evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY)
+        evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY)
         assert(evo.destroy(f1))
         assert(not evo.is_alive(f1))
         assert(not evo.is_alive(f2))
@@ -7026,7 +7026,7 @@ do
         local f1, f2 = evo.id(2)
         evo.set(f1, f1)
         evo.set(f2, f1)
-        evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY)
+        evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT)
         assert(evo.destroy(f1))
         assert(not evo.is_alive(f1))
         assert(evo.is_alive(f2) and evo.is_empty(f2))
@@ -7036,7 +7036,7 @@ end
 do
     local f1, f2 = evo.id(2)
 
-    evo.set(f1, evo.ON_DESTROY, evo.DESTROY_ENTITY_POLICY)
+    evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY)
 
     local e12a = evo.entity():set(f1, 1):set(f2, 2):build()
     local e12b = evo.entity():set(f1, 3):set(f2, 4):build()
@@ -7081,7 +7081,7 @@ do
         assert(c12, c123)
     end
 
-    evo.set(f1, evo.ON_DESTROY, evo.REMOVE_FRAGMENT_POLICY)
+    evo.set(f1, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT)
 
     local e12a = evo.entity():set(f1, 1):set(f2, 2):build()
     local e12b = evo.entity():set(f1, 3):set(f2, 4):build()
@@ -7112,12 +7112,12 @@ do
     local fb = evo.fragment()
 
     local f1 = fb:build()
-    local f2 = fb:on_destroy(evo.DESTROY_ENTITY_POLICY):build()
-    local f3 = fb:on_destroy(evo.REMOVE_FRAGMENT_POLICY):build()
+    local f2 = fb:destroy_policy(evo.DESTROY_POLICY_DESTROY_ENTITY):build()
+    local f3 = fb:destroy_policy(evo.DESTROY_POLICY_REMOVE_FRAGMENT):build()
 
-    assert(evo.get(f1, evo.ON_DESTROY) == nil)
-    assert(evo.get(f2, evo.ON_DESTROY) == evo.DESTROY_ENTITY_POLICY)
-    assert(evo.get(f3, evo.ON_DESTROY) == evo.REMOVE_FRAGMENT_POLICY)
+    assert(evo.get(f1, evo.DESTROY_POLICY) == nil)
+    assert(evo.get(f2, evo.DESTROY_POLICY) == evo.DESTROY_POLICY_DESTROY_ENTITY)
+    assert(evo.get(f3, evo.DESTROY_POLICY) == evo.DESTROY_POLICY_REMOVE_FRAGMENT)
 end
 
 do
