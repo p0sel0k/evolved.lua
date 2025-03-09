@@ -1132,6 +1132,29 @@ end
 ---
 ---
 
+---@param ... evolved.fragment fragments
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_fragments(...)
+    local fragment_count = __lua_select('#', ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local root_fragment = ...
+    local chunk = __root_chunks[root_fragment]
+        or __chunk_with_fragment(nil, root_fragment)
+
+    for i = 2, fragment_count do
+        local child_fragment = __lua_select(i, ...)
+        chunk = chunk.__with_fragment_edges[child_fragment]
+            or __chunk_with_fragment(chunk, child_fragment)
+    end
+
+    return chunk
+end
+
 ---@param fragment_list evolved.fragment[]
 ---@param fragment_count integer
 ---@return evolved.chunk?
@@ -4393,6 +4416,56 @@ end
 ---
 ---
 
+---@param phase evolved.phase
+local function __validate_phase(phase)
+    local phase_index = phase % 0x100000
+
+    if __freelist_ids[phase_index] ~= phase then
+        __lua_error(__lua_string_format(
+            'the phase (%s) is not alive and cannot be used',
+            __id_name(phase)))
+    end
+end
+
+---@param ... evolved.phase phases
+local function __validate_phases(...)
+    for i = 1, __lua_select('#', ...) do
+        __validate_phase(__lua_select(i, ...))
+    end
+end
+
+---@param fragment evolved.fragment
+local function __validate_fragment(fragment)
+    local fragment_index = fragment % 0x100000
+
+    if __freelist_ids[fragment_index] ~= fragment then
+        __lua_error(__lua_string_format(
+            'the fragment (%s) is not alive and cannot be used',
+            __id_name(fragment)))
+    end
+end
+
+---@param ... evolved.fragment fragments
+local function __validate_fragments(...)
+    for i = 1, __lua_select('#', ...) do
+        __validate_fragment(__lua_select(i, ...))
+    end
+end
+
+---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
+local function __validate_fragment_list(fragment_list, fragment_count)
+    for i = 1, fragment_count do
+        __validate_fragment(fragment_list[i])
+    end
+end
+
+---
+---
+---
+---
+---
+
 ---@param count? integer
 ---@return evolved.id ... ids
 ---@nodiscard
@@ -4577,11 +4650,7 @@ __evolved_set = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be set')
-        end
+        __validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -4765,11 +4834,7 @@ __evolved_assign = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be assigned')
-        end
+        __validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -4875,11 +4940,7 @@ __evolved_insert = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be inserted')
-        end
+        __validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -5013,14 +5074,7 @@ __evolved_remove = function(entity, ...)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = __lua_select(i, ...)
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed')
-            end
-        end
+        __validate_fragments(...)
     end
 
     local entity_index = entity % 0x100000
@@ -5280,14 +5334,7 @@ __evolved_multi_set = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be set')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -5535,14 +5582,7 @@ __evolved_multi_assign = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be assigned')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -5651,14 +5691,7 @@ __evolved_multi_insert = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be inserted')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -5796,14 +5829,7 @@ __evolved_multi_remove = function(entity, fragments)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -5908,11 +5934,7 @@ __evolved_batch_set = function(query, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be set')
-        end
+        __validate_fragment(fragment)
     end
 
     ---@type evolved.chunk[]
@@ -5955,11 +5977,7 @@ __evolved_batch_assign = function(query, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be assigned')
-        end
+        __validate_fragment(fragment)
     end
 
     ---@type evolved.chunk[]
@@ -5998,11 +6016,7 @@ __evolved_batch_insert = function(query, fragment, ...)
     end
 
     if __debug_mode then
-        local fragment_index = fragment % 0x100000
-
-        if __freelist_ids[fragment_index] ~= fragment then
-            __lua_error('the fragment is not alive and cannot be inserted')
-        end
+        __validate_fragment(fragment)
     end
 
     ---@type evolved.chunk[]
@@ -6046,14 +6060,7 @@ __evolved_batch_remove = function(query, ...)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = select(i, ...)
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed')
-            end
-        end
+        __validate_fragments(...)
     end
 
     ---@type evolved.chunk[]
@@ -6168,14 +6175,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be set')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     ---@type evolved.chunk[]
@@ -6224,14 +6224,7 @@ __evolved_batch_multi_assign = function(query, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be assigned')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     ---@type evolved.chunk[]
@@ -6280,14 +6273,7 @@ __evolved_batch_multi_insert = function(query, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be inserted')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     ---@type evolved.chunk[]
@@ -6331,14 +6317,7 @@ __evolved_batch_multi_remove = function(query, fragments)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be removed')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     ---@type evolved.chunk[]
@@ -6377,31 +6356,14 @@ end
 ---@return integer? entity_count
 ---@nodiscard
 __evolved_chunk = function(...)
-    local fragment_count = __lua_select('#', ...)
-
-    if fragment_count == 0 then
-        return
-    end
-
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = __lua_select(i, ...)
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be used in a chunk')
-            end
-        end
+        __validate_fragments(...)
     end
 
-    local root_fragment = ...
-    local chunk = __root_chunks[root_fragment]
-        or __chunk_with_fragment(nil, root_fragment)
+    local chunk = __chunk_fragments(...)
 
-    for i = 2, fragment_count do
-        local child_fragment = __lua_select(i, ...)
-        chunk = chunk.__with_fragment_edges[child_fragment]
-            or __chunk_with_fragment(chunk, child_fragment)
+    if not chunk then
+        return
     end
 
     return chunk, chunk.__entity_list, chunk.__entity_count
@@ -6412,21 +6374,14 @@ end
 ---@return evolved.storage ... storages
 ---@nodiscard
 __evolved_select = function(chunk, ...)
+    if __debug_mode then
+        __validate_fragments(...)
+    end
+
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
         return
-    end
-
-    if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = __lua_select(i, ...)
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be used in a chunk')
-            end
-        end
     end
 
     local indices = chunk.__component_indices
@@ -6607,14 +6562,7 @@ __evolved_process = function(...)
     end
 
     if __debug_mode then
-        for i = 1, phase_count do
-            local phase = __lua_select(i, ...)
-            local phase_index = phase % 0x100000
-
-            if __freelist_ids[phase_index] ~= phase then
-                __lua_error('a phase is not alive and cannot be processed')
-            end
-        end
+        __validate_phases(...)
     end
 
     for i = 1, phase_count do
@@ -6660,14 +6608,7 @@ __evolved_spawn_at = function(chunk, fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be spawned')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     __defer()
@@ -6709,14 +6650,7 @@ __evolved_spawn_with = function(fragments, components)
     end
 
     if __debug_mode then
-        for i = 1, fragment_count do
-            local fragment = fragments[i]
-            local fragment_index = fragment % 0x100000
-
-            if __freelist_ids[fragment_index] ~= fragment then
-                __lua_error('a fragment is not alive and cannot be spawned')
-            end
-        end
+        __validate_fragment_list(fragments, fragment_count)
     end
 
     __defer()
