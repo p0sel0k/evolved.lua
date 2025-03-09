@@ -8,6 +8,31 @@ do
 end
 
 do
+    local i = evo.id()
+
+    for _ = 1, 0xFFE do
+        local _, v0 = evo.unpack(i)
+        evo.destroy(i)
+        i = evo.id()
+        local _, v1 = evo.unpack(i)
+        assert(v1 == v0 + 1)
+    end
+
+    do
+        local _, v = evo.unpack(i)
+        assert(v == 0xFFF)
+    end
+
+    evo.destroy(i)
+    i = evo.id()
+
+    do
+        local _, v = evo.unpack(i)
+        assert(v == 1)
+    end
+end
+
+do
     do
         local i0 = evo.id(0)
         assert(type(i0) == 'nil')
@@ -5055,9 +5080,9 @@ do
 end
 
 do
-    local id = evo.pack(0xFFFFF, 0x7FF)
+    local id = evo.pack(0xFFFFF, 0xFFF)
     local index, version = evo.unpack(id)
-    assert(index == 0xFFFFF and version == 0x7FF)
+    assert(index == 0xFFFFF and version == 0xFFF)
 end
 
 do

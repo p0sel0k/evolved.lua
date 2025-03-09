@@ -247,7 +247,7 @@ local function __release_id(id)
         __lua_error('id is not acquired or already released')
     end
 
-    shifted_version = shifted_version == 0x7FF00000
+    shifted_version = shifted_version == 0xFFF00000
         and 0x100000
         or shifted_version + 0x100000
 
@@ -4507,8 +4507,8 @@ __evolved_pack = function(index, version)
         __lua_error('id index out of range [1;0xFFFFF]')
     end
 
-    if version < 1 or version > 0x7FF then
-        __lua_error('id version out of range [1;0x7FF]')
+    if version < 1 or version > 0xFFF then
+        __lua_error('id version out of range [1;0xFFF]')
     end
 
     local shifted_version = version * 0x100000
