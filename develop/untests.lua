@@ -2,6 +2,8 @@ require 'develop.unload' 'evolved'
 
 local evo = require 'evolved'
 
+evo.debug(true)
+
 do
     local e1, e2 = evo.id(), evo.id()
     assert(e1 ~= e2)

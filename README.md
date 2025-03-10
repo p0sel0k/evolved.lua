@@ -105,6 +105,10 @@ process :: phase... -> ()
 ```
 
 ```
+debug :: boolean -> ()
+```
+
+```
 spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
 spawn_with :: fragment[]?, component[]? -> entity, boolean
 ```

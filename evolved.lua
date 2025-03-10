@@ -92,7 +92,7 @@ local evolved = {
 ---
 ---
 
-local __debug_mode = true ---@type boolean
+local __debug_mode = false ---@type boolean
 
 local __freelist_ids = {} ---@type integer[]
 local __acquired_count = 0 ---@type integer
@@ -6685,6 +6685,17 @@ end
 ---
 ---
 
+---@param debug boolean
+local function __evolved_debug(debug)
+    __debug_mode = debug
+end
+
+---
+---
+---
+---
+---
+
 ---@class (exact) evolved.__entity_builder
 ---@field package __fragment_list? evolved.fragment[]
 ---@field package __component_list? evolved.component[]
@@ -7784,6 +7795,8 @@ evolved.process = __evolved_process
 
 evolved.spawn_at = __evolved_spawn_at
 evolved.spawn_with = __evolved_spawn_with
+
+evolved.debug = __evolved_debug
 
 evolved.entity = __evolved_entity
 evolved.fragment = __evolved_fragment

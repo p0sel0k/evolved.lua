@@ -2,8 +2,7 @@
 
 ## Backlog
 
-- add manual gc for unreachable chunks
-- add destroing policies (fragments, phases, systems)
+- collect unreachable chunks
 
 ## After first release
 
