@@ -6685,9 +6685,12 @@ end
 ---
 ---
 
----@param debug boolean
-local function __evolved_debug(debug)
-    __debug_mode = debug
+---@param yesno boolean
+local function __evolved_debug_mode(yesno)
+    __debug_mode = yesno
+end
+
+local function __evolved_collect_garbage()
 end
 
 ---
@@ -7796,7 +7799,8 @@ evolved.process = __evolved_process
 evolved.spawn_at = __evolved_spawn_at
 evolved.spawn_with = __evolved_spawn_with
 
-evolved.debug = __evolved_debug
+evolved.debug_mode = __evolved_debug_mode
+evolved.collect_garbage = __evolved_collect_garbage
 
 evolved.entity = __evolved_entity
 evolved.fragment = __evolved_fragment

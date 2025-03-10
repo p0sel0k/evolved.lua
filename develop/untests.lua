@@ -2,7 +2,7 @@ require 'develop.unload' 'evolved'
 
 local evo = require 'evolved'
 
-evo.debug(true)
+evo.debug_mode(true)
 
 do
     local e1, e2 = evo.id(), evo.id()

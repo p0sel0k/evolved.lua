@@ -102,16 +102,15 @@ each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
 process :: phase... -> ()
-```
 
-```
-debug :: boolean -> ()
-```
-
-```
 spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
 spawn_with :: fragment[]?, component[]? -> entity, boolean
+
+debug_mode :: boolean -> ()
+collect_garbage :: ()
 ```
+
+## Builders
 
 ```
 entity :: entity_builder
