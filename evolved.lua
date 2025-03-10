@@ -780,17 +780,19 @@ end
 ---
 ---
 
-local __chunk_mt = {} ---@type metatable
+local __debug_mts = {
+    chunk_mt = {}, ---@type metatable
 
-local __chunk_fragment_set_mt = {} ---@type metatable
-local __chunk_fragment_list_mt = {} ---@type metatable
+    chunk_fragment_set_mt = {}, ---@type metatable
+    chunk_fragment_list_mt = {}, ---@type metatable
 
-local __chunk_component_indices_mt = {} ---@type metatable
-local __chunk_component_storages_mt = {} ---@type metatable
-local __chunk_component_fragments_mt = {} ---@type metatable
+    chunk_component_indices_mt = {}, ---@type metatable
+    chunk_component_storages_mt = {}, ---@type metatable
+    chunk_component_fragments_mt = {}, ---@type metatable
+}
 
 ---@param self evolved.chunk
-function __chunk_mt.__tostring(self)
+function __debug_mts.chunk_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in __lua_ipairs(self.__fragment_list) do
@@ -801,7 +803,7 @@ function __chunk_mt.__tostring(self)
 end
 
 ---@param self table<evolved.fragment, integer>
-function __chunk_fragment_set_mt.__tostring(self)
+function __debug_mts.chunk_fragment_set_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment, fragment_index in __lua_pairs(self) do
@@ -813,7 +815,7 @@ function __chunk_fragment_set_mt.__tostring(self)
 end
 
 ---@param self evolved.fragment[]
-function __chunk_fragment_list_mt.__tostring(self)
+function __debug_mts.chunk_fragment_list_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in __lua_ipairs(self) do
@@ -825,7 +827,7 @@ function __chunk_fragment_list_mt.__tostring(self)
 end
 
 ---@param self table<evolved.fragment, integer>
-function __chunk_component_indices_mt.__tostring(self)
+function __debug_mts.chunk_component_indices_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_fragment, component_index in __lua_pairs(self) do
@@ -837,7 +839,7 @@ function __chunk_component_indices_mt.__tostring(self)
 end
 
 ---@param self evolved.storage[]
-function __chunk_component_storages_mt.__tostring(self)
+function __debug_mts.chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_storage in __lua_ipairs(self) do
@@ -849,7 +851,7 @@ function __chunk_component_storages_mt.__tostring(self)
 end
 
 ---@param self evolved.fragment[]
-function __chunk_component_fragments_mt.__tostring(self)
+function __debug_mts.chunk_component_fragments_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_fragment in __lua_ipairs(self) do
@@ -860,16 +862,22 @@ function __chunk_component_fragments_mt.__tostring(self)
     return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
 end
 
+---
+---
+---
+---
+---
+
 ---@param chunk_parent? evolved.chunk
 ---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
 ---@nodiscard
 local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
-    local chunk_fragment_set = __lua_setmetatable({}, __chunk_fragment_set_mt)
+    local chunk_fragment_set = __lua_setmetatable({}, __debug_mts.chunk_fragment_set_mt)
 
     ---@type evolved.fragment[]
-    local chunk_fragment_list = __lua_setmetatable({}, __chunk_fragment_list_mt)
+    local chunk_fragment_list = __lua_setmetatable({}, __debug_mts.chunk_fragment_list_mt)
 
     ---@type integer
     local chunk_fragment_count = 0
@@ -878,13 +886,13 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_count = 0
 
     ---@type table<evolved.fragment, integer>
-    local chunk_component_indices = __lua_setmetatable({}, __chunk_component_indices_mt)
+    local chunk_component_indices = __lua_setmetatable({}, __debug_mts.chunk_component_indices_mt)
 
     ---@type evolved.storage[]
-    local chunk_component_storages = __lua_setmetatable({}, __chunk_component_storages_mt)
+    local chunk_component_storages = __lua_setmetatable({}, __debug_mts.chunk_component_storages_mt)
 
     ---@type evolved.fragment[]
-    local chunk_component_fragments = __lua_setmetatable({}, __chunk_component_fragments_mt)
+    local chunk_component_fragments = __lua_setmetatable({}, __debug_mts.chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
@@ -919,7 +927,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
-    }, __chunk_mt)
+    }, __debug_mts.chunk_mt)
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -4416,24 +4424,6 @@ end
 ---
 ---
 
----@param phase evolved.phase
-local function __validate_phase(phase)
-    local phase_index = phase % 0x100000
-
-    if __freelist_ids[phase_index] ~= phase then
-        __lua_error(__lua_string_format(
-            'the phase (%s) is not alive and cannot be used',
-            __id_name(phase)))
-    end
-end
-
----@param ... evolved.phase phases
-local function __validate_phases(...)
-    for i = 1, __lua_select('#', ...) do
-        __validate_phase(__lua_select(i, ...))
-    end
-end
-
 ---@param fragment evolved.fragment
 local function __validate_fragment(fragment)
     local fragment_index = fragment % 0x100000
@@ -4457,6 +4447,35 @@ end
 local function __validate_fragment_list(fragment_list, fragment_count)
     for i = 1, fragment_count do
         __validate_fragment(fragment_list[i])
+    end
+end
+
+---@param query evolved.query
+local function __validate_query(query)
+    local query_index = query % 0x100000
+
+    if __freelist_ids[query_index] ~= query then
+        __lua_error(__lua_string_format(
+            'the query (%s) is not alive and cannot be used',
+            __id_name(query)))
+    end
+end
+
+---@param phase evolved.phase
+local function __validate_phase(phase)
+    local phase_index = phase % 0x100000
+
+    if __freelist_ids[phase_index] ~= phase then
+        __lua_error(__lua_string_format(
+            'the phase (%s) is not alive and cannot be used',
+            __id_name(phase)))
+    end
+end
+
+---@param ... evolved.phase phases
+local function __validate_phases(...)
+    for i = 1, __lua_select('#', ...) do
+        __validate_phase(__lua_select(i, ...))
     end
 end
 
@@ -6374,14 +6393,14 @@ end
 ---@return evolved.storage ... storages
 ---@nodiscard
 __evolved_select = function(chunk, ...)
-    if __debug_mode then
-        __validate_fragments(...)
-    end
-
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
         return
+    end
+
+    if __debug_mode then
+        __validate_fragments(...)
     end
 
     local indices = chunk.__component_indices
@@ -6488,10 +6507,8 @@ end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 __evolved_execute = function(query)
-    local query_index = query % 0x100000
-
-    if __freelist_ids[query_index] ~= query then
-        return __execute_iterator
+    if __debug_mode then
+        __validate_query(query)
     end
 
     local query_includes = __query_sorted_includes[query]
