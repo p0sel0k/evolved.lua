@@ -2097,6 +2097,7 @@ __chunk_remove = function(old_chunk, ...)
     local old_component_storages = old_chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
+        ---@type table<evolved.fragment, boolean>
         local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -2319,9 +2320,14 @@ __chunk_destroy = function(chunk)
     end
 
     do
-        local purging_fragments = __acquire_table(__table_pool_tag.fragment_list)
-        local purging_policies = __acquire_table(__table_pool_tag.fragment_list)
+        ---@type integer
         local purging_count = 0
+
+        ---@type evolved.fragment[]
+        local purging_fragments = __acquire_table(__table_pool_tag.fragment_list)
+
+        ---@type evolved.fragment[]
+        local purging_policies = __acquire_table(__table_pool_tag.fragment_list)
 
         local entity_chunks = __entity_chunks
         local entity_places = __entity_places
@@ -2332,9 +2338,9 @@ __chunk_destroy = function(chunk)
 
             if __minor_chunks[entity] then
                 purging_count = purging_count + 1
+                purging_fragments[purging_count] = entity
                 purging_policies[purging_count] = __chunk_get_components(chunk, place, __DESTROY_POLICY)
                     or __DESTROY_POLICY_REMOVE_FRAGMENT
-                purging_fragments[purging_count] = entity
             end
 
             entity_chunks[entity_index] = nil
@@ -2524,6 +2530,7 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
             __detach_all_entities(old_chunk)
         end
 
+        ---@type table<evolved.fragment, boolean>
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -2880,6 +2887,7 @@ __chunk_multi_insert = function(old_chunk, fragments, fragment_count, components
         __detach_all_entities(old_chunk)
     end
 
+    ---@type table<evolved.fragment, boolean>
     local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
     for i = 1, fragment_count do
@@ -2997,6 +3005,7 @@ __chunk_multi_remove = function(old_chunk, fragments, fragment_count)
     local old_component_storages = old_chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
+        ---@type table<evolved.fragment, boolean>
         local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -3668,9 +3677,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_multi_set = function(entity, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -3701,9 +3712,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_multi_assign = function(entity, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -3734,9 +3747,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_multi_insert = function(entity, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -3765,6 +3780,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param fragment_count integer
 __defer_multi_remove = function(entity, fragments, fragment_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
@@ -4127,9 +4143,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_batch_multi_set = function(query, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -4160,9 +4178,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_batch_multi_assign = function(query, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -4193,9 +4213,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_batch_multi_insert = function(query, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -4224,6 +4246,7 @@ end
 ---@param fragments evolved.fragment[]
 ---@param fragment_count integer
 __defer_batch_multi_remove = function(query, fragments, fragment_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
@@ -4252,9 +4275,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_spawn_entity_at = function(entity, chunk, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -4294,9 +4319,11 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 __defer_spawn_entity_with = function(entity, chunk, fragments, fragment_count, components, component_count)
+    ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
 
+    ---@type evolved.component[]
     local component_list = __acquire_table(__table_pool_tag.component_list)
     __lua_table_move(components, 1, component_count, 1, component_list)
 
@@ -5106,6 +5133,7 @@ __evolved_remove = function(entity, ...)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
+            ---@type table<evolved.fragment, boolean>
             local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
             for i = 1, fragment_count do
@@ -5458,6 +5486,7 @@ __evolved_multi_set = function(entity, fragments, components)
             __structural_changes = __structural_changes + 1
         end
 
+        ---@type table<evolved.fragment, boolean>
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -5757,6 +5786,7 @@ __evolved_multi_insert = function(entity, fragments, components)
             __structural_changes = __structural_changes + 1
         end
 
+        ---@type table<evolved.fragment, boolean>
         local inserted_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
@@ -5861,6 +5891,7 @@ __evolved_multi_remove = function(entity, fragments)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
+            ---@type table<evolved.fragment, boolean>
             local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
             for i = 1, fragment_count do
