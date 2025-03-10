@@ -732,25 +732,22 @@ end
 ---@param trace fun(chunk: evolved.chunk, ...: any): boolean
 ---@param ... any additional trace arguments
 local function __trace_fragment_chunks(fragment, trace, ...)
-    local major_chunks = __major_chunks[fragment]
-
-    if not major_chunks then
-        return
-    end
-
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
     local chunk_stack_size = 0
 
     do
-        local major_chunk_list = major_chunks.__item_list
-        local major_chunk_count = major_chunks.__item_count
+        local major_chunks = __major_chunks[fragment]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
-        __lua_table_move(
-            major_chunk_list, 1, major_chunk_count,
-            chunk_stack_size + 1, chunk_stack)
+        if major_chunk_count > 0 then
+            __lua_table_move(
+                major_chunk_list, 1, major_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
 
-        chunk_stack_size = chunk_stack_size + major_chunk_count
+            chunk_stack_size = chunk_stack_size + major_chunk_count
+        end
     end
 
     while chunk_stack_size > 0 do
@@ -1704,8 +1701,8 @@ local function __purge_fragment(fragment, policy)
     local purged_count = 0
 
     local minor_chunks = __minor_chunks[fragment]
-    local minor_chunk_list = minor_chunks.__item_list
-    local minor_chunk_count = minor_chunks.__item_count or 0
+    local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+    local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
     if policy == __DESTROY_POLICY_DESTROY_ENTITY then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
