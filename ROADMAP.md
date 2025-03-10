@@ -2,15 +2,7 @@
 
 ## Backlog
 
-- add manual gc for unreachable chunks
-- add destroing policies (fragments, phases, systems)
-- add debug view for chunks with help of NAME fragment traits
-
-## Known issues
-
-- destroying of fragments leave chunks with dead fragments (destroing policies)
-- destroying of systems can leave dead systems in the library state (destroying policies)
-- destroying of phases can leave dead phases in the library state (destroying policies)
+- collect unreachable chunks
 
 ## After first release
 

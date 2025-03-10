@@ -34,7 +34,6 @@ ON_SET :: fragment
 ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
-ON_DESTROY :: fragment
 
 PHASE :: fragment
 AFTER :: fragment
@@ -45,8 +44,9 @@ EXECUTE :: fragment
 PROLOGUE :: fragment
 EPILOGUE :: fragment
 
-DESTROY_ENTITY_POLICY :: id
-REMOVE_FRAGMENT_POLICY :: id
+DESTROY_POLICY :: fragment
+DESTROY_POLICY_DESTROY_ENTITY :: id
+DESTROY_POLICY_REMOVE_FRAGMENT :: id
 ```
 
 ## Functions
@@ -105,6 +105,10 @@ process :: phase... -> ()
 ```
 
 ```
+debug :: boolean -> ()
+```
+
+```
 spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
 spawn_with :: fragment[]?, component[]? -> entity, boolean
 ```
@@ -126,7 +130,7 @@ fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment
 fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
 fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder
 fragment_builder:on_remove :: {entity, fragment} -> fragment_builder
-fragment_builder:on_destroy :: id -> fragment_builder
+fragment_builder:destroy_policy :: id -> fragment_builder
 fragment_builder:build :: fragment, boolean
 ```
 
