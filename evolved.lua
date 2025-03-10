@@ -1701,16 +1701,11 @@ local function __purge_fragment(fragment, policy)
         __lua_error('purge operations should be deferred')
     end
 
-    local minor_chunks = __minor_chunks[fragment]
-
-    if not minor_chunks then
-        return 0
-    end
-
     local purged_count = 0
 
+    local minor_chunks = __minor_chunks[fragment]
     local minor_chunk_list = minor_chunks.__item_list
-    local minor_chunk_count = minor_chunks.__item_count
+    local minor_chunk_count = minor_chunks.__item_count or 0
 
     if policy == __DESTROY_POLICY_DESTROY_ENTITY then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
@@ -3156,14 +3151,9 @@ end
 ---@param phase evolved.phase
 local function __phase_process(phase)
     local phase_systems = __phase_systems[phase]
-
-    if not phase_systems then
-        return
-    end
-
-    local phase_system_set = phase_systems.__item_set
-    local phase_system_list = phase_systems.__item_list
-    local phase_system_count = phase_systems.__item_count
+    local phase_system_set = phase_systems and phase_systems.__item_set
+    local phase_system_list = phase_systems and phase_systems.__item_list
+    local phase_system_count = phase_systems and phase_systems.__item_count or 0
 
     ---@type evolved.system[]
     local sorted_system_list = __acquire_table(__table_pool_tag.system_list)
@@ -3196,47 +3186,44 @@ local function __phase_process(phase)
             sorting_marks[system_mark_index] = 1
 
             local dependencies = __system_dependencies[system]
+            local dependency_list = dependencies and dependencies.__item_list
+            local dependency_count = dependencies and dependencies.__item_count or 0
 
-            if dependencies then
-                local dependency_list = dependencies.__item_list
-                local dependency_count = dependencies.__item_count
+            for dependency_index = dependency_count, 1, -1 do
+                local dependency = dependency_list[dependency_index]
+                local dependency_mark_index = phase_system_set[dependency]
 
-                for dependency_index = dependency_count, 1, -1 do
-                    local dependency = dependency_list[dependency_index]
-                    local dependency_mark_index = phase_system_set[dependency]
+                if not dependency_mark_index then
+                    -- the dependency is not from this phase
+                else
+                    local dependency_mark = sorting_marks[dependency_mark_index]
 
-                    if not dependency_mark_index then
-                        -- the dependency is not from this phase
-                    else
-                        local dependency_mark = sorting_marks[dependency_mark_index]
+                    if not dependency_mark then
+                        -- the dependency has already been added to the sorted list
+                    elseif dependency_mark == 0 then
+                        sorting_stack_size = sorting_stack_size + 1
+                        sorting_stack[sorting_stack_size] = dependency
+                    elseif dependency_mark == 1 then
+                        local sorting_cycle_path = '' .. dependency
 
-                        if not dependency_mark then
-                            -- the dependency has already been added to the sorted list
-                        elseif dependency_mark == 0 then
-                            sorting_stack_size = sorting_stack_size + 1
-                            sorting_stack[sorting_stack_size] = dependency
-                        elseif dependency_mark == 1 then
-                            local sorting_cycle_path = '' .. dependency
+                        for cycled_system_index = sorting_stack_size, 1, -1 do
+                            local cycled_system = sorting_stack[cycled_system_index]
 
-                            for cycled_system_index = sorting_stack_size, 1, -1 do
-                                local cycled_system = sorting_stack[cycled_system_index]
+                            local cycled_system_mark_index = phase_system_set[cycled_system]
+                            local cycled_system_mark = sorting_marks[cycled_system_mark_index]
 
-                                local cycled_system_mark_index = phase_system_set[cycled_system]
-                                local cycled_system_mark = sorting_marks[cycled_system_mark_index]
+                            if cycled_system_mark == 1 then
+                                sorting_cycle_path = __lua_string_format('%s -> %s',
+                                    sorting_cycle_path, cycled_system)
 
-                                if cycled_system_mark == 1 then
-                                    sorting_cycle_path = __lua_string_format('%s -> %s',
-                                        sorting_cycle_path, cycled_system)
-
-                                    if cycled_system == dependency then
-                                        break
-                                    end
+                                if cycled_system == dependency then
+                                    break
                                 end
                             end
-
-                            __lua_error(__lua_string_format('system sorting failed: cyclic dependency detected (%s)',
-                                sorting_cycle_path))
                         end
+
+                        __lua_error(__lua_string_format('system sorting failed: cyclic dependency detected (%s)',
+                            sorting_cycle_path))
                     end
                 end
             end
@@ -6511,51 +6498,57 @@ __evolved_execute = function(query)
         __validate_query(query)
     end
 
-    local query_includes = __query_sorted_includes[query]
-    local query_include_list = query_includes and query_includes.__item_list
-    local query_include_count = query_includes and query_includes.__item_count
-
-    if not query_include_list or query_include_count == 0 then
-        return __execute_iterator
-    end
-
-    local major_fragment = query_include_list[query_include_count]
-    local major_fragment_chunks = __major_chunks[major_fragment]
-
-    if not major_fragment_chunks then
-        return __execute_iterator
-    end
-
-    local query_excludes = __query_sorted_excludes[query]
-    local query_exclude_set = query_excludes and query_excludes.__item_set
-    local query_exclude_list = query_excludes and query_excludes.__item_list
-    local query_exclude_count = query_excludes and query_excludes.__item_count
-
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
     local chunk_stack_size = 0
 
-    local major_fragment_chunk_list = major_fragment_chunks.__item_list
-    local major_fragment_chunk_count = major_fragment_chunks.__item_count
+    local query_includes = __query_sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
 
-    for major_fragment_chunk_index = 1, major_fragment_chunk_count do
-        local major_fragment_chunk = major_fragment_chunk_list[major_fragment_chunk_index]
+    local query_excludes = __query_sorted_excludes[query]
+    local query_exclude_set = query_excludes and query_excludes.__item_set
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count or 0
 
-        local is_major_fragment_chunk_matched = true
+    if query_include_count > 0 then
+        local major_fragment = query_include_list[query_include_count]
 
-        if is_major_fragment_chunk_matched and query_include_list and query_include_count > 1 then
-            is_major_fragment_chunk_matched = __chunk_has_all_fragment_list(
-                major_fragment_chunk, query_include_list, query_include_count - 1)
+        local major_fragment_chunks = __major_chunks[major_fragment]
+        local major_fragment_chunk_list = major_fragment_chunks and major_fragment_chunks.__item_list
+        local major_fragment_chunk_count = major_fragment_chunks and major_fragment_chunks.__item_count or 0
+
+        for major_fragment_chunk_index = 1, major_fragment_chunk_count do
+            local major_fragment_chunk = major_fragment_chunk_list[major_fragment_chunk_index]
+
+            local is_major_chunk_matched = true
+
+            if is_major_chunk_matched and query_include_count > 1 then
+                is_major_chunk_matched = __chunk_has_all_fragment_list(
+                    major_fragment_chunk, query_include_list, query_include_count - 1)
+            end
+
+            if is_major_chunk_matched and query_exclude_count > 0 then
+                is_major_chunk_matched = not __chunk_has_any_fragment_list(
+                    major_fragment_chunk, query_exclude_list, query_exclude_count)
+            end
+
+            if is_major_chunk_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = major_fragment_chunk
+            end
         end
-
-        if is_major_fragment_chunk_matched and query_exclude_list and query_exclude_count > 0 then
-            is_major_fragment_chunk_matched = not __chunk_has_any_fragment_list(
-                major_fragment_chunk, query_exclude_list, query_exclude_count)
+    elseif query_exclude_count > 0 then
+        for root_fragment, root_fragment_chunk in __lua_next, __root_chunks do
+            if not query_exclude_set[root_fragment] then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = root_fragment_chunk
+            end
         end
-
-        if is_major_fragment_chunk_matched then
+    else
+        for _, root_fragment_chunk in __lua_next, __root_chunks do
             chunk_stack_size = chunk_stack_size + 1
-            chunk_stack[chunk_stack_size] = major_fragment_chunk
+            chunk_stack[chunk_stack_size] = root_fragment_chunk
         end
     end
 

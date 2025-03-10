@@ -2294,18 +2294,12 @@ do
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
 
+        local chunk, entities = iter(state)
         assert(chunk == evo.chunk(f2))
         assert(entities and entities[1] == e2)
-    end
 
-    evo.set(q, evo.INCLUDES)
-
-    do
-        local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
-
+        chunk, entities = iter(state)
         assert(not chunk)
         assert(not entities)
     end
@@ -2398,16 +2392,16 @@ do
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
-        assert(not chunk and not entities)
+        local chunk = iter(state)
+        assert(chunk and chunk ~= evo.chunk(f1))
     end
 
     evo.set(q, evo.EXCLUDES, f2)
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
-        assert(not chunk and not entities)
+        local chunk = iter(state)
+        assert(chunk and chunk ~= evo.chunk(f1))
     end
 
     evo.set(q, evo.INCLUDES, f1)
@@ -7209,5 +7203,73 @@ do
 
         chunk, entity_list = iter(state)
         assert(not chunk and not entity_list)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local q12 = evo.query():include(f1, f2):build()
+
+    do
+        local iter, state = evo.execute(q12)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local qe12 = evo.query():exclude(f1, f2):build()
+
+    evo.entity():set(f1, 1):build()
+    evo.entity():set(f2, 2):build()
+    local e12 = evo.entity():set(f1, 3):set(f2, 4):build()
+
+    local c1 = evo.chunk(f1)
+    local c2 = evo.chunk(f2)
+    local c12 = evo.chunk(f1, f2)
+
+    do
+        local matched_chunk_count = 0
+        local matched_entity_count = 0
+
+        for c, es, ec in evo.execute(qe12) do
+            assert(ec > 0)
+            assert(#es == ec)
+            assert(c ~= c1 and c ~= c2 and c ~= c12)
+            matched_chunk_count = matched_chunk_count + 1
+            matched_entity_count = matched_entity_count + ec
+        end
+
+        assert(matched_chunk_count > 0)
+        assert(matched_entity_count > 0)
+    end
+
+    assert(evo.assign(qe12, evo.EXCLUDES))
+
+    do
+        local matched_chunk_count = 0
+        local matched_entity_count = 0
+
+        for _, es, ec in evo.execute(qe12) do
+            assert(ec > 0)
+            assert(#es == ec)
+            matched_chunk_count = matched_chunk_count + 1
+            matched_entity_count = matched_entity_count + ec
+        end
+
+        assert(matched_chunk_count > 0)
+        assert(matched_entity_count > 0)
+    end
+
+    assert(evo.insert(qe12, evo.INCLUDES, f1, f2))
+
+    do
+        local iter, state = evo.execute(qe12)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk == c12)
+        assert(entity_list and #entity_list == 1)
+        assert(entity_count and entity_count == 1)
+        assert(entity_list[1] == e12)
     end
 end
