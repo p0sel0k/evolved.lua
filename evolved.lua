@@ -51,6 +51,7 @@ local evolved = {
 ---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
 
 ---@class (exact) evolved.chunk
+---@field package __index? integer
 ---@field package __parent? evolved.chunk
 ---@field package __child_list evolved.chunk[]
 ---@field package __child_count integer
@@ -907,7 +908,8 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
-        __parent = chunk_parent,
+        __index = nil,
+        __parent = nil,
         __child_list = {},
         __child_count = 0,
         __entity_list = {},
@@ -949,12 +951,16 @@ local function __new_chunk(chunk_parent, chunk_fragment)
             end
         end
 
-        local child_chunk_index = chunk_parent.__child_count + 1
-        chunk_parent.__child_list[child_chunk_index] = chunk
-        chunk_parent.__child_count = child_chunk_index
+        local chunk_index = chunk_parent.__child_count + 1
+
+        chunk_parent.__child_list[chunk_index] = chunk
+        chunk_parent.__child_count = chunk_index
 
         chunk_parent.__with_fragment_edges[chunk_fragment] = chunk
         chunk.__without_fragment_edges[chunk_fragment] = chunk_parent
+
+        chunk.__index = chunk_index
+        chunk.__parent = chunk_parent
     end
 
     do
