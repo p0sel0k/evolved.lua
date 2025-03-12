@@ -6550,41 +6550,35 @@ __evolved_execute = function(query)
     if query_include_count > 0 then
         local major_fragment = query_include_list[query_include_count]
 
-        local major_fragment_chunks = __major_chunks[major_fragment]
-        local major_fragment_chunk_list = major_fragment_chunks and major_fragment_chunks.__item_list
-        local major_fragment_chunk_count = major_fragment_chunks and major_fragment_chunks.__item_count or 0
+        local major_chunks = __major_chunks[major_fragment]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
-        for major_fragment_chunk_index = 1, major_fragment_chunk_count do
-            local major_fragment_chunk = major_fragment_chunk_list[major_fragment_chunk_index]
+        for major_chunk_index = 1, major_chunk_count do
+            local major_chunk = major_chunk_list[major_chunk_index]
 
-            local is_major_chunk_matched = true
-
-            if is_major_chunk_matched and query_include_count > 1 then
-                is_major_chunk_matched = __chunk_has_all_fragment_list(
-                    major_fragment_chunk, query_include_list, query_include_count - 1)
-            end
-
-            if is_major_chunk_matched and query_exclude_count > 0 then
-                is_major_chunk_matched = not __chunk_has_any_fragment_list(
-                    major_fragment_chunk, query_exclude_list, query_exclude_count)
-            end
+            local is_major_chunk_matched =
+                (query_include_count == 1 or __chunk_has_all_fragment_list(
+                    major_chunk, query_include_list, query_include_count - 1)) and
+                (query_exclude_count == 0 or not __chunk_has_any_fragment_list(
+                    major_chunk, query_exclude_list, query_exclude_count))
 
             if is_major_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = major_fragment_chunk
+                chunk_stack[chunk_stack_size] = major_chunk
             end
         end
     elseif query_exclude_count > 0 then
-        for root_fragment, root_fragment_chunk in __lua_next, __root_chunks do
+        for root_fragment, root_chunk in __lua_next, __root_chunks do
             if not query_exclude_set[root_fragment] then
                 chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = root_fragment_chunk
+                chunk_stack[chunk_stack_size] = root_chunk
             end
         end
     else
-        for _, root_fragment_chunk in __lua_next, __root_chunks do
+        for _, root_chunk in __lua_next, __root_chunks do
             chunk_stack_size = chunk_stack_size + 1
-            chunk_stack[chunk_stack_size] = root_fragment_chunk
+            chunk_stack[chunk_stack_size] = root_chunk
         end
     end
 
