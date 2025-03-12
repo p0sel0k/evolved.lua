@@ -5979,19 +5979,19 @@ __evolved_batch_set = function(query, fragment, ...)
         __validate_fragment(fragment)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local set_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             if __chunk_has_fragment(chunk, fragment) then
@@ -6000,10 +6000,11 @@ __evolved_batch_set = function(query, fragment, ...)
                 set_count = set_count + __chunk_insert(chunk, fragment, ...)
             end
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return set_count, false
 end
 
@@ -6022,27 +6023,28 @@ __evolved_batch_assign = function(query, fragment, ...)
         __validate_fragment(fragment)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local assigned_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return assigned_count, false
 end
 
@@ -6061,27 +6063,28 @@ __evolved_batch_insert = function(query, fragment, ...)
         __validate_fragment(fragment)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local inserted_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return inserted_count, false
 end
 
@@ -6105,27 +6108,28 @@ __evolved_batch_remove = function(query, ...)
         __validate_fragments(...)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local removed_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             removed_count = removed_count + __chunk_remove(chunk, ...)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return removed_count, false
 end
 
@@ -6138,27 +6142,28 @@ __evolved_batch_clear = function(query)
         return 0, true
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local cleared_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             cleared_count = cleared_count + __chunk_clear(chunk)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return cleared_count, false
 end
 
@@ -6171,27 +6176,28 @@ __evolved_batch_destroy = function(query)
         return 0, true
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local destroyed_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             destroyed_count = destroyed_count + __chunk_destroy(chunk)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return destroyed_count, false
 end
 
@@ -6220,27 +6226,28 @@ __evolved_batch_multi_set = function(query, fragments, components)
         __validate_fragment_list(fragments, fragment_count)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local set_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             set_count = set_count + __chunk_multi_set(chunk, fragments, fragment_count, components)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return set_count, false
 end
 
@@ -6269,27 +6276,28 @@ __evolved_batch_multi_assign = function(query, fragments, components)
         __validate_fragment_list(fragments, fragment_count)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local assigned_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             assigned_count = assigned_count + __chunk_multi_assign(chunk, fragments, fragment_count, components)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return assigned_count, false
 end
 
@@ -6318,27 +6326,28 @@ __evolved_batch_multi_insert = function(query, fragments, components)
         __validate_fragment_list(fragments, fragment_count)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local inserted_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             inserted_count = inserted_count + __chunk_multi_insert(chunk, fragments, fragment_count, components)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return inserted_count, false
 end
 
@@ -6362,27 +6371,28 @@ __evolved_batch_multi_remove = function(query, fragments)
         __validate_fragment_list(fragments, fragment_count)
     end
 
-    ---@type evolved.chunk[]
-    local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-    local chunk_count = 0
-
-    for chunk in __evolved_execute(query) do
-        chunk_count = chunk_count + 1
-        chunk_list[chunk_count] = chunk
-    end
-
     local removed_count = 0
 
     __defer()
     do
+        ---@type evolved.chunk[]
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_count = 0
+
+        for chunk in __evolved_execute(query) do
+            chunk_count = chunk_count + 1
+            chunk_list[chunk_count] = chunk
+        end
+
         for i = 1, chunk_count do
             local chunk = chunk_list[i]
             removed_count = removed_count + __chunk_multi_remove(chunk, fragments, fragment_count)
         end
+
+        __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
     __commit()
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_list)
     return removed_count, false
 end
 
