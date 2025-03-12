@@ -135,6 +135,7 @@ local __lua_select = select
 local __lua_setmetatable = setmetatable
 local __lua_string_format = string.format
 local __lua_table_concat = table.concat
+local __lua_table_remove = table.remove
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -656,6 +657,9 @@ local __evolved_process
 
 local __evolved_spawn_at
 local __evolved_spawn_with
+
+local __evolved_debug_mode
+local __evolved_collect_garbage
 
 local __evolved_entity
 local __evolved_fragment
@@ -1697,6 +1701,64 @@ local __chunk_multi_remove
 ---
 ---
 ---
+
+---@param chunk evolved.chunk
+local function __purge_chunk(chunk)
+    if __defer_depth <= 0 then
+        __lua_error('purge operations should be deferred')
+    end
+
+    if chunk.__child_count > 0 or chunk.__entity_count > 0 then
+        __lua_error('chunk should be empty before purging')
+    end
+
+    local chunk_index = chunk.__index
+    local chunk_parent = chunk.__parent
+    local chunk_fragment = chunk.__fragment
+
+    local major_chunks = __major_chunks[chunk_fragment]
+    local minor_chunks = __minor_chunks[chunk_fragment]
+
+    local with_fragment_edges = chunk.__with_fragment_edges
+    local without_fragment_edges = chunk.__without_fragment_edges
+
+    if __root_chunks[chunk_fragment] == chunk then
+        __root_chunks[chunk_fragment] = nil
+    end
+
+    if major_chunks then
+        __assoc_list_remove_ordered(major_chunks, chunk)
+
+        if major_chunks.__item_count == 0 then
+            __major_chunks[chunk_fragment] = nil
+        end
+    end
+
+    if minor_chunks then
+        __assoc_list_remove_ordered(minor_chunks, chunk)
+
+        if minor_chunks.__item_count == 0 then
+            __minor_chunks[chunk_fragment] = nil
+        end
+    end
+
+    if chunk_index and chunk_parent then
+        __lua_table_remove(chunk_parent.__child_list, chunk_index)
+        chunk_parent.__child_count = chunk_parent.__child_count - 1
+        chunk.__index = nil
+        chunk.__parent = nil
+    end
+
+    for with_fragment, with_fragment_edge in __lua_next, with_fragment_edges do
+        with_fragment_edges[with_fragment] = nil
+        with_fragment_edge.__without_fragment_edges[with_fragment] = nil
+    end
+
+    for without_fragment, without_fragment_edge in __lua_next, without_fragment_edges do
+        without_fragment_edges[without_fragment] = nil
+        without_fragment_edge.__with_fragment_edges[without_fragment] = nil
+    end
+end
 
 ---@param fragment evolved.fragment
 ---@param policy evolved.id
@@ -6719,11 +6781,73 @@ end
 ---
 
 ---@param yesno boolean
-local function __evolved_debug_mode(yesno)
+__evolved_debug_mode = function(yesno)
     __debug_mode = yesno
 end
 
-local function __evolved_collect_garbage()
+---@return boolean is_collected
+---@return boolean is_deferred
+__evolved_collect_garbage = function()
+    if __defer_depth > 0 then
+        __defer_call_hook(__evolved_collect_garbage)
+        return false, true
+    end
+
+    __defer()
+
+    do
+        ---@type evolved.chunk[]
+        local working_chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+        local working_chunk_stack_size = 0
+
+        ---@type evolved.chunk[]
+        local postorder_chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+        local postorder_chunk_stack_size = 0
+
+        for _, root_chunk in __lua_next, __root_chunks do
+            working_chunk_stack_size = working_chunk_stack_size + 1
+            working_chunk_stack[working_chunk_stack_size] = root_chunk
+
+            while working_chunk_stack_size > 0 do
+                local working_chunk = working_chunk_stack[working_chunk_stack_size]
+
+                working_chunk_stack[working_chunk_stack_size] = nil
+                working_chunk_stack_size = working_chunk_stack_size - 1
+
+                do
+                    local working_chunk_child_list = working_chunk.__child_list
+                    local working_chunk_child_count = working_chunk.__child_count
+
+                    __lua_table_move(
+                        working_chunk_child_list, 1, working_chunk_child_count,
+                        working_chunk_stack_size + 1, working_chunk_stack)
+
+                    working_chunk_stack_size = working_chunk_stack_size + working_chunk_child_count
+                end
+
+                postorder_chunk_stack_size = postorder_chunk_stack_size + 1
+                postorder_chunk_stack[postorder_chunk_stack_size] = working_chunk
+            end
+        end
+
+        for postorder_chunk_index = postorder_chunk_stack_size, 1, -1 do
+            local postorder_chunk = postorder_chunk_stack[postorder_chunk_index]
+
+            local should_postorder_chunk_be_purged =
+                postorder_chunk.__child_count == 0 and
+                postorder_chunk.__entity_count == 0
+
+            if should_postorder_chunk_be_purged then
+                __purge_chunk(postorder_chunk)
+            end
+        end
+
+        __release_table(__table_pool_tag.chunk_stack, working_chunk_stack)
+        __release_table(__table_pool_tag.chunk_stack, postorder_chunk_stack)
+    end
+
+    __commit()
+    return true, false
 end
 
 ---

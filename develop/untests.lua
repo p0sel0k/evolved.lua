@@ -7273,3 +7273,65 @@ do
         assert(entity_list[1] == e12)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    assert(evo.insert(f1, evo.NAME, 'f1'))
+    assert(evo.insert(f2, evo.NAME, 'f2'))
+
+    local old_c1 = assert(evo.chunk(f1))
+    local old_c12 = assert(evo.chunk(f1, f2))
+
+    local e1 = evo.entity():set(f1, 1):build()
+
+    evo.collect_garbage()
+
+    local e12 = evo.entity():set(f1, 2):set(f2, 3):build()
+
+    do
+        assert(old_c1 == evo.chunk(f1))
+
+        local old_c1_es, old_c1_ec = evo.entities(old_c1)
+        assert(old_c1_es and old_c1_ec)
+        assert(#old_c1_es == 1 and old_c1_ec == 1)
+        assert(old_c1_es[1] == e1)
+    end
+
+    do
+        local new_c12 = assert(evo.chunk(f1, f2))
+        assert(old_c12 ~= new_c12)
+
+        local new_c12_es, new_c12_ec = evo.entities(new_c12)
+        assert(new_c12_es and new_c12_ec)
+        assert(#new_c12_es == 1 and new_c12_ec == 1)
+        assert(new_c12_es[1] == e12)
+    end
+
+    assert(evo.destroy(e1))
+    assert(evo.destroy(e12))
+
+    evo.collect_garbage()
+
+    do
+        local new_c1 = assert(evo.chunk(f1))
+        assert(old_c1 ~= new_c1)
+
+        local new_c12 = assert(evo.chunk(f1, f2))
+        assert(old_c12 ~= new_c12)
+    end
+end
+
+do
+    local f1 = evo.id()
+    local old_c1 = evo.chunk(f1)
+
+    assert(evo.defer())
+
+    assert(not evo.collect_garbage())
+    assert(old_c1 == evo.chunk(f1))
+
+    assert(evo.commit())
+
+    assert(old_c1 ~= evo.chunk(f1))
+end

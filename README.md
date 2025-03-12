@@ -107,7 +107,7 @@ spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
 spawn_with :: fragment[]?, component[]? -> entity, boolean
 
 debug_mode :: boolean -> ()
-collect_garbage :: ()
+collect_garbage :: boolean, boolean
 ```
 
 ## Builders

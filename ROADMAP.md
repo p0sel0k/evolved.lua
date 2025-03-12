@@ -3,6 +3,7 @@
 ## Backlog
 
 - collect unreachable chunks
+- add debug checks for unreachable chunks
 
 ## After first release
 
