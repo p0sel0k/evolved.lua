@@ -575,25 +575,27 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 ---
 
----@type table<evolved.fragment, integer>
-local __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
-    __newindex = function() __lua_error('attempt to modify empty fragment set') end
-})
+local __safe_tbls = {
+    ---@type table<evolved.fragment, integer>
+    __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
+        __newindex = function() __lua_error('attempt to modify empty fragment set') end
+    }),
 
----@type evolved.fragment[]
-local __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
-    __newindex = function() __lua_error('attempt to modify empty fragment list') end
-})
+    ---@type evolved.fragment[]
+    __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
+        __newindex = function() __lua_error('attempt to modify empty fragment list') end
+    }),
 
----@type evolved.component[]
-local __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
-    __newindex = function() __lua_error('attempt to modify empty component list') end
-})
+    ---@type evolved.component[]
+    __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
+        __newindex = function() __lua_error('attempt to modify empty component list') end
+    }),
 
----@type evolved.component[]
-local __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
-    __newindex = function() __lua_error('attempt to modify empty component storage') end
-})
+    ---@type evolved.component[]
+    __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
+        __newindex = function() __lua_error('attempt to modify empty component storage') end
+    }),
+}
 
 ---
 ---
@@ -5356,7 +5358,7 @@ __evolved_multi_set = function(entity, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -5456,7 +5458,7 @@ __evolved_multi_set = function(entity, fragments, components)
         local new_chunk_has_set_or_assign_hooks = new_chunk.__has_set_or_assign_hooks
         local new_chunk_has_set_or_insert_hooks = new_chunk.__has_set_or_insert_hooks
 
-        local old_fragment_set = old_chunk and old_chunk.__fragment_set or __EMPTY_FRAGMENT_SET
+        local old_fragment_set = old_chunk and old_chunk.__fragment_set or __safe_tbls.__EMPTY_FRAGMENT_SET
 
         local new_place = new_entity_count + 1
         new_chunk.__entity_count = new_place
@@ -5605,7 +5607,7 @@ __evolved_multi_assign = function(entity, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -5714,7 +5716,7 @@ __evolved_multi_insert = function(entity, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -5756,7 +5758,7 @@ __evolved_multi_insert = function(entity, fragments, components)
         local new_chunk_has_defaults_or_constructs = new_chunk.__has_defaults_or_constructs
         local new_chunk_has_set_or_insert_hooks = new_chunk.__has_set_or_insert_hooks
 
-        local old_fragment_set = old_chunk and old_chunk.__fragment_set or __EMPTY_FRAGMENT_SET
+        local old_fragment_set = old_chunk and old_chunk.__fragment_set or __safe_tbls.__EMPTY_FRAGMENT_SET
 
         local new_place = new_entity_count + 1
         new_chunk.__entity_count = new_place
@@ -6200,7 +6202,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -6249,7 +6251,7 @@ __evolved_batch_multi_assign = function(query, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -6298,7 +6300,7 @@ __evolved_batch_multi_insert = function(query, fragments, components)
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     if __defer_depth > 0 then
@@ -6421,7 +6423,7 @@ __evolved_select = function(chunk, ...)
     local indices = chunk.__component_indices
     local storages = chunk.__component_storages
 
-    local empty_component_storage = __EMPTY_COMPONENT_STORAGE
+    local empty_component_storage = __safe_tbls.__EMPTY_COMPONENT_STORAGE
 
     if fragment_count == 1 then
         local f1 = ...
@@ -6622,11 +6624,11 @@ end
 ---@return boolean is_deferred
 __evolved_spawn_at = function(chunk, fragments, components)
     if not fragments then
-        fragments = __EMPTY_FRAGMENT_LIST
+        fragments = __safe_tbls.__EMPTY_FRAGMENT_LIST
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     local fragment_count = #fragments
@@ -6664,11 +6666,11 @@ end
 ---@return boolean is_deferred
 __evolved_spawn_with = function(fragments, components)
     if not fragments then
-        fragments = __EMPTY_FRAGMENT_LIST
+        fragments = __safe_tbls.__EMPTY_FRAGMENT_LIST
     end
 
     if not components then
-        components = __EMPTY_COMPONENT_LIST
+        components = __safe_tbls.__EMPTY_COMPONENT_LIST
     end
 
     local fragment_count = #fragments
