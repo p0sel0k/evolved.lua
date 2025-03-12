@@ -1762,13 +1762,10 @@ end
 
 ---@param fragment evolved.fragment
 ---@param policy evolved.id
----@return integer purged_count
 local function __purge_fragment(fragment, policy)
     if __defer_depth <= 0 then
         __lua_error('purge operations should be deferred')
     end
-
-    local purged_count = 0
 
     local minor_chunks = __minor_chunks[fragment]
     local minor_chunk_list = minor_chunks and minor_chunks.__item_list
@@ -1777,46 +1774,17 @@ local function __purge_fragment(fragment, policy)
     if policy == __DESTROY_POLICY_DESTROY_ENTITY then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
             local minor_chunk = minor_chunk_list[minor_chunk_index]
-            purged_count = purged_count + __chunk_destroy(minor_chunk)
+            _ = __chunk_destroy(minor_chunk)
         end
     elseif policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
             local minor_chunk = minor_chunk_list[minor_chunk_index]
-            purged_count = purged_count + __chunk_remove(minor_chunk, fragment)
+            _ = __chunk_remove(minor_chunk, fragment)
         end
     else
         __lua_print(__lua_string_format('| evolved.lua | unknown DESTROY_POLICY policy (%s) on (%s)',
             __id_name(policy), __id_name(fragment)))
     end
-
-    return purged_count
-end
-
----@param fragments evolved.fragment[]
----@param policies evolved.id[]
----@param count integer
----@return integer purged_count
-local function __purge_fragments(fragments, policies, count)
-    if __defer_depth <= 0 then
-        __lua_error('purge operations should be deferred')
-    end
-
-    local purged_count = 0
-
-    for index = 1, count do
-        local fragment, policy = fragments[index], policies[index]
-
-        if policy == __DESTROY_POLICY_DESTROY_ENTITY then
-            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_POLICY_DESTROY_ENTITY)
-        elseif policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
-            purged_count = purged_count + __purge_fragment(fragment, __DESTROY_POLICY_REMOVE_FRAGMENT)
-        else
-            __lua_print(__lua_string_format('| evolved.lua | unknown DESTROY_POLICY policy (%s) on (%s)',
-                __id_name(policy), __id_name(fragment)))
-        end
-    end
-
-    return purged_count
 end
 
 ---
@@ -2421,8 +2389,10 @@ __chunk_destroy = function(chunk)
 
         __detach_all_entities(chunk)
 
-        if purging_count > 0 then
-            __purge_fragments(purging_fragments, purging_policies, purging_count)
+        for purging_index = 1, purging_count do
+            local purging_fragment = purging_fragments[purging_index]
+            local purging_policy = purging_policies[purging_index]
+            __purge_fragment(purging_fragment, purging_policy)
         end
 
         __release_table(__table_pool_tag.fragment_list, purging_fragments)
