@@ -348,8 +348,11 @@ end
 
 local __assoc_list_new
 local __assoc_list_sort
+local __assoc_list_sort_ex
 local __assoc_list_insert
+local __assoc_list_insert_ex
 local __assoc_list_remove
+local __assoc_list_remove_ex
 
 ---@param reserve? integer
 ---@return evolved.assoc_list
@@ -363,16 +366,26 @@ __assoc_list_new = function(reserve)
     }
 end
 
----@param al evolved.assoc_list
----@param comp? fun(a: any, b: any): boolean
+---@generic K
+---@param al evolved.assoc_list<K>
+---@param comp? fun(a: K, b: K): boolean
 __assoc_list_sort = function(al, comp)
-    local al_item_count = al.__item_count
+    __assoc_list_sort_ex(
+        al.__item_set,
+        al.__item_list,
+        al.__item_count,
+        comp)
+end
 
+---@generic K
+---@param al_item_set table<K, integer>
+---@param al_item_list K[]
+---@param al_item_count integer
+---@param comp? fun(a: K, b: K): boolean
+__assoc_list_sort_ex = function(al_item_set, al_item_list, al_item_count, comp)
     if al_item_count < 2 then
         return
     end
-
-    local al_item_set, al_item_list = al.__item_set, al.__item_list
 
     __lua_table_sort(al_item_list, comp)
 
@@ -382,38 +395,62 @@ __assoc_list_sort = function(al, comp)
     end
 end
 
----@param al evolved.assoc_list
----@param item any
+---@generic K
+---@param al evolved.assoc_list<K>
+---@param item K
 __assoc_list_insert = function(al, item)
-    local al_item_set = al.__item_set
+    al.__item_count = __assoc_list_insert_ex(
+        al.__item_set,
+        al.__item_list,
+        al.__item_count,
+        item)
+end
 
+---@generic K
+---@param al_item_set table<K, integer>
+---@param al_item_list K[]
+---@param al_item_count integer
+---@param item any
+---@return integer new_al_count
+---@nodiscard
+__assoc_list_insert_ex = function(al_item_set, al_item_list, al_item_count, item)
     local item_index = al_item_set[item]
 
     if item_index then
-        return
+        return al_item_count
     end
-
-    local al_item_list, al_item_count = al.__item_list, al.__item_count
 
     al_item_count = al_item_count + 1
     al_item_set[item] = al_item_count
     al_item_list[al_item_count] = item
 
-    al.__item_count = al_item_count
+    return al_item_count
 end
 
----@param al evolved.assoc_list
----@param item any
+---@generic K
+---@param al evolved.assoc_list<K>
+---@param item K
 __assoc_list_remove = function(al, item)
-    local al_item_set = al.__item_set
+    al.__item_count = __assoc_list_remove_ex(
+        al.__item_set,
+        al.__item_list,
+        al.__item_count,
+        item)
+end
 
+---@generic K
+---@param al_item_set table<K, integer>
+---@param al_item_list K[]
+---@param al_item_count integer
+---@param item any
+---@return integer new_al_count
+---@nodiscard
+__assoc_list_remove_ex = function(al_item_set, al_item_list, al_item_count, item)
     local item_index = al_item_set[item]
 
     if not item_index then
-        return
+        return al_item_count
     end
-
-    local al_item_list, al_item_count = al.__item_list, al.__item_count
 
     for al_item_index = item_index, al_item_count - 1 do
         local al_next_item = al_item_list[al_item_index + 1]
@@ -425,7 +462,7 @@ __assoc_list_remove = function(al, item)
     al_item_list[al_item_count] = nil
     al_item_count = al_item_count - 1
 
-    al.__item_count = al_item_count
+    return al_item_count
 end
 
 ---
