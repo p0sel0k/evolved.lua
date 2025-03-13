@@ -346,10 +346,15 @@ end
 ---@field package __item_list any[]
 ---@field package __item_count integer
 
+local __assoc_list_new
+local __assoc_list_sort
+local __assoc_list_insert
+local __assoc_list_remove
+
 ---@param reserve? integer
 ---@return evolved.assoc_list
 ---@nodiscard
-local function __assoc_list_new(reserve)
+__assoc_list_new = function(reserve)
     ---@type evolved.assoc_list
     return {
         __item_set = __lua_table_new(0, reserve or 0),
@@ -360,7 +365,7 @@ end
 
 ---@param al evolved.assoc_list
 ---@param comp? fun(a: any, b: any): boolean
-local function __assoc_list_sort(al, comp)
+__assoc_list_sort = function(al, comp)
     local al_item_count = al.__item_count
 
     if al_item_count < 2 then
@@ -379,7 +384,7 @@ end
 
 ---@param al evolved.assoc_list
 ---@param item any
-local function __assoc_list_insert(al, item)
+__assoc_list_insert = function(al, item)
     local al_item_set = al.__item_set
 
     local item_index = al_item_set[item]
@@ -399,7 +404,7 @@ end
 
 ---@param al evolved.assoc_list
 ---@param item any
-local function __assoc_list_remove_ordered(al, item)
+__assoc_list_remove = function(al, item)
     local al_item_set = al.__item_set
 
     local item_index = al_item_set[item]
@@ -414,33 +419,6 @@ local function __assoc_list_remove_ordered(al, item)
         local al_next_item = al_item_list[al_item_index + 1]
         al_item_set[al_next_item] = al_item_index
         al_item_list[al_item_index] = al_next_item
-    end
-
-    al_item_set[item] = nil
-    al_item_list[al_item_count] = nil
-    al_item_count = al_item_count - 1
-
-    al.__item_count = al_item_count
-end
-
----@param al evolved.assoc_list
----@param item any
----@diagnostic disable-next-line: unused-function, unused-local
-local function __assoc_list_remove_unordered(al, item)
-    local al_item_set = al.__item_set
-
-    local item_index = al_item_set[item]
-
-    if not item_index then
-        return
-    end
-
-    local al_item_list, al_item_count = al.__item_list, al.__item_count
-
-    if item_index ~= al_item_count then
-        local al_last_item = al_item_list[al_item_count]
-        al_item_set[al_last_item] = item_index
-        al_item_list[item_index] = al_last_item
     end
 
     al_item_set[item] = nil
@@ -1727,7 +1705,7 @@ local function __purge_chunk(chunk)
     end
 
     if major_chunks then
-        __assoc_list_remove_ordered(major_chunks, chunk)
+        __assoc_list_remove(major_chunks, chunk)
 
         if major_chunks.__item_count == 0 then
             __major_chunks[chunk_fragment] = nil
@@ -1735,7 +1713,7 @@ local function __purge_chunk(chunk)
     end
 
     if minor_chunks then
-        __assoc_list_remove_ordered(minor_chunks, chunk)
+        __assoc_list_remove(minor_chunks, chunk)
 
         if minor_chunks.__item_count == 0 then
             __minor_chunks[chunk_fragment] = nil
@@ -7776,7 +7754,7 @@ __lua_assert(__evolved_insert(__PHASE, __ON_SET, function(system, _, new_phase, 
         local old_phase_systems = __phase_systems[old_phase]
 
         if old_phase_systems then
-            __assoc_list_remove_ordered(old_phase_systems, system)
+            __assoc_list_remove(old_phase_systems, system)
 
             if old_phase_systems.__item_count == 0 then
                 __phase_systems[old_phase] = nil
@@ -7800,7 +7778,7 @@ __lua_assert(__evolved_insert(__PHASE, __ON_REMOVE, function(system, _, old_phas
     local old_phase_systems = __phase_systems[old_phase]
 
     if old_phase_systems then
-        __assoc_list_remove_ordered(old_phase_systems, system)
+        __assoc_list_remove(old_phase_systems, system)
 
         if old_phase_systems.__item_count == 0 then
             __phase_systems[old_phase] = nil
