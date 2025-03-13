@@ -1349,6 +1349,67 @@ end
 ---
 ---
 
+---@param fragment evolved.fragment
+local function __validate_fragment(fragment)
+    local fragment_index = fragment % 0x100000
+
+    if __freelist_ids[fragment_index] ~= fragment then
+        __lua_error(__lua_string_format(
+            'the fragment (%s) is not alive and cannot be used',
+            __id_name(fragment)))
+    end
+end
+
+---@param ... evolved.fragment fragments
+local function __validate_fragments(...)
+    for i = 1, __lua_select('#', ...) do
+        __validate_fragment(__lua_select(i, ...))
+    end
+end
+
+---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
+local function __validate_fragment_list(fragment_list, fragment_count)
+    for i = 1, fragment_count do
+        __validate_fragment(fragment_list[i])
+    end
+end
+
+---@param query evolved.query
+local function __validate_query(query)
+    local query_index = query % 0x100000
+
+    if __freelist_ids[query_index] ~= query then
+        __lua_error(__lua_string_format(
+            'the query (%s) is not alive and cannot be used',
+            __id_name(query)))
+    end
+end
+
+---@param phase evolved.phase
+local function __validate_phase(phase)
+    local phase_index = phase % 0x100000
+
+    if __freelist_ids[phase_index] ~= phase then
+        __lua_error(__lua_string_format(
+            'the phase (%s) is not alive and cannot be used',
+            __id_name(phase)))
+    end
+end
+
+---@param ... evolved.phase phases
+local function __validate_phases(...)
+    for i = 1, __lua_select('#', ...) do
+        __validate_phase(__lua_select(i, ...))
+    end
+end
+
+---
+---
+---
+---
+---
+
 local __defer
 local __commit
 
@@ -4344,6 +4405,11 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
     local fragment_list = bytes[index + 2]
     local fragment_count = bytes[index + 3]
     local component_list = bytes[index + 4]
+
+    if __debug_mode then
+        __validate_fragment_list(fragment_list, fragment_count)
+    end
+
     __defer()
     do
         __spawn_entity_at(entity, chunk, fragment_list, fragment_count, component_list)
@@ -4351,6 +4417,7 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
         __release_table(__table_pool_tag.component_list, component_list)
     end
     __commit()
+
     return 5
 end
 
@@ -4388,6 +4455,11 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
     local fragment_list = bytes[index + 2]
     local fragment_count = bytes[index + 3]
     local component_list = bytes[index + 4]
+
+    if __debug_mode then
+        __validate_fragment_list(fragment_list, fragment_count)
+    end
+
     __defer()
     do
         __spawn_entity_with(entity, chunk, fragment_list, fragment_count, component_list)
@@ -4395,6 +4467,7 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
         __release_table(__table_pool_tag.component_list, component_list)
     end
     __commit()
+
     return 5
 end
 
@@ -4469,67 +4542,6 @@ __defer_ops[__defer_op.call_hook] = function(bytes, index)
     end
 
     return 2 + argument_count
-end
-
----
----
----
----
----
-
----@param fragment evolved.fragment
-local function __validate_fragment(fragment)
-    local fragment_index = fragment % 0x100000
-
-    if __freelist_ids[fragment_index] ~= fragment then
-        __lua_error(__lua_string_format(
-            'the fragment (%s) is not alive and cannot be used',
-            __id_name(fragment)))
-    end
-end
-
----@param ... evolved.fragment fragments
-local function __validate_fragments(...)
-    for i = 1, __lua_select('#', ...) do
-        __validate_fragment(__lua_select(i, ...))
-    end
-end
-
----@param fragment_list evolved.fragment[]
----@param fragment_count integer
-local function __validate_fragment_list(fragment_list, fragment_count)
-    for i = 1, fragment_count do
-        __validate_fragment(fragment_list[i])
-    end
-end
-
----@param query evolved.query
-local function __validate_query(query)
-    local query_index = query % 0x100000
-
-    if __freelist_ids[query_index] ~= query then
-        __lua_error(__lua_string_format(
-            'the query (%s) is not alive and cannot be used',
-            __id_name(query)))
-    end
-end
-
----@param phase evolved.phase
-local function __validate_phase(phase)
-    local phase_index = phase % 0x100000
-
-    if __freelist_ids[phase_index] ~= phase then
-        __lua_error(__lua_string_format(
-            'the phase (%s) is not alive and cannot be used',
-            __id_name(phase)))
-    end
-end
-
----@param ... evolved.phase phases
-local function __validate_phases(...)
-    for i = 1, __lua_select('#', ...) do
-        __validate_phase(__lua_select(i, ...))
-    end
 end
 
 ---
@@ -6678,6 +6690,10 @@ __evolved_spawn_at = function(chunk, fragments, components)
     local fragment_count = #fragments
     local component_count = #components
 
+    if __debug_mode then
+        __validate_fragment_list(fragments, fragment_count)
+    end
+
     local entity = __acquire_id()
 
     if not chunk then
@@ -6689,10 +6705,6 @@ __evolved_spawn_at = function(chunk, fragments, components)
             fragments, fragment_count,
             components, component_count)
         return entity, true
-    end
-
-    if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
     end
 
     __defer()
@@ -6720,6 +6732,10 @@ __evolved_spawn_with = function(fragments, components)
     local fragment_count = #fragments
     local component_count = #components
 
+    if __debug_mode then
+        __validate_fragment_list(fragments, fragment_count)
+    end
+
     local entity, chunk = __acquire_id(), __chunk_fragment_list(fragments, fragment_count)
 
     if not chunk then
@@ -6731,10 +6747,6 @@ __evolved_spawn_with = function(fragments, components)
             fragments, fragment_count,
             components, component_count)
         return entity, true
-    end
-
-    if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
     end
 
     __defer()
