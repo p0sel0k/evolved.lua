@@ -51,8 +51,8 @@ local evolved = {
 ---@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
 
 ---@class (exact) evolved.chunk
----@field package __index? integer
 ---@field package __parent? evolved.chunk
+---@field package __child_set table<evolved.chunk, integer>
 ---@field package __child_list evolved.chunk[]
 ---@field package __child_count integer
 ---@field package __entity_list evolved.entity[]
@@ -135,7 +135,6 @@ local __lua_select = select
 local __lua_setmetatable = setmetatable
 local __lua_string_format = string.format
 local __lua_table_concat = table.concat
-local __lua_table_remove = table.remove
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -371,9 +370,7 @@ end
 ---@param comp? fun(a: K, b: K): boolean
 __assoc_list_sort = function(al, comp)
     __assoc_list_sort_ex(
-        al.__item_set,
-        al.__item_list,
-        al.__item_count,
+        al.__item_set, al.__item_list, al.__item_count,
         comp)
 end
 
@@ -400,9 +397,7 @@ end
 ---@param item K
 __assoc_list_insert = function(al, item)
     al.__item_count = __assoc_list_insert_ex(
-        al.__item_set,
-        al.__item_list,
-        al.__item_count,
+        al.__item_set, al.__item_list, al.__item_count,
         item)
 end
 
@@ -432,9 +427,7 @@ end
 ---@param item K
 __assoc_list_remove = function(al, item)
     al.__item_count = __assoc_list_remove_ex(
-        al.__item_set,
-        al.__item_list,
-        al.__item_count,
+        al.__item_set, al.__item_list, al.__item_count,
         item)
 end
 
@@ -927,8 +920,8 @@ local function __new_chunk(chunk_parent, chunk_fragment)
 
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
-        __index = nil,
         __parent = nil,
+        __child_set = {},
         __child_list = {},
         __child_count = 0,
         __entity_list = {},
@@ -956,9 +949,9 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         for parent_fragment_index = 1, parent_fragment_count do
             local parent_fragment = parent_fragment_list[parent_fragment_index]
 
-            chunk_fragment_count = chunk_fragment_count + 1
-            chunk_fragment_set[parent_fragment] = chunk_fragment_count
-            chunk_fragment_list[chunk_fragment_count] = parent_fragment
+            chunk_fragment_count = __assoc_list_insert_ex(
+                chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
+                parent_fragment)
 
             if not __evolved_has(parent_fragment, __TAG) then
                 chunk_component_count = chunk_component_count + 1
@@ -970,22 +963,18 @@ local function __new_chunk(chunk_parent, chunk_fragment)
             end
         end
 
-        local chunk_index = chunk_parent.__child_count + 1
-
-        chunk_parent.__child_list[chunk_index] = chunk
-        chunk_parent.__child_count = chunk_index
+        chunk.__parent, chunk_parent.__child_count = chunk_parent, __assoc_list_insert_ex(
+            chunk_parent.__child_set, chunk_parent.__child_list, chunk_parent.__child_count,
+            chunk)
 
         chunk_parent.__with_fragment_edges[chunk_fragment] = chunk
         chunk.__without_fragment_edges[chunk_fragment] = chunk_parent
-
-        chunk.__index = chunk_index
-        chunk.__parent = chunk_parent
     end
 
     do
-        chunk_fragment_count = chunk_fragment_count + 1
-        chunk_fragment_set[chunk_fragment] = chunk_fragment_count
-        chunk_fragment_list[chunk_fragment_count] = chunk_fragment
+        chunk_fragment_count = __assoc_list_insert_ex(
+            chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
+            chunk_fragment)
 
         if not __evolved_has(chunk_fragment, __TAG) then
             chunk_component_count = chunk_component_count + 1
@@ -1727,7 +1716,6 @@ local function __purge_chunk(chunk)
         __lua_error('chunk should be empty before purging')
     end
 
-    local chunk_index = chunk.__index
     local chunk_parent = chunk.__parent
     local chunk_fragment = chunk.__fragment
 
@@ -1757,11 +1745,10 @@ local function __purge_chunk(chunk)
         end
     end
 
-    if chunk_index and chunk_parent then
-        __lua_table_remove(chunk_parent.__child_list, chunk_index)
-        chunk_parent.__child_count = chunk_parent.__child_count - 1
-        chunk.__index = nil
-        chunk.__parent = nil
+    if chunk_parent then
+        chunk.__parent, chunk_parent.__child_count = nil, __assoc_list_remove_ex(
+            chunk_parent.__child_set, chunk_parent.__child_list, chunk_parent.__child_count,
+            chunk)
     end
 
     for with_fragment, with_fragment_edge in __lua_next, with_fragment_edges do
