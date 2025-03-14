@@ -138,7 +138,6 @@ local __lua_string_format = string.format
 local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
-local __lua_tostring = tostring
 
 local __lua_table_move = (function()
     ---@param a1 table
@@ -200,6 +199,26 @@ end)()
 ---
 ---
 
+---@param fmt string
+---@param ... any
+local function __error_fmt(fmt, ...)
+    __lua_error(__lua_string_format('| evolved.lua | %s',
+        __lua_string_format(fmt, ...)))
+end
+
+---@param fmt string
+---@param ... any
+local function __warning_fmt(fmt, ...)
+    __lua_print(__lua_string_format('| evolved.lua | %s',
+        __lua_string_format(fmt, ...)))
+end
+
+---
+---
+---
+---
+---
+
 ---@return evolved.id
 ---@nodiscard
 local function __acquire_id()
@@ -223,7 +242,7 @@ local function __acquire_id()
         local acquired_count = __acquired_count
 
         if acquired_count == 0xFFFFF then
-            __lua_error('id index overflow')
+            __error_fmt('id index overflow')
         end
 
         acquired_count = acquired_count + 1
@@ -247,7 +266,7 @@ local function __release_id(id)
     local freelist_ids = __freelist_ids
 
     if freelist_ids[acquired_index] ~= id then
-        __lua_error('id is not acquired or already released')
+        __error_fmt('id is not acquired or already released')
     end
 
     shifted_version = shifted_version == 0xFFF00000
@@ -476,7 +495,7 @@ local function __each_iterator(each_state)
     local chunk_fragment_index = each_state[4]
 
     if structural_changes ~= __structural_changes then
-        __lua_error('structural changes are prohibited during iteration')
+        __error_fmt('structural changes are prohibited during iteration')
     end
 
     local chunk_fragment_list = entity_chunk.__fragment_list
@@ -505,7 +524,7 @@ local function __execute_iterator(execute_state)
     local exclude_set = execute_state[4]
 
     if structural_changes ~= __structural_changes then
-        __lua_error('structural changes are prohibited during iteration')
+        __error_fmt('structural changes are prohibited during iteration')
     end
 
     while chunk_stack_size > 0 do
@@ -590,22 +609,22 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 local __safe_tbls = {
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
-        __newindex = function() __lua_error('attempt to modify empty fragment set') end
+        __newindex = function() __error_fmt('attempt to modify empty fragment set') end
     }),
 
     ---@type evolved.fragment[]
     __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __lua_error('attempt to modify empty fragment list') end
+        __newindex = function() __error_fmt('attempt to modify empty fragment list') end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __lua_error('attempt to modify empty component list') end
+        __newindex = function() __error_fmt('attempt to modify empty component list') end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
-        __newindex = function() __lua_error('attempt to modify empty component storage') end
+        __newindex = function() __error_fmt('attempt to modify empty component storage') end
     }),
 }
 
@@ -1355,9 +1374,8 @@ end
 ---@param chunk evolved.chunk
 local function __validate_chunk(chunk)
     if chunk.__unreachable_or_collected then
-        __lua_error(__lua_string_format(
-            'the chunk (%s) is unreachable or collected and cannot be used',
-            __lua_tostring(chunk)))
+        __error_fmt('the chunk (%s) is unreachable or collected and cannot be used',
+            chunk)
     end
 end
 
@@ -1366,9 +1384,8 @@ local function __validate_fragment(fragment)
     local fragment_index = fragment % 0x100000
 
     if __freelist_ids[fragment_index] ~= fragment then
-        __lua_error(__lua_string_format(
-            'the fragment (%s) is not alive and cannot be used',
-            __id_name(fragment)))
+        __error_fmt('the fragment (%s) is not alive and cannot be used',
+            __id_name(fragment))
     end
 end
 
@@ -1392,9 +1409,8 @@ local function __validate_query(query)
     local query_index = query % 0x100000
 
     if __freelist_ids[query_index] ~= query then
-        __lua_error(__lua_string_format(
-            'the query (%s) is not alive and cannot be used',
-            __id_name(query)))
+        __error_fmt('the query (%s) is not alive and cannot be used',
+            __id_name(query))
     end
 end
 
@@ -1403,9 +1419,8 @@ local function __validate_phase(phase)
     local phase_index = phase % 0x100000
 
     if __freelist_ids[phase_index] ~= phase then
-        __lua_error(__lua_string_format(
-            'the phase (%s) is not alive and cannot be used',
-            __id_name(phase)))
+        __error_fmt('the phase (%s) is not alive and cannot be used',
+            __id_name(phase))
     end
 end
 
@@ -1518,7 +1533,7 @@ end
 ---@param component_list evolved.component[]
 local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, component_list)
     if __defer_depth <= 0 then
-        __lua_error('spawn entity operations should be deferred')
+        __error_fmt('spawn entity operations should be deferred')
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -1653,7 +1668,7 @@ end
 ---@param component_list evolved.component[]
 local function __spawn_entity_with(entity, chunk, fragment_list, fragment_count, component_list)
     if __defer_depth <= 0 then
-        __lua_error('spawn entity operations should be deferred')
+        __error_fmt('spawn entity operations should be deferred')
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -1782,11 +1797,11 @@ local __chunk_multi_remove
 ---@param chunk evolved.chunk
 local function __purge_chunk(chunk)
     if __defer_depth <= 0 then
-        __lua_error('purge operations should be deferred')
+        __error_fmt('purge operations should be deferred')
     end
 
     if chunk.__child_count > 0 or chunk.__entity_count > 0 then
-        __lua_error('chunk should be empty before purging')
+        __error_fmt('chunk should be empty before purging')
     end
 
     local chunk_parent = chunk.__parent
@@ -1841,7 +1856,7 @@ end
 ---@param policy evolved.id
 local function __purge_fragment(fragment, policy)
     if __defer_depth <= 0 then
-        __lua_error('purge operations should be deferred')
+        __error_fmt('purge operations should be deferred')
     end
 
     local minor_chunks = __minor_chunks[fragment]
@@ -1859,8 +1874,8 @@ local function __purge_fragment(fragment, policy)
             _ = __chunk_remove(minor_chunk, fragment)
         end
     else
-        __lua_print(__lua_string_format('| evolved.lua | unknown DESTROY_POLICY policy (%s) on (%s)',
-            __id_name(policy), __id_name(fragment)))
+        __warning_fmt('unknown DESTROY_POLICY policy (%s) on (%s)',
+            __id_name(policy), __id_name(fragment))
     end
 end
 
@@ -1877,7 +1892,7 @@ end
 ---@nodiscard
 __chunk_assign = function(chunk, fragment, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     if not chunk.__fragment_set[fragment] then
@@ -2005,7 +2020,7 @@ end
 ---@nodiscard
 __chunk_insert = function(old_chunk, fragment, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
@@ -2185,7 +2200,7 @@ end
 ---@nodiscard
 __chunk_remove = function(old_chunk, ...)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     local fragment_count = __lua_select('#', ...)
@@ -2323,7 +2338,7 @@ end
 ---@nodiscard
 __chunk_clear = function(chunk)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -2390,7 +2405,7 @@ end
 ---@nodiscard
 __chunk_destroy = function(chunk)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -2487,7 +2502,7 @@ end
 ---@return integer set_count
 __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     if fragment_count == 0 then
@@ -2813,7 +2828,7 @@ end
 ---@return integer assigned_count
 __chunk_multi_assign = function(chunk, fragments, fragment_count, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     if fragment_count == 0 then
@@ -2925,7 +2940,7 @@ end
 ---@return integer inserted_count
 __chunk_multi_insert = function(old_chunk, fragments, fragment_count, components)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     if fragment_count == 0 then
@@ -3097,7 +3112,7 @@ end
 ---@return integer removed_count
 __chunk_multi_remove = function(old_chunk, fragments, fragment_count)
     if __defer_depth <= 0 then
-        __lua_error('batched chunk operations should be deferred')
+        __error_fmt('batched chunk operations should be deferred')
     end
 
     if fragment_count == 0 then
@@ -3243,7 +3258,7 @@ local function __system_process(system)
         local success, result = __lua_pcall(prologue)
 
         if not success then
-            __lua_error(__lua_string_format('system prologue failed: %s', result))
+            __error_fmt('system prologue failed: %s', result)
         end
     end
 
@@ -3255,7 +3270,7 @@ local function __system_process(system)
 
                 if not success then
                     __commit()
-                    __lua_error(__lua_string_format('system execution failed: %s', result))
+                    __error_fmt('system execution failed: %s', result)
                 end
             end
         end
@@ -3266,7 +3281,7 @@ local function __system_process(system)
         local success, result = __lua_pcall(epilogue)
 
         if not success then
-            __lua_error(__lua_string_format('system epilogue failed: %s', result))
+            __error_fmt('system epilogue failed: %s', result)
         end
     end
 end
@@ -3345,8 +3360,7 @@ local function __phase_process(phase)
                             end
                         end
 
-                        __lua_error(__lua_string_format('system sorting failed: cyclic dependency detected (%s)',
-                            sorting_cycle_path))
+                        __error_fmt('cyclic dependency detected: %s', sorting_cycle_path)
                     end
                 end
             end
@@ -3423,7 +3437,7 @@ end
 ---@return boolean committed
 __commit = function()
     if __defer_depth <= 0 then
-        __lua_error('unbalanced defer/commit')
+        __error_fmt('unbalanced defer/commit')
     end
 
     __defer_depth = __defer_depth - 1
@@ -4604,11 +4618,11 @@ end
 ---@nodiscard
 __evolved_pack = function(index, version)
     if index < 1 or index > 0xFFFFF then
-        __lua_error('id index out of range [1;0xFFFFF]')
+        __error_fmt('id index out of range [1;0xFFFFF]')
     end
 
     if version < 1 or version > 0xFFF then
-        __lua_error('id version out of range [1;0xFFF]')
+        __error_fmt('id version out of range [1;0xFFF]')
     end
 
     local shifted_version = version * 0x100000
