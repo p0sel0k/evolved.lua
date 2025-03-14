@@ -67,6 +67,7 @@ local evolved = {
 ---@field package __component_fragments evolved.fragment[]
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __unreachable_or_collected boolean
 ---@field package __has_defaults_or_constructs boolean
 ---@field package __has_set_or_assign_hooks boolean
 ---@field package __has_set_or_insert_hooks boolean
@@ -137,6 +138,7 @@ local __lua_string_format = string.format
 local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
+local __lua_tostring = tostring
 
 local __lua_table_move = (function()
     ---@param a1 table
@@ -936,6 +938,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __component_fragments = chunk_component_fragments,
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __unreachable_or_collected = false,
         __has_defaults_or_constructs = has_defaults_or_constructs,
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
@@ -1348,6 +1351,15 @@ end
 ---
 ---
 ---
+
+---@param chunk evolved.chunk
+local function __validate_chunk(chunk)
+    if chunk.__unreachable_or_collected then
+        __lua_error(__lua_string_format(
+            'the chunk (%s) is unreachable or collected and cannot be used',
+            __lua_tostring(chunk)))
+    end
+end
 
 ---@param fragment evolved.fragment
 local function __validate_fragment(fragment)
@@ -1821,6 +1833,8 @@ local function __purge_chunk(chunk)
         without_fragment_edges[without_fragment] = nil
         without_fragment_edge.__with_fragment_edges[without_fragment] = nil
     end
+
+    chunk.__unreachable_or_collected = true
 end
 
 ---@param fragment evolved.fragment
@@ -4407,6 +4421,7 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
     local component_list = bytes[index + 4]
 
     if __debug_mode then
+        __validate_chunk(chunk)
         __validate_fragment_list(fragment_list, fragment_count)
     end
 
@@ -4457,6 +4472,7 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
     local component_list = bytes[index + 4]
 
     if __debug_mode then
+        __validate_chunk(chunk)
         __validate_fragment_list(fragment_list, fragment_count)
     end
 
@@ -6479,6 +6495,7 @@ __evolved_select = function(chunk, ...)
     end
 
     if __debug_mode then
+        __validate_chunk(chunk)
         __validate_fragments(...)
     end
 
@@ -6538,6 +6555,10 @@ end
 ---@return integer entity_count
 ---@nodiscard
 __evolved_entities = function(chunk)
+    if __debug_mode then
+        __validate_chunk(chunk)
+    end
+
     return chunk.__entity_list, chunk.__entity_count
 end
 
@@ -6546,6 +6567,10 @@ end
 ---@return integer fragment_count
 ---@nodiscard
 __evolved_fragments = function(chunk)
+    if __debug_mode then
+        __validate_chunk(chunk)
+    end
+
     return chunk.__fragment_list, chunk.__fragment_count
 end
 
@@ -6691,6 +6716,7 @@ __evolved_spawn_at = function(chunk, fragments, components)
     local component_count = #components
 
     if __debug_mode then
+        if chunk then __validate_chunk(chunk) end
         __validate_fragment_list(fragments, fragment_count)
     end
 
