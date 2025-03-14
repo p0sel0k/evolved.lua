@@ -5,14 +5,9 @@ local evo = require 'evolved'
 evo.debug_mode(true)
 
 do
-    local e1, e2 = evo.id(), evo.id()
-    assert(e1 ~= e2)
-end
-
-do
     local i = evo.id()
 
-    for _ = 1, 0xFFE do
+    for _ = 1, 0xFFFFE do
         local _, v0 = evo.unpack(i)
         evo.destroy(i)
         i = evo.id()
@@ -22,7 +17,7 @@ do
 
     do
         local _, v = evo.unpack(i)
-        assert(v == 0xFFF)
+        assert(v == 0xFFFFF)
     end
 
     evo.destroy(i)
@@ -32,6 +27,31 @@ do
         local _, v = evo.unpack(i)
         assert(v == 1)
     end
+end
+
+do
+    local e1, e2 = evo.id(), evo.id()
+    assert(e1 ~= e2)
+
+    assert(evo.is_alive(e1))
+    assert(evo.is_alive(e2))
+
+    assert(evo.destroy(e1))
+
+    assert(not evo.is_alive(e1))
+    assert(evo.is_alive(e2))
+
+    assert(evo.destroy(e1))
+    assert(evo.destroy(e2))
+
+    assert(not evo.is_alive(e1))
+    assert(not evo.is_alive(e2))
+
+    assert(evo.destroy(e1))
+    assert(evo.destroy(e2))
+
+    assert(not evo.is_alive(e1))
+    assert(not evo.is_alive(e2))
 end
 
 do
@@ -5076,9 +5096,15 @@ do
 end
 
 do
-    local id = evo.pack(0xFFFFF, 0xFFF)
+    local id = evo.pack(0xBCDEF, 0xFEDCB)
     local index, version = evo.unpack(id)
-    assert(index == 0xFFFFF and version == 0xFFF)
+    assert(index == 0xBCDEF and version == 0xFEDCB)
+end
+
+do
+    local id = evo.pack(0xFFFFF, 0xFFFFF)
+    local index, version = evo.unpack(id)
+    assert(index == 0xFFFFF and version == 0xFFFFF)
 end
 
 do
