@@ -72,8 +72,8 @@ set :: entity, fragment, any... -> boolean, boolean
 assign :: entity, fragment, any... -> boolean, boolean
 insert :: entity, fragment, any... -> boolean, boolean
 remove :: entity, fragment... -> boolean, boolean
-clear :: entity -> boolean, boolean
-destroy :: entity -> boolean, boolean
+clear :: entity... -> boolean, boolean
+destroy :: entity... -> boolean, boolean
 
 multi_set :: entity, fragment[], component[]? -> boolean, boolean
 multi_assign :: entity, fragment[], component[]? -> boolean, boolean
