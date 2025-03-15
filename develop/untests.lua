@@ -7553,3 +7553,93 @@ do
     assert(not evo.is_alive(e1) and evo.is_empty(e1))
     assert(not evo.is_alive(e2) and evo.is_empty(e2))
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q1, q2 = evo.id(2)
+    assert(evo.insert(q1, evo.INCLUDES, f1))
+    assert(evo.insert(q2, evo.INCLUDES, f2))
+
+    local e1, e2 = evo.id(2)
+    assert(evo.insert(e1, f1, f1))
+    assert(evo.insert(e2, f2, f2))
+
+    assert(evo.batch_clear() == 0)
+
+    assert(evo.is_alive(e1) and not evo.is_empty(e1))
+    assert(evo.is_alive(e2) and not evo.is_empty(e2))
+
+    assert(evo.batch_clear(q1, q2, q1, q1) == 2)
+
+    assert(evo.is_alive(e1) and evo.is_empty(e1))
+    assert(evo.is_alive(e2) and evo.is_empty(e2))
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q1, q2 = evo.id(2)
+    assert(evo.insert(q1, evo.INCLUDES, f1))
+    assert(evo.insert(q2, evo.INCLUDES, f2))
+
+    local e1, e2 = evo.id(2)
+    assert(evo.insert(e1, f1, f1))
+    assert(evo.insert(e2, f2, f2))
+
+    assert(evo.defer())
+    do
+        assert(evo.batch_clear(q2, q1, q2, q2) == 0)
+        assert(evo.is_alive(e1) and not evo.is_empty(e1))
+        assert(evo.is_alive(e2) and not evo.is_empty(e2))
+    end
+    assert(evo.commit())
+
+    assert(evo.is_alive(e1) and evo.is_empty(e1))
+    assert(evo.is_alive(e2) and evo.is_empty(e2))
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q1, q2 = evo.id(2)
+    assert(evo.insert(q1, evo.INCLUDES, f1))
+    assert(evo.insert(q2, evo.INCLUDES, f2))
+
+    local e1, e2 = evo.id(2)
+    assert(evo.insert(e1, f1, f1))
+    assert(evo.insert(e2, f2, f2))
+
+    assert(evo.batch_destroy() == 0)
+
+    assert(evo.is_alive(e1) and not evo.is_empty(e1))
+    assert(evo.is_alive(e2) and not evo.is_empty(e2))
+
+    assert(evo.batch_destroy(q1, q2, q1, q1) == 2)
+
+    assert(not evo.is_alive(e1) and evo.is_empty(e1))
+    assert(not evo.is_alive(e2) and evo.is_empty(e2))
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local q1, q2 = evo.id(2)
+    assert(evo.insert(q1, evo.INCLUDES, f1))
+    assert(evo.insert(q2, evo.INCLUDES, f2))
+
+    local e1, e2 = evo.id(2)
+    assert(evo.insert(e1, f1, f1))
+    assert(evo.insert(e2, f2, f2))
+
+    assert(evo.defer())
+    do
+        assert(evo.batch_destroy(q2, q1, q2, q2) == 0)
+        assert(evo.is_alive(e1) and not evo.is_empty(e1))
+        assert(evo.is_alive(e2) and not evo.is_empty(e2))
+    end
+    assert(evo.commit())
+
+    assert(not evo.is_alive(e1) and evo.is_empty(e1))
+    assert(not evo.is_alive(e2) and evo.is_empty(e2))
+end

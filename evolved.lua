@@ -4342,38 +4342,146 @@ __defer_ops[__defer_op.batch_remove] = function(bytes, index)
     return 2 + fragment_count
 end
 
----@param query evolved.query
-__defer_batch_clear = function(query)
+---@param ... evolved.query queries
+__defer_batch_clear = function(...)
+    local query_count = __lua_select('#', ...)
+    if query_count == 0 then return end
+
     local length = __defer_length
     local bytecode = __defer_bytecode
 
     bytecode[length + 1] = __defer_op.batch_clear
-    bytecode[length + 2] = query
+    bytecode[length + 2] = query_count
 
-    __defer_length = length + 2
+    if query_count == 0 then
+        -- nothing
+    elseif query_count == 1 then
+        local q1 = ...
+        bytecode[length + 3] = q1
+    elseif query_count == 2 then
+        local q1, q2 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+    elseif query_count == 3 then
+        local q1, q2, q3 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+    elseif query_count == 4 then
+        local q1, q2, q3, q4 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+        bytecode[length + 6] = q4
+    else
+        local q1, q2, q3, q4 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+        bytecode[length + 6] = q4
+        for i = 5, query_count do
+            bytecode[length + 2 + i] = __lua_select(i, ...)
+        end
+    end
+
+    __defer_length = length + 2 + query_count
 end
 
 __defer_ops[__defer_op.batch_clear] = function(bytes, index)
-    local query = bytes[index + 0]
-    __evolved_batch_clear(query)
-    return 1
+    local query_count = bytes[index + 0]
+
+    if query_count == 0 then
+        -- nothing
+    elseif query_count == 1 then
+        local q1 = bytes[index + 1]
+        __evolved_batch_clear(q1)
+    elseif query_count == 2 then
+        local q1, q2 = bytes[index + 1], bytes[index + 2]
+        __evolved_batch_clear(q1, q2)
+    elseif query_count == 3 then
+        local q1, q2, q3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
+        __evolved_batch_clear(q1, q2, q3)
+    elseif query_count == 4 then
+        local q1, q2, q3, q4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        __evolved_batch_clear(q1, q2, q3, q4)
+    else
+        local q1, q2, q3, q4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        __evolved_batch_clear(q1, q2, q3, q4,
+            __lua_table_unpack(bytes, index + 5, index + 0 + query_count))
+    end
+
+    return 1 + query_count
 end
 
----@param query evolved.query
-__defer_batch_destroy = function(query)
+---@param ... evolved.query queries
+__defer_batch_destroy = function(...)
+    local query_count = __lua_select('#', ...)
+    if query_count == 0 then return end
+
     local length = __defer_length
     local bytecode = __defer_bytecode
 
     bytecode[length + 1] = __defer_op.batch_destroy
-    bytecode[length + 2] = query
+    bytecode[length + 2] = query_count
 
-    __defer_length = length + 2
+    if query_count == 0 then
+        -- nothing
+    elseif query_count == 1 then
+        local q1 = ...
+        bytecode[length + 3] = q1
+    elseif query_count == 2 then
+        local q1, q2 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+    elseif query_count == 3 then
+        local q1, q2, q3 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+    elseif query_count == 4 then
+        local q1, q2, q3, q4 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+        bytecode[length + 6] = q4
+    else
+        local q1, q2, q3, q4 = ...
+        bytecode[length + 3] = q1
+        bytecode[length + 4] = q2
+        bytecode[length + 5] = q3
+        bytecode[length + 6] = q4
+        for i = 5, query_count do
+            bytecode[length + 2 + i] = __lua_select(i, ...)
+        end
+    end
+
+    __defer_length = length + 2 + query_count
 end
 
 __defer_ops[__defer_op.batch_destroy] = function(bytes, index)
-    local query = bytes[index + 0]
-    __evolved_batch_destroy(query)
-    return 1
+    local query_count = bytes[index + 0]
+
+    if query_count == 0 then
+        -- nothing
+    elseif query_count == 1 then
+        local q1 = bytes[index + 1]
+        __evolved_batch_destroy(q1)
+    elseif query_count == 2 then
+        local q1, q2 = bytes[index + 1], bytes[index + 2]
+        __evolved_batch_destroy(q1, q2)
+    elseif query_count == 3 then
+        local q1, q2, q3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
+        __evolved_batch_destroy(q1, q2, q3)
+    elseif query_count == 4 then
+        local q1, q2, q3, q4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        __evolved_batch_destroy(q1, q2, q3, q4)
+    else
+        local q1, q2, q3, q4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        __evolved_batch_destroy(q1, q2, q3, q4,
+            __lua_table_unpack(bytes, index + 5, index + 0 + query_count))
+    end
+
+    return 1 + query_count
 end
 
 ---@param query evolved.query
@@ -6329,12 +6437,18 @@ __evolved_batch_remove = function(query, ...)
     return removed_count, false
 end
 
----@param query evolved.query
+---@param ... evolved.query queries
 ---@return integer cleared_count
 ---@return boolean is_deferred
-__evolved_batch_clear = function(query)
+__evolved_batch_clear = function(...)
+    local argument_count = select('#', ...)
+
+    if argument_count == 0 then
+        return 0, false
+    end
+
     if __defer_depth > 0 then
-        __defer_batch_clear(query)
+        __defer_batch_clear(...)
         return 0, true
     end
 
@@ -6346,9 +6460,13 @@ __evolved_batch_clear = function(query)
         local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
         local chunk_count = 0
 
-        for chunk in __evolved_execute(query) do
-            chunk_count = chunk_count + 1
-            chunk_list[chunk_count] = chunk
+        for argument_index = 1, argument_count do
+            local query = __lua_select(argument_index, ...)
+
+            for chunk in __evolved_execute(query) do
+                chunk_count = chunk_count + 1
+                chunk_list[chunk_count] = chunk
+            end
         end
 
         for i = 1, chunk_count do
@@ -6363,12 +6481,18 @@ __evolved_batch_clear = function(query)
     return cleared_count, false
 end
 
----@param query evolved.query
+---@param ... evolved.query queries
 ---@return integer destroyed_count
 ---@return boolean is_deferred
-__evolved_batch_destroy = function(query)
+__evolved_batch_destroy = function(...)
+    local argument_count = select('#', ...)
+
+    if argument_count == 0 then
+        return 0, false
+    end
+
     if __defer_depth > 0 then
-        __defer_batch_destroy(query)
+        __defer_batch_destroy(...)
         return 0, true
     end
 
@@ -6380,9 +6504,13 @@ __evolved_batch_destroy = function(query)
         local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
         local chunk_count = 0
 
-        for chunk in __evolved_execute(query) do
-            chunk_count = chunk_count + 1
-            chunk_list[chunk_count] = chunk
+        for argument_index = 1, argument_count do
+            local query = __lua_select(argument_index, ...)
+
+            for chunk in __evolved_execute(query) do
+                chunk_count = chunk_count + 1
+                chunk_list[chunk_count] = chunk
+            end
         end
 
         for i = 1, chunk_count do
