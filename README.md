@@ -72,8 +72,8 @@ set :: entity, fragment, any... -> boolean, boolean
 assign :: entity, fragment, any... -> boolean, boolean
 insert :: entity, fragment, any... -> boolean, boolean
 remove :: entity, fragment... -> boolean, boolean
-clear :: entity -> boolean, boolean
-destroy :: entity -> boolean, boolean
+clear :: entity... -> boolean, boolean
+destroy :: entity... -> boolean, boolean
 
 multi_set :: entity, fragment[], component[]? -> boolean, boolean
 multi_assign :: entity, fragment[], component[]? -> boolean, boolean
@@ -84,8 +84,8 @@ batch_set :: query, fragment, any... -> integer, boolean
 batch_assign :: query, fragment, any... -> integer, boolean
 batch_insert :: query, fragment, any... -> integer, boolean
 batch_remove :: query, fragment... -> integer, boolean
-batch_clear :: query -> integer, boolean
-batch_destroy :: query -> integer, boolean
+batch_clear :: query... -> integer, boolean
+batch_destroy :: query... -> integer, boolean
 
 batch_multi_set :: query, fragment[], component[]? -> integer, boolean
 batch_multi_assign :: query, fragment[], component[]? -> integer, boolean
@@ -102,16 +102,15 @@ each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
 process :: phase... -> ()
-```
 
-```
-debug :: boolean -> ()
-```
-
-```
 spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
 spawn_with :: fragment[]?, component[]? -> entity, boolean
+
+debug_mode :: boolean -> ()
+collect_garbage :: boolean, boolean
 ```
+
+## Builders
 
 ```
 entity :: entity_builder
