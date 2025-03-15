@@ -7643,3 +7643,61 @@ do
     assert(not evo.is_alive(e1) and evo.is_empty(e1))
     assert(not evo.is_alive(e2) and evo.is_empty(e2))
 end
+
+do
+    local a1, a2, a3, a4, a5 = evo.id(5)
+
+    assert(evo.is_alive())
+    assert(evo.is_alive(a1))
+    assert(evo.is_alive(a1, a2))
+    assert(evo.is_alive(a1, a2, a3))
+    assert(evo.is_alive(a1, a2, a3, a4))
+    assert(evo.is_alive(a1, a2, a3, a4, a5))
+
+    local d1, d2 = evo.id(2)
+    assert(evo.destroy(d1, d2))
+
+    assert(not evo.is_alive(d1))
+    assert(not evo.is_alive(d1, d2))
+    assert(not evo.is_alive(d1, a1))
+    assert(not evo.is_alive(a1, d1))
+    assert(not evo.is_alive(d1, d2, a1))
+    assert(not evo.is_alive(d1, a1, a2))
+    assert(not evo.is_alive(d1, a1, a2, d2, a3))
+    assert(not evo.is_alive(d1, a1, a2, d2, a3, d1))
+end
+
+do
+    local e1, e2, e3, e4, e5 = evo.id(5)
+
+    assert(evo.is_empty())
+    assert(evo.is_empty(e1))
+    assert(evo.is_empty(e1, e2))
+    assert(evo.is_empty(e1, e2, e3))
+    assert(evo.is_empty(e1, e2, e3, e4))
+    assert(evo.is_empty(e1, e2, e3, e4, e5))
+
+    local d1, d2 = evo.id(2)
+    assert(evo.destroy(d1, d2))
+
+    assert(evo.is_empty(d1))
+    assert(evo.is_empty(d1, d2))
+    assert(evo.is_empty(d1, e1))
+    assert(evo.is_empty(e1, d1))
+    assert(evo.is_empty(d1, d2, e1))
+    assert(evo.is_empty(d1, e1, e2))
+    assert(evo.is_empty(d1, e1, e2, d2, e3))
+    assert(evo.is_empty(d1, e1, e2, d2, e3, d1))
+
+    local f1, f2 = evo.id(2)
+    assert(evo.insert(f1, f1) and evo.insert(f2, f2))
+
+    assert(not evo.is_empty(f1))
+    assert(not evo.is_empty(f1, f2))
+    assert(not evo.is_empty(f1, e1))
+    assert(not evo.is_empty(e1, f1))
+    assert(not evo.is_empty(f1, f2, e1))
+    assert(not evo.is_empty(f1, e1, e2))
+    assert(not evo.is_empty(f1, e1, e2, f2, e3))
+    assert(not evo.is_empty(f1, e1, e2, f2, e3, f1))
+end
