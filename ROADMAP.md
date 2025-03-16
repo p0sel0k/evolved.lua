@@ -2,6 +2,9 @@
 
 ## Backlog
 
+- add has, has_all, has_any for chunks
+- rename `select` function to `components`
+
 ## After first release
 
 - add system groups
