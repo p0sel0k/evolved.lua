@@ -60,8 +60,13 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
-is_alive :: entity... -> boolean
-is_empty :: entity... -> boolean
+is_alive :: entity -> boolean
+is_alive_all :: entity... -> boolean
+is_alive_any :: entity... -> boolean
+
+is_empty :: entity -> boolean
+is_empty_all :: entity... -> boolean
+is_empty_any :: entity... -> boolean
 
 get :: entity, fragment...  -> component...
 has :: entity, fragment -> boolean

@@ -126,16 +126,12 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---
 
 local __lua_assert = assert
-local __lua_error = error
 local __lua_ipairs = ipairs
 local __lua_next = next
 local __lua_pairs = pairs
 local __lua_pcall = pcall
-local __lua_print = print
 local __lua_select = select
 local __lua_setmetatable = setmetatable
-local __lua_string_format = string.format
-local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -202,15 +198,15 @@ end)()
 ---@param fmt string
 ---@param ... any
 local function __error_fmt(fmt, ...)
-    __lua_error(__lua_string_format('| evolved.lua | %s',
-        __lua_string_format(fmt, ...)))
+    error(string.format('| evolved.lua | %s',
+        string.format(fmt, ...)))
 end
 
 ---@param fmt string
 ---@param ... any
 local function __warning_fmt(fmt, ...)
-    __lua_print(__lua_string_format('| evolved.lua | %s',
-        __lua_string_format(fmt, ...)))
+    print(string.format('| evolved.lua | %s',
+        string.format(fmt, ...)))
 end
 
 ---
@@ -643,7 +639,12 @@ local __evolved_defer
 local __evolved_commit
 
 local __evolved_is_alive
+local __evolved_is_alive_all
+local __evolved_is_alive_any
+
 local __evolved_is_empty
+local __evolved_is_empty_all
+local __evolved_is_empty_any
 
 local __evolved_get
 local __evolved_has
@@ -714,7 +715,7 @@ local function __id_name(id)
     end
 
     local id_index, id_version = __evolved_unpack(id)
-    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
+    return string.format('$%d#%d:%d', id, id_index, id_version)
 end
 
 ---@param ... any component arguments
@@ -832,7 +833,7 @@ function __debug_mts.chunk_mt.__tostring(self)
         items[fragment_index] = __id_name(fragment)
     end
 
-    return __lua_string_format('<%s>', __lua_table_concat(items, ', '))
+    return string.format('<%s>', table.concat(items, ', '))
 end
 
 ---@param self table<evolved.fragment, integer>
@@ -840,11 +841,11 @@ function __debug_mts.chunk_fragment_set_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment, fragment_index in __lua_pairs(self) do
-        items[fragment_index] = __lua_string_format('(%s -> %d)',
+        items[fragment_index] = string.format('(%s -> %d)',
             __id_name(fragment), fragment_index)
     end
 
-    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+    return string.format('{%s}', table.concat(items, ', '))
 end
 
 ---@param self evolved.fragment[]
@@ -852,11 +853,11 @@ function __debug_mts.chunk_fragment_list_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in __lua_ipairs(self) do
-        items[fragment_index] = __lua_string_format('(%d -> %s)',
+        items[fragment_index] = string.format('(%d -> %s)',
             fragment_index, __id_name(fragment))
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---@param self table<evolved.fragment, integer>
@@ -864,11 +865,11 @@ function __debug_mts.chunk_component_indices_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_fragment, component_index in __lua_pairs(self) do
-        items[component_index] = __lua_string_format('(%s -> %d)',
+        items[component_index] = string.format('(%s -> %d)',
             __id_name(component_fragment), component_index)
     end
 
-    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+    return string.format('{%s}', table.concat(items, ', '))
 end
 
 ---@param self evolved.storage[]
@@ -876,11 +877,11 @@ function __debug_mts.chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_storage in __lua_ipairs(self) do
-        items[component_index] = __lua_string_format('(%d -> #%d)',
+        items[component_index] = string.format('(%d -> #%d)',
             component_index, #component_storage)
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---@param self evolved.fragment[]
@@ -888,11 +889,11 @@ function __debug_mts.chunk_component_fragments_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_fragment in __lua_ipairs(self) do
-        items[component_index] = __lua_string_format('(%d -> %s)',
+        items[component_index] = string.format('(%d -> %s)',
             component_index, __id_name(component_fragment))
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---
@@ -1239,16 +1240,39 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_all_fragments(chunk, ...)
-    local fragment_set = chunk.__fragment_set
+    local fragment_count = __lua_select('#', ...)
 
-    for i = 1, __lua_select('#', ...) do
-        local fragment = __lua_select(i, ...)
-        if not fragment_set[fragment] then
-            return false
-        end
+    if fragment_count == 0 then
+        return true
     end
 
-    return true
+    local fs = chunk.__fragment_set
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return fs[f1] ~= nil
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil and
+            __chunk_has_all_fragments(chunk, __lua_select(5, ...))
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -1274,16 +1298,39 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_any_fragments(chunk, ...)
-    local fragment_set = chunk.__fragment_set
+    local fragment_count = __lua_select('#', ...)
 
-    for i = 1, __lua_select('#', ...) do
-        local fragment = __lua_select(i, ...)
-        if fragment_set[fragment] then
-            return true
-        end
+    if fragment_count == 0 then
+        return false
     end
 
-    return false
+    local fs = chunk.__fragment_set
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return fs[f1] ~= nil
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil or
+            __chunk_has_any_fragments(chunk, __lua_select(5, ...))
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -3351,7 +3398,7 @@ local function __phase_process(phase)
                             local cycled_system_mark = sorting_marks[cycled_system_mark_index]
 
                             if cycled_system_mark == 1 then
-                                sorting_cycle_path = __lua_string_format('%s -> %s',
+                                sorting_cycle_path = string.format('%s -> %s',
                                     sorting_cycle_path, cycled_system)
 
                                 if cycled_system == dependency then
@@ -4865,10 +4912,18 @@ __evolved_commit = function()
     return __commit()
 end
 
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+__evolved_is_alive = function(entity)
+    local entity_index = entity % 0x100000
+    return __freelist_ids[entity_index] == entity
+end
+
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-__evolved_is_alive = function(...)
+__evolved_is_alive_all = function(...)
     local entity_count = __lua_select('#', ...)
 
     if entity_count == 0 then
@@ -4919,14 +4974,81 @@ __evolved_is_alive = function(...)
             (ids[i2] == e2) and
             (ids[i3] == e3) and
             (ids[i4] == e4) and
-            __evolved_is_alive(__lua_select(5, ...))
+            __evolved_is_alive_all(__lua_select(5, ...))
     end
 end
 
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-__evolved_is_empty = function(...)
+__evolved_is_alive_any = function(...)
+    local entity_count = __lua_select('#', ...)
+
+    if entity_count == 0 then
+        return false
+    end
+
+    local ids = __freelist_ids
+
+    if entity_count == 1 then
+        local e1 = ...
+        local i1 = e1 % 0x100000
+        return
+            (ids[i1] == e1)
+    end
+
+    if entity_count == 2 then
+        local e1, e2 = ...
+        local i1, i2 = e1 % 0x100000, e2 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2)
+    end
+
+    if entity_count == 3 then
+        local e1, e2, e3 = ...
+        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3)
+    end
+
+    if entity_count == 4 then
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3) or
+            (ids[i4] == e4)
+    end
+
+    do
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3) or
+            (ids[i4] == e4) or
+            __evolved_is_alive_any(__lua_select(5, ...))
+    end
+end
+
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+__evolved_is_empty = function(entity)
+    local entity_index = entity % 0x100000
+    return __freelist_ids[entity_index] ~= entity
+        or not __entity_chunks[entity_index]
+end
+
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+__evolved_is_empty_all = function(...)
     local entity_count = __lua_select('#', ...)
 
     if entity_count == 0 then
@@ -4978,7 +5100,66 @@ __evolved_is_empty = function(...)
             (ids[i2] ~= e2 or not ecs[i2]) and
             (ids[i3] ~= e3 or not ecs[i3]) and
             (ids[i4] ~= e4 or not ecs[i4]) and
-            __evolved_is_empty(__lua_select(5, ...))
+            __evolved_is_empty_all(__lua_select(5, ...))
+    end
+end
+
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+__evolved_is_empty_any = function(...)
+    local entity_count = __lua_select('#', ...)
+
+    if entity_count == 0 then
+        return false
+    end
+
+    local ids = __freelist_ids
+    local ecs = __entity_chunks
+
+    if entity_count == 1 then
+        local e1 = ...
+        local i1 = e1 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1])
+    end
+
+    if entity_count == 2 then
+        local e1, e2 = ...
+        local i1, i2 = e1 % 0x100000, e2 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2])
+    end
+
+    if entity_count == 3 then
+        local e1, e2, e3 = ...
+        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3])
+    end
+
+    if entity_count == 4 then
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3]) or
+            (ids[i4] ~= e4 or not ecs[i4])
+    end
+
+    do
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3]) or
+            (ids[i4] ~= e4 or not ecs[i4]) or
+            __evolved_is_empty_any(__lua_select(5, ...))
     end
 end
 
@@ -8278,7 +8459,12 @@ evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
 
 evolved.is_alive = __evolved_is_alive
+evolved.is_alive_all = __evolved_is_alive_all
+evolved.is_alive_any = __evolved_is_alive_any
+
 evolved.is_empty = __evolved_is_empty
+evolved.is_empty_all = __evolved_is_empty_all
+evolved.is_empty_any = __evolved_is_empty_any
 
 evolved.get = __evolved_get
 evolved.has = __evolved_has
