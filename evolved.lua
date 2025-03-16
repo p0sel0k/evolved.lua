@@ -125,13 +125,9 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---
 ---
 
-local __lua_assert = assert
-local __lua_ipairs = ipairs
 local __lua_next = next
-local __lua_pairs = pairs
 local __lua_pcall = pcall
 local __lua_select = select
-local __lua_setmetatable = setmetatable
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -604,22 +600,22 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 
 local __safe_tbls = {
     ---@type table<evolved.fragment, integer>
-    __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
+    __EMPTY_FRAGMENT_SET = setmetatable({}, {
         __newindex = function() __error_fmt('attempt to modify empty fragment set') end
     }),
 
     ---@type evolved.fragment[]
-    __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
+    __EMPTY_FRAGMENT_LIST = setmetatable({}, {
         __newindex = function() __error_fmt('attempt to modify empty fragment list') end
     }),
 
     ---@type evolved.component[]
-    __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
+    __EMPTY_COMPONENT_LIST = setmetatable({}, {
         __newindex = function() __error_fmt('attempt to modify empty component list') end
     }),
 
     ---@type evolved.component[]
-    __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
+    __EMPTY_COMPONENT_STORAGE = setmetatable({}, {
         __newindex = function() __error_fmt('attempt to modify empty component storage') end
     }),
 }
@@ -829,7 +825,7 @@ local __debug_mts = {
 function __debug_mts.chunk_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for fragment_index, fragment in __lua_ipairs(self.__fragment_list) do
+    for fragment_index, fragment in ipairs(self.__fragment_list) do
         items[fragment_index] = __id_name(fragment)
     end
 
@@ -840,7 +836,7 @@ end
 function __debug_mts.chunk_fragment_set_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for fragment, fragment_index in __lua_pairs(self) do
+    for fragment, fragment_index in pairs(self) do
         items[fragment_index] = string.format('(%s -> %d)',
             __id_name(fragment), fragment_index)
     end
@@ -852,7 +848,7 @@ end
 function __debug_mts.chunk_fragment_list_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for fragment_index, fragment in __lua_ipairs(self) do
+    for fragment_index, fragment in ipairs(self) do
         items[fragment_index] = string.format('(%d -> %s)',
             fragment_index, __id_name(fragment))
     end
@@ -864,7 +860,7 @@ end
 function __debug_mts.chunk_component_indices_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for component_fragment, component_index in __lua_pairs(self) do
+    for component_fragment, component_index in pairs(self) do
         items[component_index] = string.format('(%s -> %d)',
             __id_name(component_fragment), component_index)
     end
@@ -876,7 +872,7 @@ end
 function __debug_mts.chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for component_index, component_storage in __lua_ipairs(self) do
+    for component_index, component_storage in ipairs(self) do
         items[component_index] = string.format('(%d -> #%d)',
             component_index, #component_storage)
     end
@@ -888,7 +884,7 @@ end
 function __debug_mts.chunk_component_fragments_mt.__tostring(self)
     local items = {} ---@type string[]
 
-    for component_index, component_fragment in __lua_ipairs(self) do
+    for component_index, component_fragment in ipairs(self) do
         items[component_index] = string.format('(%d -> %s)',
             component_index, __id_name(component_fragment))
     end
@@ -908,10 +904,10 @@ end
 ---@nodiscard
 local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
-    local chunk_fragment_set = __lua_setmetatable({}, __debug_mts.chunk_fragment_set_mt)
+    local chunk_fragment_set = setmetatable({}, __debug_mts.chunk_fragment_set_mt)
 
     ---@type evolved.fragment[]
-    local chunk_fragment_list = __lua_setmetatable({}, __debug_mts.chunk_fragment_list_mt)
+    local chunk_fragment_list = setmetatable({}, __debug_mts.chunk_fragment_list_mt)
 
     ---@type integer
     local chunk_fragment_count = 0
@@ -920,13 +916,13 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_count = 0
 
     ---@type table<evolved.fragment, integer>
-    local chunk_component_indices = __lua_setmetatable({}, __debug_mts.chunk_component_indices_mt)
+    local chunk_component_indices = setmetatable({}, __debug_mts.chunk_component_indices_mt)
 
     ---@type evolved.storage[]
-    local chunk_component_storages = __lua_setmetatable({}, __debug_mts.chunk_component_storages_mt)
+    local chunk_component_storages = setmetatable({}, __debug_mts.chunk_component_storages_mt)
 
     ---@type evolved.fragment[]
-    local chunk_component_fragments = __lua_setmetatable({}, __debug_mts.chunk_component_fragments_mt)
+    local chunk_component_fragments = setmetatable({}, __debug_mts.chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
@@ -941,7 +937,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
     ---@type evolved.chunk
-    local chunk = __lua_setmetatable({
+    local chunk = setmetatable({
         __parent = nil,
         __child_set = {},
         __child_list = {},
@@ -7423,7 +7419,7 @@ __evolved_entity = function()
         __component_count = 0,
     }
     ---@cast builder evolved.entity_builder
-    return __lua_setmetatable(builder, evolved_entity_builder)
+    return setmetatable(builder, evolved_entity_builder)
 end
 
 ---@param fragment evolved.fragment
@@ -7514,7 +7510,7 @@ __evolved_fragment = function()
         __destroy_policy = nil,
     }
     ---@cast builder evolved.fragment_builder
-    return __lua_setmetatable(builder, evolved_fragment_builder)
+    return setmetatable(builder, evolved_fragment_builder)
 end
 
 ---@return evolved.fragment_builder builder
@@ -7714,7 +7710,7 @@ __evolved_query = function()
         __exclude_list = nil,
     }
     ---@cast builder evolved.query_builder
-    return __lua_setmetatable(builder, evolved_query_builder)
+    return setmetatable(builder, evolved_query_builder)
 end
 
 ---@param name string
@@ -7857,7 +7853,7 @@ __evolved_phase = function()
         __single = nil,
     }
     ---@cast builder evolved.phase_builder
-    return __lua_setmetatable(builder, evolved_phase_builder)
+    return setmetatable(builder, evolved_phase_builder)
 end
 
 ---@param name string
@@ -7944,7 +7940,7 @@ __evolved_system = function()
         __epilogue = nil,
     }
     ---@cast builder evolved.system_builder
-    return __lua_setmetatable(builder, evolved_system_builder)
+    return setmetatable(builder, evolved_system_builder)
 end
 
 ---@param name string
@@ -8136,15 +8132,15 @@ local function __update_fragment_hooks(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-__lua_assert(__evolved_insert(__ON_SET, __ON_INSERT, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_insert(__ON_SET, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_insert(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_insert(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_insert(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
 
-__lua_assert(__evolved_insert(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
-__lua_assert(__evolved_insert(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_insert(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_insert(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_insert(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_insert(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
 
 ---
 ---
@@ -8219,47 +8215,14 @@ local function __update_fragment_constructs(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-__lua_assert(__evolved_insert(__TAG, __ON_INSERT, __update_fragment_tags))
-__lua_assert(__evolved_insert(__TAG, __ON_REMOVE, __update_fragment_tags))
+assert(__evolved_insert(__TAG, __ON_INSERT, __update_fragment_tags))
+assert(__evolved_insert(__TAG, __ON_REMOVE, __update_fragment_tags))
 
-__lua_assert(__evolved_insert(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
-__lua_assert(__evolved_insert(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
+assert(__evolved_insert(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
+assert(__evolved_insert(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
 
-__lua_assert(__evolved_insert(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
-__lua_assert(__evolved_insert(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
-
----
----
----
----
----
-
-__lua_assert(__evolved_insert(__TAG, __NAME, 'TAG'))
-
-__lua_assert(__evolved_insert(__NAME, __NAME, 'NAME'))
-__lua_assert(__evolved_insert(__DEFAULT, __NAME, 'DEFAULT'))
-__lua_assert(__evolved_insert(__CONSTRUCT, __NAME, 'CONSTRUCT'))
-
-__lua_assert(__evolved_insert(__INCLUDES, __NAME, 'INCLUDES'))
-__lua_assert(__evolved_insert(__EXCLUDES, __NAME, 'EXCLUDES'))
-
-__lua_assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
-__lua_assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
-__lua_assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
-__lua_assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
-
-__lua_assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
-__lua_assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
-
-__lua_assert(__evolved_insert(__QUERY, __NAME, 'QUERY'))
-__lua_assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
-
-__lua_assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
-__lua_assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
-
-__lua_assert(__evolved_insert(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
-__lua_assert(__evolved_insert(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
-__lua_assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
+assert(__evolved_insert(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
+assert(__evolved_insert(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
 
 ---
 ---
@@ -8267,12 +8230,45 @@ __lua_assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY
 ---
 ---
 
-__lua_assert(__evolved_insert(__TAG, __TAG))
+assert(__evolved_insert(__TAG, __NAME, 'TAG'))
 
-__lua_assert(__evolved_insert(__INCLUDES, __CONSTRUCT, __component_list))
-__lua_assert(__evolved_insert(__EXCLUDES, __CONSTRUCT, __component_list))
+assert(__evolved_insert(__NAME, __NAME, 'NAME'))
+assert(__evolved_insert(__DEFAULT, __NAME, 'DEFAULT'))
+assert(__evolved_insert(__CONSTRUCT, __NAME, 'CONSTRUCT'))
 
-__lua_assert(__evolved_insert(__AFTER, __CONSTRUCT, __component_list))
+assert(__evolved_insert(__INCLUDES, __NAME, 'INCLUDES'))
+assert(__evolved_insert(__EXCLUDES, __NAME, 'EXCLUDES'))
+
+assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
+assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
+assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
+assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
+
+assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
+assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
+
+assert(__evolved_insert(__QUERY, __NAME, 'QUERY'))
+assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
+
+assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
+assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
+
+assert(__evolved_insert(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
+assert(__evolved_insert(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
+assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
+
+---
+---
+---
+---
+---
+
+assert(__evolved_insert(__TAG, __TAG))
+
+assert(__evolved_insert(__INCLUDES, __CONSTRUCT, __component_list))
+assert(__evolved_insert(__EXCLUDES, __CONSTRUCT, __component_list))
+
+assert(__evolved_insert(__AFTER, __CONSTRUCT, __component_list))
 
 ---
 ---
@@ -8282,7 +8278,7 @@ __lua_assert(__evolved_insert(__AFTER, __CONSTRUCT, __component_list))
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-__lua_assert(__evolved_insert(__INCLUDES, __ON_SET, function(query, _, include_list)
+assert(__evolved_insert(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_count = #include_list
 
     if include_count == 0 then
@@ -8301,7 +8297,7 @@ __lua_assert(__evolved_insert(__INCLUDES, __ON_SET, function(query, _, include_l
     __query_sorted_includes[query] = sorted_includes
 end))
 
-__lua_assert(__evolved_insert(__INCLUDES, __ON_REMOVE, function(query)
+assert(__evolved_insert(__INCLUDES, __ON_REMOVE, function(query)
     __query_sorted_includes[query] = nil
 end))
 
@@ -8313,7 +8309,7 @@ end))
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-__lua_assert(__evolved_insert(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
+assert(__evolved_insert(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_count = #exclude_list
 
     if exclude_count == 0 then
@@ -8332,7 +8328,7 @@ __lua_assert(__evolved_insert(__EXCLUDES, __ON_SET, function(query, _, exclude_l
     __query_sorted_excludes[query] = sorted_excludes
 end))
 
-__lua_assert(__evolved_insert(__EXCLUDES, __ON_REMOVE, function(query)
+assert(__evolved_insert(__EXCLUDES, __ON_REMOVE, function(query)
     __query_sorted_excludes[query] = nil
 end))
 
@@ -8345,7 +8341,7 @@ end))
 ---@param system evolved.system
 ---@param new_phase evolved.phase
 ---@param old_phase? evolved.phase
-__lua_assert(__evolved_insert(__PHASE, __ON_SET, function(system, _, new_phase, old_phase)
+assert(__evolved_insert(__PHASE, __ON_SET, function(system, _, new_phase, old_phase)
     if new_phase == old_phase then
         return
     end
@@ -8374,7 +8370,7 @@ end))
 
 ---@param system evolved.system
 ---@param old_phase evolved.phase
-__lua_assert(__evolved_insert(__PHASE, __ON_REMOVE, function(system, _, old_phase)
+assert(__evolved_insert(__PHASE, __ON_REMOVE, function(system, _, old_phase)
     local old_phase_systems = __phase_systems[old_phase]
 
     if old_phase_systems then
@@ -8394,7 +8390,7 @@ end))
 
 ---@param system evolved.system
 ---@param new_after_list evolved.system[]
-__lua_assert(__evolved_insert(__AFTER, __ON_SET, function(system, _, new_after_list)
+assert(__evolved_insert(__AFTER, __ON_SET, function(system, _, new_after_list)
     local new_after_count = #new_after_list
 
     if new_after_count == 0 then
@@ -8413,7 +8409,7 @@ __lua_assert(__evolved_insert(__AFTER, __ON_SET, function(system, _, new_after_l
 end))
 
 ---@param system evolved.system
-__lua_assert(__evolved_insert(__AFTER, __ON_REMOVE, function(system)
+assert(__evolved_insert(__AFTER, __ON_REMOVE, function(system)
     __system_dependencies[system] = nil
 end))
 
