@@ -269,7 +269,7 @@ local function __release_id(id)
         __error_fmt('id is not acquired or already released')
     end
 
-    shifted_version = shifted_version == 0xFFFFF00000
+    shifted_version = shifted_version == 0xFFFFF * 0x100000
         and 0x100000
         or shifted_version + 0x100000
 
