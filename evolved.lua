@@ -126,16 +126,12 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---
 
 local __lua_assert = assert
-local __lua_error = error
 local __lua_ipairs = ipairs
 local __lua_next = next
 local __lua_pairs = pairs
 local __lua_pcall = pcall
-local __lua_print = print
 local __lua_select = select
 local __lua_setmetatable = setmetatable
-local __lua_string_format = string.format
-local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
 
@@ -202,15 +198,15 @@ end)()
 ---@param fmt string
 ---@param ... any
 local function __error_fmt(fmt, ...)
-    __lua_error(__lua_string_format('| evolved.lua | %s',
-        __lua_string_format(fmt, ...)))
+    error(string.format('| evolved.lua | %s',
+        string.format(fmt, ...)))
 end
 
 ---@param fmt string
 ---@param ... any
 local function __warning_fmt(fmt, ...)
-    __lua_print(__lua_string_format('| evolved.lua | %s',
-        __lua_string_format(fmt, ...)))
+    print(string.format('| evolved.lua | %s',
+        string.format(fmt, ...)))
 end
 
 ---
@@ -714,7 +710,7 @@ local function __id_name(id)
     end
 
     local id_index, id_version = __evolved_unpack(id)
-    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
+    return string.format('$%d#%d:%d', id, id_index, id_version)
 end
 
 ---@param ... any component arguments
@@ -832,7 +828,7 @@ function __debug_mts.chunk_mt.__tostring(self)
         items[fragment_index] = __id_name(fragment)
     end
 
-    return __lua_string_format('<%s>', __lua_table_concat(items, ', '))
+    return string.format('<%s>', table.concat(items, ', '))
 end
 
 ---@param self table<evolved.fragment, integer>
@@ -840,11 +836,11 @@ function __debug_mts.chunk_fragment_set_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment, fragment_index in __lua_pairs(self) do
-        items[fragment_index] = __lua_string_format('(%s -> %d)',
+        items[fragment_index] = string.format('(%s -> %d)',
             __id_name(fragment), fragment_index)
     end
 
-    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+    return string.format('{%s}', table.concat(items, ', '))
 end
 
 ---@param self evolved.fragment[]
@@ -852,11 +848,11 @@ function __debug_mts.chunk_fragment_list_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in __lua_ipairs(self) do
-        items[fragment_index] = __lua_string_format('(%d -> %s)',
+        items[fragment_index] = string.format('(%d -> %s)',
             fragment_index, __id_name(fragment))
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---@param self table<evolved.fragment, integer>
@@ -864,11 +860,11 @@ function __debug_mts.chunk_component_indices_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_fragment, component_index in __lua_pairs(self) do
-        items[component_index] = __lua_string_format('(%s -> %d)',
+        items[component_index] = string.format('(%s -> %d)',
             __id_name(component_fragment), component_index)
     end
 
-    return __lua_string_format('{%s}', __lua_table_concat(items, ', '))
+    return string.format('{%s}', table.concat(items, ', '))
 end
 
 ---@param self evolved.storage[]
@@ -876,11 +872,11 @@ function __debug_mts.chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_storage in __lua_ipairs(self) do
-        items[component_index] = __lua_string_format('(%d -> #%d)',
+        items[component_index] = string.format('(%d -> #%d)',
             component_index, #component_storage)
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---@param self evolved.fragment[]
@@ -888,11 +884,11 @@ function __debug_mts.chunk_component_fragments_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_fragment in __lua_ipairs(self) do
-        items[component_index] = __lua_string_format('(%d -> %s)',
+        items[component_index] = string.format('(%d -> %s)',
             component_index, __id_name(component_fragment))
     end
 
-    return __lua_string_format('[%s]', __lua_table_concat(items, ', '))
+    return string.format('[%s]', table.concat(items, ', '))
 end
 
 ---
@@ -3397,7 +3393,7 @@ local function __phase_process(phase)
                             local cycled_system_mark = sorting_marks[cycled_system_mark_index]
 
                             if cycled_system_mark == 1 then
-                                sorting_cycle_path = __lua_string_format('%s -> %s',
+                                sorting_cycle_path = string.format('%s -> %s',
                                     sorting_cycle_path, cycled_system)
 
                                 if cycled_system == dependency then
