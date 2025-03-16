@@ -1239,16 +1239,39 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_all_fragments(chunk, ...)
-    local fragment_set = chunk.__fragment_set
+    local fragment_count = __lua_select('#', ...)
 
-    for i = 1, __lua_select('#', ...) do
-        local fragment = __lua_select(i, ...)
-        if not fragment_set[fragment] then
-            return false
-        end
+    if fragment_count == 0 then
+        return true
     end
 
-    return true
+    local fs = chunk.__fragment_set
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return fs[f1] ~= nil
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil and
+            __chunk_has_all_fragments(chunk, __lua_select(5, ...))
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -1274,16 +1297,39 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_any_fragments(chunk, ...)
-    local fragment_set = chunk.__fragment_set
+    local fragment_count = __lua_select('#', ...)
 
-    for i = 1, __lua_select('#', ...) do
-        local fragment = __lua_select(i, ...)
-        if fragment_set[fragment] then
-            return true
-        end
+    if fragment_count == 0 then
+        return false
     end
 
-    return false
+    local fs = chunk.__fragment_set
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return fs[f1] ~= nil
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil or
+            __chunk_has_any_fragments(chunk, __lua_select(5, ...))
+    end
 end
 
 ---@param chunk evolved.chunk

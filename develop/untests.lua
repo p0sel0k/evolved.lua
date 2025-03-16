@@ -7701,3 +7701,61 @@ do
     assert(not evo.is_empty(f1, e1, e2, f2, e3))
     assert(not evo.is_empty(f1, e1, e2, f2, e3, f1))
 end
+
+do
+    local f1, f2, f3, f4, f5, f6 = evo.id(6)
+
+    local e2 = evo.spawn_with({ f1, f2 })
+    local e5 = evo.spawn_with({ f1, f2, f3, f4, f5 })
+
+    assert(evo.has_all(e2, f1))
+    assert(evo.has_all(e2, f1, f2))
+    assert(evo.has_all(e2, f2, f1))
+    assert(evo.has_all(e2, f2, f1, f2))
+    assert(not evo.has_all(e2, f1, f2, f3))
+
+    assert(evo.has_all(e5, f1))
+    assert(evo.has_all(e5, f1, f2))
+    assert(evo.has_all(e5, f1, f2, f3))
+    assert(evo.has_all(e5, f1, f2, f3, f4))
+    assert(evo.has_all(e5, f1, f2, f3, f4, f5))
+
+    assert(not evo.has_all(e5, f6, f1, f2, f3, f4, f5))
+    assert(not evo.has_all(e5, f1, f2, f3, f4, f5, f6))
+    assert(not evo.has_all(e5, f1, f2, f6, f3, f4, f5))
+end
+
+do
+    local f1, f2, f3, f4, f5, f6, f7 = evo.id(7)
+
+    local e2 = evo.spawn_with({ f1, f2 })
+    local e5 = evo.spawn_with({ f1, f2, f3, f4, f5 })
+
+    assert(evo.has_all(e2))
+    assert(not evo.has_any(e2))
+
+    assert(evo.has_any(e2, f1))
+    assert(evo.has_any(e2, f1, f2))
+    assert(evo.has_any(e2, f2, f1))
+    assert(evo.has_any(e2, f2, f1, f2))
+    assert(evo.has_any(e2, f1, f2, f3))
+    assert(evo.has_any(e2, f3, f4, f5, f6, f7, f1))
+
+    assert(not evo.has_any(e2, f3))
+    assert(not evo.has_any(e2, f3, f4))
+    assert(not evo.has_any(e2, f3, f7, f4))
+
+    assert(evo.has_any(e5, f1))
+    assert(evo.has_any(e5, f1, f2))
+    assert(evo.has_any(e5, f1, f2, f3))
+    assert(evo.has_any(e5, f1, f2, f3, f4))
+    assert(evo.has_any(e5, f1, f2, f3, f4, f5))
+
+    assert(evo.has_any(e5, f6, f1, f2, f3, f4, f5))
+    assert(evo.has_any(e5, f1, f2, f3, f4, f5, f6))
+    assert(evo.has_any(e5, f1, f2, f6, f3, f4, f5))
+
+    assert(not evo.has_any(e5, f7))
+    assert(not evo.has_any(e5, f7, f7))
+    assert(not evo.has_any(e5, f7, f7, f6))
+end
