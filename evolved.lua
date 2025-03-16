@@ -639,7 +639,12 @@ local __evolved_defer
 local __evolved_commit
 
 local __evolved_is_alive
+local __evolved_is_alive_all
+local __evolved_is_alive_any
+
 local __evolved_is_empty
+local __evolved_is_empty_all
+local __evolved_is_empty_any
 
 local __evolved_get
 local __evolved_has
@@ -4907,10 +4912,18 @@ __evolved_commit = function()
     return __commit()
 end
 
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+__evolved_is_alive = function(entity)
+    local entity_index = entity % 0x100000
+    return __freelist_ids[entity_index] == entity
+end
+
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-__evolved_is_alive = function(...)
+__evolved_is_alive_all = function(...)
     local entity_count = __lua_select('#', ...)
 
     if entity_count == 0 then
@@ -4961,14 +4974,81 @@ __evolved_is_alive = function(...)
             (ids[i2] == e2) and
             (ids[i3] == e3) and
             (ids[i4] == e4) and
-            __evolved_is_alive(__lua_select(5, ...))
+            __evolved_is_alive_all(__lua_select(5, ...))
     end
 end
 
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-__evolved_is_empty = function(...)
+__evolved_is_alive_any = function(...)
+    local entity_count = __lua_select('#', ...)
+
+    if entity_count == 0 then
+        return false
+    end
+
+    local ids = __freelist_ids
+
+    if entity_count == 1 then
+        local e1 = ...
+        local i1 = e1 % 0x100000
+        return
+            (ids[i1] == e1)
+    end
+
+    if entity_count == 2 then
+        local e1, e2 = ...
+        local i1, i2 = e1 % 0x100000, e2 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2)
+    end
+
+    if entity_count == 3 then
+        local e1, e2, e3 = ...
+        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3)
+    end
+
+    if entity_count == 4 then
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3) or
+            (ids[i4] == e4)
+    end
+
+    do
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] == e1) or
+            (ids[i2] == e2) or
+            (ids[i3] == e3) or
+            (ids[i4] == e4) or
+            __evolved_is_alive_any(__lua_select(5, ...))
+    end
+end
+
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+__evolved_is_empty = function(entity)
+    local entity_index = entity % 0x100000
+    return __freelist_ids[entity_index] ~= entity
+        or not __entity_chunks[entity_index]
+end
+
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+__evolved_is_empty_all = function(...)
     local entity_count = __lua_select('#', ...)
 
     if entity_count == 0 then
@@ -5020,7 +5100,66 @@ __evolved_is_empty = function(...)
             (ids[i2] ~= e2 or not ecs[i2]) and
             (ids[i3] ~= e3 or not ecs[i3]) and
             (ids[i4] ~= e4 or not ecs[i4]) and
-            __evolved_is_empty(__lua_select(5, ...))
+            __evolved_is_empty_all(__lua_select(5, ...))
+    end
+end
+
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+__evolved_is_empty_any = function(...)
+    local entity_count = __lua_select('#', ...)
+
+    if entity_count == 0 then
+        return false
+    end
+
+    local ids = __freelist_ids
+    local ecs = __entity_chunks
+
+    if entity_count == 1 then
+        local e1 = ...
+        local i1 = e1 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1])
+    end
+
+    if entity_count == 2 then
+        local e1, e2 = ...
+        local i1, i2 = e1 % 0x100000, e2 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2])
+    end
+
+    if entity_count == 3 then
+        local e1, e2, e3 = ...
+        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3])
+    end
+
+    if entity_count == 4 then
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3]) or
+            (ids[i4] ~= e4 or not ecs[i4])
+    end
+
+    do
+        local e1, e2, e3, e4 = ...
+        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
+        return
+            (ids[i1] ~= e1 or not ecs[i1]) or
+            (ids[i2] ~= e2 or not ecs[i2]) or
+            (ids[i3] ~= e3 or not ecs[i3]) or
+            (ids[i4] ~= e4 or not ecs[i4]) or
+            __evolved_is_empty_any(__lua_select(5, ...))
     end
 end
 
@@ -8320,7 +8459,12 @@ evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
 
 evolved.is_alive = __evolved_is_alive
+evolved.is_alive_all = __evolved_is_alive_all
+evolved.is_alive_any = __evolved_is_alive_any
+
 evolved.is_empty = __evolved_is_empty
+evolved.is_empty_all = __evolved_is_empty_all
+evolved.is_empty_any = __evolved_is_empty_any
 
 evolved.get = __evolved_get
 evolved.has = __evolved_has
