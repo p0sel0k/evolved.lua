@@ -672,9 +672,9 @@ local __evolved_batch_multi_insert
 local __evolved_batch_multi_remove
 
 local __evolved_chunk
-local __evolved_select
 local __evolved_entities
 local __evolved_fragments
+local __evolved_components
 
 local __evolved_each
 local __evolved_execute
@@ -7018,10 +7018,34 @@ __evolved_chunk = function(...)
 end
 
 ---@param chunk evolved.chunk
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+---@nodiscard
+__evolved_entities = function(chunk)
+    if __debug_mode then
+        __validate_chunk(chunk)
+    end
+
+    return chunk.__entity_list, chunk.__entity_count
+end
+
+---@param chunk evolved.chunk
+---@return evolved.fragment[] fragments
+---@return integer fragment_count
+---@nodiscard
+__evolved_fragments = function(chunk)
+    if __debug_mode then
+        __validate_chunk(chunk)
+    end
+
+    return chunk.__fragment_list, chunk.__fragment_count
+end
+
+---@param chunk evolved.chunk
 ---@param ... evolved.fragment fragments
 ---@return evolved.storage ... storages
 ---@nodiscard
-__evolved_select = function(chunk, ...)
+__evolved_components = function(chunk, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
@@ -7080,32 +7104,8 @@ __evolved_select = function(chunk, ...)
             i2 and storages[i2] or empty_component_storage,
             i3 and storages[i3] or empty_component_storage,
             i4 and storages[i4] or empty_component_storage,
-            __evolved_select(chunk, __lua_select(5, ...))
+            __evolved_components(chunk, __lua_select(5, ...))
     end
-end
-
----@param chunk evolved.chunk
----@return evolved.entity[] entity_list
----@return integer entity_count
----@nodiscard
-__evolved_entities = function(chunk)
-    if __debug_mode then
-        __validate_chunk(chunk)
-    end
-
-    return chunk.__entity_list, chunk.__entity_count
-end
-
----@param chunk evolved.chunk
----@return evolved.fragment[] fragments
----@return integer fragment_count
----@nodiscard
-__evolved_fragments = function(chunk)
-    if __debug_mode then
-        __validate_chunk(chunk)
-    end
-
-    return chunk.__fragment_list, chunk.__fragment_count
 end
 
 ---@param entity evolved.entity
@@ -8492,10 +8492,10 @@ evolved.batch_multi_insert = __evolved_batch_multi_insert
 evolved.batch_multi_remove = __evolved_batch_multi_remove
 
 evolved.chunk = __evolved_chunk
-evolved.select = __evolved_select
 
 evolved.entities = __evolved_entities
 evolved.fragments = __evolved_fragments
+evolved.components = __evolved_components
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute
