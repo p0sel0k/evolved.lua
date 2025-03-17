@@ -130,6 +130,7 @@ local __lua_pcall = pcall
 local __lua_select = select
 local __lua_table_sort = table.sort
 local __lua_table_unpack = table.unpack or unpack
+local __lua_type = type
 
 local __lua_table_move = (function()
     ---@param a1 table
@@ -4908,255 +4909,243 @@ __evolved_commit = function()
     return __commit()
 end
 
----@param entity evolved.entity
+---@param chunk_or_entity evolved.chunk | evolved.entity
 ---@return boolean
 ---@nodiscard
-__evolved_is_alive = function(entity)
-    local entity_index = entity % 0x100000
-    return __freelist_ids[entity_index] == entity
+__evolved_is_alive = function(chunk_or_entity)
+    if __lua_type(chunk_or_entity) ~= 'number' then
+        ---@cast chunk_or_entity -evolved.entity
+        return not chunk_or_entity.__unreachable_or_collected
+    end
+
+    ---@cast chunk_or_entity -evolved.chunk
+    local entity_index = chunk_or_entity % 0x100000
+    return __freelist_ids[entity_index] == chunk_or_entity
 end
 
----@param ... evolved.entity entities
+---@param ... evolved.chunk | evolved.entity chunks_or_entities
 ---@return boolean
 ---@nodiscard
 __evolved_is_alive_all = function(...)
-    local entity_count = __lua_select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
-    if entity_count == 0 then
+    if argument_count == 0 then
         return true
     end
 
-    local ids = __freelist_ids
+    local freelist_ids = __freelist_ids
 
-    if entity_count == 1 then
-        local e1 = ...
-        local i1 = e1 % 0x100000
-        return
-            (ids[i1] == e1)
+    for argument_index = 1, argument_count do
+        ---@type evolved.chunk | evolved.entity
+        local chunk_or_entity = __lua_select(argument_index, ...)
+
+        if __lua_type(chunk_or_entity) ~= 'number' then
+            ---@cast chunk_or_entity -evolved.entity
+            if chunk_or_entity.__unreachable_or_collected then
+                return false
+            end
+        else
+            ---@cast chunk_or_entity -evolved.chunk
+            local entity_index = chunk_or_entity % 0x100000
+            if freelist_ids[entity_index] ~= chunk_or_entity then
+                return false
+            end
+        end
     end
 
-    if entity_count == 2 then
-        local e1, e2 = ...
-        local i1, i2 = e1 % 0x100000, e2 % 0x100000
-        return
-            (ids[i1] == e1) and
-            (ids[i2] == e2)
-    end
-
-    if entity_count == 3 then
-        local e1, e2, e3 = ...
-        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
-        return
-            (ids[i1] == e1) and
-            (ids[i2] == e2) and
-            (ids[i3] == e3)
-    end
-
-    if entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] == e1) and
-            (ids[i2] == e2) and
-            (ids[i3] == e3) and
-            (ids[i4] == e4)
-    end
-
-    do
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] == e1) and
-            (ids[i2] == e2) and
-            (ids[i3] == e3) and
-            (ids[i4] == e4) and
-            __evolved_is_alive_all(__lua_select(5, ...))
-    end
+    return true
 end
 
----@param ... evolved.entity entities
+---@param ... evolved.chunk | evolved.entity chunks_or_entities
 ---@return boolean
 ---@nodiscard
 __evolved_is_alive_any = function(...)
-    local entity_count = __lua_select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
-    if entity_count == 0 then
+    if argument_count == 0 then
         return false
     end
 
-    local ids = __freelist_ids
+    local freelist_ids = __freelist_ids
 
-    if entity_count == 1 then
-        local e1 = ...
-        local i1 = e1 % 0x100000
-        return
-            (ids[i1] == e1)
+    for argument_index = 1, argument_count do
+        ---@type evolved.chunk | evolved.entity
+        local chunk_or_entity = __lua_select(argument_index, ...)
+
+        if __lua_type(chunk_or_entity) ~= 'number' then
+            ---@cast chunk_or_entity -evolved.entity
+            if not chunk_or_entity.__unreachable_or_collected then
+                return true
+            end
+        else
+            ---@cast chunk_or_entity -evolved.chunk
+            local entity_index = chunk_or_entity % 0x100000
+            if freelist_ids[entity_index] == chunk_or_entity then
+                return true
+            end
+        end
     end
 
-    if entity_count == 2 then
-        local e1, e2 = ...
-        local i1, i2 = e1 % 0x100000, e2 % 0x100000
-        return
-            (ids[i1] == e1) or
-            (ids[i2] == e2)
-    end
-
-    if entity_count == 3 then
-        local e1, e2, e3 = ...
-        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
-        return
-            (ids[i1] == e1) or
-            (ids[i2] == e2) or
-            (ids[i3] == e3)
-    end
-
-    if entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] == e1) or
-            (ids[i2] == e2) or
-            (ids[i3] == e3) or
-            (ids[i4] == e4)
-    end
-
-    do
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] == e1) or
-            (ids[i2] == e2) or
-            (ids[i3] == e3) or
-            (ids[i4] == e4) or
-            __evolved_is_alive_any(__lua_select(5, ...))
-    end
+    return false
 end
 
----@param entity evolved.entity
+---@param chunk_or_entity evolved.chunk | evolved.entity
 ---@return boolean
 ---@nodiscard
-__evolved_is_empty = function(entity)
-    local entity_index = entity % 0x100000
-    return __freelist_ids[entity_index] ~= entity
+__evolved_is_empty = function(chunk_or_entity)
+    if __lua_type(chunk_or_entity) ~= 'number' then
+        ---@cast chunk_or_entity -evolved.entity
+        return chunk_or_entity.__entity_count == 0
+    end
+
+    ---@cast chunk_or_entity -evolved.chunk
+    local entity_index = chunk_or_entity % 0x100000
+    return __freelist_ids[entity_index] ~= chunk_or_entity
         or not __entity_chunks[entity_index]
 end
 
----@param ... evolved.entity entities
+---@param ... evolved.chunk | evolved.entity chunks_or_entities
 ---@return boolean
 ---@nodiscard
 __evolved_is_empty_all = function(...)
-    local entity_count = __lua_select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
-    if entity_count == 0 then
+    if argument_count == 0 then
         return true
     end
 
-    local ids = __freelist_ids
-    local ecs = __entity_chunks
+    local freelist_ids = __freelist_ids
 
-    if entity_count == 1 then
-        local e1 = ...
-        local i1 = e1 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1])
+    for argument_index = 1, argument_count do
+        ---@type evolved.chunk | evolved.entity
+        local chunk_or_entity = __lua_select(argument_index, ...)
+
+        if __lua_type(chunk_or_entity) ~= 'number' then
+            ---@cast chunk_or_entity -evolved.entity
+            if chunk_or_entity.__entity_count > 0 then
+                return false
+            end
+        else
+            ---@cast chunk_or_entity -evolved.chunk
+            local entity_index = chunk_or_entity % 0x100000
+            if freelist_ids[entity_index] == chunk_or_entity and __entity_chunks[entity_index] then
+                return false
+            end
+        end
     end
 
-    if entity_count == 2 then
-        local e1, e2 = ...
-        local i1, i2 = e1 % 0x100000, e2 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) and
-            (ids[i2] ~= e2 or not ecs[i2])
-    end
-
-    if entity_count == 3 then
-        local e1, e2, e3 = ...
-        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) and
-            (ids[i2] ~= e2 or not ecs[i2]) and
-            (ids[i3] ~= e3 or not ecs[i3])
-    end
-
-    if entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) and
-            (ids[i2] ~= e2 or not ecs[i2]) and
-            (ids[i3] ~= e3 or not ecs[i3]) and
-            (ids[i4] ~= e4 or not ecs[i4])
-    end
-
-    do
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) and
-            (ids[i2] ~= e2 or not ecs[i2]) and
-            (ids[i3] ~= e3 or not ecs[i3]) and
-            (ids[i4] ~= e4 or not ecs[i4]) and
-            __evolved_is_empty_all(__lua_select(5, ...))
-    end
+    return true
 end
 
----@param ... evolved.entity entities
+---@param ... evolved.chunk | evolved.entity chunks_or_entities
 ---@return boolean
 ---@nodiscard
 __evolved_is_empty_any = function(...)
-    local entity_count = __lua_select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
-    if entity_count == 0 then
+    if argument_count == 0 then
         return false
     end
 
-    local ids = __freelist_ids
-    local ecs = __entity_chunks
+    local freelist_ids = __freelist_ids
 
-    if entity_count == 1 then
-        local e1 = ...
-        local i1 = e1 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1])
+    for argument_index = 1, argument_count do
+        ---@type evolved.chunk | evolved.entity
+        local chunk_or_entity = __lua_select(argument_index, ...)
+
+        if __lua_type(chunk_or_entity) ~= 'number' then
+            ---@cast chunk_or_entity -evolved.entity
+            if chunk_or_entity.__entity_count == 0 then
+                return true
+            end
+        else
+            ---@cast chunk_or_entity -evolved.chunk
+            local entity_index = chunk_or_entity % 0x100000
+            if freelist_ids[entity_index] ~= chunk_or_entity or not __entity_chunks[entity_index] then
+                return true
+            end
+        end
     end
 
-    if entity_count == 2 then
-        local e1, e2 = ...
-        local i1, i2 = e1 % 0x100000, e2 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) or
-            (ids[i2] ~= e2 or not ecs[i2])
+    return false
+end
+
+---@param chunk_or_entity evolved.chunk | evolved.entity
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+__evolved_has = function(chunk_or_entity, fragment)
+    if __lua_type(chunk_or_entity) ~= 'number' then
+        ---@cast chunk_or_entity -evolved.entity
+        return __chunk_has_fragment(chunk_or_entity, fragment)
     end
 
-    if entity_count == 3 then
-        local e1, e2, e3 = ...
-        local i1, i2, i3 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) or
-            (ids[i2] ~= e2 or not ecs[i2]) or
-            (ids[i3] ~= e3 or not ecs[i3])
+    ---@cast chunk_or_entity -evolved.chunk
+    local entity_index = chunk_or_entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= chunk_or_entity then
+        return false
     end
 
-    if entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) or
-            (ids[i2] ~= e2 or not ecs[i2]) or
-            (ids[i3] ~= e3 or not ecs[i3]) or
-            (ids[i4] ~= e4 or not ecs[i4])
+    local chunk = __entity_chunks[entity_index]
+
+    if not chunk then
+        return false
     end
 
-    do
-        local e1, e2, e3, e4 = ...
-        local i1, i2, i3, i4 = e1 % 0x100000, e2 % 0x100000, e3 % 0x100000, e4 % 0x100000
-        return
-            (ids[i1] ~= e1 or not ecs[i1]) or
-            (ids[i2] ~= e2 or not ecs[i2]) or
-            (ids[i3] ~= e3 or not ecs[i3]) or
-            (ids[i4] ~= e4 or not ecs[i4]) or
-            __evolved_is_empty_any(__lua_select(5, ...))
+    return __chunk_has_fragment(chunk, fragment)
+end
+
+---@param chunk_or_entity evolved.chunk | evolved.entity
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+__evolved_has_all = function(chunk_or_entity, ...)
+    if __lua_type(chunk_or_entity) ~= 'number' then
+        ---@cast chunk_or_entity -evolved.entity
+        return __chunk_has_all_fragments(chunk_or_entity, ...)
     end
+
+    ---@cast chunk_or_entity -evolved.chunk
+    local entity_index = chunk_or_entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= chunk_or_entity then
+        return __lua_select('#', ...) == 0
+    end
+
+    local chunk = __entity_chunks[entity_index]
+
+    if not chunk then
+        return __lua_select('#', ...) == 0
+    end
+
+    return __chunk_has_all_fragments(chunk, ...)
+end
+
+---@param chunk_or_entity evolved.chunk | evolved.entity
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+__evolved_has_any = function(chunk_or_entity, ...)
+    if __lua_type(chunk_or_entity) ~= 'number' then
+        ---@cast chunk_or_entity -evolved.entity
+        return __chunk_has_any_fragments(chunk_or_entity, ...)
+    end
+
+    ---@cast chunk_or_entity -evolved.chunk
+    local entity_index = chunk_or_entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= chunk_or_entity then
+        return false
+    end
+
+    local chunk = __entity_chunks[entity_index]
+
+    if not chunk then
+        return false
+    end
+
+    return __chunk_has_any_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -5178,66 +5167,6 @@ __evolved_get = function(entity, ...)
 
     local place = __entity_places[entity_index]
     return __chunk_get_components(chunk, place, ...)
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@return boolean
----@nodiscard
-__evolved_has = function(entity, fragment)
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return false
-    end
-
-    return __chunk_has_fragment(chunk, fragment)
-end
-
----@param entity evolved.entity
----@param ... evolved.fragment fragments
----@return boolean
----@nodiscard
-__evolved_has_all = function(entity, ...)
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return __lua_select('#', ...) == 0
-    end
-
-    return __chunk_has_all_fragments(chunk, ...)
-end
-
----@param entity evolved.entity
----@param ... evolved.fragment fragments
----@return boolean
----@nodiscard
-__evolved_has_any = function(entity, ...)
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return false
-    end
-
-    return __chunk_has_any_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity

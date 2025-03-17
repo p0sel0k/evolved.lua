@@ -60,18 +60,19 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
-is_alive :: entity -> boolean
-is_alive_all :: entity... -> boolean
-is_alive_any :: entity... -> boolean
+is_alive :: chunk | entity -> boolean
+is_alive_all :: chunk | entity... -> boolean
+is_alive_any :: chunk | entity... -> boolean
 
-is_empty :: entity -> boolean
-is_empty_all :: entity... -> boolean
-is_empty_any :: entity... -> boolean
+is_empty :: chunk | entity -> boolean
+is_empty_all :: chunk | entity... -> boolean
+is_empty_any :: chunk | entity... -> boolean
+
+has :: chunk | entity, fragment -> boolean
+has_all :: chunk | entity, fragment... -> boolean
+has_any :: chunk | entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
-has :: entity, fragment -> boolean
-has_all :: entity, fragment... -> boolean
-has_any :: entity, fragment... -> boolean
 
 set :: entity, fragment, any... -> boolean, boolean
 assign :: entity, fragment, any... -> boolean, boolean

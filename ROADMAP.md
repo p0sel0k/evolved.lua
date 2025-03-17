@@ -2,8 +2,6 @@
 
 ## Backlog
 
-- add has, has_all, has_any for chunks
-
 ## After first release
 
 - add system groups

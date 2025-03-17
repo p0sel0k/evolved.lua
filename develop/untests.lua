@@ -7316,6 +7316,7 @@ do
     local e12 = evo.entity():set(f1, 2):set(f2, 3):build()
 
     do
+        assert(evo.is_alive(old_c1))
         assert(old_c1 == evo.chunk(f1))
 
         local old_c1_es, old_c1_ec = evo.entities(old_c1)
@@ -7326,6 +7327,8 @@ do
 
     do
         local new_c12 = assert(evo.chunk(f1, f2))
+
+        assert(not evo.is_alive(old_c12))
         assert(old_c12 ~= new_c12)
 
         local new_c12_es, new_c12_ec = evo.entities(new_c12)
@@ -7341,24 +7344,31 @@ do
 
     do
         local new_c1 = assert(evo.chunk(f1))
+
+        assert(not evo.is_alive(old_c1))
         assert(old_c1 ~= new_c1)
 
         local new_c12 = assert(evo.chunk(f1, f2))
+
+        assert(not evo.is_alive(old_c12))
         assert(old_c12 ~= new_c12)
     end
 end
 
 do
     local f1 = evo.id()
-    local old_c1 = evo.chunk(f1)
+    local old_c1 = assert(evo.chunk(f1))
 
     assert(evo.defer())
 
     assert(not evo.collect_garbage())
+
+    assert(evo.is_alive(old_c1))
     assert(old_c1 == evo.chunk(f1))
 
     assert(evo.commit())
 
+    assert(not evo.is_alive(old_c1))
     assert(old_c1 ~= evo.chunk(f1))
 end
 
@@ -7804,4 +7814,192 @@ do
     assert(not evo.has_any(e5, f7))
     assert(not evo.has_any(e5, f7, f7))
     assert(not evo.has_any(e5, f7, f7, f6))
+end
+
+do
+    local f1 = evo.id()
+
+    local c1 = assert(evo.chunk(f1))
+    assert(evo.is_alive(c1) and evo.is_empty(c1))
+
+    local e1 = evo.spawn_at(c1)
+    assert(evo.is_alive(c1) and not evo.is_empty(c1))
+
+    assert(evo.destroy(e1))
+    assert(evo.is_alive(c1) and evo.is_empty(c1))
+
+    assert(evo.collect_garbage())
+    assert(not evo.is_alive(c1) and evo.is_empty(c1))
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    assert(evo.is_alive(c1))
+    assert(evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(evo.is_alive_all(c1))
+    assert(evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(evo.is_alive_any(c1))
+    assert(evo.is_alive_any(c1, c12))
+
+    assert(evo.is_empty(c1))
+    assert(evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(evo.is_empty_all(c1))
+    assert(evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+
+    local e12 = evo.spawn_at(c12)
+
+    assert(evo.is_alive(c1))
+    assert(evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(evo.is_alive_all(c1))
+    assert(evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(evo.is_alive_any(c1))
+    assert(evo.is_alive_any(c1, c12))
+
+    assert(evo.is_empty(c1))
+    assert(not evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(evo.is_empty_all(c1))
+    assert(not evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+
+    assert(evo.remove(e12, f2))
+
+    assert(evo.is_alive(c1))
+    assert(evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(evo.is_alive_all(c1))
+    assert(evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(evo.is_alive_any(c1))
+    assert(evo.is_alive_any(c1, c12))
+
+    assert(not evo.is_empty(c1))
+    assert(evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(not evo.is_empty_all(c1))
+    assert(not evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(not evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+
+    assert(evo.collect_garbage())
+
+    assert(evo.is_alive(c1))
+    assert(not evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(evo.is_alive_all(c1))
+    assert(not evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(evo.is_alive_any(c1))
+    assert(evo.is_alive_any(c1, c12))
+
+    assert(not evo.is_empty(c1))
+    assert(evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(not evo.is_empty_all(c1))
+    assert(not evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(not evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+
+    assert(evo.remove(e12, f1))
+
+    assert(evo.is_alive(c1))
+    assert(not evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(evo.is_alive_all(c1))
+    assert(not evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(evo.is_alive_any(c1))
+    assert(evo.is_alive_any(c1, c12))
+
+    assert(evo.is_empty(c1))
+    assert(evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(evo.is_empty_all(c1))
+    assert(evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+
+    assert(evo.collect_garbage())
+
+    assert(not evo.is_alive(c1))
+    assert(not evo.is_alive(c12))
+    assert(evo.is_alive_all())
+    assert(not evo.is_alive_all(c1))
+    assert(not evo.is_alive_all(c1, c12))
+    assert(not evo.is_alive_any())
+    assert(not evo.is_alive_any(c1))
+    assert(not evo.is_alive_any(c1, c12))
+
+    assert(evo.is_empty(c1))
+    assert(evo.is_empty(c12))
+    assert(evo.is_empty_all())
+    assert(evo.is_empty_all(c1))
+    assert(evo.is_empty_all(c1, c12))
+    assert(not evo.is_empty_any())
+    assert(evo.is_empty_any(c1))
+    assert(evo.is_empty_any(c1, c12))
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    assert(evo.has(c1, f1))
+    assert(not evo.has(c1, f2))
+    assert(evo.has(c12, f1))
+    assert(evo.has(c12, f2))
+
+    assert(evo.has_all(c1))
+    assert(evo.has_all(c1, f1))
+    assert(not evo.has_all(c1, f1, f2))
+    assert(evo.has_all(c12))
+    assert(evo.has_all(c12, f1))
+    assert(evo.has_all(c12, f1, f2))
+
+    assert(not evo.has_any(c1))
+    assert(evo.has_any(c1, f1))
+    assert(evo.has_any(c1, f1, f2))
+    assert(not evo.has_any(c12))
+    assert(evo.has_any(c12, f1))
+    assert(evo.has_any(c12, f1, f2))
+
+    assert(evo.collect_garbage())
+    assert(not evo.is_alive_any(c1, c12))
+
+    assert(evo.has(c1, f1))
+    assert(not evo.has(c1, f2))
+    assert(evo.has(c12, f1))
+    assert(evo.has(c12, f2))
+
+    assert(evo.has_all(c1))
+    assert(evo.has_all(c1, f1))
+    assert(not evo.has_all(c1, f1, f2))
+    assert(evo.has_all(c12))
+    assert(evo.has_all(c12, f1))
+    assert(evo.has_all(c12, f1, f2))
+
+    assert(not evo.has_any(c1))
+    assert(evo.has_any(c1, f1))
+    assert(evo.has_any(c1, f1, f2))
+    assert(not evo.has_any(c12))
+    assert(evo.has_any(c12, f1))
+    assert(evo.has_any(c12, f1, f2))
 end
