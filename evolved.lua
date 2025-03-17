@@ -1143,6 +1143,7 @@ local function __chunk_without_fragments(chunk, ...)
     end
 
     for i = 1, fragment_count do
+        ---@type evolved.fragment
         local fragment = __lua_select(i, ...)
         chunk = __chunk_without_fragment(chunk, fragment)
     end
@@ -1189,6 +1190,7 @@ local function __chunk_fragments(...)
         or __chunk_with_fragment(nil, root_fragment)
 
     for i = 2, fragment_count do
+        ---@type evolved.fragment
         local child_fragment = __lua_select(i, ...)
         chunk = chunk.__with_fragment_edges[child_fragment]
             or __chunk_with_fragment(chunk, child_fragment)
@@ -2294,6 +2296,7 @@ __chunk_remove = function(old_chunk, ...)
         local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
         for i = 1, fragment_count do
+            ---@type evolved.fragment
             local fragment = __lua_select(i, ...)
 
             if not removed_set[fragment] and old_fragment_set[fragment] then
@@ -5693,6 +5696,7 @@ __evolved_remove = function(entity, ...)
             local removed_set = __acquire_table(__table_pool_tag.fragment_set)
 
             for i = 1, fragment_count do
+                ---@type evolved.fragment
                 local fragment = __lua_select(i, ...)
 
                 if not removed_set[fragment] and old_fragment_set[fragment] then
@@ -5775,6 +5779,7 @@ __evolved_clear = function(...)
     __defer()
 
     for argument_index = 1, argument_count do
+        ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
         local entity_index = entity % 0x100000
 
@@ -5846,6 +5851,7 @@ __evolved_destroy = function(...)
     __defer()
 
     for argument_index = 1, argument_count do
+        ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
         local entity_index = entity % 0x100000
 
@@ -7305,6 +7311,7 @@ __evolved_process = function(...)
     end
 
     for i = 1, phase_count do
+        ---@type evolved.phase
         local phase = __lua_select(i, ...)
         __phase_process(phase)
     end
@@ -7830,6 +7837,7 @@ function evolved_query_builder:include(...)
     local include_count = #include_list
 
     for i = 1, fragment_count do
+        ---@type evolved.fragment
         local fragment = __lua_select(i, ...)
         include_list[include_count + i] = fragment
     end
@@ -7856,6 +7864,7 @@ function evolved_query_builder:exclude(...)
     local exclude_count = #exclude_list
 
     for i = 1, fragment_count do
+        ---@type evolved.fragment
         local fragment = __lua_select(i, ...)
         exclude_list[exclude_count + i] = fragment
     end

@@ -3,7 +3,6 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
-- add types to every __lua_select call
 - chunk(...) check for 0 fragments
 
 ## After first release
