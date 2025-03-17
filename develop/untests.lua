@@ -8003,3 +8003,207 @@ do
     assert(evo.has_any(c12, f1))
     assert(evo.has_any(c12, f1, f2))
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b)
+        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
+    end
+
+    assert(2 == evo.batch_set(c1, f2, 0))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f2) == 0 and evo.get(e1b, f2) == 0)
+        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
+    end
+
+    assert(4 == evo.batch_set(c12, f2, 7))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
+        assert(evo.get(e12a, f2) == 7 and evo.get(e12b, f2) == 7)
+    end
+
+    assert(4 == evo.batch_assign(c12, f2, 8))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f2) == 8 and evo.get(e1b, f2) == 8)
+        assert(evo.get(e12a, f2) == 8 and evo.get(e12b, f2) == 8)
+    end
+
+    assert(4 == evo.batch_remove(c12, f2))
+
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 4 and c1_ec == 4)
+        assert(c1_es[1] == e12a and c1_es[2] == e12b and c1_es[3] == e1a and c1_es[4] == e1b)
+        assert(evo.get(e1a, f1) == 1 and evo.get(e1b, f1) == 2)
+        assert(evo.get(e12a, f1) == 3 and evo.get(e12b, f1) == 5)
+    end
+
+    assert(4 == evo.batch_insert(c1, f2, 9))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f2) == 9 and evo.get(e1b, f2) == 9)
+        assert(evo.get(e12a, f2) == 9 and evo.get(e12b, f2) == 9)
+    end
+
+    assert(4 == evo.batch_clear(c12))
+
+    do
+        assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
+        assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
+    end
+
+    assert(evo.insert(e1a, f1, 1) and evo.insert(e1b, f1, 2))
+    assert(evo.multi_insert(e12a, { f1, f2 }, { 3, 4 }) and evo.multi_insert(e12b, { f1, f2 }, { 5, 6 }))
+
+    do
+        assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
+        assert(not evo.is_empty_any(e1a, e1b, e12a, e12b))
+    end
+
+    assert(2 == evo.batch_destroy(c12))
+
+    do
+        assert(evo.is_alive_all(e1a, e1b))
+        assert(not evo.is_alive_any(e12a, e12b))
+
+        assert(not evo.is_empty_any(e1a, e1b))
+        assert(evo.is_empty_all(e12a, e12b))
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b)
+        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
+    end
+
+    assert(2 == evo.batch_multi_set(c1, { f2, f1 }, { 7, 0 }))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f1) == 0 and evo.get(e1b, f1) == 0)
+        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
+        assert(evo.get(e12a, f1) == 3 and evo.get(e12b, f1) == 5)
+        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
+    end
+
+    assert(4 == evo.batch_multi_assign(c12, { f1 }, { 7 }))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
+        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
+        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
+        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
+    end
+
+    assert(4 == evo.batch_multi_remove(c12, { f2 }))
+
+    do
+        local c1_es, c1_ec = evo.entities(c1)
+        assert(c1_es and #c1_es == 4 and c1_ec == 4)
+        assert(c1_es[1] == e12a and c1_es[2] == e12b and c1_es[3] == e1a and c1_es[4] == e1b)
+        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
+        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
+    end
+
+    assert(4 == evo.batch_multi_insert(c1, { f2 }, { 8 }))
+
+    do
+        local c12_es, c12_ec = evo.entities(c12)
+        assert(c12_es and #c12_es == 4 and c12_ec == 4)
+        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
+        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
+        assert(evo.get(e1a, f2) == 8 and evo.get(e1b, f2) == 8)
+        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
+        assert(evo.get(e12a, f2) == 8 and evo.get(e12b, f2) == 8)
+    end
+
+    assert(4 == evo.batch_destroy(c12))
+
+    do
+        assert(not evo.is_alive_any(e1a, e1b, e12a, e12b))
+        assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    assert(4 == evo.batch_clear(c1, c12))
+
+    assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
+    assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local c1 = assert(evo.chunk(f1))
+    local c12 = assert(evo.chunk(f1, f2))
+
+    local e1a = evo.entity():set(f1, 1):build()
+    local e1b = evo.entity():set(f1, 2):build()
+
+    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
+    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
+
+    assert(4 == evo.batch_destroy(c1, c12))
+
+    assert(not evo.is_alive_any(e1a, e1b, e12a, e12b))
+    assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
+end

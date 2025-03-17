@@ -86,17 +86,17 @@ multi_assign :: entity, fragment[], component[]? -> boolean, boolean
 multi_insert :: entity, fragment[], component[]? -> boolean, boolean
 multi_remove :: entity, fragment[] -> boolean, boolean
 
-batch_set :: query, fragment, any... -> integer, boolean
-batch_assign :: query, fragment, any... -> integer, boolean
-batch_insert :: query, fragment, any... -> integer, boolean
-batch_remove :: query, fragment... -> integer, boolean
-batch_clear :: query... -> integer, boolean
-batch_destroy :: query... -> integer, boolean
+batch_set :: chunk | query, fragment, any... -> integer, boolean
+batch_assign :: chunk | query, fragment, any... -> integer, boolean
+batch_insert :: chunk | query, fragment, any... -> integer, boolean
+batch_remove :: chunk | query, fragment... -> integer, boolean
+batch_clear :: chunk | query... -> integer, boolean
+batch_destroy :: chunk | query... -> integer, boolean
 
-batch_multi_set :: query, fragment[], component[]? -> integer, boolean
-batch_multi_assign :: query, fragment[], component[]? -> integer, boolean
-batch_multi_insert :: query, fragment[], component[]? -> integer, boolean
-batch_multi_remove :: query, fragment[] -> integer, boolean
+batch_multi_set :: chunk | query, fragment[], component[]? -> integer, boolean
+batch_multi_assign :: chunk | query, fragment[], component[]? -> integer, boolean
+batch_multi_insert :: chunk | query, fragment[], component[]? -> integer, boolean
+batch_multi_remove :: chunk | query, fragment[] -> integer, boolean
 
 chunk :: fragment... -> chunk?, entity[]?, integer?
 
