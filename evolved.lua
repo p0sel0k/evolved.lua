@@ -813,7 +813,7 @@ end
 ---
 ---
 
-local __debug_mts = {
+local __debug_fns = {
     chunk_mt = {}, ---@type metatable
 
     chunk_fragment_set_mt = {}, ---@type metatable
@@ -825,7 +825,7 @@ local __debug_mts = {
 }
 
 ---@param self evolved.chunk
-function __debug_mts.chunk_mt.__tostring(self)
+function __debug_fns.chunk_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in ipairs(self.__fragment_list) do
@@ -836,7 +836,7 @@ function __debug_mts.chunk_mt.__tostring(self)
 end
 
 ---@param self table<evolved.fragment, integer>
-function __debug_mts.chunk_fragment_set_mt.__tostring(self)
+function __debug_fns.chunk_fragment_set_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment, fragment_index in pairs(self) do
@@ -848,7 +848,7 @@ function __debug_mts.chunk_fragment_set_mt.__tostring(self)
 end
 
 ---@param self evolved.fragment[]
-function __debug_mts.chunk_fragment_list_mt.__tostring(self)
+function __debug_fns.chunk_fragment_list_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for fragment_index, fragment in ipairs(self) do
@@ -860,7 +860,7 @@ function __debug_mts.chunk_fragment_list_mt.__tostring(self)
 end
 
 ---@param self table<evolved.fragment, integer>
-function __debug_mts.chunk_component_indices_mt.__tostring(self)
+function __debug_fns.chunk_component_indices_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_fragment, component_index in pairs(self) do
@@ -872,7 +872,7 @@ function __debug_mts.chunk_component_indices_mt.__tostring(self)
 end
 
 ---@param self evolved.storage[]
-function __debug_mts.chunk_component_storages_mt.__tostring(self)
+function __debug_fns.chunk_component_storages_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_storage in ipairs(self) do
@@ -884,7 +884,7 @@ function __debug_mts.chunk_component_storages_mt.__tostring(self)
 end
 
 ---@param self evolved.fragment[]
-function __debug_mts.chunk_component_fragments_mt.__tostring(self)
+function __debug_fns.chunk_component_fragments_mt.__tostring(self)
     local items = {} ---@type string[]
 
     for component_index, component_fragment in ipairs(self) do
@@ -893,6 +893,66 @@ function __debug_mts.chunk_component_fragments_mt.__tostring(self)
     end
 
     return string.format('[%s]', table.concat(items, ', '))
+end
+
+---@param chunk evolved.chunk
+function __debug_fns.validate_chunk(chunk)
+    if chunk.__unreachable_or_collected then
+        __error_fmt('the chunk (%s) is unreachable or collected and cannot be used',
+            chunk)
+    end
+end
+
+---@param fragment evolved.fragment
+function __debug_fns.validate_fragment(fragment)
+    local fragment_index = fragment % 0x100000
+
+    if __freelist_ids[fragment_index] ~= fragment then
+        __error_fmt('the fragment (%s) is not alive and cannot be used',
+            __id_name(fragment))
+    end
+end
+
+---@param ... evolved.fragment fragments
+function __debug_fns.validate_fragments(...)
+    for i = 1, __lua_select('#', ...) do
+        __debug_fns.validate_fragment(__lua_select(i, ...))
+    end
+end
+
+---@param fragment_list evolved.fragment[]
+---@param fragment_count integer
+function __debug_fns.validate_fragment_list(fragment_list, fragment_count)
+    for i = 1, fragment_count do
+        __debug_fns.validate_fragment(fragment_list[i])
+    end
+end
+
+---@param query evolved.query
+function __debug_fns.validate_query(query)
+    local query_index = query % 0x100000
+
+    if __freelist_ids[query_index] ~= query then
+        __error_fmt('the query (%s) is not alive and cannot be used',
+            __id_name(query))
+    end
+end
+
+---@param phase evolved.phase
+function __debug_fns.validate_phase(phase)
+    local phase_index = phase % 0x100000
+
+    if __freelist_ids[phase_index] ~= phase then
+        __error_fmt('the phase (%s) is not alive and cannot be used',
+            __id_name(phase))
+    end
+end
+
+---@param ... evolved.phase phases
+function __debug_fns.validate_phases(...)
+    for i = 1, __lua_select('#', ...) do
+        __debug_fns.validate_phase(__lua_select(i, ...))
+    end
 end
 
 ---
@@ -907,10 +967,10 @@ end
 ---@nodiscard
 local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
-    local chunk_fragment_set = setmetatable({}, __debug_mts.chunk_fragment_set_mt)
+    local chunk_fragment_set = setmetatable({}, __debug_fns.chunk_fragment_set_mt)
 
     ---@type evolved.fragment[]
-    local chunk_fragment_list = setmetatable({}, __debug_mts.chunk_fragment_list_mt)
+    local chunk_fragment_list = setmetatable({}, __debug_fns.chunk_fragment_list_mt)
 
     ---@type integer
     local chunk_fragment_count = 0
@@ -919,13 +979,13 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_count = 0
 
     ---@type table<evolved.fragment, integer>
-    local chunk_component_indices = setmetatable({}, __debug_mts.chunk_component_indices_mt)
+    local chunk_component_indices = setmetatable({}, __debug_fns.chunk_component_indices_mt)
 
     ---@type evolved.storage[]
-    local chunk_component_storages = setmetatable({}, __debug_mts.chunk_component_storages_mt)
+    local chunk_component_storages = setmetatable({}, __debug_fns.chunk_component_storages_mt)
 
     ---@type evolved.fragment[]
-    local chunk_component_fragments = setmetatable({}, __debug_mts.chunk_component_fragments_mt)
+    local chunk_component_fragments = setmetatable({}, __debug_fns.chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
@@ -962,7 +1022,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_set_or_assign_hooks = has_set_or_assign_hooks,
         __has_set_or_insert_hooks = has_set_or_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
-    }, __debug_mts.chunk_mt)
+    }, __debug_fns.chunk_mt)
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -1404,72 +1464,6 @@ local function __chunk_get_components(chunk, place, ...)
             i3 and storages[i3][place],
             i4 and storages[i4][place],
             __chunk_get_components(chunk, place, __lua_select(5, ...))
-    end
-end
-
----
----
----
----
----
-
----@param chunk evolved.chunk
-local function __validate_chunk(chunk)
-    if chunk.__unreachable_or_collected then
-        __error_fmt('the chunk (%s) is unreachable or collected and cannot be used',
-            chunk)
-    end
-end
-
----@param fragment evolved.fragment
-local function __validate_fragment(fragment)
-    local fragment_index = fragment % 0x100000
-
-    if __freelist_ids[fragment_index] ~= fragment then
-        __error_fmt('the fragment (%s) is not alive and cannot be used',
-            __id_name(fragment))
-    end
-end
-
----@param ... evolved.fragment fragments
-local function __validate_fragments(...)
-    for i = 1, __lua_select('#', ...) do
-        __validate_fragment(__lua_select(i, ...))
-    end
-end
-
----@param fragment_list evolved.fragment[]
----@param fragment_count integer
-local function __validate_fragment_list(fragment_list, fragment_count)
-    for i = 1, fragment_count do
-        __validate_fragment(fragment_list[i])
-    end
-end
-
----@param query evolved.query
-local function __validate_query(query)
-    local query_index = query % 0x100000
-
-    if __freelist_ids[query_index] ~= query then
-        __error_fmt('the query (%s) is not alive and cannot be used',
-            __id_name(query))
-    end
-end
-
----@param phase evolved.phase
-local function __validate_phase(phase)
-    local phase_index = phase % 0x100000
-
-    if __freelist_ids[phase_index] ~= phase then
-        __error_fmt('the phase (%s) is not alive and cannot be used',
-            __id_name(phase))
-    end
-end
-
----@param ... evolved.phase phases
-local function __validate_phases(...)
-    for i = 1, __lua_select('#', ...) do
-        __validate_phase(__lua_select(i, ...))
     end
 end
 
@@ -4671,8 +4665,8 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
     local component_list = bytes[index + 4]
 
     if __debug_mode then
-        __validate_chunk(chunk)
-        __validate_fragment_list(fragment_list, fragment_count)
+        __debug_fns.validate_chunk(chunk)
+        __debug_fns.validate_fragment_list(fragment_list, fragment_count)
     end
 
     __evolved_defer()
@@ -4722,8 +4716,8 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
     local component_list = bytes[index + 4]
 
     if __debug_mode then
-        __validate_chunk(chunk)
-        __validate_fragment_list(fragment_list, fragment_count)
+        __debug_fns.validate_chunk(chunk)
+        __debug_fns.validate_fragment_list(fragment_list, fragment_count)
     end
 
     __evolved_defer()
@@ -5220,7 +5214,7 @@ __evolved_set = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -5404,7 +5398,7 @@ __evolved_assign = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -5510,7 +5504,7 @@ __evolved_insert = function(entity, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local entity_index = entity % 0x100000
@@ -5644,7 +5638,7 @@ __evolved_remove = function(entity, ...)
     end
 
     if __debug_mode then
-        __validate_fragments(...)
+        __debug_fns.validate_fragments(...)
     end
 
     local entity_index = entity % 0x100000
@@ -5920,7 +5914,7 @@ __evolved_multi_set = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -6169,7 +6163,7 @@ __evolved_multi_assign = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -6278,7 +6272,7 @@ __evolved_multi_insert = function(entity, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -6417,7 +6411,7 @@ __evolved_multi_remove = function(entity, fragments)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity_index = entity % 0x100000
@@ -6523,7 +6517,7 @@ __evolved_batch_set = function(chunk_or_query, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local set_count = 0
@@ -6573,7 +6567,7 @@ __evolved_batch_assign = function(chunk_or_query, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local assigned_count = 0
@@ -6623,7 +6617,7 @@ __evolved_batch_insert = function(chunk_or_query, fragment, ...)
     end
 
     if __debug_mode then
-        __validate_fragment(fragment)
+        __debug_fns.validate_fragment(fragment)
     end
 
     local inserted_count = 0
@@ -6678,7 +6672,7 @@ __evolved_batch_remove = function(chunk_or_query, ...)
     end
 
     if __debug_mode then
-        __validate_fragments(...)
+        __debug_fns.validate_fragments(...)
     end
 
     local removed_count = 0
@@ -6850,7 +6844,7 @@ __evolved_batch_multi_set = function(chunk_or_query, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local set_count = 0
@@ -6910,7 +6904,7 @@ __evolved_batch_multi_assign = function(chunk_or_query, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local assigned_count = 0
@@ -6970,7 +6964,7 @@ __evolved_batch_multi_insert = function(chunk_or_query, fragments, components)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local inserted_count = 0
@@ -7025,7 +7019,7 @@ __evolved_batch_multi_remove = function(chunk_or_query, fragments)
     end
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local removed_count = 0
@@ -7077,7 +7071,7 @@ end
 ---@nodiscard
 __evolved_chunk = function(head_fragment, ...)
     if __debug_mode then
-        __validate_fragments(head_fragment, ...)
+        __debug_fns.validate_fragments(head_fragment, ...)
     end
 
     local chunk = __chunk_fragments(head_fragment, ...)
@@ -7090,7 +7084,7 @@ end
 ---@nodiscard
 __evolved_entities = function(chunk)
     if __debug_mode then
-        __validate_chunk(chunk)
+        __debug_fns.validate_chunk(chunk)
     end
 
     return chunk.__entity_list, chunk.__entity_count
@@ -7102,7 +7096,7 @@ end
 ---@nodiscard
 __evolved_fragments = function(chunk)
     if __debug_mode then
-        __validate_chunk(chunk)
+        __debug_fns.validate_chunk(chunk)
     end
 
     return chunk.__fragment_list, chunk.__fragment_count
@@ -7120,8 +7114,8 @@ __evolved_components = function(chunk, ...)
     end
 
     if __debug_mode then
-        __validate_chunk(chunk)
-        __validate_fragments(...)
+        __debug_fns.validate_chunk(chunk)
+        __debug_fns.validate_fragments(...)
     end
 
     local indices = chunk.__component_indices
@@ -7213,7 +7207,7 @@ end
 ---@nodiscard
 __evolved_execute = function(query)
     if __debug_mode then
-        __validate_query(query)
+        __debug_fns.validate_query(query)
     end
 
     ---@type evolved.chunk[]
@@ -7284,7 +7278,7 @@ __evolved_process = function(...)
     end
 
     if __debug_mode then
-        __validate_phases(...)
+        __debug_fns.validate_phases(...)
     end
 
     for i = 1, phase_count do
@@ -7318,8 +7312,8 @@ __evolved_spawn_at = function(chunk, fragments, components)
     local component_count = #components
 
     if __debug_mode then
-        if chunk then __validate_chunk(chunk) end
-        __validate_fragment_list(fragments, fragment_count)
+        if chunk then __debug_fns.validate_chunk(chunk) end
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity = __acquire_id()
@@ -7361,7 +7355,7 @@ __evolved_spawn_with = function(fragments, components)
     local component_count = #components
 
     if __debug_mode then
-        __validate_fragment_list(fragments, fragment_count)
+        __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
     local entity, chunk = __acquire_id(), __chunk_fragment_list(fragments, fragment_count)
