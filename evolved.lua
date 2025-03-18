@@ -1479,9 +1479,6 @@ end
 ---
 ---
 
-local __defer
-local __commit
-
 local __defer_set
 local __defer_assign
 local __defer_insert
@@ -3324,18 +3321,18 @@ local function __system_process(system)
     end
 
     if query and execute then
-        __defer()
+        __evolved_defer()
         do
             for chunk, entity_list, entity_count in __evolved_execute(query) do
                 local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
 
                 if not success then
-                    __commit()
+                    __evolved_commit()
                     __error_fmt('system execution failed: %s', result)
                 end
             end
         end
-        __commit()
+        __evolved_commit()
     end
 
     if epilogue then
@@ -3488,44 +3485,6 @@ local __defer_op = {
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
 local __defer_ops = __lua_table_new(__defer_op.__count, 0)
-
----@return boolean started
-__defer = function()
-    __defer_depth = __defer_depth + 1
-    return __defer_depth == 1
-end
-
----@return boolean committed
-__commit = function()
-    if __defer_depth <= 0 then
-        __error_fmt('unbalanced defer/commit')
-    end
-
-    __defer_depth = __defer_depth - 1
-
-    if __defer_depth > 0 then
-        return false
-    end
-
-    if __defer_length == 0 then
-        return true
-    end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    __defer_length = 0
-    __defer_bytecode = __acquire_table(__table_pool_tag.bytecode)
-
-    local bytecode_index = 1
-    while bytecode_index <= length do
-        local op = __defer_ops[bytecode[bytecode_index]]
-        bytecode_index = bytecode_index + op(bytecode, bytecode_index + 1) + 1
-    end
-
-    __release_table(__table_pool_tag.bytecode, bytecode, true)
-    return true
-end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
@@ -4716,13 +4675,13 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
         __validate_fragment_list(fragment_list, fragment_count)
     end
 
-    __defer()
+    __evolved_defer()
     do
         __spawn_entity_at(entity, chunk, fragment_list, fragment_count, component_list)
         __release_table(__table_pool_tag.fragment_list, fragment_list)
         __release_table(__table_pool_tag.component_list, component_list)
     end
-    __commit()
+    __evolved_commit()
 
     return 5
 end
@@ -4767,13 +4726,13 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
         __validate_fragment_list(fragment_list, fragment_count)
     end
 
-    __defer()
+    __evolved_defer()
     do
         __spawn_entity_with(entity, chunk, fragment_list, fragment_count, component_list)
         __release_table(__table_pool_tag.fragment_list, fragment_list)
         __release_table(__table_pool_tag.component_list, component_list)
     end
-    __commit()
+    __evolved_commit()
 
     return 5
 end
@@ -4918,12 +4877,40 @@ end
 
 ---@return boolean started
 __evolved_defer = function()
-    return __defer()
+    __defer_depth = __defer_depth + 1
+    return __defer_depth == 1
 end
 
 ---@return boolean committed
 __evolved_commit = function()
-    return __commit()
+    if __defer_depth <= 0 then
+        __error_fmt('unbalanced defer/commit')
+    end
+
+    __defer_depth = __defer_depth - 1
+
+    if __defer_depth > 0 then
+        return false
+    end
+
+    if __defer_length == 0 then
+        return true
+    end
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    __defer_length = 0
+    __defer_bytecode = __acquire_table(__table_pool_tag.bytecode)
+
+    local bytecode_index = 1
+    while bytecode_index <= length do
+        local op = __defer_ops[bytecode[bytecode_index]]
+        bytecode_index = bytecode_index + op(bytecode, bytecode_index + 1) + 1
+    end
+
+    __release_table(__table_pool_tag.bytecode, bytecode, true)
+    return true
 end
 
 ---@param chunk_or_entity evolved.chunk | evolved.entity
@@ -5258,7 +5245,7 @@ __evolved_set = function(entity, fragment, ...)
             __ON_SET, __ON_ASSIGN, __ON_INSERT)
     end
 
-    __defer()
+    __evolved_defer()
 
     if old_chunk == new_chunk then
         local old_component_indices = old_chunk.__component_indices
@@ -5401,7 +5388,7 @@ __evolved_set = function(entity, fragment, ...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5444,7 +5431,7 @@ __evolved_assign = function(entity, fragment, ...)
             __ON_SET, __ON_ASSIGN)
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local component_indices = chunk.__component_indices
@@ -5507,7 +5494,7 @@ __evolved_assign = function(entity, fragment, ...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5552,7 +5539,7 @@ __evolved_insert = function(entity, fragment, ...)
             __ON_SET, __ON_INSERT)
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local new_entity_list = new_chunk.__entity_list
@@ -5636,7 +5623,7 @@ __evolved_insert = function(entity, fragment, ...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5678,7 +5665,7 @@ __evolved_remove = function(entity, ...)
         return true, false
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local old_fragment_set = old_chunk.__fragment_set
@@ -5748,7 +5735,7 @@ __evolved_remove = function(entity, ...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5770,7 +5757,7 @@ __evolved_clear = function(...)
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
 
-    __defer()
+    __evolved_defer()
 
     for argument_index = 1, argument_count do
         ---@type evolved.entity
@@ -5820,7 +5807,7 @@ __evolved_clear = function(...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5842,7 +5829,7 @@ __evolved_destroy = function(...)
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
 
-    __defer()
+    __evolved_defer()
 
     for argument_index = 1, argument_count do
         ---@type evolved.entity
@@ -5907,7 +5894,7 @@ __evolved_destroy = function(...)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -5954,7 +5941,7 @@ __evolved_multi_set = function(entity, fragments, components)
         return false, false
     end
 
-    __defer()
+    __evolved_defer()
 
     if old_chunk == new_chunk then
         local old_component_indices = old_chunk.__component_indices
@@ -6156,7 +6143,7 @@ __evolved_multi_set = function(entity, fragments, components)
         __release_table(__table_pool_tag.fragment_set, inserted_set)
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -6201,7 +6188,7 @@ __evolved_multi_assign = function(entity, fragments, components)
         return false, false
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local chunk_fragment_set = chunk.__fragment_set
@@ -6265,7 +6252,7 @@ __evolved_multi_assign = function(entity, fragments, components)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -6312,7 +6299,7 @@ __evolved_multi_insert = function(entity, fragments, components)
         return false, false
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local new_entity_list = new_chunk.__entity_list
@@ -6409,7 +6396,7 @@ __evolved_multi_insert = function(entity, fragments, components)
         __release_table(__table_pool_tag.fragment_set, inserted_set)
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -6451,7 +6438,7 @@ __evolved_multi_remove = function(entity, fragments)
         return true, false
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         local old_fragment_set = old_chunk.__fragment_set
@@ -6520,7 +6507,7 @@ __evolved_multi_remove = function(entity, fragments)
         end
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -6541,7 +6528,7 @@ __evolved_batch_set = function(chunk_or_query, fragment, ...)
 
     local set_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6569,7 +6556,7 @@ __evolved_batch_set = function(chunk_or_query, fragment, ...)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return set_count, false
 end
@@ -6591,7 +6578,7 @@ __evolved_batch_assign = function(chunk_or_query, fragment, ...)
 
     local assigned_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6619,7 +6606,7 @@ __evolved_batch_assign = function(chunk_or_query, fragment, ...)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return assigned_count, false
 end
@@ -6641,7 +6628,7 @@ __evolved_batch_insert = function(chunk_or_query, fragment, ...)
 
     local inserted_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6669,7 +6656,7 @@ __evolved_batch_insert = function(chunk_or_query, fragment, ...)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return inserted_count, false
 end
@@ -6696,7 +6683,7 @@ __evolved_batch_remove = function(chunk_or_query, ...)
 
     local removed_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6724,7 +6711,7 @@ __evolved_batch_remove = function(chunk_or_query, ...)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return removed_count, false
 end
@@ -6746,7 +6733,7 @@ __evolved_batch_clear = function(...)
 
     local cleared_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         ---@type evolved.chunk[]
         local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
@@ -6780,7 +6767,7 @@ __evolved_batch_clear = function(...)
 
         __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
-    __commit()
+    __evolved_commit()
 
     return cleared_count, false
 end
@@ -6802,7 +6789,7 @@ __evolved_batch_destroy = function(...)
 
     local destroyed_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         ---@type evolved.chunk[]
         local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
@@ -6836,7 +6823,7 @@ __evolved_batch_destroy = function(...)
 
         __release_table(__table_pool_tag.chunk_stack, chunk_list)
     end
-    __commit()
+    __evolved_commit()
 
     return destroyed_count, false
 end
@@ -6868,7 +6855,7 @@ __evolved_batch_multi_set = function(chunk_or_query, fragments, components)
 
     local set_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6896,7 +6883,7 @@ __evolved_batch_multi_set = function(chunk_or_query, fragments, components)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return set_count, false
 end
@@ -6928,7 +6915,7 @@ __evolved_batch_multi_assign = function(chunk_or_query, fragments, components)
 
     local assigned_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -6956,7 +6943,7 @@ __evolved_batch_multi_assign = function(chunk_or_query, fragments, components)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return assigned_count, false
 end
@@ -6988,7 +6975,7 @@ __evolved_batch_multi_insert = function(chunk_or_query, fragments, components)
 
     local inserted_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -7016,7 +7003,7 @@ __evolved_batch_multi_insert = function(chunk_or_query, fragments, components)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return inserted_count, false
 end
@@ -7043,7 +7030,7 @@ __evolved_batch_multi_remove = function(chunk_or_query, fragments)
 
     local removed_count = 0
 
-    __defer()
+    __evolved_defer()
     do
         if __lua_type(chunk_or_query) ~= 'number' then
             ---@cast chunk_or_query -evolved.query
@@ -7071,7 +7058,7 @@ __evolved_batch_multi_remove = function(chunk_or_query, fragments)
             __release_table(__table_pool_tag.chunk_stack, chunk_list)
         end
     end
-    __commit()
+    __evolved_commit()
 
     return removed_count, false
 end
@@ -7348,11 +7335,11 @@ __evolved_spawn_at = function(chunk, fragments, components)
         return entity, true
     end
 
-    __defer()
+    __evolved_defer()
     do
         __spawn_entity_at(entity, chunk, fragments, fragment_count, components)
     end
-    __commit()
+    __evolved_commit()
 
     return entity, false
 end
@@ -7390,11 +7377,11 @@ __evolved_spawn_with = function(fragments, components)
         return entity, true
     end
 
-    __defer()
+    __evolved_defer()
     do
         __spawn_entity_with(entity, chunk, fragments, fragment_count, components)
     end
-    __commit()
+    __evolved_commit()
 
     return entity, false
 end
@@ -7418,7 +7405,7 @@ __evolved_collect_garbage = function()
         return false, true
     end
 
-    __defer()
+    __evolved_defer()
 
     do
         ---@type evolved.chunk[]
@@ -7471,7 +7458,7 @@ __evolved_collect_garbage = function()
         __release_table(__table_pool_tag.chunk_stack, postorder_chunk_stack)
     end
 
-    __commit()
+    __evolved_commit()
     return true, false
 end
 
@@ -8041,6 +8028,7 @@ function evolved_system_builder:single(single)
 end
 
 ---@param phase evolved.phase
+---@return evolved.system_builder builder
 function evolved_system_builder:phase(phase)
     self.__phase = phase
     return self
@@ -8073,24 +8061,28 @@ function evolved_system_builder:after(...)
 end
 
 ---@param query evolved.query
+---@return evolved.system_builder builder
 function evolved_system_builder:query(query)
     self.__query = query
     return self
 end
 
 ---@param execute evolved.execute
+---@return evolved.system_builder builder
 function evolved_system_builder:execute(execute)
     self.__execute = execute
     return self
 end
 
 ---@param prologue evolved.prologue
+---@return evolved.system_builder builder
 function evolved_system_builder:prologue(prologue)
     self.__prologue = prologue
     return self
 end
 
 ---@param epilogue evolved.epilogue
+---@return evolved.system_builder builder
 function evolved_system_builder:epilogue(epilogue)
     self.__epilogue = epilogue
     return self

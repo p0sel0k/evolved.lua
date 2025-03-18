@@ -3,14 +3,13 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
-- remove __evolved_defer/commit to __defer/commit indirect calls
 - enable/disable systems and phases
-- add optional immediate mode for systems
-- cached queries
+- add system groups
+- sort system groups instead of systems
 
 ## After first release
 
-- add system groups
+- cached queries
 - observers and events
 - add INDEX fragment trait
 - add REQUIRES fragment trait
