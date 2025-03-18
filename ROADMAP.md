@@ -3,6 +3,9 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
+- enable/disable systems and phases
+- add optional immediate mode for systems
+- cached queries
 
 ## After first release
 
