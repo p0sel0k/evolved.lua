@@ -3,9 +3,9 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
-- enable/disable systems and phases
-- add system groups
-- sort system groups instead of systems
+- enable/disable systems and groups
+- should systems support multiple groups?
+- should groups support multiple phases?
 
 ## After first release
 
