@@ -35,6 +35,7 @@ ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
 
+GROUP :: fragment
 PHASE :: fragment
 AFTER :: fragment
 

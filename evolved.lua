@@ -114,6 +114,7 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
+local __group_systems = {} ---@type table<evolved.group, evolved.assoc_list>
 local __phase_systems = {} ---@type table<evolved.phase, evolved.assoc_list>
 local __system_dependencies = {} ---@type table<evolved.system, evolved.assoc_list>
 
@@ -581,6 +582,7 @@ local __ON_ASSIGN = __acquire_id()
 local __ON_INSERT = __acquire_id()
 local __ON_REMOVE = __acquire_id()
 
+local __GROUP = __acquire_id()
 local __PHASE = __acquire_id()
 local __AFTER = __acquire_id()
 
@@ -8055,6 +8057,7 @@ end
 ---@class (exact) evolved.__system_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
+---@field package __group? evolved.group
 ---@field package __phase? evolved.phase
 ---@field package __after? evolved.system[]
 ---@field package __query? evolved.query
@@ -8073,6 +8076,7 @@ __evolved_system = function()
     local builder = {
         __name = nil,
         __single = nil,
+        __group = nil,
         __phase = nil,
         __after = nil,
         __query = nil,
@@ -8095,6 +8099,13 @@ end
 ---@return evolved.system_builder builder
 function evolved_system_builder:single(single)
     self.__single = single
+    return self
+end
+
+---@param group evolved.group
+---@return evolved.system_builder builder
+function evolved_system_builder:group(group)
+    self.__group = group
     return self
 end
 
@@ -8164,6 +8175,7 @@ end
 function evolved_system_builder:build()
     local name = self.__name
     local single = self.__single
+    local group = self.__group
     local phase = self.__phase
     local after = self.__after
     local query = self.__query
@@ -8173,6 +8185,7 @@ function evolved_system_builder:build()
 
     self.__name = nil
     self.__single = nil
+    self.__group = nil
     self.__phase = nil
     self.__after = nil
     self.__query = nil
@@ -8196,6 +8209,12 @@ function evolved_system_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = system
         component_list[component_count] = single
+    end
+
+    if group then
+        component_count = component_count + 1
+        fragment_list[component_count] = __GROUP
+        component_list[component_count] = group
     end
 
     if phase then
@@ -8390,6 +8409,7 @@ assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
 assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
 assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
 
+assert(__evolved_insert(__GROUP, __NAME, 'GROUP'))
 assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
 assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
 
@@ -8476,6 +8496,56 @@ end))
 
 assert(__evolved_insert(__EXCLUDES, __ON_REMOVE, function(query)
     __query_sorted_excludes[query] = nil
+end))
+
+---
+---
+---
+---
+---
+
+---@param system evolved.system
+---@param new_group evolved.group
+---@param old_group? evolved.group
+assert(__evolved_insert(__GROUP, __ON_SET, function(system, _, new_group, old_group)
+    if new_group == old_group then
+        return
+    end
+
+    if old_group then
+        local old_group_systems = __group_systems[old_group]
+
+        if old_group_systems then
+            __assoc_list_remove(old_group_systems, system)
+
+            if old_group_systems.__item_count == 0 then
+                __group_systems[old_group] = nil
+            end
+        end
+    end
+
+    local new_group_systems = __group_systems[new_group]
+
+    if not new_group_systems then
+        new_group_systems = __assoc_list_new(4)
+        __group_systems[new_group] = new_group_systems
+    end
+
+    __assoc_list_insert(new_group_systems, system)
+end))
+
+---@param system evolved.system
+---@param old_group evolved.group
+assert(__evolved_insert(__GROUP, __ON_REMOVE, function(system, _, old_group)
+    local old_group_systems = __group_systems[old_group]
+
+    if old_group_systems then
+        __assoc_list_remove(old_group_systems, system)
+
+        if old_group_systems.__item_count == 0 then
+            __group_systems[old_group] = nil
+        end
+    end
 end))
 
 ---
@@ -8579,6 +8649,7 @@ evolved.ON_ASSIGN = __ON_ASSIGN
 evolved.ON_INSERT = __ON_INSERT
 evolved.ON_REMOVE = __ON_REMOVE
 
+evolved.GROUP = __GROUP
 evolved.PHASE = __PHASE
 evolved.AFTER = __AFTER
 

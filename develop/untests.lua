@@ -8216,3 +8216,9 @@ do
     assert(not evo.has(g3, evo.NAME) and evo.get(g3, g3) == 42)
     assert(evo.get(g4, evo.NAME) == 'g4' and evo.get(g4, g4) == 43)
 end
+
+do
+    local g = evo.group():build()
+    local s = evo.system():group(g):build()
+    assert(evo.get(s, evo.GROUP) == g)
+end
