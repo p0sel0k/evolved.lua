@@ -4940,7 +4940,7 @@ __evolved_is_alive = function(chunk_or_entity)
         local entity = chunk_or_entity --[[@as evolved.entity]]
 
         local entity_index = entity % 0x100000
-        return __freelist_ids[entity_index] == chunk_or_entity
+        return __freelist_ids[entity_index] == entity
     end
 end
 

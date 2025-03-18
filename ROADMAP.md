@@ -3,6 +3,7 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
+- remove __evolved_defer/commit to __defer/commit indirect calls
 - enable/disable systems and phases
 - add optional immediate mode for systems
 - cached queries
