@@ -35,8 +35,8 @@ ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
 
-GROUP :: fragment
 PHASE :: fragment
+GROUP :: fragment
 AFTER :: fragment
 
 QUERY :: fragment
@@ -153,6 +153,8 @@ query_builder:build :: query, boolean
 group :: group_builder
 group_builder:name :: string -> group_builder
 group_builder:single :: component -> group_builder
+group_builder:phase :: phase -> group_builder
+group_builder:after :: group... -> group_builder
 group_builder:build :: group, boolean
 ```
 
@@ -167,8 +169,7 @@ phase_builder:build :: phase, boolean
 system :: system_builder
 system_builder:name :: string -> system_builder
 system_builder:single :: component -> system_builder
-system_builder:phase :: phase -> system_builder
-system_builder:after :: system... -> system_builder
+system_builder:group :: group -> system_builder
 system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:prologue :: {} -> system_builder

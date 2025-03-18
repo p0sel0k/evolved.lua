@@ -6570,26 +6570,6 @@ do
 end
 
 do
-    local s1 = evo.system():build()
-    do
-        local after = evo.get(s1, evo.AFTER)
-        assert(after == nil)
-    end
-
-    local s2 = evo.system():after(s1):build()
-    do
-        local after = evo.get(s2, evo.AFTER)
-        assert(#after == 1 and after[1] == s1)
-    end
-
-    local s3 = evo.system():after(s1, s2):build()
-    do
-        local after = evo.get(s3, evo.AFTER)
-        assert(#after == 2 and after[1] == s1 and after[2] == s2)
-    end
-end
-
-do
     local f1, f2 = evo.id(2)
 
     local e1a = evo.entity():set(f1, 1):build()
@@ -8221,4 +8201,24 @@ do
     local g = evo.group():build()
     local s = evo.system():group(g):build()
     assert(evo.get(s, evo.GROUP) == g)
+end
+
+do
+    local s1 = evo.group():build()
+    do
+        local after = evo.get(s1, evo.AFTER)
+        assert(after == nil)
+    end
+
+    local g2 = evo.group():after(s1):build()
+    do
+        local after = evo.get(g2, evo.AFTER)
+        assert(#after == 1 and after[1] == s1)
+    end
+
+    local g3 = evo.group():after(s1, g2):build()
+    do
+        local after = evo.get(g3, evo.AFTER)
+        assert(#after == 2 and after[1] == s1 and after[2] == g2)
+    end
 end

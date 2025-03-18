@@ -22,6 +22,13 @@ local phases = {
     shutdown = evo.phase():build(),
 }
 
+local groups = {
+    awake = evo.group():phase(phases.awake):build(),
+    physics = evo.group():phase(phases.physics):build(),
+    graphics = evo.group():phase(phases.graphics):build(),
+    shutdown = evo.group():phase(phases.shutdown):build(),
+}
+
 local singles = {
     delta_time = evo.fragment():single(0.016):build(),
     physics_gravity = evo.fragment():single(vector2(0, 9.81)):build(),
@@ -40,7 +47,7 @@ local queries = {
 }
 
 local awake_system = evo.system()
-    :phase(phases.awake)
+    :group(groups.awake)
     :prologue(function()
         print '-= | Awake | =-'
         evo.entity()
@@ -51,7 +58,7 @@ local awake_system = evo.system()
     end):build()
 
 local integrate_forces_system = evo.system()
-    :phase(phases.physics)
+    :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type number, evolved.vector2
@@ -72,8 +79,7 @@ local integrate_forces_system = evo.system()
     end):build()
 
 local integrate_velocities_system = evo.system()
-    :phase(phases.physics)
-    :after(integrate_forces_system)
+    :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type number
@@ -96,7 +102,7 @@ local integrate_velocities_system = evo.system()
     end):build()
 
 local graphics_system = evo.system()
-    :phase(phases.graphics)
+    :group(groups.graphics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type evolved.vector2[]
@@ -113,7 +119,7 @@ local graphics_system = evo.system()
     end):build()
 
 local shutdown_system = evo.system()
-    :phase(phases.shutdown)
+    :group(groups.shutdown)
     :epilogue(function()
         print '-= | Shutdown | =-'
         evo.batch_destroy(queries.physics_bodies)

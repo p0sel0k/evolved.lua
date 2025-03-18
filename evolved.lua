@@ -114,9 +114,9 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
+local __phase_groups = {} ---@type table<evolved.phase, evolved.assoc_list>
 local __group_systems = {} ---@type table<evolved.group, evolved.assoc_list>
-local __phase_systems = {} ---@type table<evolved.phase, evolved.assoc_list>
-local __system_dependencies = {} ---@type table<evolved.system, evolved.assoc_list>
+local __group_dependencies = {} ---@type table<evolved.group, evolved.assoc_list>
 
 local __query_sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
 local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
@@ -287,7 +287,7 @@ local __table_pool_tag = {
     fragment_set = 5,
     fragment_list = 6,
     component_list = 7,
-    system_list = 8,
+    group_list = 8,
     sorting_stack = 9,
     sorting_marks = 10,
     __count = 10,
@@ -582,8 +582,8 @@ local __ON_ASSIGN = __acquire_id()
 local __ON_INSERT = __acquire_id()
 local __ON_REMOVE = __acquire_id()
 
-local __GROUP = __acquire_id()
 local __PHASE = __acquire_id()
+local __GROUP = __acquire_id()
 local __AFTER = __acquire_id()
 
 local __QUERY = __acquire_id()
@@ -778,8 +778,8 @@ local function __trace_fragment_chunks(fragment, trace, ...)
 
     do
         local major_chunks = __major_chunks[fragment]
-        local major_chunk_list = major_chunks and major_chunks.__item_list
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
+        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
         if major_chunk_count > 0 then
             __lua_table_move(
@@ -1898,8 +1898,8 @@ local function __purge_fragment(fragment, policy)
     end
 
     local minor_chunks = __minor_chunks[fragment]
-    local minor_chunk_list = minor_chunks and minor_chunks.__item_list
-    local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
+    local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
+    local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
     if policy == __DESTROY_POLICY_DESTROY_ENTITY then
         for minor_chunk_index = minor_chunk_count, 1, -1 do
@@ -3342,50 +3342,61 @@ local function __system_process(system)
     end
 end
 
+---@param group evolved.group
+local function __group_process(group)
+    local group_systems = __group_systems[group]
+    local group_system_list = group_systems and group_systems.__item_list --[=[@as evolved.system[]]=]
+    local group_system_count = group_systems and group_systems.__item_count or 0 --[[@as integer]]
+
+    for group_system_index = 1, group_system_count do
+        __system_process(group_system_list[group_system_index])
+    end
+end
+
 ---@param phase evolved.phase
 local function __phase_process(phase)
-    local phase_systems = __phase_systems[phase]
-    local phase_system_set = phase_systems and phase_systems.__item_set
-    local phase_system_list = phase_systems and phase_systems.__item_list
-    local phase_system_count = phase_systems and phase_systems.__item_count or 0
+    local phase_groups = __phase_groups[phase]
+    local phase_group_set = phase_groups and phase_groups.__item_set --[[@as table<evolved.group, integer>]]
+    local phase_group_list = phase_groups and phase_groups.__item_list --[=[@as evolved.group[]]=]
+    local phase_group_count = phase_groups and phase_groups.__item_count or 0 --[[@as integer]]
 
-    ---@type evolved.system[]
-    local sorted_system_list = __acquire_table(__table_pool_tag.system_list)
-    local sorted_system_count = 0
+    ---@type evolved.group[]
+    local sorted_group_list = __acquire_table(__table_pool_tag.group_list)
+    local sorted_group_count = 0
 
     ---@type integer[]
     local sorting_marks = __acquire_table(__table_pool_tag.sorting_marks)
 
-    ---@type evolved.system[]
+    ---@type evolved.group[]
     local sorting_stack = __acquire_table(__table_pool_tag.sorting_stack)
-    local sorting_stack_size = phase_system_count
+    local sorting_stack_size = phase_group_count
 
-    for phase_system_index = 1, phase_system_count do
-        sorting_marks[phase_system_index] = 0
-        local phase_system_rev_index = phase_system_count - phase_system_index + 1
-        sorting_stack[phase_system_index] = phase_system_list[phase_system_rev_index]
+    for phase_group_index = 1, phase_group_count do
+        sorting_marks[phase_group_index] = 0
+        local phase_group_rev_index = phase_group_count - phase_group_index + 1
+        sorting_stack[phase_group_index] = phase_group_list[phase_group_rev_index]
     end
 
     while sorting_stack_size > 0 do
-        local system = sorting_stack[sorting_stack_size]
+        local group = sorting_stack[sorting_stack_size]
 
-        local system_mark_index = phase_system_set[system]
-        local system_mark = sorting_marks[system_mark_index]
+        local group_mark_index = phase_group_set[group]
+        local group_mark = sorting_marks[group_mark_index]
 
-        if not system_mark then
-            -- the system has already been added to the sorted list
+        if not group_mark then
+            -- the group has already been added to the sorted list
             sorting_stack[sorting_stack_size] = nil
             sorting_stack_size = sorting_stack_size - 1
-        elseif system_mark == 0 then
-            sorting_marks[system_mark_index] = 1
+        elseif group_mark == 0 then
+            sorting_marks[group_mark_index] = 1
 
-            local dependencies = __system_dependencies[system]
-            local dependency_list = dependencies and dependencies.__item_list
-            local dependency_count = dependencies and dependencies.__item_count or 0
+            local dependencies = __group_dependencies[group]
+            local dependency_list = dependencies and dependencies.__item_list --[=[@as evolved.group[]]=]
+            local dependency_count = dependencies and dependencies.__item_count or 0 --[[@as integer]]
 
             for dependency_index = dependency_count, 1, -1 do
                 local dependency = dependency_list[dependency_index]
-                local dependency_mark_index = phase_system_set[dependency]
+                local dependency_mark_index = phase_group_set[dependency]
 
                 if not dependency_mark_index then
                     -- the dependency is not from this phase
@@ -3398,19 +3409,19 @@ local function __phase_process(phase)
                         sorting_stack_size = sorting_stack_size + 1
                         sorting_stack[sorting_stack_size] = dependency
                     elseif dependency_mark == 1 then
-                        local sorting_cycle_path = '' .. dependency
+                        local sorting_cycle_path = '' .. __id_name(dependency)
 
-                        for cycled_system_index = sorting_stack_size, 1, -1 do
-                            local cycled_system = sorting_stack[cycled_system_index]
+                        for cycled_group_index = sorting_stack_size, 1, -1 do
+                            local cycled_group = sorting_stack[cycled_group_index]
 
-                            local cycled_system_mark_index = phase_system_set[cycled_system]
-                            local cycled_system_mark = sorting_marks[cycled_system_mark_index]
+                            local cycled_group_mark_index = phase_group_set[cycled_group]
+                            local cycled_group_mark = sorting_marks[cycled_group_mark_index]
 
-                            if cycled_system_mark == 1 then
+                            if cycled_group_mark == 1 then
                                 sorting_cycle_path = string.format('%s -> %s',
-                                    sorting_cycle_path, cycled_system)
+                                    sorting_cycle_path, __id_name(cycled_group))
 
-                                if cycled_system == dependency then
+                                if cycled_group == dependency then
                                     break
                                 end
                             end
@@ -3420,23 +3431,22 @@ local function __phase_process(phase)
                     end
                 end
             end
-        elseif system_mark == 1 then
-            sorting_marks[system_mark_index] = nil
+        elseif group_mark == 1 then
+            sorting_marks[group_mark_index] = nil
 
-            sorted_system_count = sorted_system_count + 1
-            sorted_system_list[sorted_system_count] = system
+            sorted_group_count = sorted_group_count + 1
+            sorted_group_list[sorted_group_count] = group
 
             sorting_stack[sorting_stack_size] = nil
             sorting_stack_size = sorting_stack_size - 1
         end
     end
 
-    for sorted_system_index = 1, sorted_system_count do
-        local system = sorted_system_list[sorted_system_index]
-        __system_process(system)
+    for sorted_group_index = 1, sorted_group_count do
+        __group_process(sorted_group_list[sorted_group_index])
     end
 
-    __release_table(__table_pool_tag.system_list, sorted_system_list)
+    __release_table(__table_pool_tag.group_list, sorted_group_list)
     __release_table(__table_pool_tag.sorting_marks, sorting_marks, true)
     __release_table(__table_pool_tag.sorting_stack, sorting_stack, true)
 end
@@ -7219,20 +7229,20 @@ __evolved_execute = function(query)
     local chunk_stack_size = 0
 
     local query_includes = __query_sorted_includes[query]
-    local query_include_list = query_includes and query_includes.__item_list
-    local query_include_count = query_includes and query_includes.__item_count or 0
+    local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
+    local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
 
     local query_excludes = __query_sorted_excludes[query]
-    local query_exclude_set = query_excludes and query_excludes.__item_set
-    local query_exclude_list = query_excludes and query_excludes.__item_list
-    local query_exclude_count = query_excludes and query_excludes.__item_count or 0
+    local query_exclude_set = query_excludes and query_excludes.__item_set --[[@as table<evolved.fragment, integer>]]
+    local query_exclude_list = query_excludes and query_excludes.__item_list --[=[@as evolved.fragment[]]=]
+    local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
 
     if query_include_count > 0 then
         local major_fragment = query_include_list[query_include_count]
 
         local major_chunks = __major_chunks[major_fragment]
-        local major_chunk_list = major_chunks and major_chunks.__item_list
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
+        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
         for major_chunk_index = 1, major_chunk_count do
             local major_chunk = major_chunk_list[major_chunk_index]
@@ -7275,20 +7285,12 @@ end
 
 ---@param ... evolved.phase phases
 __evolved_process = function(...)
-    local phase_count = __lua_select('#', ...)
-
-    if phase_count == 0 then
-        return
-    end
-
     if __debug_mode then
         __debug_fns.validate_phases(...)
     end
 
-    for i = 1, phase_count do
-        ---@type evolved.phase
-        local phase = __lua_select(i, ...)
-        __phase_process(phase)
+    for i = 1, __lua_select('#', ...) do
+        __phase_process(__lua_select(i, ...))
     end
 end
 
@@ -7906,6 +7908,8 @@ end
 
 ---@class (exact) evolved.__group_builder
 ---@field package __name? string
+---@field package __phase? evolved.phase
+---@field package __after? evolved.group[]
 ---@field package __single? evolved.component
 
 ---@class evolved.group_builder : evolved.__group_builder
@@ -7919,6 +7923,8 @@ __evolved_group = function()
     local builder = {
         __name = nil,
         __single = nil,
+        __phase = nil,
+        __after = nil,
     }
     ---@cast builder evolved.group_builder
     return setmetatable(builder, evolved_group_builder)
@@ -7938,14 +7944,51 @@ function evolved_group_builder:single(single)
     return self
 end
 
+---@param phase evolved.phase
+---@return evolved.group_builder builder
+function evolved_group_builder:phase(phase)
+    self.__phase = phase
+    return self
+end
+
+---@param ... evolved.group groups
+---@return evolved.group_builder builder
+function evolved_group_builder:after(...)
+    local group_count = __lua_select('#', ...)
+
+    if group_count == 0 then
+        return self
+    end
+
+    local after = self.__after
+
+    if not after then
+        after = __lua_table_new(math.max(4, group_count), 0)
+        self.__after = after
+    end
+
+    local after_count = #after
+
+    for i = 1, group_count do
+        after_count = after_count + 1
+        after[after_count] = __lua_select(i, ...)
+    end
+
+    return self
+end
+
 ---@return evolved.group group
 ---@return boolean is_deferred
 function evolved_group_builder:build()
     local name = self.__name
     local single = self.__single
+    local phase = self.__phase
+    local after = self.__after
 
     self.__name = nil
     self.__single = nil
+    self.__phase = nil
+    self.__after = nil
 
     local group = __evolved_id()
 
@@ -7963,6 +8006,18 @@ function evolved_group_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = group
         component_list[component_count] = single
+    end
+
+    if phase then
+        component_count = component_count + 1
+        fragment_list[component_count] = __PHASE
+        component_list[component_count] = phase
+    end
+
+    if after then
+        component_count = component_count + 1
+        fragment_list[component_count] = __AFTER
+        component_list[component_count] = after
     end
 
     local _, is_deferred = __evolved_multi_set(group, fragment_list, component_list)
@@ -8058,8 +8113,6 @@ end
 ---@field package __name? string
 ---@field package __single? evolved.component
 ---@field package __group? evolved.group
----@field package __phase? evolved.phase
----@field package __after? evolved.system[]
 ---@field package __query? evolved.query
 ---@field package __execute? evolved.execute
 ---@field package __prologue? evolved.prologue
@@ -8077,8 +8130,6 @@ __evolved_system = function()
         __name = nil,
         __single = nil,
         __group = nil,
-        __phase = nil,
-        __after = nil,
         __query = nil,
         __execute = nil,
         __prologue = nil,
@@ -8106,39 +8157,6 @@ end
 ---@return evolved.system_builder builder
 function evolved_system_builder:group(group)
     self.__group = group
-    return self
-end
-
----@param phase evolved.phase
----@return evolved.system_builder builder
-function evolved_system_builder:phase(phase)
-    self.__phase = phase
-    return self
-end
-
----@param ... evolved.system systems
----@return evolved.system_builder builder
-function evolved_system_builder:after(...)
-    local system_count = __lua_select('#', ...)
-
-    if system_count == 0 then
-        return self
-    end
-
-    local after = self.__after
-
-    if not after then
-        after = __lua_table_new(math.max(4, system_count), 0)
-        self.__after = after
-    end
-
-    local after_count = #after
-
-    for i = 1, system_count do
-        after_count = after_count + 1
-        after[after_count] = __lua_select(i, ...)
-    end
-
     return self
 end
 
@@ -8176,8 +8194,6 @@ function evolved_system_builder:build()
     local name = self.__name
     local single = self.__single
     local group = self.__group
-    local phase = self.__phase
-    local after = self.__after
     local query = self.__query
     local execute = self.__execute
     local prologue = self.__prologue
@@ -8186,8 +8202,6 @@ function evolved_system_builder:build()
     self.__name = nil
     self.__single = nil
     self.__group = nil
-    self.__phase = nil
-    self.__after = nil
     self.__query = nil
     self.__execute = nil
     self.__prologue = nil
@@ -8215,18 +8229,6 @@ function evolved_system_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __GROUP
         component_list[component_count] = group
-    end
-
-    if phase then
-        component_count = component_count + 1
-        fragment_list[component_count] = __PHASE
-        component_list[component_count] = phase
-    end
-
-    if after then
-        component_count = component_count + 1
-        fragment_list[component_count] = __AFTER
-        component_list[component_count] = after
     end
 
     if query then
@@ -8409,8 +8411,8 @@ assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
 assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
 assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
 
-assert(__evolved_insert(__GROUP, __NAME, 'GROUP'))
 assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
+assert(__evolved_insert(__GROUP, __NAME, 'GROUP'))
 assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
 
 assert(__evolved_insert(__QUERY, __NAME, 'QUERY'))
@@ -8504,6 +8506,56 @@ end))
 ---
 ---
 
+---@param group evolved.group
+---@param new_phase evolved.phase
+---@param old_phase? evolved.phase
+assert(__evolved_insert(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
+    if new_phase == old_phase then
+        return
+    end
+
+    if old_phase then
+        local old_phase_groups = __phase_groups[old_phase]
+
+        if old_phase_groups then
+            __assoc_list_remove(old_phase_groups, group)
+
+            if old_phase_groups.__item_count == 0 then
+                __phase_groups[old_phase] = nil
+            end
+        end
+    end
+
+    local new_phase_groups = __phase_groups[new_phase]
+
+    if not new_phase_groups then
+        new_phase_groups = __assoc_list_new(4)
+        __phase_groups[new_phase] = new_phase_groups
+    end
+
+    __assoc_list_insert(new_phase_groups, group)
+end))
+
+---@param group evolved.group
+---@param old_phase evolved.phase
+assert(__evolved_insert(__PHASE, __ON_REMOVE, function(group, _, old_phase)
+    local old_phase_groups = __phase_groups[old_phase]
+
+    if old_phase_groups then
+        __assoc_list_remove(old_phase_groups, group)
+
+        if old_phase_groups.__item_count == 0 then
+            __phase_groups[old_phase] = nil
+        end
+    end
+end))
+
+---
+---
+---
+---
+---
+
 ---@param system evolved.system
 ---@param new_group evolved.group
 ---@param old_group? evolved.group
@@ -8554,63 +8606,13 @@ end))
 ---
 ---
 
----@param system evolved.system
----@param new_phase evolved.phase
----@param old_phase? evolved.phase
-assert(__evolved_insert(__PHASE, __ON_SET, function(system, _, new_phase, old_phase)
-    if new_phase == old_phase then
-        return
-    end
-
-    if old_phase then
-        local old_phase_systems = __phase_systems[old_phase]
-
-        if old_phase_systems then
-            __assoc_list_remove(old_phase_systems, system)
-
-            if old_phase_systems.__item_count == 0 then
-                __phase_systems[old_phase] = nil
-            end
-        end
-    end
-
-    local new_phase_systems = __phase_systems[new_phase]
-
-    if not new_phase_systems then
-        new_phase_systems = __assoc_list_new(4)
-        __phase_systems[new_phase] = new_phase_systems
-    end
-
-    __assoc_list_insert(new_phase_systems, system)
-end))
-
----@param system evolved.system
----@param old_phase evolved.phase
-assert(__evolved_insert(__PHASE, __ON_REMOVE, function(system, _, old_phase)
-    local old_phase_systems = __phase_systems[old_phase]
-
-    if old_phase_systems then
-        __assoc_list_remove(old_phase_systems, system)
-
-        if old_phase_systems.__item_count == 0 then
-            __phase_systems[old_phase] = nil
-        end
-    end
-end))
-
----
----
----
----
----
-
----@param system evolved.system
----@param new_after_list evolved.system[]
-assert(__evolved_insert(__AFTER, __ON_SET, function(system, _, new_after_list)
+---@param group evolved.group
+---@param new_after_list evolved.group[]
+assert(__evolved_insert(__AFTER, __ON_SET, function(group, _, new_after_list)
     local new_after_count = #new_after_list
 
     if new_after_count == 0 then
-        __system_dependencies[system] = nil
+        __group_dependencies[group] = nil
         return
     end
 
@@ -8621,12 +8623,12 @@ assert(__evolved_insert(__AFTER, __ON_SET, function(system, _, new_after_list)
         __assoc_list_insert(new_dependencies, new_after)
     end
 
-    __system_dependencies[system] = new_dependencies
+    __group_dependencies[group] = new_dependencies
 end))
 
----@param system evolved.system
-assert(__evolved_insert(__AFTER, __ON_REMOVE, function(system)
-    __system_dependencies[system] = nil
+---@param group evolved.group
+assert(__evolved_insert(__AFTER, __ON_REMOVE, function(group)
+    __group_dependencies[group] = nil
 end))
 
 ---
@@ -8649,8 +8651,8 @@ evolved.ON_ASSIGN = __ON_ASSIGN
 evolved.ON_INSERT = __ON_INSERT
 evolved.ON_REMOVE = __ON_REMOVE
 
-evolved.GROUP = __GROUP
 evolved.PHASE = __PHASE
+evolved.GROUP = __GROUP
 evolved.AFTER = __AFTER
 
 evolved.QUERY = __QUERY
