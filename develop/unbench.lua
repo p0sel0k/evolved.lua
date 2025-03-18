@@ -619,7 +619,7 @@ basics.describe_bench(string.format('create and destroy %d entities / spawn_at',
         local fragments = {}
         local components = {}
 
-        local chunk = evo.chunk()
+        local chunk = nil
 
         for i = 1, N do
             entities[i] = spawn_at(chunk, fragments, components)

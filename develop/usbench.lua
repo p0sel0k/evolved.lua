@@ -41,7 +41,7 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Defer): %d entities',
         evo.defer()
         do
             for chunk, entities in evo.execute(A) do
-                local as = evo.select(chunk, a)
+                local as = evo.components(chunk, a)
                 for i = 1, #entities do
                     evo.set(evo.id(), b, as[i])
                 end
@@ -70,7 +70,7 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Manual): %d entities'
         local to_create = {}
 
         for chunk, entities in evo.execute(A) do
-            local as = evo.select(chunk, a)
+            local as = evo.components(chunk, a)
             for i = 1, #entities do
                 to_create[#to_create + 1] = as[i]
             end
@@ -144,21 +144,21 @@ basics.describe_bench(string.format('Evolved Simple Iteration: %d entities', N),
     ---@param CE evolved.query
     function(a, b, c, d, e, AB, CD, CE)
         for chunk, entities in evo.execute(AB) do
-            local as, bs = evo.select(chunk, a, b)
+            local as, bs = evo.components(chunk, a, b)
             for i = 1, #entities do
                 as[i], bs[i] = bs[i], as[i]
             end
         end
 
         for chunk, entities in evo.execute(CD) do
-            local cs, ds = evo.select(chunk, c, d)
+            local cs, ds = evo.components(chunk, c, d)
             for i = 1, #entities do
                 cs[i], ds[i] = ds[i], cs[i]
             end
         end
 
         for chunk, entities in evo.execute(CE) do
-            local cs, es = evo.select(chunk, c, e)
+            local cs, es = evo.components(chunk, c, e)
             for i = 1, #entities do
                 cs[i], es[i] = es[i], cs[i]
             end
@@ -240,35 +240,35 @@ basics.describe_bench(string.format('Evolved Packed Iteration: %d entities', N),
     ---@param E evolved.query
     function(a, b, c, d, e, A, B, C, D, E)
         for chunk, entities in evo.execute(A) do
-            local as = evo.select(chunk, a)
+            local as = evo.components(chunk, a)
             for i = 1, #entities do
                 as[i] = as[i] * 2
             end
         end
 
         for chunk, entities in evo.execute(B) do
-            local bs = evo.select(chunk, b)
+            local bs = evo.components(chunk, b)
             for i = 1, #entities do
                 bs[i] = bs[i] * 2
             end
         end
 
         for chunk, entities in evo.execute(C) do
-            local cs = evo.select(chunk, c)
+            local cs = evo.components(chunk, c)
             for i = 1, #entities do
                 cs[i] = cs[i] * 2
             end
         end
 
         for chunk, entities in evo.execute(D) do
-            local ds = evo.select(chunk, d)
+            local ds = evo.components(chunk, d)
             for i = 1, #entities do
                 ds[i] = ds[i] * 2
             end
         end
 
         for chunk, entities in evo.execute(E) do
-            local es = evo.select(chunk, e)
+            local es = evo.components(chunk, e)
             for i = 1, #entities do
                 es[i] = es[i] * 2
             end
@@ -335,14 +335,14 @@ basics.describe_bench(string.format('Evolved Fragmented Iteration: %d entities',
     ---@param Last evolved.query
     function(data, last, Data, Last)
         for chunk, entities in evo.execute(Data) do
-            local ds = evo.select(chunk, data)
+            local ds = evo.components(chunk, data)
             for i = 1, #entities do
                 ds[i] = ds[i] * 2
             end
         end
 
         for chunk, entities in evo.execute(Last) do
-            local ls = evo.select(chunk, last)
+            local ls = evo.components(chunk, last)
             for i = 1, #entities do
                 ls[i] = ls[i] * 2
             end
