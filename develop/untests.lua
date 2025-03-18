@@ -648,11 +648,6 @@ do
     assert(evo.insert(e2b, f2, 45))
 
     do
-        local chunk, entities = evo.chunk()
-        assert(not chunk and not entities)
-    end
-
-    do
         local chunk, entities = evo.chunk(f1)
         assert(entities and entities[1] == e1)
         assert(chunk and evo.components(chunk, f1)[1] == 41)

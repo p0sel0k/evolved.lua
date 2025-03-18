@@ -674,6 +674,7 @@ local __evolved_batch_multi_insert
 local __evolved_batch_multi_remove
 
 local __evolved_chunk
+
 local __evolved_entities
 local __evolved_fragments
 local __evolved_components
@@ -1175,25 +1176,19 @@ end
 ---
 ---
 
----@param ... evolved.fragment fragments
----@return evolved.chunk?
+---@param head_fragment evolved.fragment
+---@param ... evolved.fragment tail_fragments
+---@return evolved.chunk
 ---@nodiscard
-local function __chunk_fragments(...)
-    local fragment_count = __lua_select('#', ...)
+local function __chunk_fragments(head_fragment, ...)
+    local chunk = __root_chunks[head_fragment]
+        or __chunk_with_fragment(nil, head_fragment)
 
-    if fragment_count == 0 then
-        return
-    end
-
-    local root_fragment = ...
-    local chunk = __root_chunks[root_fragment]
-        or __chunk_with_fragment(nil, root_fragment)
-
-    for i = 2, fragment_count do
+    for i = 1, __lua_select('#', ...) do
         ---@type evolved.fragment
-        local child_fragment = __lua_select(i, ...)
-        chunk = chunk.__with_fragment_edges[child_fragment]
-            or __chunk_with_fragment(chunk, child_fragment)
+        local tail_fragment = __lua_select(i, ...)
+        chunk = chunk.__with_fragment_edges[tail_fragment]
+            or __chunk_with_fragment(chunk, tail_fragment)
     end
 
     return chunk
@@ -5037,8 +5032,7 @@ __evolved_is_empty = function(chunk_or_entity)
         local entity = chunk_or_entity --[[@as evolved.entity]]
 
         local entity_index = entity % 0x100000
-        return __freelist_ids[entity_index] ~= entity
-            or not __entity_chunks[entity_index]
+        return __freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index]
     end
 end
 
@@ -7088,22 +7082,18 @@ end
 ---
 ---
 
----@param ... evolved.fragment fragments
----@return evolved.chunk? chunk
----@return evolved.entity[]? entity_list
----@return integer? entity_count
+---@param head_fragment evolved.fragment
+---@param ... evolved.fragment tail_fragments
+---@return evolved.chunk chunk
+---@return evolved.entity[] entity_list
+---@return integer entity_count
 ---@nodiscard
-__evolved_chunk = function(...)
+__evolved_chunk = function(head_fragment, ...)
     if __debug_mode then
-        __validate_fragments(...)
+        __validate_fragments(head_fragment, ...)
     end
 
-    local chunk = __chunk_fragments(...)
-
-    if not chunk then
-        return
-    end
-
+    local chunk = __chunk_fragments(head_fragment, ...)
     return chunk, chunk.__entity_list, chunk.__entity_count
 end
 

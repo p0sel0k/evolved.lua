@@ -3,11 +3,11 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
-- chunk(...) check for 0 fragments
 
 ## After first release
 
 - add system groups
+- observers and events
 - add INDEX fragment trait
 - add REQUIRES fragment trait
 - use compact prefix-tree for chunks

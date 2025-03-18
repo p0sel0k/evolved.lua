@@ -98,7 +98,7 @@ batch_multi_assign :: chunk | query, fragment[], component[]? -> integer, boolea
 batch_multi_insert :: chunk | query, fragment[], component[]? -> integer, boolean
 batch_multi_remove :: chunk | query, fragment[] -> integer, boolean
 
-chunk :: fragment... -> chunk?, entity[]?, integer?
+chunk :: fragment, fragment... -> chunk, entity[], integer
 
 entities :: chunk -> entity[], integer
 fragments :: chunk -> fragment[], integer
