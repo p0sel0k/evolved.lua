@@ -8202,3 +8202,17 @@ do
     assert(not evo.is_alive_any(e1a, e1b, e12a, e12b))
     assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
 end
+
+do
+    local gb = evo.group()
+
+    local g1 = gb:build()
+    local g2 = gb:name('g2'):build()
+    local g3 = gb:single(42):build()
+    local g4 = gb:name('g4'):single(43):build()
+
+    assert(not evo.has(g1, evo.NAME) and not evo.has(g1, g1))
+    assert(evo.get(g2, evo.NAME) == 'g2' and not evo.has(g2, g2))
+    assert(not evo.has(g3, evo.NAME) and evo.get(g3, g3) == 42)
+    assert(evo.get(g4, evo.NAME) == 'g4' and evo.get(g4, g4) == 43)
+end

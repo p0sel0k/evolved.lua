@@ -149,6 +149,13 @@ query_builder:build :: query, boolean
 ```
 
 ```
+group :: group_builder
+group_builder:name :: string -> group_builder
+group_builder:single :: component -> group_builder
+group_builder:build :: group, boolean
+```
+
+```
 phase :: phase_builder
 phase_builder:name :: string -> phase_builder
 phase_builder:single :: component -> phase_builder

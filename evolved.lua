@@ -32,6 +32,7 @@ local evolved = {
 ---@alias evolved.entity evolved.id
 ---@alias evolved.fragment evolved.id
 ---@alias evolved.query evolved.id
+---@alias evolved.group evolved.id
 ---@alias evolved.phase evolved.id
 ---@alias evolved.system evolved.id
 
@@ -693,6 +694,7 @@ local __evolved_collect_garbage
 local __evolved_entity
 local __evolved_fragment
 local __evolved_query
+local __evolved_group
 local __evolved_phase
 local __evolved_system
 
@@ -7900,6 +7902,81 @@ end
 ---
 ---
 
+---@class (exact) evolved.__group_builder
+---@field package __name? string
+---@field package __single? evolved.component
+
+---@class evolved.group_builder : evolved.__group_builder
+local evolved_group_builder = {}
+evolved_group_builder.__index = evolved_group_builder
+
+---@return evolved.group_builder builder
+---@nodiscard
+__evolved_group = function()
+    ---@type evolved.__group_builder
+    local builder = {
+        __name = nil,
+        __single = nil,
+    }
+    ---@cast builder evolved.group_builder
+    return setmetatable(builder, evolved_group_builder)
+end
+
+---@param name string
+---@return evolved.group_builder builder
+function evolved_group_builder:name(name)
+    self.__name = name
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.group_builder builder
+function evolved_group_builder:single(single)
+    self.__single = single
+    return self
+end
+
+---@return evolved.group group
+---@return boolean is_deferred
+function evolved_group_builder:build()
+    local name = self.__name
+    local single = self.__single
+
+    self.__name = nil
+    self.__single = nil
+
+    local group = __evolved_id()
+
+    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+    local component_list = __acquire_table(__table_pool_tag.component_list)
+    local component_count = 0
+
+    if name then
+        component_count = component_count + 1
+        fragment_list[component_count] = __NAME
+        component_list[component_count] = name
+    end
+
+    if single ~= nil then
+        component_count = component_count + 1
+        fragment_list[component_count] = group
+        component_list[component_count] = single
+    end
+
+    local _, is_deferred = __evolved_multi_set(group, fragment_list, component_list)
+
+    __release_table(__table_pool_tag.fragment_list, fragment_list)
+    __release_table(__table_pool_tag.component_list, component_list)
+
+    return group, is_deferred
+end
+
+---
+---
+---
+---
+---
+
 ---@class (exact) evolved.__phase_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
@@ -8580,6 +8657,7 @@ evolved.collect_garbage = __evolved_collect_garbage
 evolved.entity = __evolved_entity
 evolved.fragment = __evolved_fragment
 evolved.query = __evolved_query
+evolved.group = __evolved_group
 evolved.phase = __evolved_phase
 evolved.system = __evolved_system
 
