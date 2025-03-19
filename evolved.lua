@@ -3152,27 +3152,27 @@ end
 ---@enum evolved.defer_op
 local __defer_op = {
     set = 1,
-    remove = 4,
-    clear = 5,
-    destroy = 6,
+    remove = 2,
+    clear = 3,
+    destroy = 4,
 
-    multi_set = 7,
-    multi_remove = 10,
+    multi_set = 5,
+    multi_remove = 6,
 
-    batch_set = 11,
-    batch_remove = 14,
-    batch_clear = 15,
-    batch_destroy = 16,
+    batch_set = 7,
+    batch_remove = 8,
+    batch_clear = 9,
+    batch_destroy = 10,
 
-    batch_multi_set = 17,
-    batch_multi_remove = 20,
+    batch_multi_set = 11,
+    batch_multi_remove = 12,
 
-    spawn_entity_at = 21,
-    spawn_entity_with = 22,
+    spawn_entity_at = 13,
+    spawn_entity_with = 14,
 
-    call_hook = 23,
+    call_hook = 15,
 
-    __count = 23,
+    __count = 15,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
