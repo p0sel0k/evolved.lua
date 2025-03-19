@@ -664,8 +664,6 @@ local __evolved_multi_set
 local __evolved_multi_remove
 
 local __evolved_batch_set
-local __evolved_batch_assign
-local __evolved_batch_insert
 local __evolved_batch_remove
 local __evolved_batch_clear
 local __evolved_batch_destroy
@@ -1510,8 +1508,6 @@ local __defer_multi_set
 local __defer_multi_remove
 
 local __defer_batch_set
-local __defer_batch_assign
-local __defer_batch_insert
 local __defer_batch_remove
 local __defer_batch_clear
 local __defer_batch_destroy
@@ -3205,8 +3201,6 @@ local __defer_op = {
     multi_remove = 10,
 
     batch_set = 11,
-    batch_assign = 12,
-    batch_insert = 13,
     batch_remove = 14,
     batch_clear = 15,
     batch_destroy = 16,
@@ -3648,158 +3642,6 @@ __defer_ops[__defer_op.batch_set] = function(bytes, index)
     else
         local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
         __evolved_batch_set(chunk_or_query, fragment, a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
-    end
-
-    return 3 + argument_count
-end
-
----@param chunk_or_query evolved.chunk | evolved.query
----@param fragment evolved.fragment
----@param ... any component arguments
-__defer_batch_assign = function(chunk_or_query, fragment, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.batch_assign
-    bytecode[length + 2] = chunk_or_query
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 5] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-        for i = 5, argument_count do
-            bytecode[length + 4 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 4 + argument_count
-end
-
-__defer_ops[__defer_op.batch_assign] = function(bytes, index)
-    local chunk_or_query = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local argument_count = bytes[index + 2]
-
-    if argument_count == 0 then
-        __evolved_batch_assign(chunk_or_query, fragment)
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 3]
-        __evolved_batch_assign(chunk_or_query, fragment, a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 3], bytes[index + 4]
-        __evolved_batch_assign(chunk_or_query, fragment, a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_assign(chunk_or_query, fragment, a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_batch_assign(chunk_or_query, fragment, a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_batch_assign(chunk_or_query, fragment, a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
-    end
-
-    return 3 + argument_count
-end
-
----@param chunk_or_query evolved.chunk | evolved.query
----@param fragment evolved.fragment
----@param ... any component arguments
-__defer_batch_insert = function(chunk_or_query, fragment, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.batch_insert
-    bytecode[length + 2] = chunk_or_query
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 5] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-        for i = 5, argument_count do
-            bytecode[length + 4 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 4 + argument_count
-end
-
-__defer_ops[__defer_op.batch_insert] = function(bytes, index)
-    local chunk_or_query = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local argument_count = bytes[index + 2]
-
-    if argument_count == 0 then
-        __evolved_batch_insert(chunk_or_query, fragment)
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 3]
-        __evolved_batch_insert(chunk_or_query, fragment, a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 3], bytes[index + 4]
-        __evolved_batch_insert(chunk_or_query, fragment, a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_insert(chunk_or_query, fragment, a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_batch_insert(chunk_or_query, fragment, a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_batch_insert(chunk_or_query, fragment, a1, a2, a3, a4,
             __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
@@ -5518,106 +5360,6 @@ __evolved_batch_set = function(chunk_or_query, fragment, ...)
     __evolved_commit()
 
     return set_count, false
-end
-
----@param chunk_or_query evolved.chunk | evolved.query
----@param fragment evolved.fragment
----@param ... any component arguments
----@return integer assigned_count
----@return boolean is_deferred
-__evolved_batch_assign = function(chunk_or_query, fragment, ...)
-    if __defer_depth > 0 then
-        __defer_batch_assign(chunk_or_query, fragment, ...)
-        return 0, true
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_fragment(fragment)
-    end
-
-    local assigned_count = 0
-
-    __evolved_defer()
-    do
-        if __lua_type(chunk_or_query) ~= 'number' then
-            ---@cast chunk_or_query -evolved.query
-            local chunk = chunk_or_query --[[@as evolved.chunk]]
-
-            assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
-        else
-            ---@cast chunk_or_query -evolved.chunk
-            local query = chunk_or_query --[[@as evolved.query]]
-
-            ---@type evolved.chunk[]
-            local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-            local chunk_count = 0
-
-            for chunk in __evolved_execute(query) do
-                chunk_count = chunk_count + 1
-                chunk_list[chunk_count] = chunk
-            end
-
-            for chunk_index = 1, chunk_count do
-                local chunk = chunk_list[chunk_index]
-                assigned_count = assigned_count + __chunk_assign(chunk, fragment, ...)
-            end
-
-            __release_table(__table_pool_tag.chunk_stack, chunk_list)
-        end
-    end
-    __evolved_commit()
-
-    return assigned_count, false
-end
-
----@param chunk_or_query evolved.chunk | evolved.query
----@param fragment evolved.fragment
----@param ... any component arguments
----@return integer inserted_count
----@return boolean is_deferred
-__evolved_batch_insert = function(chunk_or_query, fragment, ...)
-    if __defer_depth > 0 then
-        __defer_batch_insert(chunk_or_query, fragment, ...)
-        return 0, true
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_fragment(fragment)
-    end
-
-    local inserted_count = 0
-
-    __evolved_defer()
-    do
-        if __lua_type(chunk_or_query) ~= 'number' then
-            ---@cast chunk_or_query -evolved.query
-            local chunk = chunk_or_query --[[@as evolved.chunk]]
-
-            inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
-        else
-            ---@cast chunk_or_query -evolved.chunk
-            local query = chunk_or_query --[[@as evolved.query]]
-
-            ---@type evolved.chunk[]
-            local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
-            local chunk_count = 0
-
-            for chunk in __evolved_execute(query) do
-                chunk_count = chunk_count + 1
-                chunk_list[chunk_count] = chunk
-            end
-
-            for chunk_index = 1, chunk_count do
-                local chunk = chunk_list[chunk_index]
-                inserted_count = inserted_count + __chunk_insert(chunk, fragment, ...)
-            end
-
-            __release_table(__table_pool_tag.chunk_stack, chunk_list)
-        end
-    end
-    __evolved_commit()
-
-    return inserted_count, false
 end
 
 ---@param chunk_or_query evolved.chunk | evolved.query
@@ -7527,8 +7269,6 @@ evolved.multi_set = __evolved_multi_set
 evolved.multi_remove = __evolved_multi_remove
 
 evolved.batch_set = __evolved_batch_set
-evolved.batch_assign = __evolved_batch_assign
-evolved.batch_insert = __evolved_batch_insert
 evolved.batch_remove = __evolved_batch_remove
 evolved.batch_clear = __evolved_batch_clear
 evolved.batch_destroy = __evolved_batch_destroy
