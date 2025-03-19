@@ -656,8 +656,6 @@ local __evolved_has_any
 local __evolved_get
 
 local __evolved_set
-local __evolved_assign
-local __evolved_insert
 local __evolved_remove
 local __evolved_clear
 local __evolved_destroy
@@ -1508,8 +1506,6 @@ end
 ---
 
 local __defer_set
-local __defer_assign
-local __defer_insert
 local __defer_remove
 local __defer_clear
 local __defer_destroy
@@ -3496,8 +3492,6 @@ end
 ---@enum evolved.defer_op
 local __defer_op = {
     set = 1,
-    assign = 2,
-    insert = 3,
     remove = 4,
     clear = 5,
     destroy = 6,
@@ -3600,158 +3594,6 @@ __defer_ops[__defer_op.set] = function(bytes, index)
     else
         local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
         __evolved_set(entity, fragment, a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
-    end
-
-    return 3 + argument_count
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param ... any component arguments
-__defer_assign = function(entity, fragment, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.assign
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 5] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-        for i = 5, argument_count do
-            bytecode[length + 4 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 4 + argument_count
-end
-
-__defer_ops[__defer_op.assign] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local argument_count = bytes[index + 2]
-
-    if argument_count == 0 then
-        __evolved_assign(entity, fragment)
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 3]
-        __evolved_assign(entity, fragment, a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 3], bytes[index + 4]
-        __evolved_assign(entity, fragment, a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_assign(entity, fragment, a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_assign(entity, fragment, a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_assign(entity, fragment, a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
-    end
-
-    return 3 + argument_count
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param ... any component arguments
-__defer_insert = function(entity, fragment, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.insert
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 5] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 5] = a1
-        bytecode[length + 6] = a2
-        bytecode[length + 7] = a3
-        bytecode[length + 8] = a4
-        for i = 5, argument_count do
-            bytecode[length + 4 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 4 + argument_count
-end
-
-__defer_ops[__defer_op.insert] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local argument_count = bytes[index + 2]
-
-    if argument_count == 0 then
-        __evolved_insert(entity, fragment)
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 3]
-        __evolved_insert(entity, fragment, a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 3], bytes[index + 4]
-        __evolved_insert(entity, fragment, a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_insert(entity, fragment, a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_insert(entity, fragment, a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 3], bytes[index + 4], bytes[index + 5], bytes[index + 6]
-        __evolved_insert(entity, fragment, a1, a2, a3, a4,
             __lua_table_unpack(bytes, index + 7, index + 2 + argument_count))
     end
 
@@ -5351,241 +5193,6 @@ __evolved_set = function(entity, fragment, ...)
             end
         end
     else
-        local new_entity_list = new_chunk.__entity_list
-        local new_entity_count = new_chunk.__entity_count
-
-        local new_component_indices = new_chunk.__component_indices
-        local new_component_storages = new_chunk.__component_storages
-
-        local new_place = new_entity_count + 1
-        new_chunk.__entity_count = new_place
-
-        new_entity_list[new_place] = entity
-
-        if old_chunk then
-            local old_component_count = old_chunk.__component_count
-            local old_component_storages = old_chunk.__component_storages
-            local old_component_fragments = old_chunk.__component_fragments
-
-            for old_ci = 1, old_component_count do
-                local old_f = old_component_fragments[old_ci]
-                local old_cs = old_component_storages[old_ci]
-                local new_ci = new_component_indices[old_f]
-                local new_cs = new_component_storages[new_ci]
-                new_cs[new_place] = old_cs[old_place]
-            end
-
-            __detach_entity(old_chunk, old_place)
-        end
-
-        do
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
-
-            __structural_changes = __structural_changes + 1
-        end
-
-        do
-            local new_component_index = new_component_indices[fragment]
-
-            if new_component_index then
-                local new_component_storage = new_component_storages[new_component_index]
-
-                if new_chunk.__has_defaults_or_constructs then
-                    local new_component = __component_construct(fragment, ...)
-
-                    new_component_storage[new_place] = new_component
-
-                    if fragment_on_set then
-                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
-                    end
-
-                    if fragment_on_insert then
-                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
-                    end
-                else
-                    local new_component = ...
-
-                    if new_component == nil then
-                        new_component = true
-                    end
-
-                    new_component_storage[new_place] = new_component
-
-                    if fragment_on_set then
-                        __defer_call_hook(fragment_on_set, entity, fragment, new_component)
-                    end
-
-                    if fragment_on_insert then
-                        __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
-                    end
-                end
-            else
-                if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment)
-                end
-
-                if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment)
-                end
-            end
-        end
-    end
-
-    __evolved_commit()
-    return true, false
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param ... any component arguments
----@return boolean is_assigned
----@return boolean is_deferred
-__evolved_assign = function(entity, fragment, ...)
-    if __defer_depth > 0 then
-        __defer_assign(entity, fragment, ...)
-        return false, true
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_fragment(fragment)
-    end
-
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false, false
-    end
-
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
-    local chunk = entity_chunks[entity_index]
-    local place = entity_places[entity_index]
-
-    if not chunk or not chunk.__fragment_set[fragment] then
-        return false, false
-    end
-
-    ---@type evolved.set_hook?, evolved.assign_hook?
-    local fragment_on_set, fragment_on_assign
-
-    if chunk.__has_set_or_assign_hooks then
-        fragment_on_set, fragment_on_assign = __evolved_get(fragment,
-            __ON_SET, __ON_ASSIGN)
-    end
-
-    __evolved_defer()
-
-    do
-        local component_indices = chunk.__component_indices
-        local component_storages = chunk.__component_storages
-
-        local component_index = component_indices[fragment]
-
-        if component_index then
-            local component_storage = component_storages[component_index]
-
-            if chunk.__has_defaults_or_constructs then
-                local new_component = __component_construct(fragment, ...)
-
-                if fragment_on_set or fragment_on_assign then
-                    local old_component = component_storage[place]
-
-                    component_storage[place] = new_component
-
-                    if fragment_on_set then
-                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
-                    end
-
-                    if fragment_on_assign then
-                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
-                    end
-                else
-                    component_storage[place] = new_component
-                end
-            else
-                local new_component = ...
-
-                if new_component == nil then
-                    new_component = true
-                end
-
-                if fragment_on_set or fragment_on_assign then
-                    local old_component = component_storage[place]
-
-                    component_storage[place] = new_component
-
-                    if fragment_on_set then
-                        __defer_call_hook(fragment_on_set, entity, fragment, new_component, old_component)
-                    end
-
-                    if fragment_on_assign then
-                        __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
-                    end
-                else
-                    component_storage[place] = new_component
-                end
-            end
-        else
-            if fragment_on_set then
-                __defer_call_hook(fragment_on_set, entity, fragment)
-            end
-
-            if fragment_on_assign then
-                __defer_call_hook(fragment_on_assign, entity, fragment)
-            end
-        end
-    end
-
-    __evolved_commit()
-    return true, false
-end
-
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param ... any component arguments
----@return boolean is_inserted
----@return boolean is_deferred
-__evolved_insert = function(entity, fragment, ...)
-    if __defer_depth > 0 then
-        __defer_insert(entity, fragment, ...)
-        return false, true
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_fragment(fragment)
-    end
-
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false, false
-    end
-
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
-
-    local old_chunk = entity_chunks[entity_index]
-    local old_place = entity_places[entity_index]
-
-    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
-
-    if not new_chunk or old_chunk == new_chunk then
-        return false, false
-    end
-
-    ---@type evolved.set_hook?, evolved.insert_hook?
-    local fragment_on_set, fragment_on_insert
-
-    if new_chunk.__has_set_or_insert_hooks then
-        fragment_on_set, fragment_on_insert = __evolved_get(fragment,
-            __ON_SET, __ON_INSERT)
-    end
-
-    __evolved_defer()
-
-    do
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
 
@@ -8330,15 +7937,15 @@ local function __update_fragment_hooks(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(__evolved_insert(__ON_SET, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_insert(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_insert(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_insert(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_set(__ON_SET, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_set(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
+assert(__evolved_set(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
 
-assert(__evolved_insert(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_insert(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_insert(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_insert(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_set(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_set(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
+assert(__evolved_set(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
 
 ---
 ---
@@ -8413,50 +8020,14 @@ local function __update_fragment_constructs(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(__evolved_insert(__TAG, __ON_INSERT, __update_fragment_tags))
-assert(__evolved_insert(__TAG, __ON_REMOVE, __update_fragment_tags))
+assert(__evolved_set(__TAG, __ON_INSERT, __update_fragment_tags))
+assert(__evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags))
 
-assert(__evolved_insert(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
-assert(__evolved_insert(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
+assert(__evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
+assert(__evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
 
-assert(__evolved_insert(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
-assert(__evolved_insert(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
-
----
----
----
----
----
-
-assert(__evolved_insert(__TAG, __NAME, 'TAG'))
-
-assert(__evolved_insert(__NAME, __NAME, 'NAME'))
-assert(__evolved_insert(__DEFAULT, __NAME, 'DEFAULT'))
-assert(__evolved_insert(__CONSTRUCT, __NAME, 'CONSTRUCT'))
-
-assert(__evolved_insert(__INCLUDES, __NAME, 'INCLUDES'))
-assert(__evolved_insert(__EXCLUDES, __NAME, 'EXCLUDES'))
-
-assert(__evolved_insert(__ON_SET, __NAME, 'ON_SET'))
-assert(__evolved_insert(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
-assert(__evolved_insert(__ON_INSERT, __NAME, 'ON_INSERT'))
-assert(__evolved_insert(__ON_REMOVE, __NAME, 'ON_REMOVE'))
-
-assert(__evolved_insert(__PHASE, __NAME, 'PHASE'))
-assert(__evolved_insert(__GROUP, __NAME, 'GROUP'))
-assert(__evolved_insert(__AFTER, __NAME, 'AFTER'))
-
-assert(__evolved_insert(__QUERY, __NAME, 'QUERY'))
-assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
-
-assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
-assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
-
-assert(__evolved_insert(__DISABLED, __NAME, 'DISABLED'))
-
-assert(__evolved_insert(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
-assert(__evolved_insert(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
-assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
+assert(__evolved_set(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
+assert(__evolved_set(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
 
 ---
 ---
@@ -8464,14 +8035,50 @@ assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLIC
 ---
 ---
 
-assert(__evolved_insert(__TAG, __TAG))
+assert(__evolved_set(__TAG, __NAME, 'TAG'))
 
-assert(__evolved_insert(__INCLUDES, __CONSTRUCT, __component_list))
-assert(__evolved_insert(__EXCLUDES, __CONSTRUCT, __component_list))
+assert(__evolved_set(__NAME, __NAME, 'NAME'))
+assert(__evolved_set(__DEFAULT, __NAME, 'DEFAULT'))
+assert(__evolved_set(__CONSTRUCT, __NAME, 'CONSTRUCT'))
 
-assert(__evolved_insert(__AFTER, __CONSTRUCT, __component_list))
+assert(__evolved_set(__INCLUDES, __NAME, 'INCLUDES'))
+assert(__evolved_set(__EXCLUDES, __NAME, 'EXCLUDES'))
 
-assert(__evolved_insert(__DISABLED, __TAG))
+assert(__evolved_set(__ON_SET, __NAME, 'ON_SET'))
+assert(__evolved_set(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
+assert(__evolved_set(__ON_INSERT, __NAME, 'ON_INSERT'))
+assert(__evolved_set(__ON_REMOVE, __NAME, 'ON_REMOVE'))
+
+assert(__evolved_set(__PHASE, __NAME, 'PHASE'))
+assert(__evolved_set(__GROUP, __NAME, 'GROUP'))
+assert(__evolved_set(__AFTER, __NAME, 'AFTER'))
+
+assert(__evolved_set(__QUERY, __NAME, 'QUERY'))
+assert(__evolved_set(__EXECUTE, __NAME, 'EXECUTE'))
+
+assert(__evolved_set(__PROLOGUE, __NAME, 'PROLOGUE'))
+assert(__evolved_set(__EPILOGUE, __NAME, 'EPILOGUE'))
+
+assert(__evolved_set(__DISABLED, __NAME, 'DISABLED'))
+
+assert(__evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
+assert(__evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
+assert(__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
+
+---
+---
+---
+---
+---
+
+assert(__evolved_set(__TAG, __TAG))
+
+assert(__evolved_set(__INCLUDES, __CONSTRUCT, __component_list))
+assert(__evolved_set(__EXCLUDES, __CONSTRUCT, __component_list))
+
+assert(__evolved_set(__AFTER, __CONSTRUCT, __component_list))
+
+assert(__evolved_set(__DISABLED, __TAG))
 
 ---
 ---
@@ -8481,7 +8088,7 @@ assert(__evolved_insert(__DISABLED, __TAG))
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-assert(__evolved_insert(__INCLUDES, __ON_SET, function(query, _, include_list)
+assert(__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_count = #include_list
 
     if include_count == 0 then
@@ -8500,7 +8107,7 @@ assert(__evolved_insert(__INCLUDES, __ON_SET, function(query, _, include_list)
     __query_sorted_includes[query] = sorted_includes
 end))
 
-assert(__evolved_insert(__INCLUDES, __ON_REMOVE, function(query)
+assert(__evolved_set(__INCLUDES, __ON_REMOVE, function(query)
     __query_sorted_includes[query] = nil
 end))
 
@@ -8512,7 +8119,7 @@ end))
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-assert(__evolved_insert(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
+assert(__evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_count = #exclude_list
 
     if exclude_count == 0 then
@@ -8531,7 +8138,7 @@ assert(__evolved_insert(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     __query_sorted_excludes[query] = sorted_excludes
 end))
 
-assert(__evolved_insert(__EXCLUDES, __ON_REMOVE, function(query)
+assert(__evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
     __query_sorted_excludes[query] = nil
 end))
 
@@ -8544,7 +8151,7 @@ end))
 ---@param group evolved.group
 ---@param new_phase evolved.phase
 ---@param old_phase? evolved.phase
-assert(__evolved_insert(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
+assert(__evolved_set(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
     if new_phase == old_phase then
         return
     end
@@ -8573,7 +8180,7 @@ end))
 
 ---@param group evolved.group
 ---@param old_phase evolved.phase
-assert(__evolved_insert(__PHASE, __ON_REMOVE, function(group, _, old_phase)
+assert(__evolved_set(__PHASE, __ON_REMOVE, function(group, _, old_phase)
     local old_phase_groups = __phase_groups[old_phase]
 
     if old_phase_groups then
@@ -8594,7 +8201,7 @@ end))
 ---@param system evolved.system
 ---@param new_group evolved.group
 ---@param old_group? evolved.group
-assert(__evolved_insert(__GROUP, __ON_SET, function(system, _, new_group, old_group)
+assert(__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
     if new_group == old_group then
         return
     end
@@ -8623,7 +8230,7 @@ end))
 
 ---@param system evolved.system
 ---@param old_group evolved.group
-assert(__evolved_insert(__GROUP, __ON_REMOVE, function(system, _, old_group)
+assert(__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
     local old_group_systems = __group_systems[old_group]
 
     if old_group_systems then
@@ -8643,7 +8250,7 @@ end))
 
 ---@param group evolved.group
 ---@param new_after_list evolved.group[]
-assert(__evolved_insert(__AFTER, __ON_SET, function(group, _, new_after_list)
+assert(__evolved_set(__AFTER, __ON_SET, function(group, _, new_after_list)
     local new_after_count = #new_after_list
 
     if new_after_count == 0 then
@@ -8662,7 +8269,7 @@ assert(__evolved_insert(__AFTER, __ON_SET, function(group, _, new_after_list)
 end))
 
 ---@param group evolved.group
-assert(__evolved_insert(__AFTER, __ON_REMOVE, function(group)
+assert(__evolved_set(__AFTER, __ON_REMOVE, function(group)
     __group_dependencies[group] = nil
 end))
 
@@ -8724,8 +8331,6 @@ evolved.has_all = __evolved_has_all
 evolved.has_any = __evolved_has_any
 
 evolved.set = __evolved_set
-evolved.assign = __evolved_assign
-evolved.insert = __evolved_insert
 evolved.remove = __evolved_remove
 evolved.clear = __evolved_clear
 evolved.destroy = __evolved_destroy

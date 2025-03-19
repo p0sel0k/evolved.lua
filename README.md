@@ -78,8 +78,6 @@ has_any :: chunk | entity, fragment... -> boolean
 get :: entity, fragment...  -> component...
 
 set :: entity, fragment, any... -> boolean, boolean
-assign :: entity, fragment, any... -> boolean, boolean
-insert :: entity, fragment, any... -> boolean, boolean
 remove :: entity, fragment... -> boolean, boolean
 clear :: entity... -> boolean, boolean
 destroy :: entity... -> boolean, boolean
