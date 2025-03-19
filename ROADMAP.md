@@ -2,6 +2,7 @@
 
 ## Backlog
 
+- validate operation sources in the debug mode
 - should set/assign/insert return a constructed component?
 
 ## After first release
