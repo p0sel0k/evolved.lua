@@ -7498,27 +7498,57 @@ end
 
 local __builder_fns = {}
 
----@class evolved.entity_builder : evolved.__entity_builder
+---@class evolved.entity_builder
+---@field package __fragment_list? evolved.fragment[]
+---@field package __component_list? evolved.component[]
+---@field package __component_count? integer
 __builder_fns.entity_builder = {}
 __builder_fns.entity_builder.__index = __builder_fns.entity_builder
 
----@class evolved.fragment_builder : evolved.__fragment_builder
+---@class evolved.fragment_builder
+---@field package __tag? boolean
+---@field package __name? string
+---@field package __single? evolved.component
+---@field package __default? evolved.component
+---@field package __construct? fun(...): evolved.component
+---@field package __on_set? evolved.set_hook
+---@field package __on_assign? evolved.set_hook
+---@field package __on_insert? evolved.set_hook
+---@field package __on_remove? evolved.remove_hook
+---@field package __destroy_policy? evolved.id
 __builder_fns.fragment_builder = {}
 __builder_fns.fragment_builder.__index = __builder_fns.fragment_builder
 
----@class evolved.query_builder : evolved.__query_builder
+---@class evolved.query_builder
+---@field package __name? string
+---@field package __single? evolved.component
+---@field package __include_list? evolved.fragment[]
+---@field package __exclude_list? evolved.fragment[]
 __builder_fns.query_builder = {}
 __builder_fns.query_builder.__index = __builder_fns.query_builder
 
----@class evolved.group_builder : evolved.__group_builder
+---@class evolved.group_builder
+---@field package __name? string
+---@field package __single? evolved.component
+---@field package __phase? evolved.phase
+---@field package __after? evolved.group[]
 __builder_fns.group_builder = {}
 __builder_fns.group_builder.__index = __builder_fns.group_builder
 
----@class evolved.phase_builder : evolved.__phase_builder
+---@class evolved.phase_builder
+---@field package __name? string
+---@field package __single? evolved.component
 __builder_fns.phase_builder = {}
 __builder_fns.phase_builder.__index = __builder_fns.phase_builder
 
----@class evolved.system_builder : evolved.__system_builder
+---@class evolved.system_builder
+---@field package __name? string
+---@field package __single? evolved.component
+---@field package __group? evolved.group
+---@field package __query? evolved.query
+---@field package __execute? evolved.execute
+---@field package __prologue? evolved.prologue
+---@field package __epilogue? evolved.epilogue
 __builder_fns.system_builder = {}
 __builder_fns.system_builder.__index = __builder_fns.system_builder
 
@@ -7528,22 +7558,10 @@ __builder_fns.system_builder.__index = __builder_fns.system_builder
 ---
 ---
 
----@class (exact) evolved.__entity_builder
----@field package __fragment_list? evolved.fragment[]
----@field package __component_list? evolved.component[]
----@field package __component_count integer
-
 ---@return evolved.entity_builder builder
 ---@nodiscard
 __evolved_entity = function()
-    ---@type evolved.__entity_builder
-    local builder = {
-        __fragment_list = nil,
-        __component_list = nil,
-        __component_count = 0,
-    }
-    ---@cast builder evolved.entity_builder
-    return __lua_setmetatable(builder, __builder_fns.entity_builder)
+    return __lua_setmetatable({}, __builder_fns.entity_builder)
 end
 
 ---@param fragment evolved.fragment
@@ -7554,7 +7572,7 @@ function __builder_fns.entity_builder:set(fragment, ...)
 
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-    local component_count = self.__component_count
+    local component_count = self.__component_count or 0
 
     if component_count == 0 then
         fragment_list = __acquire_table(__table_pool_tag.fragment_list)
@@ -7562,6 +7580,9 @@ function __builder_fns.entity_builder:set(fragment, ...)
         self.__fragment_list = fragment_list
         self.__component_list = component_list
     end
+
+    ---@cast fragment_list -?
+    ---@cast component_list -?
 
     component_count = component_count + 1
     self.__component_count = component_count
@@ -7577,15 +7598,18 @@ end
 function __builder_fns.entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-    local component_count = self.__component_count
+    local component_count = self.__component_count or 0
 
     self.__fragment_list = nil
     self.__component_list = nil
-    self.__component_count = 0
+    self.__component_count = nil
 
     if component_count == 0 then
         return __evolved_id(), false
     end
+
+    ---@cast fragment_list -?
+    ---@cast component_list -?
 
     local entity, is_deferred = __evolved_spawn_with(fragment_list, component_list)
 
@@ -7601,36 +7625,10 @@ end
 ---
 ---
 
----@class (exact) evolved.__fragment_builder
----@field package __tag boolean
----@field package __name? string
----@field package __single? evolved.component
----@field package __default? evolved.component
----@field package __construct? fun(...): evolved.component
----@field package __on_set? evolved.set_hook
----@field package __on_assign? evolved.set_hook
----@field package __on_insert? evolved.set_hook
----@field package __on_remove? evolved.remove_hook
----@field package __destroy_policy? evolved.id
-
 ---@return evolved.fragment_builder builder
 ---@nodiscard
 __evolved_fragment = function()
-    ---@type evolved.__fragment_builder
-    local builder = {
-        __tag = false,
-        __name = nil,
-        __single = nil,
-        __default = nil,
-        __construct = nil,
-        __on_set = nil,
-        __on_assign = nil,
-        __on_insert = nil,
-        __on_remove = nil,
-        __destroy_policy = nil,
-    }
-    ---@cast builder evolved.fragment_builder
-    return __lua_setmetatable(builder, __builder_fns.fragment_builder)
+    return __lua_setmetatable({}, __builder_fns.fragment_builder)
 end
 
 ---@return evolved.fragment_builder builder
@@ -7710,19 +7708,17 @@ function __builder_fns.fragment_builder:build()
     local single = self.__single
     local default = self.__default
     local construct = self.__construct
-
     local on_set = self.__on_set
     local on_assign = self.__on_assign
     local on_insert = self.__on_insert
     local on_remove = self.__on_remove
     local destroy_policy = self.__destroy_policy
 
-    self.__tag = false
+    self.__tag = nil
     self.__name = nil
     self.__single = nil
     self.__default = nil
     self.__construct = nil
-
     self.__on_set = nil
     self.__on_assign = nil
     self.__on_insert = nil
@@ -7809,24 +7805,10 @@ end
 ---
 ---
 
----@class (exact) evolved.__query_builder
----@field package __name? string
----@field package __single? evolved.component
----@field package __include_list? evolved.fragment[]
----@field package __exclude_list? evolved.fragment[]
-
 ---@return evolved.query_builder builder
 ---@nodiscard
 __evolved_query = function()
-    ---@type evolved.__query_builder
-    local builder = {
-        __name = nil,
-        __single = nil,
-        __include_list = nil,
-        __exclude_list = nil,
-    }
-    ---@cast builder evolved.query_builder
-    return __lua_setmetatable(builder, __builder_fns.query_builder)
+    return __lua_setmetatable({}, __builder_fns.query_builder)
 end
 
 ---@param name string
@@ -7954,24 +7936,10 @@ end
 ---
 ---
 
----@class (exact) evolved.__group_builder
----@field package __name? string
----@field package __phase? evolved.phase
----@field package __after? evolved.group[]
----@field package __single? evolved.component
-
 ---@return evolved.group_builder builder
 ---@nodiscard
 __evolved_group = function()
-    ---@type evolved.__group_builder
-    local builder = {
-        __name = nil,
-        __single = nil,
-        __phase = nil,
-        __after = nil,
-    }
-    ---@cast builder evolved.group_builder
-    return __lua_setmetatable(builder, __builder_fns.group_builder)
+    return __lua_setmetatable({}, __builder_fns.group_builder)
 end
 
 ---@param name string
@@ -8078,20 +8046,10 @@ end
 ---
 ---
 
----@class (exact) evolved.__phase_builder
----@field package __name? string
----@field package __single? evolved.component
-
 ---@return evolved.phase_builder builder
 ---@nodiscard
 __evolved_phase = function()
-    ---@type evolved.__phase_builder
-    local builder = {
-        __name = nil,
-        __single = nil,
-    }
-    ---@cast builder evolved.phase_builder
-    return __lua_setmetatable(builder, __builder_fns.phase_builder)
+    return __lua_setmetatable({}, __builder_fns.phase_builder)
 end
 
 ---@param name string
@@ -8149,30 +8107,10 @@ end
 ---
 ---
 
----@class (exact) evolved.__system_builder
----@field package __name? string
----@field package __single? evolved.component
----@field package __group? evolved.group
----@field package __query? evolved.query
----@field package __execute? evolved.execute
----@field package __prologue? evolved.prologue
----@field package __epilogue? evolved.epilogue
-
 ---@return evolved.system_builder builder
 ---@nodiscard
 __evolved_system = function()
-    ---@type evolved.__system_builder
-    local builder = {
-        __name = nil,
-        __single = nil,
-        __group = nil,
-        __query = nil,
-        __execute = nil,
-        __prologue = nil,
-        __epilogue = nil,
-    }
-    ---@cast builder evolved.system_builder
-    return __lua_setmetatable(builder, __builder_fns.system_builder)
+    return __lua_setmetatable({}, __builder_fns.system_builder)
 end
 
 ---@param name string
