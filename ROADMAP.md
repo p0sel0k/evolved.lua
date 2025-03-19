@@ -4,12 +4,12 @@
 
 - should set/assign/insert return a constructed component?
 - enable/disable systems and groups
-- should systems support multiple groups?
-- should groups support multiple phases?
 
 ## After first release
 
 - cached queries
+- multi-phase groups
+- multi-group systems
 - observers and events
 - add INDEX fragment trait
 - add REQUIRES fragment trait
