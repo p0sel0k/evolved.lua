@@ -4485,17 +4485,17 @@ __evolved_set = function(entity, fragment, ...)
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
-    ---@type evolved.set_hook?, evolved.assign_hook?, evolved.insert_hook?
-    local fragment_on_set, fragment_on_assign, fragment_on_insert
-
-    if new_chunk.__has_set_or_assign_hooks or new_chunk.__has_set_or_insert_hooks then
-        fragment_on_set, fragment_on_assign, fragment_on_insert = __evolved_get(fragment,
-            __ON_SET, __ON_ASSIGN, __ON_INSERT)
-    end
-
     __evolved_defer()
 
     if old_chunk == new_chunk then
+        ---@type evolved.set_hook?, evolved.assign_hook?
+        local fragment_on_set, fragment_on_assign
+
+        if old_chunk.__has_set_or_assign_hooks then
+            fragment_on_set, fragment_on_assign = __evolved_get(fragment,
+                __ON_SET, __ON_ASSIGN)
+        end
+
         local old_component_indices = old_chunk.__component_indices
         local old_component_storages = old_chunk.__component_storages
 
@@ -4555,6 +4555,14 @@ __evolved_set = function(entity, fragment, ...)
             end
         end
     else
+        ---@type evolved.set_hook?, evolved.insert_hook?
+        local fragment_on_set, fragment_on_insert
+
+        if new_chunk.__has_set_or_insert_hooks then
+            fragment_on_set, fragment_on_insert = __evolved_get(fragment,
+                __ON_SET, __ON_INSERT)
+        end
+
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
 
