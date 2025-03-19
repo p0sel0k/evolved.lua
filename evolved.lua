@@ -593,6 +593,8 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
+local __DISABLED = __acquire_id()
+
 local __DESTROY_POLICY = __acquire_id()
 local __DESTROY_POLICY_DESTROY_ENTITY = __acquire_id()
 local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
@@ -3377,7 +3379,10 @@ local function __group_process(group)
     local group_system_count = group_systems and group_systems.__item_count or 0 --[[@as integer]]
 
     for group_system_index = 1, group_system_count do
-        __system_process(group_system_list[group_system_index])
+        local group_system = group_system_list[group_system_index]
+        if not __evolved_has(group_system, __DISABLED) then
+            __system_process(group_system)
+        end
     end
 end
 
@@ -3471,7 +3476,10 @@ local function __phase_process(phase)
     end
 
     for sorted_group_index = 1, sorted_group_count do
-        __group_process(sorted_group_list[sorted_group_index])
+        local sorted_group = sorted_group_list[sorted_group_index]
+        if not __evolved_has(sorted_group, __DISABLED) then
+            __group_process(sorted_group)
+        end
     end
 
     __release_table(__table_pool_tag.group_list, sorted_group_list)
@@ -7318,7 +7326,11 @@ __evolved_process = function(...)
     end
 
     for i = 1, __lua_select('#', ...) do
-        __phase_process(__lua_select(i, ...))
+        ---@type evolved.phase
+        local phase = __lua_select(i, ...)
+        if not __evolved_has(phase, __DISABLED) then
+            __phase_process(phase)
+        end
     end
 end
 
@@ -7530,6 +7542,7 @@ __builder_fns.query_builder.__index = __builder_fns.query_builder
 ---@class evolved.group_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
+---@field package __disable? boolean
 ---@field package __phase? evolved.phase
 ---@field package __after? evolved.group[]
 __builder_fns.group_builder = {}
@@ -7538,12 +7551,14 @@ __builder_fns.group_builder.__index = __builder_fns.group_builder
 ---@class evolved.phase_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
+---@field package __disable? boolean
 __builder_fns.phase_builder = {}
 __builder_fns.phase_builder.__index = __builder_fns.phase_builder
 
 ---@class evolved.system_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
+---@field package __disable? boolean
 ---@field package __group? evolved.group
 ---@field package __query? evolved.query
 ---@field package __execute? evolved.execute
@@ -7956,6 +7971,12 @@ function __builder_fns.group_builder:single(single)
     return self
 end
 
+---@return evolved.group_builder builder
+function __builder_fns.group_builder:disable()
+    self.__disable = true
+    return self
+end
+
 ---@param phase evolved.phase
 ---@return evolved.group_builder builder
 function __builder_fns.group_builder:phase(phase)
@@ -7994,11 +8015,13 @@ end
 function __builder_fns.group_builder:build()
     local name = self.__name
     local single = self.__single
+    local disable = self.__disable
     local phase = self.__phase
     local after = self.__after
 
     self.__name = nil
     self.__single = nil
+    self.__disable = nil
     self.__phase = nil
     self.__after = nil
 
@@ -8018,6 +8041,12 @@ function __builder_fns.group_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = group
         component_list[component_count] = single
+    end
+
+    if disable then
+        component_count = component_count + 1
+        fragment_list[component_count] = __DISABLED
+        component_list[component_count] = true
     end
 
     if phase then
@@ -8066,14 +8095,22 @@ function __builder_fns.phase_builder:single(single)
     return self
 end
 
+---@return evolved.phase_builder builder
+function __builder_fns.phase_builder:disable()
+    self.__disable = true
+    return self
+end
+
 ---@return evolved.phase phase
 ---@return boolean is_deferred
 function __builder_fns.phase_builder:build()
     local name = self.__name
     local single = self.__single
+    local disable = self.__disable
 
     self.__name = nil
     self.__single = nil
+    self.__disable = nil
 
     local phase = __evolved_id()
 
@@ -8091,6 +8128,12 @@ function __builder_fns.phase_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = phase
         component_list[component_count] = single
+    end
+
+    if disable then
+        component_count = component_count + 1
+        fragment_list[component_count] = __DISABLED
+        component_list[component_count] = true
     end
 
     local _, is_deferred = __evolved_multi_set(phase, fragment_list, component_list)
@@ -8124,6 +8167,12 @@ end
 ---@return evolved.system_builder builder
 function __builder_fns.system_builder:single(single)
     self.__single = single
+    return self
+end
+
+---@return evolved.system_builder builder
+function __builder_fns.system_builder:disable()
+    self.__disable = true
     return self
 end
 
@@ -8167,6 +8216,7 @@ end
 function __builder_fns.system_builder:build()
     local name = self.__name
     local single = self.__single
+    local disable = self.__disable
     local group = self.__group
     local query = self.__query
     local execute = self.__execute
@@ -8175,6 +8225,7 @@ function __builder_fns.system_builder:build()
 
     self.__name = nil
     self.__single = nil
+    self.__disable = nil
     self.__group = nil
     self.__query = nil
     self.__execute = nil
@@ -8197,6 +8248,12 @@ function __builder_fns.system_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = system
         component_list[component_count] = single
+    end
+
+    if disable then
+        component_count = component_count + 1
+        fragment_list[component_count] = __DISABLED
+        component_list[component_count] = true
     end
 
     if group then
@@ -8395,6 +8452,8 @@ assert(__evolved_insert(__EXECUTE, __NAME, 'EXECUTE'))
 assert(__evolved_insert(__PROLOGUE, __NAME, 'PROLOGUE'))
 assert(__evolved_insert(__EPILOGUE, __NAME, 'EPILOGUE'))
 
+assert(__evolved_insert(__DISABLED, __NAME, 'DISABLED'))
+
 assert(__evolved_insert(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
 assert(__evolved_insert(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
 assert(__evolved_insert(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
@@ -8411,6 +8470,8 @@ assert(__evolved_insert(__INCLUDES, __CONSTRUCT, __component_list))
 assert(__evolved_insert(__EXCLUDES, __CONSTRUCT, __component_list))
 
 assert(__evolved_insert(__AFTER, __CONSTRUCT, __component_list))
+
+assert(__evolved_insert(__DISABLED, __TAG))
 
 ---
 ---
@@ -8634,6 +8695,8 @@ evolved.EXECUTE = __EXECUTE
 
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
+
+evolved.DISABLED = __DISABLED
 
 evolved.DESTROY_POLICY = __DESTROY_POLICY
 evolved.DESTROY_POLICY_DESTROY_ENTITY = __DESTROY_POLICY_DESTROY_ENTITY

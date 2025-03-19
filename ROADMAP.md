@@ -3,7 +3,6 @@
 ## Backlog
 
 - should set/assign/insert return a constructed component?
-- enable/disable systems and groups
 
 ## After first release
 

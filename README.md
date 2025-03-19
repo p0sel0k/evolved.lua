@@ -45,6 +45,8 @@ EXECUTE :: fragment
 PROLOGUE :: fragment
 EPILOGUE :: fragment
 
+DISABLED :: fragment
+
 DESTROY_POLICY :: fragment
 DESTROY_POLICY_DESTROY_ENTITY :: id
 DESTROY_POLICY_REMOVE_FRAGMENT :: id
@@ -153,6 +155,7 @@ query_builder:build :: query, boolean
 group :: group_builder
 group_builder:name :: string -> group_builder
 group_builder:single :: component -> group_builder
+group_builder:disable :: group_builder
 group_builder:phase :: phase -> group_builder
 group_builder:after :: group... -> group_builder
 group_builder:build :: group, boolean
@@ -162,6 +165,7 @@ group_builder:build :: group, boolean
 phase :: phase_builder
 phase_builder:name :: string -> phase_builder
 phase_builder:single :: component -> phase_builder
+phase_builder:disable :: phase_builder
 phase_builder:build :: phase, boolean
 ```
 
@@ -169,6 +173,7 @@ phase_builder:build :: phase, boolean
 system :: system_builder
 system_builder:name :: string -> system_builder
 system_builder:single :: component -> system_builder
+system_builder:disable :: system_builder
 system_builder:group :: group -> system_builder
 system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
