@@ -2994,117 +2994,161 @@ end
 
 ---@param group evolved.group
 local function __group_process(group)
-    local group_systems = __group_systems[group]
-    local group_system_list = group_systems and group_systems.__item_list --[=[@as evolved.system[]]=]
-    local group_system_count = group_systems and group_systems.__item_count or 0 --[[@as integer]]
+    ---@type evolved.prologue?, evolved.epilogue?
+    local prologue, epilogue = __evolved_get(group,
+        __PROLOGUE, __EPILOGUE)
 
-    for group_system_index = 1, group_system_count do
-        local group_system = group_system_list[group_system_index]
-        if not __evolved_has(group_system, __DISABLED) then
-            __system_process(group_system)
+    if prologue then
+        local success, result = __lua_pcall(prologue)
+
+        if not success then
+            __error_fmt('group prologue failed: %s', result)
+        end
+    end
+
+    do
+        local group_systems = __group_systems[group]
+        local group_system_list = group_systems and group_systems.__item_list --[=[@as evolved.system[]]=]
+        local group_system_count = group_systems and group_systems.__item_count or 0 --[[@as integer]]
+
+        for group_system_index = 1, group_system_count do
+            local group_system = group_system_list[group_system_index]
+            if not __evolved_has(group_system, __DISABLED) then
+                __system_process(group_system)
+            end
+        end
+    end
+
+    if epilogue then
+        local success, result = __lua_pcall(epilogue)
+
+        if not success then
+            __error_fmt('group epilogue failed: %s', result)
         end
     end
 end
 
 ---@param phase evolved.phase
 local function __phase_process(phase)
-    local phase_groups = __phase_groups[phase]
-    local phase_group_set = phase_groups and phase_groups.__item_set --[[@as table<evolved.group, integer>]]
-    local phase_group_list = phase_groups and phase_groups.__item_list --[=[@as evolved.group[]]=]
-    local phase_group_count = phase_groups and phase_groups.__item_count or 0 --[[@as integer]]
+    ---@type evolved.prologue?, evolved.epilogue?
+    local prologue, epilogue = __evolved_get(phase,
+        __PROLOGUE, __EPILOGUE)
 
-    ---@type evolved.group[]
-    local sorted_group_list = __acquire_table(__table_pool_tag.group_list)
-    local sorted_group_count = 0
+    if prologue then
+        local success, result = __lua_pcall(prologue)
 
-    ---@type integer[]
-    local sorting_marks = __acquire_table(__table_pool_tag.sorting_marks)
-
-    ---@type evolved.group[]
-    local sorting_stack = __acquire_table(__table_pool_tag.sorting_stack)
-    local sorting_stack_size = phase_group_count
-
-    for phase_group_index = 1, phase_group_count do
-        sorting_marks[phase_group_index] = 0
-        local phase_group_rev_index = phase_group_count - phase_group_index + 1
-        sorting_stack[phase_group_index] = phase_group_list[phase_group_rev_index]
+        if not success then
+            __error_fmt('phase prologue failed: %s', result)
+        end
     end
 
-    while sorting_stack_size > 0 do
-        local group = sorting_stack[sorting_stack_size]
+    do
+        local phase_groups = __phase_groups[phase]
+        local phase_group_set = phase_groups and phase_groups.__item_set --[[@as table<evolved.group, integer>]]
+        local phase_group_list = phase_groups and phase_groups.__item_list --[=[@as evolved.group[]]=]
+        local phase_group_count = phase_groups and phase_groups.__item_count or 0 --[[@as integer]]
 
-        local group_mark_index = phase_group_set[group]
-        local group_mark = sorting_marks[group_mark_index]
+        ---@type evolved.group[]
+        local sorted_group_list = __acquire_table(__table_pool_tag.group_list)
+        local sorted_group_count = 0
 
-        if not group_mark then
-            -- the group has already been added to the sorted list
-            sorting_stack[sorting_stack_size] = nil
-            sorting_stack_size = sorting_stack_size - 1
-        elseif group_mark == 0 then
-            sorting_marks[group_mark_index] = 1
+        ---@type integer[]
+        local sorting_marks = __acquire_table(__table_pool_tag.sorting_marks)
 
-            local dependencies = __group_dependencies[group]
-            local dependency_list = dependencies and dependencies.__item_list --[=[@as evolved.group[]]=]
-            local dependency_count = dependencies and dependencies.__item_count or 0 --[[@as integer]]
+        ---@type evolved.group[]
+        local sorting_stack = __acquire_table(__table_pool_tag.sorting_stack)
+        local sorting_stack_size = phase_group_count
 
-            for dependency_index = dependency_count, 1, -1 do
-                local dependency = dependency_list[dependency_index]
-                local dependency_mark_index = phase_group_set[dependency]
+        for phase_group_index = 1, phase_group_count do
+            sorting_marks[phase_group_index] = 0
+            local phase_group_rev_index = phase_group_count - phase_group_index + 1
+            sorting_stack[phase_group_index] = phase_group_list[phase_group_rev_index]
+        end
 
-                if not dependency_mark_index then
-                    -- the dependency is not from this phase
-                else
-                    local dependency_mark = sorting_marks[dependency_mark_index]
+        while sorting_stack_size > 0 do
+            local group = sorting_stack[sorting_stack_size]
 
-                    if not dependency_mark then
-                        -- the dependency has already been added to the sorted list
-                    elseif dependency_mark == 0 then
-                        sorting_stack_size = sorting_stack_size + 1
-                        sorting_stack[sorting_stack_size] = dependency
-                    elseif dependency_mark == 1 then
-                        local sorting_cycle_path = '' .. __id_name(dependency)
+            local group_mark_index = phase_group_set[group]
+            local group_mark = sorting_marks[group_mark_index]
 
-                        for cycled_group_index = sorting_stack_size, 1, -1 do
-                            local cycled_group = sorting_stack[cycled_group_index]
+            if not group_mark then
+                -- the group has already been added to the sorted list
+                sorting_stack[sorting_stack_size] = nil
+                sorting_stack_size = sorting_stack_size - 1
+            elseif group_mark == 0 then
+                sorting_marks[group_mark_index] = 1
 
-                            local cycled_group_mark_index = phase_group_set[cycled_group]
-                            local cycled_group_mark = sorting_marks[cycled_group_mark_index]
+                local dependencies = __group_dependencies[group]
+                local dependency_list = dependencies and dependencies.__item_list --[=[@as evolved.group[]]=]
+                local dependency_count = dependencies and dependencies.__item_count or 0 --[[@as integer]]
 
-                            if cycled_group_mark == 1 then
-                                sorting_cycle_path = string.format('%s -> %s',
-                                    sorting_cycle_path, __id_name(cycled_group))
+                for dependency_index = dependency_count, 1, -1 do
+                    local dependency = dependency_list[dependency_index]
+                    local dependency_mark_index = phase_group_set[dependency]
 
-                                if cycled_group == dependency then
-                                    break
+                    if not dependency_mark_index then
+                        -- the dependency is not from this phase
+                    else
+                        local dependency_mark = sorting_marks[dependency_mark_index]
+
+                        if not dependency_mark then
+                            -- the dependency has already been added to the sorted list
+                        elseif dependency_mark == 0 then
+                            sorting_stack_size = sorting_stack_size + 1
+                            sorting_stack[sorting_stack_size] = dependency
+                        elseif dependency_mark == 1 then
+                            local sorting_cycle_path = '' .. __id_name(dependency)
+
+                            for cycled_group_index = sorting_stack_size, 1, -1 do
+                                local cycled_group = sorting_stack[cycled_group_index]
+
+                                local cycled_group_mark_index = phase_group_set[cycled_group]
+                                local cycled_group_mark = sorting_marks[cycled_group_mark_index]
+
+                                if cycled_group_mark == 1 then
+                                    sorting_cycle_path = string.format('%s -> %s',
+                                        sorting_cycle_path, __id_name(cycled_group))
+
+                                    if cycled_group == dependency then
+                                        break
+                                    end
                                 end
                             end
-                        end
 
-                        __error_fmt('cyclic dependency detected: %s', sorting_cycle_path)
+                            __error_fmt('cyclic dependency detected: %s', sorting_cycle_path)
+                        end
                     end
                 end
+            elseif group_mark == 1 then
+                sorting_marks[group_mark_index] = nil
+
+                sorted_group_count = sorted_group_count + 1
+                sorted_group_list[sorted_group_count] = group
+
+                sorting_stack[sorting_stack_size] = nil
+                sorting_stack_size = sorting_stack_size - 1
             end
-        elseif group_mark == 1 then
-            sorting_marks[group_mark_index] = nil
-
-            sorted_group_count = sorted_group_count + 1
-            sorted_group_list[sorted_group_count] = group
-
-            sorting_stack[sorting_stack_size] = nil
-            sorting_stack_size = sorting_stack_size - 1
         end
+
+        for sorted_group_index = 1, sorted_group_count do
+            local sorted_group = sorted_group_list[sorted_group_index]
+            if not __evolved_has(sorted_group, __DISABLED) then
+                __group_process(sorted_group)
+            end
+        end
+
+        __release_table(__table_pool_tag.group_list, sorted_group_list)
+        __release_table(__table_pool_tag.sorting_marks, sorting_marks, true)
+        __release_table(__table_pool_tag.sorting_stack, sorting_stack, true)
     end
 
-    for sorted_group_index = 1, sorted_group_count do
-        local sorted_group = sorted_group_list[sorted_group_index]
-        if not __evolved_has(sorted_group, __DISABLED) then
-            __group_process(sorted_group)
+    if epilogue then
+        local success, result = __lua_pcall(epilogue)
+
+        if not success then
+            __error_fmt('phase epilogue failed: %s', result)
         end
     end
-
-    __release_table(__table_pool_tag.group_list, sorted_group_list)
-    __release_table(__table_pool_tag.sorting_marks, sorting_marks, true)
-    __release_table(__table_pool_tag.sorting_stack, sorting_stack, true)
 end
 
 ---
@@ -6013,6 +6057,8 @@ __builder_fns.query_builder.__index = __builder_fns.query_builder
 ---@field package __disable? boolean
 ---@field package __phase? evolved.phase
 ---@field package __after? evolved.group[]
+---@field package __prologue? evolved.prologue
+---@field package __epilogue? evolved.epilogue
 __builder_fns.group_builder = {}
 __builder_fns.group_builder.__index = __builder_fns.group_builder
 
@@ -6020,6 +6066,8 @@ __builder_fns.group_builder.__index = __builder_fns.group_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
 ---@field package __disable? boolean
+---@field package __prologue? evolved.prologue
+---@field package __epilogue? evolved.epilogue
 __builder_fns.phase_builder = {}
 __builder_fns.phase_builder.__index = __builder_fns.phase_builder
 
@@ -6478,6 +6526,20 @@ function __builder_fns.group_builder:after(...)
     return self
 end
 
+---@param prologue evolved.prologue
+---@return evolved.group_builder builder
+function __builder_fns.group_builder:prologue(prologue)
+    self.__prologue = prologue
+    return self
+end
+
+---@param epilogue evolved.epilogue
+---@return evolved.group_builder builder
+function __builder_fns.group_builder:epilogue(epilogue)
+    self.__epilogue = epilogue
+    return self
+end
+
 ---@return evolved.group group
 ---@return boolean is_deferred
 function __builder_fns.group_builder:build()
@@ -6486,12 +6548,16 @@ function __builder_fns.group_builder:build()
     local disable = self.__disable
     local phase = self.__phase
     local after = self.__after
+    local prologue = self.__prologue
+    local epilogue = self.__epilogue
 
     self.__name = nil
     self.__single = nil
     self.__disable = nil
     self.__phase = nil
     self.__after = nil
+    self.__prologue = nil
+    self.__epilogue = nil
 
     local group = __evolved_id()
 
@@ -6527,6 +6593,18 @@ function __builder_fns.group_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __AFTER
         component_list[component_count] = after
+    end
+
+    if prologue then
+        component_count = component_count + 1
+        fragment_list[component_count] = __PROLOGUE
+        component_list[component_count] = prologue
+    end
+
+    if epilogue then
+        component_count = component_count + 1
+        fragment_list[component_count] = __EPILOGUE
+        component_list[component_count] = epilogue
     end
 
     local _, is_deferred = __evolved_multi_set(group, fragment_list, component_list)
@@ -6569,16 +6647,34 @@ function __builder_fns.phase_builder:disable()
     return self
 end
 
+---@param prologue evolved.prologue
+---@return evolved.phase_builder builder
+function __builder_fns.phase_builder:prologue(prologue)
+    self.__prologue = prologue
+    return self
+end
+
+---@param epilogue evolved.epilogue
+---@return evolved.phase_builder builder
+function __builder_fns.phase_builder:epilogue(epilogue)
+    self.__epilogue = epilogue
+    return self
+end
+
 ---@return evolved.phase phase
 ---@return boolean is_deferred
 function __builder_fns.phase_builder:build()
     local name = self.__name
     local single = self.__single
     local disable = self.__disable
+    local prologue = self.__prologue
+    local epilogue = self.__epilogue
 
     self.__name = nil
     self.__single = nil
     self.__disable = nil
+    self.__prologue = nil
+    self.__epilogue = nil
 
     local phase = __evolved_id()
 
@@ -6602,6 +6698,18 @@ function __builder_fns.phase_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __DISABLED
         component_list[component_count] = true
+    end
+
+    if prologue then
+        component_count = component_count + 1
+        fragment_list[component_count] = __PROLOGUE
+        component_list[component_count] = prologue
+    end
+
+    if epilogue then
+        component_count = component_count + 1
+        fragment_list[component_count] = __EPILOGUE
+        component_list[component_count] = epilogue
     end
 
     local _, is_deferred = __evolved_multi_set(phase, fragment_list, component_list)
