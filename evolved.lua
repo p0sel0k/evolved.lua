@@ -1962,20 +1962,15 @@ __chunk_set = function(old_chunk, fragment, ...)
     local old_component_fragments = old_chunk.__component_fragments
 
     if old_chunk == new_chunk then
-        ---@type evolved.default?, evolved.construct?
-        local fragment_default, fragment_construct
+        local old_chunk_has_defaults_or_constructs = old_chunk.__has_defaults_or_constructs
+        local old_chunk_has_set_or_assign_hooks = old_chunk.__has_set_or_assign_hooks
 
-        ---@type evolved.set_hook?, evolved.assign_hook?
-        local fragment_on_set, fragment_on_assign
+        ---@type evolved.default?, evolved.construct?, evolved.set_hook?, evolved.assign_hook?
+        local fragment_default, fragment_construct, fragment_on_set, fragment_on_assign
 
-        do
-            if old_chunk.__has_defaults_or_constructs then
-                fragment_default, fragment_construct = __evolved_get(fragment, __DEFAULT, __CONSTRUCT)
-            end
-
-            if old_chunk.__has_set_or_assign_hooks then
-                fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
-            end
+        if old_chunk_has_defaults_or_constructs or old_chunk_has_set_or_assign_hooks then
+            fragment_default, fragment_construct, fragment_on_set, fragment_on_assign = __evolved_get(fragment,
+                __DEFAULT, __CONSTRUCT, __ON_SET, __ON_ASSIGN)
         end
 
         if fragment_on_set or fragment_on_assign then
@@ -2069,20 +2064,15 @@ __chunk_set = function(old_chunk, fragment, ...)
         local new_component_indices = new_chunk.__component_indices
         local new_component_storages = new_chunk.__component_storages
 
-        ---@type evolved.default?, evolved.construct?
-        local fragment_default, fragment_construct
+        local new_chunk_has_defaults_or_constructs = new_chunk.__has_defaults_or_constructs
+        local new_chunk_has_set_or_insert_hooks = new_chunk.__has_set_or_insert_hooks
 
-        ---@type evolved.set_hook?, evolved.insert_hook?
-        local fragment_on_set, fragment_on_insert
+        ---@type evolved.default?, evolved.construct?, evolved.set_hook?, evolved.insert_hook?
+        local fragment_default, fragment_construct, fragment_on_set, fragment_on_insert
 
-        do
-            if new_chunk.__has_defaults_or_constructs then
-                fragment_default, fragment_construct = __evolved_get(fragment, __DEFAULT, __CONSTRUCT)
-            end
-
-            if new_chunk.__has_set_or_insert_hooks then
-                fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
-            end
+        if new_chunk_has_defaults_or_constructs or new_chunk_has_set_or_insert_hooks then
+            fragment_default, fragment_construct, fragment_on_set, fragment_on_insert = __evolved_get(fragment,
+                __DEFAULT, __CONSTRUCT, __ON_SET, __ON_INSERT)
         end
 
         if new_entity_count == 0 then
@@ -2374,12 +2364,11 @@ __chunk_clear = function(chunk)
         return 0
     end
 
-    local chunk_component_indices = chunk.__component_indices
-    local chunk_component_storages = chunk.__component_storages
-
     if chunk.__has_remove_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
+        local chunk_component_indices = chunk.__component_indices
+        local chunk_component_storages = chunk.__component_storages
 
         for chunk_fragment_index = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[chunk_fragment_index]
@@ -2441,12 +2430,11 @@ __chunk_destroy = function(chunk)
         return 0
     end
 
-    local chunk_component_indices = chunk.__component_indices
-    local chunk_component_storages = chunk.__component_storages
-
     if chunk.__has_remove_hooks then
         local chunk_fragment_list = chunk.__fragment_list
         local chunk_fragment_count = chunk.__fragment_count
+        local chunk_component_indices = chunk.__component_indices
+        local chunk_component_storages = chunk.__component_storages
 
         for chunk_fragment_index = 1, chunk_fragment_count do
             local fragment = chunk_fragment_list[chunk_fragment_index]
@@ -2554,27 +2542,19 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
     local old_component_storages = old_chunk.__component_storages
     local old_component_fragments = old_chunk.__component_fragments
 
-    local old_chunk_has_defaults_or_constructs = old_chunk.__has_defaults_or_constructs
-    local old_chunk_has_set_or_assign_hooks = old_chunk.__has_set_or_assign_hooks
-
     if old_chunk == new_chunk then
+        local old_chunk_has_defaults_or_constructs = old_chunk.__has_defaults_or_constructs
+        local old_chunk_has_set_or_assign_hooks = old_chunk.__has_set_or_assign_hooks
+
         for i = 1, fragment_count do
             local fragment = fragments[i]
 
-            ---@type evolved.default?
-            local fragment_default
+            ---@type evolved.default?, evolved.set_hook?, evolved.assign_hook?
+            local fragment_default, fragment_on_set, fragment_on_assign
 
-            ---@type evolved.set_hook?, evolved.assign_hook?
-            local fragment_on_set, fragment_on_assign
-
-            do
-                if old_chunk_has_defaults_or_constructs then
-                    fragment_default = __evolved_get(fragment, __DEFAULT)
-                end
-
-                if old_chunk_has_set_or_assign_hooks then
-                    fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
-                end
+            if old_chunk_has_defaults_or_constructs or old_chunk_has_set_or_assign_hooks then
+                fragment_default, fragment_on_set, fragment_on_assign = __evolved_get(fragment,
+                    __DEFAULT, __ON_SET, __ON_ASSIGN)
             end
 
             if fragment_on_set or fragment_on_assign then
@@ -2695,20 +2675,12 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
             local fragment = fragments[i]
 
             if inserted_set[fragment] or old_fragment_set[fragment] then
-                ---@type evolved.default?
-                local fragment_default
+                ---@type evolved.default?, evolved.set_hook?, evolved.assign_hook?
+                local fragment_default, fragment_on_set, fragment_on_assign
 
-                ---@type evolved.set_hook?, evolved.assign_hook?
-                local fragment_on_set, fragment_on_assign
-
-                do
-                    if new_chunk_has_defaults_or_constructs then
-                        fragment_default = __evolved_get(fragment, __DEFAULT)
-                    end
-
-                    if new_chunk_has_set_or_assign_hooks then
-                        fragment_on_set, fragment_on_assign = __evolved_get(fragment, __ON_SET, __ON_ASSIGN)
-                    end
+                if new_chunk_has_defaults_or_constructs or new_chunk_has_set_or_assign_hooks then
+                    fragment_default, fragment_on_set, fragment_on_assign = __evolved_get(fragment,
+                        __DEFAULT, __ON_SET, __ON_ASSIGN)
                 end
 
                 if fragment_on_set or fragment_on_assign then
@@ -2768,20 +2740,12 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
             else
                 inserted_set[fragment] = true
 
-                ---@type evolved.default?
-                local fragment_default
+                ---@type evolved.default?, evolved.set_hook?, evolved.insert_hook?
+                local fragment_default, fragment_on_set, fragment_on_insert
 
-                ---@type evolved.set_hook?, evolved.insert_hook?
-                local fragment_on_set, fragment_on_insert
-
-                do
-                    if new_chunk_has_defaults_or_constructs then
-                        fragment_default = __evolved_get(fragment, __DEFAULT)
-                    end
-
-                    if new_chunk_has_set_or_insert_hooks then
-                        fragment_on_set, fragment_on_insert = __evolved_get(fragment, __ON_SET, __ON_INSERT)
-                    end
+                if new_chunk_has_defaults_or_constructs or new_chunk_has_set_or_insert_hooks then
+                    fragment_default, fragment_on_set, fragment_on_insert = __evolved_get(fragment,
+                        __DEFAULT, __ON_SET, __ON_INSERT)
                 end
 
                 if fragment_on_set or fragment_on_insert then
