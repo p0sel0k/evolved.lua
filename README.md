@@ -78,27 +78,19 @@ has_any :: chunk | entity, fragment... -> boolean
 get :: entity, fragment...  -> component...
 
 set :: entity, fragment, any... -> boolean, boolean
-assign :: entity, fragment, any... -> boolean, boolean
-insert :: entity, fragment, any... -> boolean, boolean
 remove :: entity, fragment... -> boolean, boolean
 clear :: entity... -> boolean, boolean
 destroy :: entity... -> boolean, boolean
 
 multi_set :: entity, fragment[], component[]? -> boolean, boolean
-multi_assign :: entity, fragment[], component[]? -> boolean, boolean
-multi_insert :: entity, fragment[], component[]? -> boolean, boolean
 multi_remove :: entity, fragment[] -> boolean, boolean
 
 batch_set :: chunk | query, fragment, any... -> integer, boolean
-batch_assign :: chunk | query, fragment, any... -> integer, boolean
-batch_insert :: chunk | query, fragment, any... -> integer, boolean
 batch_remove :: chunk | query, fragment... -> integer, boolean
 batch_clear :: chunk | query... -> integer, boolean
 batch_destroy :: chunk | query... -> integer, boolean
 
 batch_multi_set :: chunk | query, fragment[], component[]? -> integer, boolean
-batch_multi_assign :: chunk | query, fragment[], component[]? -> integer, boolean
-batch_multi_insert :: chunk | query, fragment[], component[]? -> integer, boolean
 batch_multi_remove :: chunk | query, fragment[] -> integer, boolean
 
 chunk :: fragment, fragment... -> chunk, entity[], integer
