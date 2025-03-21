@@ -132,20 +132,97 @@ local __lua_pcall = pcall
 local __lua_select = select
 local __lua_setmetatable = setmetatable
 local __lua_table_sort = table.sort
-local __lua_table_unpack = table.unpack or unpack
 local __lua_type = type
 
-local __lua_table_move = (function()
-    ---@param a1 table
-    ---@param f integer
-    ---@param e integer
-    ---@param t integer
-    ---@param a2? table
-    ---@return table a2
-    return table.move or function(a1, f, e, t, a2)
-        -- REFERENCE:
-        -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lib_table.c#L132
+---@type fun(narray: integer, nhash: integer): table
+local __lua_table_new = (function()
+    -- https://luajit.org/extensions.html
+    -- https://create.roblox.com/docs/reference/engine/libraries/table#create
+    -- https://forum.defold.com/t/solved-is-luajit-table-new-function-available-in-defold/78623
 
+    do
+        ---@diagnostic disable-next-line: undefined-field
+        local table_new = table and table.new
+        if table_new then
+            ---@cast table_new fun(narray: integer, nhash: integer): table
+            return table_new
+        end
+    end
+
+    do
+        ---@diagnostic disable-next-line: undefined-field
+        local table_create = table and table.create
+        if table_create then
+            ---@cast table_create fun(count: integer, value: any): table
+            return function(narray)
+                return table_create(narray)
+            end
+        end
+    end
+
+    do
+        local table_new_loader = package and package.preload and package.preload['table.new']
+        local table_new = table_new_loader and table_new_loader()
+        if table_new then
+            ---@cast table_new fun(narray: integer, nhash: integer): table
+            return table_new
+        end
+    end
+
+    ---@return table
+    return function()
+        return {}
+    end
+end)()
+
+---@type fun(tab: table)
+local __lua_table_clear = (function()
+    -- https://luajit.org/extensions.html
+    -- https://create.roblox.com/docs/reference/engine/libraries/table#clear
+    -- https://forum.defold.com/t/solved-is-luajit-table-new-function-available-in-defold/78623
+
+    do
+        ---@diagnostic disable-next-line: undefined-field
+        local table_clear = table and table.clear
+        if table_clear then
+            ---@cast table_clear fun(tab: table)
+            return table_clear
+        end
+    end
+
+    do
+        local table_clear_loader = package and package.preload and package.preload['table.clear']
+        local table_clear = table_clear_loader and table_clear_loader()
+        if table_clear then
+            ---@cast table_clear fun(tab: table)
+            return table_clear
+        end
+    end
+
+    ---@param tab table
+    return function(tab)
+        for i = 1, #tab do tab[i] = nil end
+        for k in __lua_next, tab do tab[k] = nil end
+    end
+end)()
+
+---@type fun(a1: table, f: integer, e: integer, t: integer, a2?: table): table
+local __lua_table_move = (function()
+    -- https://luajit.org/extensions.html
+    -- https://github.com/LuaJIT/LuaJIT/blob/v2.1/src/lib_table.c#L132
+    -- https://create.roblox.com/docs/reference/engine/libraries/table#move
+
+    do
+        ---@diagnostic disable-next-line: deprecated
+        local table_move = table and table.move
+        if table_move then
+            ---@cast table_move fun(a1: table, f: integer, e: integer, t: integer, a2?: table): table
+            return table_move
+        end
+    end
+
+    ---@type fun(a1: table, f: integer, e: integer, t: integer, a2?: table): table
+    return function(a1, f, e, t, a2)
         if a2 == nil then
             a2 = a1
         end
@@ -170,22 +247,18 @@ local __lua_table_move = (function()
     end
 end)()
 
----@type fun(narray: integer, nhash: integer): table
-local __lua_table_new = (function()
-    local table_new_loader = package.preload['table.new']
-    ---@return table
-    return table_new_loader and table_new_loader() or function()
-        return {}
+---@type fun(lst: table, i: integer, j: integer): ...
+local __lua_table_unpack = (function()
+    do
+        ---@diagnostic disable-next-line: deprecated
+        local table_unpack = unpack
+        if table_unpack then return table_unpack end
     end
-end)()
 
----@type fun(tab: table)
-local __lua_table_clear = (function()
-    local table_clear_loader = package.preload['table.clear']
-    ---@param tab table
-    return table_clear_loader and table_clear_loader() or function(tab)
-        for i = 1, #tab do tab[i] = nil end
-        for k in __lua_next, tab do tab[k] = nil end
+    do
+        ---@diagnostic disable-next-line: deprecated
+        local table_unpack = table and table.unpack
+        if table_unpack then return table_unpack end
     end
 end)()
 
@@ -6368,7 +6441,7 @@ function __builder_fns.query_builder:include(...)
     local include_list = self.__include_list
 
     if not include_list then
-        include_list = __lua_table_new(math.max(4, fragment_count), 0)
+        include_list = __lua_table_new(fragment_count, 0)
         self.__include_list = include_list
     end
 
@@ -6395,7 +6468,7 @@ function __builder_fns.query_builder:exclude(...)
     local exclude_list = self.__exclude_list
 
     if not exclude_list then
-        exclude_list = __lua_table_new(math.max(4, fragment_count), 0)
+        exclude_list = __lua_table_new(fragment_count, 0)
         self.__exclude_list = exclude_list
     end
 
@@ -6512,7 +6585,7 @@ function __builder_fns.group_builder:after(...)
     local after = self.__after
 
     if not after then
-        after = __lua_table_new(math.max(4, group_count), 0)
+        after = __lua_table_new(group_count, 0)
         self.__after = after
     end
 
