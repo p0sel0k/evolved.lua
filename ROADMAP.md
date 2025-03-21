@@ -5,6 +5,8 @@
 - validate operation sources in the debug mode
 - should set/assign/insert return a constructed component?
 - can we pass systems and groups to the process function?
+- support luau
+- builders should be rewritten :/
 
 ## After first release
 
