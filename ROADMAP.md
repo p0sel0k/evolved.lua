@@ -6,6 +6,7 @@
 - should set/assign/insert return a constructed component?
 - can we pass systems and groups to the process function?
 - builders should be rewritten :/
+- add DUPLICATE fragment trait
 
 ## After first release
 
