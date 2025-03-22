@@ -816,26 +816,6 @@ local function __component_storage(fragment)
     return {}
 end
 
----@param ... any component arguments
----@return evolved.component
----@nodiscard
-local function __component_construct(fragment, ...)
-    ---@type evolved.default, evolved.construct
-    local default, construct = __evolved_get(fragment, __DEFAULT, __CONSTRUCT)
-
-    local component = ...
-
-    if construct then
-        component = construct(...)
-    end
-
-    if component == nil then
-        component = default
-    end
-
-    return component == nil and true or component
-end
-
 ---@param fragment evolved.fragment
 ---@param trace fun(chunk: evolved.chunk, ...: any): boolean
 ---@param ... any additional trace arguments
@@ -5916,7 +5896,7 @@ __builder_fns.entity_builder.__index = __builder_fns.entity_builder
 ---@field package __name? string
 ---@field package __single? evolved.component
 ---@field package __default? evolved.component
----@field package __construct? fun(...): evolved.component
+---@field package __construct? evolved.construct
 ---@field package __on_set? evolved.set_hook
 ---@field package __on_assign? evolved.set_hook
 ---@field package __on_insert? evolved.set_hook
@@ -5981,7 +5961,14 @@ end
 ---@param ... any component arguments
 ---@return evolved.entity_builder builder
 function __builder_fns.entity_builder:set(fragment, ...)
-    local component = __component_construct(fragment, ...)
+    ---@type evolved.default?, evolved.construct?
+    local fragment_default, fragment_construct = __evolved_get(fragment,
+        __DEFAULT, __CONSTRUCT)
+
+    local component = ...
+    if fragment_construct then component = fragment_construct(...) end
+    if component == nil then component = fragment_default end
+    if component == nil then component = true end
 
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
@@ -6070,7 +6057,7 @@ function __builder_fns.fragment_builder:default(default)
     return self
 end
 
----@param construct fun(...): evolved.component
+---@param construct evolved.construct
 ---@return evolved.fragment_builder builder
 function __builder_fns.fragment_builder:construct(construct)
     self.__construct = construct
