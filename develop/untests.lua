@@ -868,7 +868,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_set(q, f1, 60) == 3)
+        assert(evo.batch_set(q, f1, 60))
 
         assert(evo.get(e1, f1) == 41 and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 60 and evo.get(e2, f3) == nil)
@@ -877,7 +877,7 @@ do
         assert(evo.get(e5, f1) == nil and evo.get(e5, f3) == 52)
 
         evo.set(q, evo.INCLUDES, f1, f2, f3)
-        assert(evo.batch_set(q, f3, 70) == 2)
+        assert(evo.batch_set(q, f3, 70))
 
         assert(evo.get(e1, f1) == 41 and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 60 and evo.get(e2, f3) == nil)
@@ -929,7 +929,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_set(q, f1, 60) == 3)
+        assert(evo.batch_set(q, f1, 60))
 
         assert(entity_sum == e2 + e3 + e4)
         assert(component_sum == 42 + 44 + 47 + 60 + 60 + 60)
@@ -943,7 +943,7 @@ do
         assert(evo.get(e5, f1) == nil and evo.get(e5, f3) == 52)
 
         evo.set(q, evo.INCLUDES, f1, f2, f3)
-        assert(evo.batch_set(q, f3, 70) == 2)
+        assert(evo.batch_set(q, f3, 70))
 
         assert(entity_sum == e3 + e4)
         assert(component_sum == 46 + 49 + 70 + 70)
@@ -988,7 +988,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_clear(q) == 3)
+        assert(evo.batch_clear(q))
 
         assert(evo.is_alive(e1))
         assert(evo.is_alive(e2))
@@ -1058,7 +1058,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_clear(q) == 3)
+        assert(evo.batch_clear(q))
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
         assert(component_sum == 42 + 43 + 44 + 45 + 46 + 47 + 48 + 49 + 50)
 
@@ -1106,7 +1106,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_destroy(q) == 3)
+        assert(evo.batch_destroy(q))
 
         assert(evo.is_alive(e1))
         assert(not evo.is_alive(e2))
@@ -1176,7 +1176,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_destroy(q) == 3)
+        assert(evo.batch_destroy(q))
         assert(entity_sum == e2 * 2 + e3 * 3 + e4 * 4)
         assert(component_sum == 42 + 43 + 44 + 45 + 46 + 47 + 48 + 49 + 50)
 
@@ -1224,7 +1224,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_remove(q, f2, f3) == 3)
+        assert(evo.batch_remove(q, f2, f3))
 
         assert(evo.get(e1, f1) == 41)
         assert(evo.get(e2, f1) == 42)
@@ -1297,7 +1297,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f1, f2)
 
-        assert(evo.batch_remove(q, f2, f3, f3) == 3)
+        assert(evo.batch_remove(q, f2, f3, f3))
         assert(entity_sum == e2 + e3 * 2 + e4 * 2)
         assert(component_sum == 43 + 45 + 46 + 48 + 49)
 
@@ -1321,7 +1321,7 @@ do
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22)
 
         local q = evo.query():include(f1):exclude(f2):build()
-        assert(evo.batch_set(q, f2) == 1)
+        assert(evo.batch_set(q, f2))
 
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 42)
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22)
@@ -1350,7 +1350,7 @@ do
         evo.set(q, evo.INCLUDES, f2)
         evo.set(q, evo.EXCLUDES, f1)
 
-        assert(evo.batch_set(q, f1, 60) == 1)
+        assert(evo.batch_set(q, f1, 60))
 
         assert(evo.get(e1, f1) == 41)
         assert(evo.get(e2, f1) == 42)
@@ -1398,7 +1398,7 @@ do
 
         entity_sum = 0
         component_sum = 0
-        assert(evo.batch_set(q, f1, 60) == 1)
+        assert(evo.batch_set(q, f1, 60))
         assert(entity_sum == e4)
         assert(component_sum == 60)
 
@@ -1411,7 +1411,7 @@ do
 
         entity_sum = 0
         component_sum = 0
-        assert(evo.batch_set(q, f5, 70) == 3)
+        assert(evo.batch_set(q, f5, 70))
         assert(entity_sum == e2 + e3 + e4)
         assert(component_sum == 70 * 3)
     end
@@ -1441,7 +1441,7 @@ do
         local q = evo.id()
         evo.set(q, evo.INCLUDES, f2)
 
-        assert(evo.batch_set(q, f1, 60) == 3)
+        assert(evo.batch_set(q, f1, 60))
 
         assert(evo.get(e1, f1) == 41)
         assert(evo.get(e2, f1) == 60)
@@ -1488,7 +1488,7 @@ do
 
         entity_sum = 0
         component_sum = 0
-        assert(evo.batch_set(q, f1, 60) == 3)
+        assert(evo.batch_set(q, f1, 60))
         assert(entity_sum == e2 + e3 + e4)
         assert(component_sum == 42 + 60 + 44 + 60 + 60)
 
@@ -1829,7 +1829,7 @@ do
 
         do
             local e = evo.id()
-            assert(evo.batch_set(q, f1, 50) == 0)
+            assert(evo.batch_set(q, f1, 50))
             assert(not evo.has(e, f1))
             assert(evo.get(e, f1) == nil)
         end
@@ -1838,7 +1838,7 @@ do
             local e = evo.id()
             assert(evo.set(e, f1, 41))
 
-            assert(evo.batch_set(q, f1, 50) == 0)
+            assert(evo.batch_set(q, f1, 50))
             assert(evo.has(e, f1))
             assert(evo.get(e, f1) == nil)
         end
@@ -1853,14 +1853,14 @@ do
             assert(evo.set(e2, f2, 42))
             assert(evo.set(e2, f3, 43))
 
-            assert(evo.batch_set(q, f1, 50) == 2)
+            assert(evo.batch_set(q, f1, 50))
             assert(evo.has(e1, f1) and evo.has(e1, f2) and not evo.has(e1, f3))
             assert(evo.has(e2, f1) and evo.has(e2, f2) and evo.has(e2, f3))
             assert(evo.get(e1, f1) == nil and evo.get(e1, f2) == nil)
             assert(evo.get(e2, f1) == nil and evo.get(e2, f2) == nil and evo.get(e2, f3) == 43)
 
             evo.set(q, evo.INCLUDES, f1, f2, f3)
-            assert(evo.batch_set(q, f3, 51) == 1)
+            assert(evo.batch_set(q, f3, 51))
 
             assert(evo.has(e1, f1) and evo.has(e1, f2) and not evo.has(e1, f3))
             assert(evo.has(e2, f1) and evo.has(e2, f2) and evo.has(e2, f3))
@@ -1893,7 +1893,7 @@ do
             assert(evo.set(e3, f3, 43))
 
             evo.set(q, evo.EXCLUDES, f3)
-            assert(evo.batch_set(q, f3, 50) == 1)
+            assert(evo.batch_set(q, f3, 50))
 
             assert(evo.has(e1, f1) and evo.has(e1, f2) and evo.has(e1, f3))
             assert(evo.get(e1, f1) == nil and evo.get(e1, f2) == nil and evo.get(e1, f3) == 50)
@@ -1940,7 +1940,7 @@ do
             assert(evo.set(e3, f2, 42))
             assert(evo.set(e3, f3, 43))
 
-            assert(evo.batch_remove(q, f1) == 2)
+            assert(evo.batch_remove(q, f1))
 
             assert(not evo.has(e1, f1) and evo.has(e1, f2) and not evo.has(e1, f3))
             assert(evo.has(e2, f1) and not evo.has(e2, f2) and not evo.has(e2, f3))
@@ -1991,7 +1991,7 @@ do
             assert(evo.set(e3, f2, 42))
             assert(evo.set(e3, f3, 43))
 
-            assert(evo.batch_clear(q) == 2)
+            assert(evo.batch_clear(q))
 
             assert(evo.is_alive(e1))
             assert(evo.is_alive(e2))
@@ -2036,7 +2036,7 @@ do
             assert(evo.set(e3, f2, 42))
             assert(evo.set(e3, f3, 43))
 
-            assert(evo.batch_destroy(q) == 2)
+            assert(evo.batch_destroy(q))
 
             assert(not evo.is_alive(e1))
             assert(evo.is_alive(e2))
@@ -2071,10 +2071,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_set(q, f1, 42)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_set(q, f1, 42))
         assert(evo.get(e1, f1) == 41)
 
         assert(evo.commit())
@@ -2084,10 +2081,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_set(q, f2, 43)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_set(q, f2, 43))
         assert(evo.get(e1, f2) == nil)
 
         assert(evo.commit())
@@ -2107,10 +2101,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_set(q, f1, 42)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_set(q, f1, 42))
         assert(evo.get(e1, f1) == 41)
 
         assert(evo.commit())
@@ -2122,8 +2113,7 @@ do
 
         do
             evo.set(q, evo.INCLUDES, f1, f2)
-            local c, d = evo.batch_set(q, f2, 43)
-            assert(c == 0 and d == true)
+            assert(not evo.batch_set(q, f2, 43))
         end
         assert(evo.get(e1, f2) == nil)
 
@@ -2146,8 +2136,7 @@ do
 
         do
             evo.set(q, evo.EXCLUDES, f1)
-            local c, d = evo.batch_set(q, f1, 42)
-            assert(c == 0 and d == true)
+            assert(not evo.batch_set(q, f1, 42))
         end
         assert(evo.get(e1, f1) == 41)
 
@@ -2160,8 +2149,7 @@ do
 
         do
             evo.set(q, evo.EXCLUDES)
-            local c, d = evo.batch_set(q, f2, 43)
-            assert(c == 0 and d == true)
+            assert(not evo.batch_set(q, f2, 43))
         end
         assert(evo.get(e1, f2) == nil)
 
@@ -2182,10 +2170,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_remove(q, f1)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_remove(q, f1))
         assert(evo.get(e1, f1) == 41)
 
         assert(evo.commit())
@@ -2205,10 +2190,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_clear(q)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_clear(q))
         assert(evo.is_alive(e1))
         assert(evo.get(e1, f1) == 41)
 
@@ -2230,10 +2212,7 @@ do
     do
         assert(evo.defer())
 
-        do
-            local c, d = evo.batch_destroy(q)
-            assert(c == 0 and d == true)
-        end
+        assert(not evo.batch_destroy(q))
         assert(evo.is_alive(e1))
         assert(evo.get(e1, f1) == 41)
 
@@ -2626,9 +2605,9 @@ do
 
     do
         local e = evo.id()
-        assert(not evo.multi_set(e, {}))
-        assert(not evo.multi_set(e, {}, {}))
-        assert(not evo.multi_set(e, {}, { 41 }))
+        assert(evo.multi_set(e, {}))
+        assert(evo.multi_set(e, {}, {}))
+        assert(evo.multi_set(e, {}, { 41 }))
         assert(evo.is_alive(e) and evo.is_empty(e))
 
         assert(evo.multi_set(e, { f1 }))
@@ -2734,9 +2713,9 @@ do
 
     do
         local e = evo.id()
-        assert(not evo.multi_set(e, {}))
-        assert(not evo.multi_set(e, {}, {}))
-        assert(not evo.multi_set(e, {}, { 41 }))
+        assert(evo.multi_set(e, {}))
+        assert(evo.multi_set(e, {}, {}))
+        assert(evo.multi_set(e, {}, { 41 }))
         assert(evo.is_alive(e) and evo.is_empty(e))
 
         assert(evo.multi_set(e, { f1 }, { 21 }))
@@ -2930,9 +2909,9 @@ do
 
     do
         local e = evo.id()
-        assert(not evo.multi_set(e, {}))
-        assert(not evo.multi_set(e, {}, {}))
-        assert(not evo.multi_set(e, {}, { 41 }))
+        assert(evo.multi_set(e, {}))
+        assert(evo.multi_set(e, {}, {}))
+        assert(evo.multi_set(e, {}, { 41 }))
         assert(evo.is_alive(e) and evo.is_empty(e))
 
         assert(evo.multi_set(e, { f1 }))
@@ -3680,7 +3659,7 @@ do
         assert(evo.defer())
         local e, d = evo.spawn_with()
         assert(evo.is_alive(e) and evo.is_empty(e))
-        assert(not d)
+        assert(d)
         assert(evo.commit())
         assert(evo.is_alive(e) and evo.is_empty(e))
     end
@@ -3689,7 +3668,7 @@ do
         assert(evo.defer())
         local e, d = evo.spawn_with({})
         assert(evo.is_alive(e) and evo.is_empty(e))
-        assert(not d)
+        assert(d)
         assert(evo.commit())
         assert(evo.is_alive(e) and evo.is_empty(e))
     end
@@ -3698,7 +3677,7 @@ do
         assert(evo.defer())
         local e1, d1 = evo.spawn_with({ f1 })
         assert(evo.is_alive(e1) and evo.is_empty(e1))
-        assert(d1)
+        assert(not d1)
         assert(evo.commit())
         assert(evo.is_alive(e1) and not evo.is_empty(e1))
         assert(evo.has(e1, f1) and evo.get(e1, f1) == true)
@@ -3706,7 +3685,7 @@ do
         assert(evo.defer())
         local e2, d2 = evo.spawn_with({ f1 }, {})
         assert(evo.is_alive(e2) and evo.is_empty(e2))
-        assert(d2)
+        assert(not d2)
         assert(evo.commit())
         assert(evo.is_alive(e2) and not evo.is_empty(e2))
         assert(evo.has(e2, f1) and evo.get(e2, f1) == true)
@@ -3714,7 +3693,7 @@ do
         assert(evo.defer())
         local e3, d3 = evo.spawn_with({ f1 }, { 41 })
         assert(evo.is_alive(e3) and evo.is_empty(e3))
-        assert(d3)
+        assert(not d3)
         assert(evo.commit())
         assert(evo.is_alive(e3) and not evo.is_empty(e3))
         assert(evo.has(e3, f1) and evo.get(e3, f1) == 41)
@@ -3724,7 +3703,7 @@ do
         assert(evo.defer())
         local e1, d1 = evo.spawn_with({ f1, f2 })
         assert(evo.is_alive(e1) and evo.is_empty(e1))
-        assert(d1)
+        assert(not d1)
         assert(evo.commit())
         assert(evo.is_alive(e1) and not evo.is_empty(e1))
         assert(evo.has(e1, f1) and evo.get(e1, f1) == true)
@@ -3733,7 +3712,7 @@ do
         assert(evo.defer())
         local e2, d2 = evo.spawn_with({ f1, f2 }, {})
         assert(evo.is_alive(e2) and evo.is_empty(e2))
-        assert(d2)
+        assert(not d2)
         assert(evo.commit())
         assert(evo.is_alive(e2) and not evo.is_empty(e2))
         assert(evo.has(e2, f1) and evo.get(e2, f1) == true)
@@ -3742,7 +3721,7 @@ do
         assert(evo.defer())
         local e3, d3 = evo.spawn_with({ f1, f2 }, { 41 })
         assert(evo.is_alive(e3) and evo.is_empty(e3))
-        assert(d3)
+        assert(not d3)
         assert(evo.commit())
         assert(evo.is_alive(e3) and not evo.is_empty(e3))
         assert(evo.has(e3, f1) and evo.get(e3, f1) == 41)
@@ -3751,7 +3730,7 @@ do
         assert(evo.defer())
         local e4, d4 = evo.spawn_with({ f1, f2 }, { nil, 42 })
         assert(evo.is_alive(e4) and evo.is_empty(e4))
-        assert(d4)
+        assert(not d4)
         assert(evo.commit())
         assert(evo.is_alive(e4) and not evo.is_empty(e4))
         assert(evo.has(e4, f1) and evo.get(e4, f1) == true)
@@ -3760,7 +3739,7 @@ do
         assert(evo.defer())
         local e5, d5 = evo.spawn_with({ f1, f2 }, { 41, 42 })
         assert(evo.is_alive(e5) and evo.is_empty(e5))
-        assert(d5)
+        assert(not d5)
         assert(evo.commit())
         assert(evo.is_alive(e5) and not evo.is_empty(e5))
         assert(evo.has(e5, f1) and evo.get(e5, f1) == 41)
@@ -3769,7 +3748,7 @@ do
         assert(evo.defer())
         local e6, d6 = evo.spawn_with({ f1, f2 }, { 41, 42, 43 })
         assert(evo.is_alive(e6) and evo.is_empty(e6))
-        assert(d6)
+        assert(not d6)
         assert(evo.commit())
         assert(evo.is_alive(e6) and not evo.is_empty(e6))
         assert(evo.has(e6, f1) and evo.get(e6, f1) == 41)
@@ -3780,7 +3759,7 @@ do
         assert(evo.defer())
         local e1, d1 = evo.spawn_with({ f3, f4 })
         assert(evo.is_alive(e1) and evo.is_empty(e1))
-        assert(d1)
+        assert(not d1)
         assert(evo.commit())
         assert(evo.is_alive(e1) and not evo.is_empty(e1))
         assert(evo.has(e1, f3) and evo.get(e1, f3) == 3)
@@ -3789,7 +3768,7 @@ do
         assert(evo.defer())
         local e2, d2 = evo.spawn_with({ f3, f4 }, { 33, 44 })
         assert(evo.is_alive(e2) and evo.is_empty(e2))
-        assert(d2)
+        assert(not d2)
         assert(evo.commit())
         assert(evo.is_alive(e2) and not evo.is_empty(e2))
         assert(evo.has(e2, f3) and evo.get(e2, f3) == 33)
@@ -3807,14 +3786,14 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_remove(q, {}) == 0)
-        assert(evo.batch_multi_remove(q, { f5 }) == 0)
+        assert(evo.batch_multi_remove(q, {}))
+        assert(evo.batch_multi_remove(q, { f5 }))
     end
 
     do
         local q = evo.query():include(f3):build()
 
-        assert(evo.batch_multi_remove(q, { f4 }) == 1)
+        assert(evo.batch_multi_remove(q, { f4 }))
         assert(evo.has_all(e4, f1, f2, f3) and not evo.has(e4, f4))
         assert(evo.get(e4, f1) == 41)
         assert(evo.get(e4, f2) == 42)
@@ -3845,7 +3824,7 @@ do
     do
         local q = evo.query():include(f2):build()
 
-        assert(evo.batch_multi_remove(q, { f1 }) == 3)
+        assert(evo.batch_multi_remove(q, { f1 }))
         assert(evo.has_all(e1, f1) and not evo.has_any(e1, f2, f3, f4))
         assert(evo.has_all(e2, f2) and not evo.has_any(e2, f1, f3, f4))
         assert(evo.has_all(e3, f2, f3) and not evo.has_any(e3, f1, f4))
@@ -3855,7 +3834,7 @@ do
             assert(next(evo.components(chunk, f1)) == nil)
         end
 
-        assert(evo.batch_multi_remove(q, { f2, f3 }) == 3)
+        assert(evo.batch_multi_remove(q, { f2, f3 }))
         assert(evo.has_all(e1, f1) and not evo.has_any(e1, f2, f3, f4))
         assert(not evo.has_any(e2, f1, f2, f3, f4))
         assert(not evo.has_any(e3, f1, f2, f3, f4))
@@ -3888,7 +3867,7 @@ do
         local q = evo.query():include(f1):build()
 
         assert(evo.defer())
-        assert(evo.batch_multi_remove(q, { f1 }) == 0)
+        assert(not evo.batch_multi_remove(q, { f1 }))
         assert(evo.has(e1, f1))
         assert(evo.commit())
         assert(not evo.has(e1, f1))
@@ -3928,7 +3907,7 @@ do
 
         local q = evo.query():include(f1):build()
 
-        assert(evo.batch_multi_remove(q, { f1, f1 }) == 2)
+        assert(evo.batch_multi_remove(q, { f1, f1 }))
         assert(last_remove_entity == e2 and last_remove_component == 21)
         assert(sum_removed_components == 11 + 21)
     end
@@ -3940,7 +3919,7 @@ do
 
         local q = evo.query():include(f2):build()
 
-        assert(evo.batch_multi_remove(q, { f2 }) == 1)
+        assert(evo.batch_multi_remove(q, { f2 }))
         assert(last_remove_entity == e2 and last_remove_component == nil)
         assert(sum_removed_components == 0)
     end
@@ -3961,18 +3940,18 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_set(q, {}) == 0)
+        assert(evo.batch_multi_set(q, {}))
     end
 
     do
         local q = evo.query():include(f1, f5):build()
-        assert(evo.batch_multi_set(q, { f5 }) == 0)
+        assert(evo.batch_multi_set(q, { f5 }))
     end
 
     do
         local q = evo.query():include(f3, f4):build()
 
-        assert(evo.batch_multi_set(q, { f4 }, { 54 }) == 1)
+        assert(evo.batch_multi_set(q, { f4 }, { 54 }))
         assert(evo.get(e3, f3) == 33 and evo.get(e3, f4) == nil)
         assert(evo.get(e4, f3) == 43 and evo.get(e4, f4) == 54)
     end
@@ -3980,13 +3959,13 @@ do
     do
         local q = evo.query():include(f2):build()
 
-        assert(evo.batch_multi_set(q, { f1 }, { 51, 52 }) == 3)
+        assert(evo.batch_multi_set(q, { f1 }, { 51, 52 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33)
         assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 54)
 
-        assert(evo.batch_multi_set(q, { f2, f3 }, { 52, 53 }) == 4)
+        assert(evo.batch_multi_set(q, { f2, f3 }, { 52, 53 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 52 and evo.get(e2, f3) == 53)
         assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 52 and evo.get(e3, f3) == 53)
@@ -4012,14 +3991,14 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_set(q, {}) == 0)
-        assert(evo.batch_multi_set(q, { f5 }) == 0)
+        assert(evo.batch_multi_set(q, {}))
+        assert(evo.batch_multi_set(q, { f5 }))
     end
 
     do
         local q = evo.query():include(f3, f4):build()
 
-        assert(evo.batch_multi_set(q, { f4 }, { 54 }) == 1)
+        assert(evo.batch_multi_set(q, { f4 }, { 54 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
@@ -4029,13 +4008,13 @@ do
     do
         local q = evo.query():include(f2):build()
 
-        assert(evo.batch_multi_set(q, { f1 }, { 51, 52 }) == 3)
+        assert(evo.batch_multi_set(q, { f1 }, { 51, 52 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == nil)
         assert(evo.get(e4, f1) == 51 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
 
-        assert(evo.batch_multi_set(q, { f2, f3 }, { 52, 53 }) == 4)
+        assert(evo.batch_multi_set(q, { f2, f3 }, { 52, 53 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 51 and evo.get(e2, f2) == 52 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == 51 and evo.get(e3, f2) == 52 and evo.get(e3, f3) == nil)
@@ -4045,13 +4024,13 @@ do
     do
         local q = evo.query():include(f1):build()
 
-        assert(evo.batch_multi_set(q, { f1 }) == 4)
+        assert(evo.batch_multi_set(q, { f1 }))
         assert(evo.get(e1, f1) == true and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == true and evo.get(e2, f2) == 52 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == true and evo.get(e3, f2) == 52 and evo.get(e3, f3) == nil)
         assert(evo.get(e4, f1) == true and evo.get(e4, f2) == 52 and evo.get(e4, f3) == nil and evo.get(e4, f4) == 54)
 
-        assert(evo.batch_multi_set(q, { f2 }) == 4)
+        assert(evo.batch_multi_set(q, { f2 }))
         assert(evo.get(e1, f1) == true and evo.get(e1, f2) == 41 and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == true and evo.get(e2, f2) == 41 and evo.get(e2, f3) == nil)
         assert(evo.get(e3, f1) == true and evo.get(e3, f2) == 41 and evo.get(e3, f3) == nil)
@@ -4106,7 +4085,7 @@ do
         last_assign_new_component = 0
         last_assign_old_component = 0
 
-        assert(evo.batch_multi_set(q, { f2 }, {}) == 1)
+        assert(evo.batch_multi_set(q, { f2 }, {}))
         assert(sum_entity == e3)
         assert(last_assign_entity == e3)
         assert(last_assign_new_component == 42)
@@ -4121,7 +4100,7 @@ do
         last_assign_new_component = 0
         last_assign_old_component = 0
 
-        assert(evo.batch_multi_set(q, { f1 }, { 51 }) == 3)
+        assert(evo.batch_multi_set(q, { f1 }, { 51 }))
         assert(sum_entity == e1 + e2 + e3)
         assert(last_assign_entity == e3)
         assert(last_assign_new_component == 51)
@@ -4136,7 +4115,7 @@ do
         last_assign_new_component = 0
         last_assign_old_component = 0
 
-        assert(evo.batch_multi_set(q, { f1, f1 }, { 61, 61 }) == 3)
+        assert(evo.batch_multi_set(q, { f1, f1 }, { 61, 61 }))
         assert(sum_entity == e1 + e2 + e3 + e1 + e2 + e3)
         assert(last_assign_entity == e3)
         assert(last_assign_new_component == 61)
@@ -4151,7 +4130,7 @@ do
         last_assign_new_component = 0
         last_assign_old_component = 0
 
-        assert(evo.batch_multi_set(q, { f3 }, { 63 }) == 1)
+        assert(evo.batch_multi_set(q, { f3 }, { 63 }))
         assert(sum_entity == e3)
         assert(last_assign_entity == e3)
         assert(last_assign_new_component == nil)
@@ -4170,13 +4149,13 @@ do
     do
         local q = evo.query():include(f1):build()
 
-        assert(evo.batch_multi_set(q, {}) == 0)
+        assert(evo.batch_multi_set(q, {}))
     end
 
     do
         local q = evo.query():include(f3):exclude(f4):build()
 
-        assert(evo.batch_multi_set(q, { f4 }) == 1)
+        assert(evo.batch_multi_set(q, { f4 }))
         assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33 and evo.get(e3, f4) == true)
         assert(evo.get(e4, f1) == 41 and evo.get(e4, f2) == 42 and evo.get(e4, f3) == 43 and evo.get(e4, f4) == 44)
 
@@ -4199,7 +4178,7 @@ do
     do
         local q = evo.query():include(f1):exclude(f3, f4):build()
 
-        assert(evo.batch_multi_set(q, { f3, f4 }, { 53, 54 }) == 2)
+        assert(evo.batch_multi_set(q, { f3, f4 }, { 53, 54 }))
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == 53 and evo.get(e1, f4) == 54)
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == 53 and evo.get(e2, f4) == 54)
         assert(evo.get(e3, f1) == 31 and evo.get(e3, f2) == 32 and evo.get(e3, f3) == 33 and evo.get(e3, f4) == true)
@@ -4255,12 +4234,12 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_set(q, {}) == 0)
+        assert(evo.batch_multi_set(q, {}))
     end
 
     do
         local q = evo.query():include(f1):exclude(f2):build()
-        assert(evo.batch_multi_set(q, { f2 }) == 1)
+        assert(evo.batch_multi_set(q, { f2 }))
 
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == 41 and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
@@ -4325,7 +4304,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_multi_set(q, { f2 }) == 1)
+        assert(evo.batch_multi_set(q, { f2 }))
         assert(sum_entity == e1)
         assert(last_insert_entity == e1)
         assert(last_insert_component == 42)
@@ -4344,7 +4323,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_multi_set(q, { f3 }) == 2)
+        assert(evo.batch_multi_set(q, { f3 }))
         assert(sum_entity == e1 + e2)
         assert(last_insert_entity == e1)
         assert(last_insert_component == nil)
@@ -4363,7 +4342,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_multi_set(q, { f3, f4, f5, f5 }, { 53, 54, 55, 65 }) == 3)
+        assert(evo.batch_multi_set(q, { f3, f4, f5, f5 }, { 53, 54, 55, 65 }))
         assert(sum_entity == e1 + e2 + e3 + e1 + e2 + e3)
         assert(last_insert_entity == e1)
         assert(last_insert_component == 55)
@@ -4399,12 +4378,12 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_set(q, {}) == 0)
+        assert(evo.batch_multi_set(q, {}))
     end
 
     do
         local q = evo.query():include(f3):exclude(f4):build()
-        assert(evo.batch_multi_set(q, { f3 }) == 2)
+        assert(evo.batch_multi_set(q, { f3 }))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == nil and evo.get(e1a, f3) == nil)
         assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == nil and evo.get(e1b, f3) == nil)
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 22 and evo.get(e2a, f3) == nil)
@@ -4417,7 +4396,7 @@ do
 
     do
         local q = evo.query():include(f3):exclude(f4):build()
-        assert(evo.batch_multi_set(q, { f3 }, { 43, 44 }) == 2)
+        assert(evo.batch_multi_set(q, { f3 }, { 43, 44 }))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == nil and evo.get(e1a, f3) == nil)
         assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == nil and evo.get(e1b, f3) == nil)
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 22 and evo.get(e2a, f3) == nil)
@@ -4430,7 +4409,7 @@ do
 
     do
         local q = evo.query():include(f2):exclude(f3, f4):build()
-        assert(evo.batch_multi_set(q, { f2 }, {}) == 2)
+        assert(evo.batch_multi_set(q, { f2 }, {}))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == nil and evo.get(e1a, f3) == nil)
         assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == nil and evo.get(e1b, f3) == nil)
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 52 and evo.get(e2a, f3) == nil)
@@ -4443,7 +4422,7 @@ do
 
     do
         local q = evo.query():include(f2):exclude(f3, f4):build()
-        assert(evo.batch_multi_set(q, { f2 }, { 62, 63 }) == 2)
+        assert(evo.batch_multi_set(q, { f2 }, { 62, 63 }))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == nil and evo.get(e1a, f3) == nil)
         assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == nil and evo.get(e1b, f3) == nil)
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 62 and evo.get(e2a, f3) == nil)
@@ -4494,7 +4473,7 @@ do
 
     do
         local q = evo.query():include(f1):build()
-        assert(evo.batch_multi_set(q, {}) == 0)
+        assert(evo.batch_multi_set(q, {}))
     end
 
     do
@@ -4504,7 +4483,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f2 }) == 2)
+        assert(evo.batch_multi_set(q, { f2 }))
         assert(sum_entity == e2a + e2b)
         assert(last_assign_entity == e2b)
         assert(last_assign_component == 52)
@@ -4514,7 +4493,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f2, f2 }) == 2)
+        assert(evo.batch_multi_set(q, { f2, f2 }))
         assert(sum_entity == e2a + e2b + e2a + e2b)
         assert(last_assign_entity == e2b)
         assert(last_assign_component == 52)
@@ -4528,7 +4507,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f2 }, { 62, 63 }) == 2)
+        assert(evo.batch_multi_set(q, { f2 }, { 62, 63 }))
         assert(sum_entity == e2a + e2b)
         assert(last_assign_entity == e2b)
         assert(last_assign_component == 62)
@@ -4538,7 +4517,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f2, f2 }, { 62, 63 }) == 2)
+        assert(evo.batch_multi_set(q, { f2, f2 }, { 62, 63 }))
         assert(sum_entity == e2a + e2b + e2a + e2b)
         assert(last_assign_entity == e2b)
         assert(last_assign_component == 63)
@@ -4552,7 +4531,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f3 }) == 2)
+        assert(evo.batch_multi_set(q, { f3 }))
         assert(sum_entity == e3a + e3b)
         assert(last_assign_entity == e3b)
         assert(last_assign_component == true)
@@ -4566,7 +4545,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f4 }, { 62, 63 }) == 2)
+        assert(evo.batch_multi_set(q, { f4 }, { 62, 63 }))
         assert(sum_entity == e4a + e4b)
         assert(last_assign_entity == e4b)
         assert(last_assign_component == nil)
@@ -4577,7 +4556,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_multi_set(q, { f4, f4 }, { 62, 63 }) == 2)
+        assert(evo.batch_multi_set(q, { f4, f4 }, { 62, 63 }))
         assert(sum_entity == e4a + e4b + e4a + e4b)
         assert(last_assign_entity == e4b)
         assert(last_assign_component == nil)
@@ -4602,7 +4581,7 @@ do
 
     do
         local q = evo.query():include(f2):exclude(f3, f4):build()
-        assert(evo.batch_multi_set(q, { f3 }) == 2)
+        assert(evo.batch_multi_set(q, { f3 }))
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 22 and evo.get(e2a, f3) == true)
         assert(evo.get(e2b, f1) == 21 and evo.get(e2b, f2) == 22 and evo.get(e2b, f3) == true)
         assert(evo.get(e3a, f1) == 31 and evo.get(e3a, f2) == 32 and evo.get(e3a, f3) == 33)
@@ -4623,7 +4602,7 @@ do
 
     do
         local q = evo.query():include(f2, f3):exclude(f4):build()
-        assert(evo.batch_multi_set(q, { f2, f3, f4, f4 }, { 62, 63, 64, 65 }) == 4)
+        assert(evo.batch_multi_set(q, { f2, f3, f4, f4 }, { 62, 63, 64, 65 }))
         assert(evo.has_all(e2a, f2, f3, f4) and evo.has_all(e2b, f2, f3, f4))
         assert(evo.get(e2a, f1) == 21 and evo.get(e2a, f2) == 62 and evo.get(e2a, f3) == 63 and evo.get(e2a, f4) == nil)
         assert(evo.get(e2b, f1) == 21 and evo.get(e2b, f2) == 62 and evo.get(e2b, f3) == 63 and evo.get(e2b, f4) == nil)
@@ -4633,7 +4612,7 @@ do
 
     do
         local q = evo.query():include(f1):exclude(f2, f3, f4):build()
-        assert(evo.batch_multi_set(q, { f2, f1 }, { nil, 71 }) == 2)
+        assert(evo.batch_multi_set(q, { f2, f1 }, { nil, 71 }))
         assert(evo.get(e1a, f1) == 71 and evo.get(e1a, f2) == 52)
         assert(evo.get(e1b, f1) == 71 and evo.get(e1b, f2) == 52)
         do
@@ -4699,7 +4678,7 @@ do
         last_assign_entity, last_assign_component = 0, 0
         last_insert_entity, last_insert_component = 0, 0
 
-        assert(evo.batch_multi_set(q, { f1, f2 }, { 51 }) == 2)
+        assert(evo.batch_multi_set(q, { f1, f2 }, { 51 }))
         assert(sum_entity == e0a + e0b + e0a + e0b)
         assert(last_assign_entity == 0)
         assert(last_assign_component == 0)
@@ -4712,7 +4691,7 @@ do
         last_assign_entity, last_assign_component = 0, 0
         last_insert_entity, last_insert_component = 0, 0
 
-        assert(evo.batch_multi_set(q, { f1, f3, f2 }, { 61 }) == 2)
+        assert(evo.batch_multi_set(q, { f1, f3, f2 }, { 61 }))
         assert(sum_entity == e0a + e0b + e0a + e0b + e0a + e0b)
         assert(last_assign_entity == e0b)
         assert(last_assign_component == 52)
@@ -4729,7 +4708,7 @@ do
         last_assign_entity, last_assign_component = 0, 0
         last_insert_entity, last_insert_component = 0, 0
 
-        assert(evo.batch_multi_set(q, { f3, f4 }, { 53, 54 }) == 2)
+        assert(evo.batch_multi_set(q, { f3, f4 }, { 53, 54 }))
         assert(sum_entity == e3a + e3b + e3a + e3b)
         assert(last_assign_entity == e3b)
         assert(last_assign_component == 53)
@@ -4751,18 +4730,15 @@ do
     do
         do
             local q = evo.query():include(f1):exclude(f2):build()
-            local n, d = evo.batch_multi_set(q, { f2 }, { 42 })
-            assert(n == 0 and d == true)
+            assert(not evo.batch_multi_set(q, { f2 }, { 42 }))
         end
         do
             local q = evo.query():include(f1, f3):build()
-            local n, d = evo.batch_multi_set(q, { f3 }, { 43 })
-            assert(n == 0 and d == true)
+            assert(not evo.batch_multi_set(q, { f3 }, { 43 }))
         end
         do
             local q = evo.query():include(f1):build()
-            local n, d = evo.batch_multi_remove(q, { f1 })
-            assert(n == 0 and d == true)
+            assert(not evo.batch_multi_remove(q, { f1 }))
         end
         assert(evo.get(e1, f1) == 11 and evo.get(e1, f2) == nil and evo.get(e1, f3) == nil)
         assert(evo.get(e2, f1) == 21 and evo.get(e2, f2) == 22 and evo.get(e2, f3) == nil)
@@ -4778,8 +4754,7 @@ do
     do
         local q = evo.query():include(f2):build()
         do
-            local n, d = evo.batch_multi_set(q, { f3, f4 }, { 53, 54 })
-            assert(n == 0 and d == true)
+            assert(not evo.batch_multi_set(q, { f3, f4 }, { 53, 54 }))
         end
     end
     assert(evo.commit())
@@ -4842,26 +4817,26 @@ do
     local q = evo.query():include(f1):build()
 
     assert(evo.set(q, evo.EXCLUDES, f2))
-    assert(evo.batch_set(q, f2) == 2)
+    assert(evo.batch_set(q, f2))
     assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == 42)
     assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == 42)
     assert(evo.get(e2a, f1) == 11 and evo.get(e2a, f2) == 22)
     assert(evo.get(e2b, f1) == 11 and evo.get(e2b, f2) == 22)
 
     assert(evo.set(q, evo.EXCLUDES))
-    assert(evo.batch_set(q, f2) == 4)
+    assert(evo.batch_set(q, f2))
     assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == 42)
     assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == 42)
     assert(evo.get(e2a, f1) == 11 and evo.get(e2a, f2) == 42)
     assert(evo.get(e2b, f1) == 11 and evo.get(e2b, f2) == 42)
 
-    assert(evo.batch_set(q, f1) == 4)
+    assert(evo.batch_set(q, f1))
     assert(evo.get(e1a, f1) == true and evo.get(e1a, f2) == 42)
     assert(evo.get(e1b, f1) == true and evo.get(e1b, f2) == 42)
     assert(evo.get(e2a, f1) == true and evo.get(e2a, f2) == 42)
     assert(evo.get(e2b, f1) == true and evo.get(e2b, f2) == 42)
 
-    assert(evo.batch_set(q, f3) == 4)
+    assert(evo.batch_set(q, f3))
     assert(evo.get(e1a, f1) == true and evo.get(e1a, f2) == 42 and evo.get(e1a, f3) == true)
     assert(evo.get(e1b, f1) == true and evo.get(e1b, f2) == 42 and evo.get(e1b, f3) == true)
     assert(evo.get(e2a, f1) == true and evo.get(e2a, f2) == 42 and evo.get(e2a, f3) == true)
@@ -4915,7 +4890,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_set(q, f2) == 2)
+        assert(evo.batch_set(q, f2))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == 42)
         assert(evo.get(e1b, f1) == 11 and evo.get(e1b, f2) == 42)
         assert(evo.get(e2a, f1) == 11 and evo.get(e2a, f2) == 22)
@@ -4933,7 +4908,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_set(q, f3) == 4)
+        assert(evo.batch_set(q, f3))
         assert(evo.has_all(e1a, f1, f2, f3) and evo.has_all(e1b, f1, f2, f3))
         assert(evo.has_all(e2a, f1, f2, f3) and evo.has_all(e2b, f1, f2, f3))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == 42 and evo.get(e1a, f3) == nil)
@@ -4949,7 +4924,7 @@ do
         last_insert_entity = 0
         last_insert_component = 0
 
-        assert(evo.batch_set(q, f4) == 4)
+        assert(evo.batch_set(q, f4))
         assert(evo.has_all(e1a, f1, f2, f3, f4) and evo.has_all(e1b, f1, f2, f3, f4))
         assert(evo.has_all(e2a, f1, f2, f3, f4) and evo.has_all(e2b, f1, f2, f3, f4))
         assert(evo.get(e1a, f1) == 11 and evo.get(e1a, f2) == 42 and evo.get(e1a, f3) == nil and evo.get(e1a, f4) == true)
@@ -4965,7 +4940,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_set(q, f2) == 4)
+        assert(evo.batch_set(q, f2))
         assert(sum_entity == e1a + e1b + e2a + e2b)
         assert(last_assign_entity == e1b)
         assert(last_assign_component == 42)
@@ -4974,7 +4949,7 @@ do
         last_assign_entity = 0
         last_assign_component = 0
 
-        assert(evo.batch_set(q, f1) == 4)
+        assert(evo.batch_set(q, f1))
         assert(sum_entity == e1a + e1b + e2a + e2b)
         assert(last_assign_entity == e1b)
         assert(last_assign_component == true)
@@ -4988,8 +4963,8 @@ do
         local e = evo.id()
         assert(evo.defer())
         do
-            local s, d = evo.multi_set(e, { f1 }, { 11 })
-            assert(not s and d == true)
+            local s = evo.multi_set(e, { f1 }, { 11 })
+            assert(not s)
             assert(not evo.has_any(e, f1))
         end
         assert(evo.commit())
@@ -4999,8 +4974,8 @@ do
         end
         assert(evo.defer())
         do
-            local s, d = evo.multi_set(e, { f1, f2 }, { 21, 22 })
-            assert(not s and d == true)
+            local s = evo.multi_set(e, { f1, f2 }, { 21, 22 })
+            assert(not s)
             assert(not evo.has_any(e, f2))
         end
         assert(evo.commit())
@@ -5063,14 +5038,9 @@ do
     assert(not evo.has(e, f1) and not evo.has(e, f2))
     assert(not evo.has_all(e, f1, f2) and not evo.has_any(e, f1, f2))
 
-    assert(not evo.set(e, f1, 11))
-    assert(not evo.set(e, f1, 11))
     assert(evo.remove(e, f1))
     assert(evo.clear(e))
 
-    assert(not evo.multi_set(e, { f1 }, { 11 }))
-    assert(not evo.multi_set(e, { f1 }, { 11 }))
-    assert(not evo.multi_set(e, { f1 }, { 11 }))
     assert(evo.multi_remove(e, { f1 }))
 end
 
@@ -6401,7 +6371,7 @@ do
         assert(evo.components(c1, f1)[1] == 1 and evo.components(c1, f1)[2] == 11)
     end
 
-    assert(evo.batch_set(q1, f2, 2) == 2)
+    assert(evo.batch_set(q1, f2, 2))
 
     do
         local c1, c1_es = evo.chunk(f1)
@@ -6425,7 +6395,7 @@ do
     end
 
     assert(evo.set(q1, evo.EXCLUDES, f2))
-    assert(evo.batch_set(q1, f2, 22) == 2)
+    assert(evo.batch_set(q1, f2, 22))
 
     do
         local c1, c1_es = evo.chunk(f1)
@@ -6459,7 +6429,7 @@ do
         assert(evo.components(c123, f3)[1] == 3 and evo.components(c123, f3)[2] == 33)
     end
 
-    assert(evo.batch_remove(q1, f2) == 2)
+    assert(evo.batch_remove(q1, f2))
 
     do
         local c13, c13_es = evo.chunk(f3, f1)
@@ -6480,7 +6450,7 @@ do
         assert(evo.components(c3, f3)[1] == 3 and evo.components(c3, f3)[2] == 33)
     end
 
-    assert(evo.batch_remove(q1, f1) == 2)
+    assert(evo.batch_remove(q1, f1))
 
     do
         local c3, c3_es = evo.chunk(f3)
@@ -7494,12 +7464,12 @@ do
     assert(evo.set(e1, f1, f1))
     assert(evo.set(e2, f2, f2))
 
-    assert(evo.batch_clear() == 0)
+    assert(evo.batch_clear())
 
     assert(evo.is_alive(e1) and not evo.is_empty(e1))
     assert(evo.is_alive(e2) and not evo.is_empty(e2))
 
-    assert(evo.batch_clear(q1, q2, q1, q1) == 2)
+    assert(evo.batch_clear(q1, q2, q1, q1))
 
     assert(evo.is_alive(e1) and evo.is_empty(e1))
     assert(evo.is_alive(e2) and evo.is_empty(e2))
@@ -7518,7 +7488,7 @@ do
 
     assert(evo.defer())
     do
-        assert(evo.batch_clear(q2, q1, q2, q2) == 0)
+        assert(not evo.batch_clear(q2, q1, q2, q2))
         assert(evo.is_alive(e1) and not evo.is_empty(e1))
         assert(evo.is_alive(e2) and not evo.is_empty(e2))
     end
@@ -7539,12 +7509,12 @@ do
     assert(evo.set(e1, f1, f1))
     assert(evo.set(e2, f2, f2))
 
-    assert(evo.batch_destroy() == 0)
+    assert(evo.batch_destroy())
 
     assert(evo.is_alive(e1) and not evo.is_empty(e1))
     assert(evo.is_alive(e2) and not evo.is_empty(e2))
 
-    assert(evo.batch_destroy(q1, q2, q1, q1) == 2)
+    assert(evo.batch_destroy(q1, q2, q1, q1))
 
     assert(not evo.is_alive(e1) and evo.is_empty(e1))
     assert(not evo.is_alive(e2) and evo.is_empty(e2))
@@ -7563,7 +7533,7 @@ do
 
     assert(evo.defer())
     do
-        assert(evo.batch_destroy(q2, q1, q2, q2) == 0)
+        assert(not evo.batch_destroy(q2, q1, q2, q2))
         assert(evo.is_alive(e1) and not evo.is_empty(e1))
         assert(evo.is_alive(e2) and not evo.is_empty(e2))
     end
@@ -7921,210 +7891,6 @@ do
     assert(not evo.has_any(c12))
     assert(evo.has_any(c12, f1))
     assert(evo.has_any(c12, f1, f2))
-end
-
-do
-    local f1, f2 = evo.id(2)
-
-    local c1 = assert(evo.chunk(f1))
-    local c12 = assert(evo.chunk(f1, f2))
-
-    local e1a = evo.entity():set(f1, 1):build()
-    local e1b = evo.entity():set(f1, 2):build()
-
-    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
-    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 2 and c12_ec == 2)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b)
-        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
-    end
-
-    assert(2 == evo.batch_set(c1, f2, 0))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f2) == 0 and evo.get(e1b, f2) == 0)
-        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
-    end
-
-    assert(4 == evo.batch_set(c12, f2, 7))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
-        assert(evo.get(e12a, f2) == 7 and evo.get(e12b, f2) == 7)
-    end
-
-    assert(4 == evo.batch_set(c12, f2, 8))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f2) == 8 and evo.get(e1b, f2) == 8)
-        assert(evo.get(e12a, f2) == 8 and evo.get(e12b, f2) == 8)
-    end
-
-    assert(4 == evo.batch_remove(c12, f2))
-
-    do
-        local c1_es, c1_ec = evo.entities(c1)
-        assert(c1_es and #c1_es == 4 and c1_ec == 4)
-        assert(c1_es[1] == e12a and c1_es[2] == e12b and c1_es[3] == e1a and c1_es[4] == e1b)
-        assert(evo.get(e1a, f1) == 1 and evo.get(e1b, f1) == 2)
-        assert(evo.get(e12a, f1) == 3 and evo.get(e12b, f1) == 5)
-    end
-
-    assert(4 == evo.batch_set(c1, f2, 9))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f2) == 9 and evo.get(e1b, f2) == 9)
-        assert(evo.get(e12a, f2) == 9 and evo.get(e12b, f2) == 9)
-    end
-
-    assert(4 == evo.batch_clear(c12))
-
-    do
-        assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
-        assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
-    end
-
-    assert(evo.set(e1a, f1, 1) and evo.set(e1b, f1, 2))
-    assert(evo.multi_set(e12a, { f1, f2 }, { 3, 4 }) and evo.multi_set(e12b, { f1, f2 }, { 5, 6 }))
-
-    do
-        assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
-        assert(not evo.is_empty_any(e1a, e1b, e12a, e12b))
-    end
-
-    assert(2 == evo.batch_destroy(c12))
-
-    do
-        assert(evo.is_alive_all(e1a, e1b))
-        assert(not evo.is_alive_any(e12a, e12b))
-
-        assert(not evo.is_empty_any(e1a, e1b))
-        assert(evo.is_empty_all(e12a, e12b))
-    end
-end
-
-do
-    local f1, f2 = evo.id(2)
-
-    local c1 = assert(evo.chunk(f1))
-    local c12 = assert(evo.chunk(f1, f2))
-
-    local e1a = evo.entity():set(f1, 1):build()
-    local e1b = evo.entity():set(f1, 2):build()
-
-    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
-    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 2 and c12_ec == 2)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b)
-        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
-    end
-
-    assert(2 == evo.batch_multi_set(c1, { f2, f1 }, { 7, 0 }))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f1) == 0 and evo.get(e1b, f1) == 0)
-        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
-        assert(evo.get(e12a, f1) == 3 and evo.get(e12b, f1) == 5)
-        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
-    end
-
-    assert(4 == evo.batch_multi_set(c12, { f1 }, { 7 }))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
-        assert(evo.get(e1a, f2) == 7 and evo.get(e1b, f2) == 7)
-        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
-        assert(evo.get(e12a, f2) == 4 and evo.get(e12b, f2) == 6)
-    end
-
-    assert(4 == evo.batch_multi_remove(c12, { f2 }))
-
-    do
-        local c1_es, c1_ec = evo.entities(c1)
-        assert(c1_es and #c1_es == 4 and c1_ec == 4)
-        assert(c1_es[1] == e12a and c1_es[2] == e12b and c1_es[3] == e1a and c1_es[4] == e1b)
-        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
-        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
-    end
-
-    assert(4 == evo.batch_multi_set(c1, { f2 }, { 8 }))
-
-    do
-        local c12_es, c12_ec = evo.entities(c12)
-        assert(c12_es and #c12_es == 4 and c12_ec == 4)
-        assert(c12_es[1] == e12a and c12_es[2] == e12b and c12_es[3] == e1a and c12_es[4] == e1b)
-        assert(evo.get(e1a, f1) == 7 and evo.get(e1b, f1) == 7)
-        assert(evo.get(e1a, f2) == 8 and evo.get(e1b, f2) == 8)
-        assert(evo.get(e12a, f1) == 7 and evo.get(e12b, f1) == 7)
-        assert(evo.get(e12a, f2) == 8 and evo.get(e12b, f2) == 8)
-    end
-
-    assert(4 == evo.batch_destroy(c12))
-
-    do
-        assert(not evo.is_alive_any(e1a, e1b, e12a, e12b))
-        assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
-    end
-end
-
-do
-    local f1, f2 = evo.id(2)
-
-    local c1 = assert(evo.chunk(f1))
-    local c12 = assert(evo.chunk(f1, f2))
-
-    local e1a = evo.entity():set(f1, 1):build()
-    local e1b = evo.entity():set(f1, 2):build()
-
-    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
-    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
-
-    assert(4 == evo.batch_clear(c1, c12))
-
-    assert(evo.is_alive_all(e1a, e1b, e12a, e12b))
-    assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
-end
-
-do
-    local f1, f2 = evo.id(2)
-
-    local c1 = assert(evo.chunk(f1))
-    local c12 = assert(evo.chunk(f1, f2))
-
-    local e1a = evo.entity():set(f1, 1):build()
-    local e1b = evo.entity():set(f1, 2):build()
-
-    local e12a = evo.entity():set(f1, 3):set(f2, 4):build()
-    local e12b = evo.entity():set(f1, 5):set(f2, 6):build()
-
-    assert(4 == evo.batch_destroy(c1, c12))
-
-    assert(not evo.is_alive_any(e1a, e1b, e12a, e12b))
-    assert(evo.is_empty_all(e1a, e1b, e12a, e12b))
 end
 
 do
