@@ -4508,7 +4508,6 @@ end
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return boolean set_or_deferred
 __evolved_set = function(entity, fragment, ...)
     if __debug_mode then
         __debug_fns.validate_entity(entity)
@@ -4517,7 +4516,7 @@ __evolved_set = function(entity, fragment, ...)
 
     if __defer_depth > 0 then
         __defer_set(entity, fragment, ...)
-        return false
+        return
     end
 
     local entity_index = entity % 0x100000
@@ -4531,7 +4530,7 @@ __evolved_set = function(entity, fragment, ...)
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if not new_chunk then
-        return true
+        return
     end
 
     __evolved_defer()
@@ -4664,29 +4663,27 @@ __evolved_set = function(entity, fragment, ...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
----@return boolean removed_or_deferred
 __evolved_remove = function(entity, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
         -- this entity is not alive, nothing to remove
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_remove(entity, ...)
-        return false
+        return
     end
 
     local entity_chunks = __entity_chunks
@@ -4698,7 +4695,7 @@ __evolved_remove = function(entity, ...)
     local new_chunk = __chunk_without_fragments(old_chunk, ...)
 
     if old_chunk == new_chunk then
-        return true
+        return
     end
 
     __evolved_defer()
@@ -4772,21 +4769,19 @@ __evolved_remove = function(entity, ...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param ... evolved.entity entities
----@return boolean cleared_or_deferred
 __evolved_clear = function(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_clear(...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -4845,21 +4840,19 @@ __evolved_clear = function(...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param ... evolved.entity entities
----@return boolean destroyed_or_deferred
 __evolved_destroy = function(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_destroy(...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -4933,18 +4926,16 @@ __evolved_destroy = function(...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param entity evolved.entity
 ---@param fragments evolved.fragment[]
 ---@param components? evolved.component[]
----@return boolean set_or_deferred
 __evolved_multi_set = function(entity, fragments, components)
     local fragment_count = #fragments
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     if not components then
@@ -4958,7 +4949,7 @@ __evolved_multi_set = function(entity, fragments, components)
 
     if __defer_depth > 0 then
         __defer_multi_set(entity, fragments, fragment_count, components, #components)
-        return false
+        return
     end
 
     local entity_index = entity % 0x100000
@@ -4972,7 +4963,7 @@ __evolved_multi_set = function(entity, fragments, components)
     local new_chunk = __chunk_with_fragment_list(old_chunk, fragments, fragment_count)
 
     if not new_chunk then
-        return true
+        return
     end
 
     __evolved_defer()
@@ -5163,29 +5154,27 @@ __evolved_multi_set = function(entity, fragments, components)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param entity evolved.entity
 ---@param fragments evolved.fragment[]
----@return boolean removed_or_deferred
 __evolved_multi_remove = function(entity, fragments)
     local fragment_count = #fragments
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
         -- this entity is not alive, nothing to remove
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_multi_remove(entity, fragments, fragment_count)
-        return false
+        return
     end
 
     local entity_chunks = __entity_chunks
@@ -5197,7 +5186,7 @@ __evolved_multi_remove = function(entity, fragments)
     local new_chunk = __chunk_without_fragment_list(old_chunk, fragments, fragment_count)
 
     if old_chunk == new_chunk then
-        return true
+        return
     end
 
     __evolved_defer()
@@ -5270,13 +5259,11 @@ __evolved_multi_remove = function(entity, fragments)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param ... any component arguments
----@return boolean set_or_deferred
 __evolved_batch_set = function(query, fragment, ...)
     if __debug_mode then
         __debug_fns.validate_query(query)
@@ -5285,7 +5272,7 @@ __evolved_batch_set = function(query, fragment, ...)
 
     if __defer_depth > 0 then
         __defer_batch_set(query, fragment, ...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5309,29 +5296,27 @@ __evolved_batch_set = function(query, fragment, ...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param query evolved.query
 ---@param ... evolved.fragment fragments
----@return boolean removed_or_deferred
 __evolved_batch_remove = function(query, ...)
     local fragment_count = select('#', ...)
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     local query_index = query % 0x100000
 
     if __freelist_ids[query_index] ~= query then
         -- this query is not alive, nothing to remove
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_batch_remove(query, ...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5355,21 +5340,19 @@ __evolved_batch_remove = function(query, ...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param ... evolved.query queries
----@return boolean cleared_or_deferred
 __evolved_batch_clear = function(...)
     local argument_count = select('#', ...)
 
     if argument_count == 0 then
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_batch_clear(...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5403,21 +5386,19 @@ __evolved_batch_clear = function(...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param ... evolved.query queries
----@return boolean destroyed_or_deferred
 __evolved_batch_destroy = function(...)
     local argument_count = select('#', ...)
 
     if argument_count == 0 then
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_batch_destroy(...)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5451,18 +5432,16 @@ __evolved_batch_destroy = function(...)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
 ---@param components? evolved.component[]
----@return boolean set_or_deferred
 __evolved_batch_multi_set = function(query, fragments, components)
     local fragment_count = #fragments
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     if not components then
@@ -5476,7 +5455,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
 
     if __defer_depth > 0 then
         __defer_batch_multi_set(query, fragments, fragment_count, components, #components)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5500,29 +5479,27 @@ __evolved_batch_multi_set = function(query, fragments, components)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---@param query evolved.query
 ---@param fragments evolved.fragment[]
----@return boolean removed_or_deferred
 __evolved_batch_multi_remove = function(query, fragments)
     local fragment_count = #fragments
 
     if fragment_count == 0 then
-        return true
+        return
     end
 
     local query_index = query % 0x100000
 
     if __freelist_ids[query_index] ~= query then
         -- this query is not alive, nothing to remove
-        return true
+        return
     end
 
     if __defer_depth > 0 then
         __defer_batch_multi_remove(query, fragments, fragment_count)
-        return false
+        return
     end
 
     __evolved_defer()
@@ -5546,7 +5523,6 @@ __evolved_batch_multi_remove = function(query, fragments)
     end
 
     __evolved_commit()
-    return true
 end
 
 ---
@@ -5767,7 +5743,6 @@ end
 ---@param fragments? evolved.fragment[]
 ---@param components? evolved.component[]
 ---@return evolved.entity entity
----@return boolean spawned_or_deferred
 __evolved_spawn_at = function(chunk, fragments, components)
     if not fragments then
         fragments = __safe_tbls.__EMPTY_FRAGMENT_LIST
@@ -5788,14 +5763,14 @@ __evolved_spawn_at = function(chunk, fragments, components)
     local entity = __acquire_id()
 
     if not chunk then
-        return entity, true
+        return entity
     end
 
     if __defer_depth > 0 then
         __defer_spawn_entity_at(entity, chunk,
             fragments, fragment_count,
             components, component_count)
-        return entity, false
+        return entity
     end
 
     __evolved_defer()
@@ -5804,13 +5779,12 @@ __evolved_spawn_at = function(chunk, fragments, components)
     end
     __evolved_commit()
 
-    return entity, true
+    return entity
 end
 
 ---@param fragments? evolved.fragment[]
 ---@param components? evolved.component[]
 ---@return evolved.entity entity
----@return boolean spawned_or_deferred
 __evolved_spawn_with = function(fragments, components)
     if not fragments then
         fragments = __safe_tbls.__EMPTY_FRAGMENT_LIST
@@ -5830,14 +5804,14 @@ __evolved_spawn_with = function(fragments, components)
     local entity, chunk = __acquire_id(), __chunk_fragment_list(fragments, fragment_count)
 
     if not chunk then
-        return entity, true
+        return entity
     end
 
     if __defer_depth > 0 then
         __defer_spawn_entity_with(entity, chunk,
             fragments, fragment_count,
             components, component_count)
-        return entity, false
+        return entity
     end
 
     __evolved_defer()
@@ -5846,7 +5820,7 @@ __evolved_spawn_with = function(fragments, components)
     end
     __evolved_commit()
 
-    return entity, true
+    return entity
 end
 
 ---
@@ -5860,12 +5834,10 @@ __evolved_debug_mode = function(yesno)
     __debug_mode = yesno
 end
 
----@return boolean is_collected
----@return boolean is_deferred
 __evolved_collect_garbage = function()
     if __defer_depth > 0 then
         __defer_call_hook(__evolved_collect_garbage)
-        return false, true
+        return
     end
 
     __evolved_defer()
@@ -5922,7 +5894,6 @@ __evolved_collect_garbage = function()
     end
 
     __evolved_commit()
-    return true, false
 end
 
 ---
@@ -6036,7 +6007,6 @@ function __builder_fns.entity_builder:set(fragment, ...)
 end
 
 ---@return evolved.entity entity
----@return boolean spawned_or_deferred
 function __builder_fns.entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
@@ -6047,18 +6017,18 @@ function __builder_fns.entity_builder:build()
     self.__component_count = nil
 
     if component_count == 0 then
-        return __evolved_id(), false
+        return __evolved_id()
     end
 
     ---@cast fragment_list -?
     ---@cast component_list -?
 
-    local entity, spawned_or_deferred = __evolved_spawn_with(fragment_list, component_list)
+    local entity = __evolved_spawn_with(fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return entity, spawned_or_deferred
+    return entity
 end
 
 ---
@@ -6143,7 +6113,6 @@ function __builder_fns.fragment_builder:destroy_policy(destroy_policy)
 end
 
 ---@return evolved.fragment fragment
----@return boolean spawned_or_deferred
 function __builder_fns.fragment_builder:build()
     local tag = self.__tag
     local name = self.__name
@@ -6233,12 +6202,12 @@ function __builder_fns.fragment_builder:build()
         component_list[component_count] = destroy_policy
     end
 
-    local spawned_or_deferred = __evolved_multi_set(fragment, fragment_list, component_list)
+    __evolved_multi_set(fragment, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return fragment, spawned_or_deferred
+    return fragment
 end
 
 ---
@@ -6322,7 +6291,6 @@ function __builder_fns.query_builder:exclude(...)
 end
 
 ---@return evolved.query query
----@return boolean spawned_or_deferred
 function __builder_fns.query_builder:build()
     local name = self.__name
     local single = self.__single
@@ -6364,12 +6332,12 @@ function __builder_fns.query_builder:build()
         component_list[component_count] = exclude_list
     end
 
-    local spawner_or_deferred = __evolved_multi_set(query, fragment_list, component_list)
+    __evolved_multi_set(query, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return query, spawner_or_deferred
+    return query
 end
 
 ---
@@ -6452,7 +6420,6 @@ function __builder_fns.group_builder:epilogue(epilogue)
 end
 
 ---@return evolved.group group
----@return boolean spawned_or_deferred
 function __builder_fns.group_builder:build()
     local name = self.__name
     local single = self.__single
@@ -6518,12 +6485,12 @@ function __builder_fns.group_builder:build()
         component_list[component_count] = epilogue
     end
 
-    local spawner_or_deferred = __evolved_multi_set(group, fragment_list, component_list)
+    __evolved_multi_set(group, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return group, spawner_or_deferred
+    return group
 end
 
 ---
@@ -6573,7 +6540,6 @@ function __builder_fns.phase_builder:epilogue(epilogue)
 end
 
 ---@return evolved.phase phase
----@return boolean spawned_or_deferred
 function __builder_fns.phase_builder:build()
     local name = self.__name
     local single = self.__single
@@ -6623,12 +6589,12 @@ function __builder_fns.phase_builder:build()
         component_list[component_count] = epilogue
     end
 
-    local spawned_or_deferred = __evolved_multi_set(phase, fragment_list, component_list)
+    __evolved_multi_set(phase, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return phase, spawned_or_deferred
+    return phase
 end
 
 ---
@@ -6699,7 +6665,6 @@ function __builder_fns.system_builder:epilogue(epilogue)
 end
 
 ---@return evolved.system system
----@return boolean spawned_or_deferred
 function __builder_fns.system_builder:build()
     local name = self.__name
     local single = self.__single
@@ -6773,12 +6738,12 @@ function __builder_fns.system_builder:build()
         component_list[component_count] = epilogue
     end
 
-    local spawned_or_deferred = __evolved_multi_set(system, fragment_list, component_list)
+    __evolved_multi_set(system, fragment_list, component_list)
 
     __release_table(__table_pool_tag.fragment_list, fragment_list)
     __release_table(__table_pool_tag.component_list, component_list)
 
-    return system, spawned_or_deferred
+    return system
 end
 
 ---
@@ -6817,15 +6782,15 @@ local function __update_fragment_hooks(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(__evolved_set(__ON_SET, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_set(__ON_INSERT, __ON_INSERT, __update_fragment_hooks))
-assert(__evolved_set(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks))
+__evolved_set(__ON_SET, __ON_INSERT, __update_fragment_hooks)
+__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks)
+__evolved_set(__ON_INSERT, __ON_INSERT, __update_fragment_hooks)
+__evolved_set(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks)
 
-assert(__evolved_set(__ON_SET, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_set(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks))
-assert(__evolved_set(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks))
+__evolved_set(__ON_SET, __ON_REMOVE, __update_fragment_hooks)
+__evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks)
+__evolved_set(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks)
+__evolved_set(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks)
 
 ---
 ---
@@ -6900,50 +6865,14 @@ local function __update_fragment_constructs(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
-assert(__evolved_set(__TAG, __ON_INSERT, __update_fragment_tags))
-assert(__evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags))
+__evolved_set(__TAG, __ON_INSERT, __update_fragment_tags)
+__evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags)
 
-assert(__evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults))
-assert(__evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults))
+__evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults)
+__evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults)
 
-assert(__evolved_set(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs))
-assert(__evolved_set(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs))
-
----
----
----
----
----
-
-assert(__evolved_set(__TAG, __NAME, 'TAG'))
-
-assert(__evolved_set(__NAME, __NAME, 'NAME'))
-assert(__evolved_set(__DEFAULT, __NAME, 'DEFAULT'))
-assert(__evolved_set(__CONSTRUCT, __NAME, 'CONSTRUCT'))
-
-assert(__evolved_set(__INCLUDES, __NAME, 'INCLUDES'))
-assert(__evolved_set(__EXCLUDES, __NAME, 'EXCLUDES'))
-
-assert(__evolved_set(__ON_SET, __NAME, 'ON_SET'))
-assert(__evolved_set(__ON_ASSIGN, __NAME, 'ON_ASSIGN'))
-assert(__evolved_set(__ON_INSERT, __NAME, 'ON_INSERT'))
-assert(__evolved_set(__ON_REMOVE, __NAME, 'ON_REMOVE'))
-
-assert(__evolved_set(__PHASE, __NAME, 'PHASE'))
-assert(__evolved_set(__GROUP, __NAME, 'GROUP'))
-assert(__evolved_set(__AFTER, __NAME, 'AFTER'))
-
-assert(__evolved_set(__QUERY, __NAME, 'QUERY'))
-assert(__evolved_set(__EXECUTE, __NAME, 'EXECUTE'))
-
-assert(__evolved_set(__PROLOGUE, __NAME, 'PROLOGUE'))
-assert(__evolved_set(__EPILOGUE, __NAME, 'EPILOGUE'))
-
-assert(__evolved_set(__DISABLED, __NAME, 'DISABLED'))
-
-assert(__evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY'))
-assert(__evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY'))
-assert(__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT'))
+__evolved_set(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs)
+__evolved_set(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs)
 
 ---
 ---
@@ -6951,14 +6880,50 @@ assert(__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_R
 ---
 ---
 
-assert(__evolved_set(__TAG, __TAG))
+__evolved_set(__TAG, __NAME, 'TAG')
 
-assert(__evolved_set(__INCLUDES, __CONSTRUCT, __component_list))
-assert(__evolved_set(__EXCLUDES, __CONSTRUCT, __component_list))
+__evolved_set(__NAME, __NAME, 'NAME')
+__evolved_set(__DEFAULT, __NAME, 'DEFAULT')
+__evolved_set(__CONSTRUCT, __NAME, 'CONSTRUCT')
 
-assert(__evolved_set(__AFTER, __CONSTRUCT, __component_list))
+__evolved_set(__INCLUDES, __NAME, 'INCLUDES')
+__evolved_set(__EXCLUDES, __NAME, 'EXCLUDES')
 
-assert(__evolved_set(__DISABLED, __TAG))
+__evolved_set(__ON_SET, __NAME, 'ON_SET')
+__evolved_set(__ON_ASSIGN, __NAME, 'ON_ASSIGN')
+__evolved_set(__ON_INSERT, __NAME, 'ON_INSERT')
+__evolved_set(__ON_REMOVE, __NAME, 'ON_REMOVE')
+
+__evolved_set(__PHASE, __NAME, 'PHASE')
+__evolved_set(__GROUP, __NAME, 'GROUP')
+__evolved_set(__AFTER, __NAME, 'AFTER')
+
+__evolved_set(__QUERY, __NAME, 'QUERY')
+__evolved_set(__EXECUTE, __NAME, 'EXECUTE')
+
+__evolved_set(__PROLOGUE, __NAME, 'PROLOGUE')
+__evolved_set(__EPILOGUE, __NAME, 'EPILOGUE')
+
+__evolved_set(__DISABLED, __NAME, 'DISABLED')
+
+__evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY')
+__evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY')
+__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT')
+
+---
+---
+---
+---
+---
+
+__evolved_set(__TAG, __TAG)
+
+__evolved_set(__INCLUDES, __CONSTRUCT, __component_list)
+__evolved_set(__EXCLUDES, __CONSTRUCT, __component_list)
+
+__evolved_set(__AFTER, __CONSTRUCT, __component_list)
+
+__evolved_set(__DISABLED, __TAG)
 
 ---
 ---
@@ -6968,7 +6933,7 @@ assert(__evolved_set(__DISABLED, __TAG))
 
 ---@param query evolved.query
 ---@param include_list evolved.fragment[]
-assert(__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
+__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_count = #include_list
 
     if include_count == 0 then
@@ -6985,11 +6950,11 @@ assert(__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
 
     __assoc_list_sort(sorted_includes)
     __query_sorted_includes[query] = sorted_includes
-end))
+end)
 
-assert(__evolved_set(__INCLUDES, __ON_REMOVE, function(query)
+__evolved_set(__INCLUDES, __ON_REMOVE, function(query)
     __query_sorted_includes[query] = nil
-end))
+end)
 
 ---
 ---
@@ -6999,7 +6964,7 @@ end))
 
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
-assert(__evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
+__evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_count = #exclude_list
 
     if exclude_count == 0 then
@@ -7016,11 +6981,11 @@ assert(__evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
 
     __assoc_list_sort(sorted_excludes)
     __query_sorted_excludes[query] = sorted_excludes
-end))
+end)
 
-assert(__evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
+__evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
     __query_sorted_excludes[query] = nil
-end))
+end)
 
 ---
 ---
@@ -7031,7 +6996,7 @@ end))
 ---@param group evolved.group
 ---@param new_phase evolved.phase
 ---@param old_phase? evolved.phase
-assert(__evolved_set(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
+__evolved_set(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
     if new_phase == old_phase then
         return
     end
@@ -7056,11 +7021,11 @@ assert(__evolved_set(__PHASE, __ON_SET, function(group, _, new_phase, old_phase)
     end
 
     __assoc_list_insert(new_phase_groups, group)
-end))
+end)
 
 ---@param group evolved.group
 ---@param old_phase evolved.phase
-assert(__evolved_set(__PHASE, __ON_REMOVE, function(group, _, old_phase)
+__evolved_set(__PHASE, __ON_REMOVE, function(group, _, old_phase)
     local old_phase_groups = __phase_groups[old_phase]
 
     if old_phase_groups then
@@ -7070,7 +7035,7 @@ assert(__evolved_set(__PHASE, __ON_REMOVE, function(group, _, old_phase)
             __phase_groups[old_phase] = nil
         end
     end
-end))
+end)
 
 ---
 ---
@@ -7081,7 +7046,7 @@ end))
 ---@param system evolved.system
 ---@param new_group evolved.group
 ---@param old_group? evolved.group
-assert(__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
+__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
     if new_group == old_group then
         return
     end
@@ -7106,11 +7071,11 @@ assert(__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group
     end
 
     __assoc_list_insert(new_group_systems, system)
-end))
+end)
 
 ---@param system evolved.system
 ---@param old_group evolved.group
-assert(__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
+__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
     local old_group_systems = __group_systems[old_group]
 
     if old_group_systems then
@@ -7120,7 +7085,7 @@ assert(__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
             __group_systems[old_group] = nil
         end
     end
-end))
+end)
 
 ---
 ---
@@ -7130,7 +7095,7 @@ end))
 
 ---@param group evolved.group
 ---@param new_after_list evolved.group[]
-assert(__evolved_set(__AFTER, __ON_SET, function(group, _, new_after_list)
+__evolved_set(__AFTER, __ON_SET, function(group, _, new_after_list)
     local new_after_count = #new_after_list
 
     if new_after_count == 0 then
@@ -7146,12 +7111,12 @@ assert(__evolved_set(__AFTER, __ON_SET, function(group, _, new_after_list)
     end
 
     __group_dependencies[group] = new_dependencies
-end))
+end)
 
 ---@param group evolved.group
-assert(__evolved_set(__AFTER, __ON_REMOVE, function(group)
+__evolved_set(__AFTER, __ON_REMOVE, function(group)
     __group_dependencies[group] = nil
-end))
+end)
 
 ---
 ---

@@ -77,21 +77,21 @@ has_any :: chunk | entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
 
-set :: entity, fragment, any... -> boolean
-remove :: entity, fragment... -> boolean
-clear :: entity... -> boolean
-destroy :: entity... -> boolean
+set :: entity, fragment, any... -> ()
+remove :: entity, fragment... -> ()
+clear :: entity... -> ()
+destroy :: entity... -> ()
 
-multi_set :: entity, fragment[], component[]? -> boolean
-multi_remove :: entity, fragment[] -> boolean
+multi_set :: entity, fragment[], component[]? -> ()
+multi_remove :: entity, fragment[] -> ()
 
-batch_set :: query, fragment, any... -> boolean
-batch_remove :: query, fragment... -> boolean
-batch_clear :: query... -> boolean
-batch_destroy :: query... -> boolean
+batch_set :: query, fragment, any... -> ()
+batch_remove :: query, fragment... -> ()
+batch_clear :: query... -> ()
+batch_destroy :: query... -> ()
 
-batch_multi_set :: query, fragment[], component[]? -> boolean
-batch_multi_remove :: query, fragment[] -> boolean
+batch_multi_set :: query, fragment[], component[]? -> ()
+batch_multi_remove :: query, fragment[] -> ()
 
 chunk :: fragment, fragment... -> chunk, entity[], integer
 
@@ -104,11 +104,11 @@ execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_sta
 
 process :: phase... -> ()
 
-spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
-spawn_with :: fragment[]?, component[]? -> entity, boolean
+spawn_at :: chunk?, fragment[]?, component[]? -> entity
+spawn_with :: fragment[]?, component[]? -> entity
 
 debug_mode :: boolean -> ()
-collect_garbage :: boolean, boolean
+collect_garbage :: ()
 ```
 
 ## Builders
@@ -116,7 +116,7 @@ collect_garbage :: boolean, boolean
 ```
 entity :: entity_builder
 entity_builder:set :: fragment, any... -> entity_builder
-entity_builder:build :: entity, boolean
+entity_builder:build :: entity
 ```
 
 ```
@@ -131,7 +131,7 @@ fragment_builder:on_assign :: {entity, fragment, component, component} -> fragme
 fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder
 fragment_builder:on_remove :: {entity, fragment} -> fragment_builder
 fragment_builder:destroy_policy :: id -> fragment_builder
-fragment_builder:build :: fragment, boolean
+fragment_builder:build :: fragment
 ```
 
 ```
@@ -140,7 +140,7 @@ query_builder:name :: string -> query_builder
 query_builder:single :: component -> query_builder
 query_builder:include :: fragment... -> query_builder
 query_builder:exclude :: fragment... -> query_builder
-query_builder:build :: query, boolean
+query_builder:build :: query
 ```
 
 ```
@@ -152,7 +152,7 @@ group_builder:phase :: phase -> group_builder
 group_builder:after :: group... -> group_builder
 group_builder:prologue :: {} -> group_builder
 group_builder:epilogue :: {} -> group_builder
-group_builder:build :: group, boolean
+group_builder:build :: group
 ```
 
 ```
@@ -162,7 +162,7 @@ phase_builder:single :: component -> phase_builder
 phase_builder:disable :: phase_builder
 phase_builder:prologue :: {} -> phase_builder
 phase_builder:epilogue :: {} -> phase_builder
-phase_builder:build :: phase, boolean
+phase_builder:build :: phase
 ```
 
 ```
@@ -175,7 +175,7 @@ system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:prologue :: {} -> system_builder
 system_builder:epilogue :: {} -> system_builder
-system_builder:build :: system, boolean
+system_builder:build :: system
 ```
 
 ## [License (MIT)](./LICENSE.md)
