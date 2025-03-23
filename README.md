@@ -26,6 +26,7 @@ TAG :: fragment
 NAME :: fragment
 DEFAULT :: fragment
 CONSTRUCT :: fragment
+DUPLICATE :: fragment
 
 INCLUDES :: fragment
 EXCLUDES :: fragment
@@ -126,6 +127,7 @@ fragment_builder:name :: string -> fragment_builder
 fragment_builder:single :: component -> fragment_builder
 fragment_builder:default :: component -> fragment_builder
 fragment_builder:construct :: {any... -> component} -> fragment_builder
+fragment_builder:duplicate :: {component -> component} -> fragment_builder
 fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment_builder
 fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
 fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder

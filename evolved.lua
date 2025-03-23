@@ -41,6 +41,7 @@ local evolved = {
 
 ---@alias evolved.default evolved.component
 ---@alias evolved.construct fun(...: any): evolved.component
+---@alias evolved.duplicate fun(c: evolved.component): evolved.component
 
 ---@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
 ---@alias evolved.prologue fun()
@@ -649,6 +650,7 @@ local __TAG = __acquire_id()
 local __NAME = __acquire_id()
 local __DEFAULT = __acquire_id()
 local __CONSTRUCT = __acquire_id()
+local __DUPLICATE = __acquire_id()
 
 local __INCLUDES = __acquire_id()
 local __EXCLUDES = __acquire_id()
@@ -792,9 +794,9 @@ local function __id_name(id)
 end
 
 ---@param ... any component arguments
----@return evolved.component
+---@return evolved.component argument_list
 ---@nodiscard
-local function __component_list(...)
+local function __component_list_ctor(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -808,6 +810,25 @@ local function __component_list(...)
     end
 
     return argument_list
+end
+
+---@param argument_list evolved.component
+---@return evolved.component argument_list
+---@nodiscard
+local function __component_list_copy(argument_list)
+    local argument_count = #argument_list
+
+    if argument_count == 0 then
+        return {}
+    end
+
+    local dupl_argument_list = __lua_table_new(argument_count, 0)
+
+    __lua_table_move(
+        argument_list, 1, argument_count,
+        1, dupl_argument_list)
+
+    return dupl_argument_list
 end
 
 ---@param fragment evolved.fragment
@@ -1086,7 +1107,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_fragments = __lua_setmetatable({}, __debug_fns.chunk_component_fragments_mt)
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
-        or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
+        or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT, __DUPLICATE)
 
     local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
@@ -5933,6 +5954,7 @@ __builder_fns.entity_builder.__index = __builder_fns.entity_builder
 ---@field package __single? evolved.component
 ---@field package __default? evolved.component
 ---@field package __construct? evolved.construct
+---@field package __duplicate? evolved.duplicate
 ---@field package __on_set? evolved.set_hook
 ---@field package __on_assign? evolved.set_hook
 ---@field package __on_insert? evolved.set_hook
@@ -6100,6 +6122,13 @@ function __builder_fns.fragment_builder:construct(construct)
     return self
 end
 
+---@param duplicate evolved.duplicate
+---@return evolved.fragment_builder builder
+function __builder_fns.fragment_builder:duplicate(duplicate)
+    self.__duplicate = duplicate
+    return self
+end
+
 ---@param on_set evolved.set_hook
 ---@return evolved.fragment_builder builder
 function __builder_fns.fragment_builder:on_set(on_set)
@@ -6142,6 +6171,7 @@ function __builder_fns.fragment_builder:build()
     local single = self.__single
     local default = self.__default
     local construct = self.__construct
+    local duplicate = self.__duplicate
     local on_set = self.__on_set
     local on_assign = self.__on_assign
     local on_insert = self.__on_insert
@@ -6153,6 +6183,7 @@ function __builder_fns.fragment_builder:build()
     self.__single = nil
     self.__default = nil
     self.__construct = nil
+    self.__duplicate = nil
     self.__on_set = nil
     self.__on_assign = nil
     self.__on_insert = nil
@@ -6193,6 +6224,12 @@ function __builder_fns.fragment_builder:build()
         component_count = component_count + 1
         fragment_list[component_count] = __CONSTRUCT
         component_list[component_count] = construct
+    end
+
+    if duplicate then
+        component_count = component_count + 1
+        fragment_list[component_count] = __DUPLICATE
+        component_list[component_count] = duplicate
     end
 
     if on_set then
@@ -6781,7 +6818,7 @@ local function __update_chunk_caches_trace(chunk)
     local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
 
     local has_defaults_or_constructs = (chunk_parent and chunk_parent.__has_defaults_or_constructs)
-        or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT)
+        or __evolved_has_any(chunk_fragment, __DEFAULT, __CONSTRUCT, __DUPLICATE)
 
     local has_set_or_assign_hooks = (chunk_parent and chunk_parent.__has_set_or_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
@@ -6888,6 +6925,11 @@ local function __update_fragment_constructs(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
 end
 
+---@param fragment evolved.fragment
+local function __update_fragment_duplicates(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
 __evolved_set(__TAG, __ON_INSERT, __update_fragment_tags)
 __evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags)
 
@@ -6896,6 +6938,9 @@ __evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults)
 
 __evolved_set(__CONSTRUCT, __ON_INSERT, __update_fragment_constructs)
 __evolved_set(__CONSTRUCT, __ON_REMOVE, __update_fragment_constructs)
+
+__evolved_set(__DUPLICATE, __ON_INSERT, __update_fragment_duplicates)
+__evolved_set(__DUPLICATE, __ON_REMOVE, __update_fragment_duplicates)
 
 ---
 ---
@@ -6908,6 +6953,7 @@ __evolved_set(__TAG, __NAME, 'TAG')
 __evolved_set(__NAME, __NAME, 'NAME')
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__CONSTRUCT, __NAME, 'CONSTRUCT')
+__evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
 
 __evolved_set(__INCLUDES, __NAME, 'INCLUDES')
 __evolved_set(__EXCLUDES, __NAME, 'EXCLUDES')
@@ -6941,10 +6987,14 @@ __evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_F
 
 __evolved_set(__TAG, __TAG)
 
-__evolved_set(__INCLUDES, __CONSTRUCT, __component_list)
-__evolved_set(__EXCLUDES, __CONSTRUCT, __component_list)
+__evolved_set(__INCLUDES, __CONSTRUCT, __component_list_ctor)
+__evolved_set(__INCLUDES, __DUPLICATE, __component_list_copy)
 
-__evolved_set(__AFTER, __CONSTRUCT, __component_list)
+__evolved_set(__EXCLUDES, __CONSTRUCT, __component_list_ctor)
+__evolved_set(__EXCLUDES, __DUPLICATE, __component_list_copy)
+
+__evolved_set(__AFTER, __CONSTRUCT, __component_list_ctor)
+__evolved_set(__AFTER, __DUPLICATE, __component_list_copy)
 
 __evolved_set(__DISABLED, __TAG)
 
@@ -7152,6 +7202,7 @@ evolved.TAG = __TAG
 evolved.NAME = __NAME
 evolved.DEFAULT = __DEFAULT
 evolved.CONSTRUCT = __CONSTRUCT
+evolved.DUPLICATE = __DUPLICATE
 
 evolved.INCLUDES = __INCLUDES
 evolved.EXCLUDES = __EXCLUDES
