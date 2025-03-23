@@ -7938,3 +7938,59 @@ do
         assert(#after == 2 and after[1] == s1 and after[2] == g2)
     end
 end
+
+do
+    local f1 = evo.id()
+    local c1 = evo.chunk(f1)
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    local e1 = evo.spawn_at(c1, { f1 }, { 42 })
+    assert(evo.commit())
+
+    assert(evo.is_alive(c1))
+    assert(evo.get(e1, f1) == 42)
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    assert(evo.commit())
+
+    assert(evo.is_alive(c1))
+
+    evo.destroy(e1)
+    assert(not evo.is_alive(e1))
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    assert(evo.commit())
+
+    assert(not evo.is_alive(c1))
+end
+
+do
+    local f1 = evo.id()
+    local c1 = evo.chunk(f1)
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    local e1 = evo.spawn_with({ f1 }, { 42 })
+    assert(evo.commit())
+
+    assert(evo.is_alive(c1))
+    assert(evo.get(e1, f1) == 42)
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    assert(evo.commit())
+
+    assert(evo.is_alive(c1))
+
+    evo.destroy(e1)
+    assert(not evo.is_alive(e1))
+
+    assert(evo.defer())
+    evo.collect_garbage()
+    assert(evo.commit())
+
+    assert(not evo.is_alive(c1))
+end
