@@ -3,7 +3,7 @@
 ## Backlog
 
 - validate operation sources in the debug mode
-- should set/assign/insert return a constructed component?
+- should set/assign/insert return a constructed component? (or remove ctors at all?)
 - can we pass systems and groups to the process function?
 - builders should be rewritten :/
 - add DUPLICATE fragment trait
