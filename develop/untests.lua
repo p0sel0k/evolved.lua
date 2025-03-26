@@ -7994,3 +7994,992 @@ do
 
     assert(not evo.is_alive(c1))
 end
+
+do
+    local q1, q2, fq = evo.id(3)
+
+    evo.set(q1, fq)
+    evo.set(q2, fq)
+
+    local qf = evo.id()
+    evo.set(qf, evo.INCLUDES, fq)
+
+    local f1, f2 = evo.id(2)
+
+    local fs = { f1, f2 }
+    evo.batch_multi_set(qf, { evo.INCLUDES }, { fs })
+
+    do
+        local q1_fs = evo.get(q1, evo.INCLUDES)
+        assert(q1_fs and q1_fs ~= fs)
+        assert(#q1_fs == #fs)
+        assert(q1_fs[1] == fs[1] and q1_fs[2] == fs[2])
+    end
+
+    do
+        local q2_fs = evo.get(q2, evo.INCLUDES)
+        assert(q2_fs and q2_fs ~= fs)
+        assert(#q2_fs == #fs)
+        assert(q2_fs[1] == fs[1] and q2_fs[2] == fs[2])
+    end
+
+    do
+        local q1_fs = evo.get(q1, evo.INCLUDES)
+        local q2_fs = evo.get(q2, evo.INCLUDES)
+        assert(q1_fs ~= q2_fs)
+    end
+end
+
+do
+    local q1, q2 = evo.id(2)
+
+    local f1, f2 = evo.id(2)
+
+    local fs = { f1, f2 }
+    evo.multi_set(q1, { evo.INCLUDES }, { fs })
+    evo.multi_set(q2, { evo.INCLUDES }, { fs })
+
+    do
+        local q1_fs = evo.get(q1, evo.INCLUDES)
+        assert(q1_fs and q1_fs ~= fs)
+        assert(#q1_fs == #fs)
+        assert(q1_fs[1] == fs[1] and q1_fs[2] == fs[2])
+    end
+
+    do
+        local q2_fs = evo.get(q2, evo.INCLUDES)
+        assert(q2_fs and q2_fs ~= fs)
+        assert(#q2_fs == #fs)
+        assert(q2_fs[1] == fs[1] and q2_fs[2] == fs[2])
+    end
+
+    do
+        local q1_fs = evo.get(q1, evo.INCLUDES)
+        local q2_fs = evo.get(q2, evo.INCLUDES)
+        assert(q1_fs ~= q2_fs)
+    end
+end
+
+do
+    -- evo.set
+    -- evo.multi_set
+
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    do
+        local f = evo.fragment():build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+        end
+    end
+
+    do
+        local f = evo.fragment():default(v2(11, 22)):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():default(v2(11, 22)):duplicate(v2_clone):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():construct(v2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.set(e1, f, 1, 2)
+            evo.set(e2, f, 3, 4)
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, 1, 2)
+            evo.set(e2, f, 3, 4)
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():duplicate(v2_clone):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, v2(1, 2))
+            evo.set(e2, f, v2(3, 4))
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():construct(v2):default(v2(11, 22)):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.set(e1, f, 1, 2)
+            evo.set(e2, f, 3, 4)
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+
+            evo.set(e1, f, 1, 2)
+            evo.set(e2, f, 3, 4)
+            evo.multi_set(e3, { f }, { v2(5, 6) })
+            evo.multi_set(e4, { f }, { v2(7, 8) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 3 and evo.get(e2, f).y == 4)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 5 and evo.get(e3, f).y == 6)
+            assert(evo.get(e4, f).x == 7 and evo.get(e4, f).y == 8)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.set(e1, f)
+            evo.set(e2, f)
+            evo.multi_set(e3, { f })
+            evo.multi_set(e4, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+end
+
+do
+    -- evo.batch_set
+    -- evo.batch_multi_set
+
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    do
+        local f = evo.fragment():build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+        end
+    end
+
+    do
+        local f = evo.fragment():default(v2(11, 22)):build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():default(v2(11, 22)):duplicate(v2_clone):build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 11 and evo.get(e1, f).y == 22)
+            assert(evo.get(e2, f).x == 11 and evo.get(e2, f).y == 22)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():construct(v2):build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f, 1, 2)
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, 1, 2)
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+
+    do
+        local f = evo.fragment():duplicate(v2_clone):build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, v2(1, 2))
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) ~= evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f) == true)
+            assert(evo.get(e2, f) == true)
+            assert(evo.get(e1, f) == evo.get(e2, f))
+            assert(evo.get(e3, f) == true)
+            assert(evo.get(e4, f) == true)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+    do
+        local f = evo.fragment():construct(v2):default(v2(11, 22)):build()
+
+        local t1 = evo.fragment():tag():build()
+        local qt1 = evo.query():include(t1):build()
+
+        local t2 = evo.fragment():tag():build()
+        local qt2 = evo.query():include(t2):build()
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f, 1, 2)
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+
+        do
+            local e1, e2, e3, e4 = evo.id(4)
+            evo.set(e1, t1); evo.set(e2, t1); evo.set(e3, t2); evo.set(e4, t2)
+
+            evo.batch_set(qt1, f, 1, 2)
+            evo.batch_multi_set(qt2, { f }, { v2(3, 4) })
+
+            assert(evo.get(e1, f).x == 1 and evo.get(e1, f).y == 2)
+            assert(evo.get(e2, f).x == 1 and evo.get(e2, f).y == 2)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 3 and evo.get(e3, f).y == 4)
+            assert(evo.get(e4, f).x == 3 and evo.get(e4, f).y == 4)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+
+            evo.batch_set(qt1, f)
+            evo.batch_multi_set(qt2, { f })
+
+            assert(evo.get(e1, f).x == 0 and evo.get(e1, f).y == 0)
+            assert(evo.get(e2, f).x == 0 and evo.get(e2, f).y == 0)
+            assert(evo.get(e1, f) ~= evo.get(e2, f))
+            assert(evo.get(e3, f).x == 11 and evo.get(e3, f).y == 22)
+            assert(evo.get(e4, f).x == 11 and evo.get(e4, f).y == 22)
+            assert(evo.get(e3, f) == evo.get(e4, f))
+        end
+    end
+end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+
+    local f1 = evo.fragment():default(v2(10, 11)):build()
+    local f2 = evo.fragment():default(v2(11, 22)):build()
+
+    local fs, cs = { f1, f2 }, { v2(1, 2) }
+    local c12 = evo.chunk(f1, f2)
+
+    do
+        local e1 = evo.spawn_at(c12, fs, cs)
+        local e2 = evo.spawn_at(c12, fs, cs)
+
+        assert(evo.get(e1, f1).x == 1 and evo.get(e1, f1).y == 2)
+        assert(evo.get(e2, f1).x == 1 and evo.get(e2, f1).y == 2)
+        assert(evo.get(e1, f1) == evo.get(e2, f1))
+
+        assert(evo.get(e1, f2).x == 11 and evo.get(e1, f2).y == 22)
+        assert(evo.get(e2, f2).x == 11 and evo.get(e2, f2).y == 22)
+        assert(evo.get(e1, f2) == evo.get(e2, f2))
+    end
+
+    do
+        local e1 = evo.spawn_with(fs, cs)
+        local e2 = evo.spawn_with(fs, cs)
+
+        assert(evo.get(e1, f1).x == 1 and evo.get(e1, f1).y == 2)
+        assert(evo.get(e2, f1).x == 1 and evo.get(e2, f1).y == 2)
+        assert(evo.get(e1, f1) == evo.get(e2, f1))
+
+        assert(evo.get(e1, f2).x == 11 and evo.get(e1, f2).y == 22)
+        assert(evo.get(e2, f2).x == 11 and evo.get(e2, f2).y == 22)
+        assert(evo.get(e1, f2) == evo.get(e2, f2))
+    end
+end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local f1 = evo.fragment():default(v2(10, 11)):duplicate(v2_clone):build()
+    local f2 = evo.fragment():default(v2(11, 22)):duplicate(v2_clone):build()
+
+    local fs, cs = { f1, f2 }, { v2(1, 2) }
+    local c12 = evo.chunk(f1, f2)
+
+    do
+        local e1 = evo.spawn_at(c12, fs, cs)
+        local e2 = evo.spawn_at(c12, fs, cs)
+
+        assert(evo.get(e1, f1).x == 1 and evo.get(e1, f1).y == 2)
+        assert(evo.get(e2, f1).x == 1 and evo.get(e2, f1).y == 2)
+        assert(evo.get(e1, f1) ~= evo.get(e2, f1))
+
+        assert(evo.get(e1, f2).x == 11 and evo.get(e1, f2).y == 22)
+        assert(evo.get(e2, f2).x == 11 and evo.get(e2, f2).y == 22)
+        assert(evo.get(e1, f2) ~= evo.get(e2, f2))
+    end
+
+    do
+        local e1 = evo.spawn_with(fs, cs)
+        local e2 = evo.spawn_with(fs, cs)
+
+        assert(evo.get(e1, f1).x == 1 and evo.get(e1, f1).y == 2)
+        assert(evo.get(e2, f1).x == 1 and evo.get(e2, f1).y == 2)
+        assert(evo.get(e1, f1) ~= evo.get(e2, f1))
+
+        assert(evo.get(e1, f2).x == 11 and evo.get(e1, f2).y == 22)
+        assert(evo.get(e2, f2).x == 11 and evo.get(e2, f2).y == 22)
+        assert(evo.get(e1, f2) ~= evo.get(e2, f2))
+    end
+end
