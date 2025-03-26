@@ -837,7 +837,7 @@ end
 ---@param ... any component arguments
 ---@return evolved.component
 ---@nodiscard
-local function __component_common_construct(default, construct, duplicate, ...)
+local function __component_construct(default, construct, duplicate, ...)
     local component = ...
 
     if construct then
@@ -860,25 +860,11 @@ local function __component_common_construct(default, construct, duplicate, ...)
 end
 
 ---@param default? evolved.component
----@param prototype? evolved.component
----@return evolved.component
----@nodiscard
-local function __component_simple_construct(default, prototype)
-    local component = prototype
-
-    if component == nil then
-        component = default
-    end
-
-    return component == nil and true or component
-end
-
----@param default? evolved.component
 ---@param duplicate? evolved.duplicate
 ---@param prototype? evolved.component
 ---@return evolved.component
 ---@nodiscard
-local function __component_duplicate_construct(default, duplicate, prototype)
+local function __component_duplicate(default, duplicate, prototype)
     local component = prototype
 
     if component == nil then
@@ -2184,7 +2170,7 @@ __chunk_set = function(old_chunk, fragment, ...)
                     for old_place = 1, old_entity_count do
                         local entity = old_entity_list[old_place]
 
-                        local new_component = __component_common_construct(
+                        local new_component = __component_construct(
                             fragment_default, fragment_construct, fragment_duplicate, ...)
 
                         local old_component = old_component_storage[old_place]
@@ -2199,8 +2185,9 @@ __chunk_set = function(old_chunk, fragment, ...)
                         end
                     end
                 else
-                    local new_component = __component_simple_construct(
-                        fragment_default, ...)
+                    local new_component = ...
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for old_place = 1, old_entity_count do
                         local entity = old_entity_list[old_place]
@@ -2238,12 +2225,13 @@ __chunk_set = function(old_chunk, fragment, ...)
 
                 if fragment_construct or fragment_duplicate then
                     for old_place = 1, old_entity_count do
-                        old_component_storage[old_place] = __component_common_construct(
+                        old_component_storage[old_place] = __component_construct(
                             fragment_default, fragment_construct, fragment_duplicate, ...)
                     end
                 else
-                    local new_component = __component_simple_construct(
-                        fragment_default, ...)
+                    local new_component = ...
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for old_place = 1, old_entity_count do
                         old_component_storage[old_place] = new_component
@@ -2326,7 +2314,7 @@ __chunk_set = function(old_chunk, fragment, ...)
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entity_list[new_place]
 
-                        local new_component = __component_common_construct(
+                        local new_component = __component_construct(
                             fragment_default, fragment_construct, fragment_duplicate, ...)
 
                         new_component_storage[new_place] = new_component
@@ -2340,8 +2328,9 @@ __chunk_set = function(old_chunk, fragment, ...)
                         end
                     end
                 else
-                    local new_component = __component_simple_construct(
-                        fragment_default, ...)
+                    local new_component = ...
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         local entity = new_entity_list[new_place]
@@ -2378,12 +2367,13 @@ __chunk_set = function(old_chunk, fragment, ...)
 
                 if fragment_construct or fragment_duplicate then
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-                        new_component_storage[new_place] = __component_common_construct(
+                        new_component_storage[new_place] = __component_construct(
                             fragment_default, fragment_construct, fragment_duplicate, ...)
                     end
                 else
-                    local new_component = __component_simple_construct(
-                        fragment_default, ...)
+                    local new_component = ...
+                    if new_component == nil then new_component = fragment_default end
+                    if new_component == nil then new_component = true end
 
                     for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                         new_component_storage[new_place] = new_component
@@ -2746,7 +2736,7 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
 
-                            local new_component = __component_duplicate_construct(
+                            local new_component = __component_duplicate(
                                 fragment_default, fragment_duplicate, components[i])
 
                             local old_component = old_component_storage[old_place]
@@ -2761,8 +2751,9 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                             end
                         end
                     else
-                        local new_component = __component_simple_construct(
-                            fragment_default, components[i])
+                        local new_component = components[i]
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
@@ -2800,12 +2791,13 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
 
                     if fragment_duplicate then
                         for old_place = 1, old_entity_count do
-                            old_component_storage[old_place] = __component_duplicate_construct(
+                            old_component_storage[old_place] = __component_duplicate(
                                 fragment_default, fragment_duplicate, components[i])
                         end
                     else
-                        local new_component = __component_simple_construct(
-                            fragment_default, components[i])
+                        local new_component = components[i]
+                        if new_component == nil then new_component = fragment_default end
+                        if new_component == nil then new_component = true end
 
                         for old_place = 1, old_entity_count do
                             old_component_storage[old_place] = new_component
@@ -2897,7 +2889,7 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 local entity = new_entity_list[new_place]
 
-                                local new_component = __component_duplicate_construct(
+                                local new_component = __component_duplicate(
                                     fragment_default, fragment_duplicate, components[i])
 
                                 local old_component = new_component_storage[new_place]
@@ -2912,8 +2904,9 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                                 end
                             end
                         else
-                            local new_component = __component_simple_construct(
-                                fragment_default, components[i])
+                            local new_component = components[i]
+                            if new_component == nil then new_component = fragment_default end
+                            if new_component == nil then new_component = true end
 
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 local entity = new_entity_list[new_place]
@@ -2951,12 +2944,13 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
 
                         if fragment_duplicate then
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-                                new_component_storage[new_place] = __component_duplicate_construct(
+                                new_component_storage[new_place] = __component_duplicate(
                                     fragment_default, fragment_duplicate, components[i])
                             end
                         else
-                            local new_component = __component_simple_construct(
-                                fragment_default, components[i])
+                            local new_component = components[i]
+                            if new_component == nil then new_component = fragment_default end
+                            if new_component == nil then new_component = true end
 
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 new_component_storage[new_place] = new_component
@@ -2979,7 +2973,7 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 local entity = new_entity_list[new_place]
 
-                                local new_component = __component_duplicate_construct(
+                                local new_component = __component_duplicate(
                                     fragment_default, fragment_duplicate, components[i])
 
                                 new_component_storage[new_place] = new_component
@@ -2993,8 +2987,9 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
                                 end
                             end
                         else
-                            local new_component = __component_simple_construct(
-                                fragment_default, components[i])
+                            local new_component = components[i]
+                            if new_component == nil then new_component = fragment_default end
+                            if new_component == nil then new_component = true end
 
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 local entity = new_entity_list[new_place]
@@ -3031,12 +3026,13 @@ __chunk_multi_set = function(old_chunk, fragments, fragment_count, components)
 
                         if fragment_duplicate then
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
-                                new_component_storage[new_place] = __component_duplicate_construct(
+                                new_component_storage[new_place] = __component_duplicate(
                                     fragment_default, fragment_duplicate, components[i])
                             end
                         else
-                            local new_component = __component_simple_construct(
-                                fragment_default, components[i])
+                            local new_component = components[i]
+                            if new_component == nil then new_component = fragment_default end
+                            if new_component == nil then new_component = true end
 
                             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                                 new_component_storage[new_place] = new_component
@@ -4724,7 +4720,7 @@ __evolved_set = function(entity, fragment, ...)
         if old_component_index then
             local old_component_storage = old_component_storages[old_component_index]
 
-            local new_component = __component_common_construct(
+            local new_component = __component_construct(
                 fragment_default, fragment_construct, fragment_duplicate, ...)
 
             local old_component = old_component_storage[old_place]
@@ -4798,7 +4794,7 @@ __evolved_set = function(entity, fragment, ...)
             if new_component_index then
                 local new_component_storage = new_component_storages[new_component_index]
 
-                local new_component = __component_common_construct(
+                local new_component = __component_construct(
                     fragment_default, fragment_construct, fragment_duplicate, ...)
 
                 new_component_storage[new_place] = new_component
@@ -5151,7 +5147,7 @@ __evolved_multi_set = function(entity, fragments, components)
             if old_component_index then
                 local old_component_storage = old_component_storages[old_component_index]
 
-                local new_component = __component_duplicate_construct(
+                local new_component = __component_duplicate(
                     fragment_default, fragment_duplicate, components[i])
 
                 if fragment_on_set or fragment_on_assign then
@@ -5240,7 +5236,7 @@ __evolved_multi_set = function(entity, fragments, components)
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
-                    local new_component = __component_duplicate_construct(
+                    local new_component = __component_duplicate(
                         fragment_default, fragment_duplicate, components[i])
 
                     if fragment_on_set or fragment_on_assign then
@@ -5275,7 +5271,7 @@ __evolved_multi_set = function(entity, fragments, components)
                 if new_component_index then
                     local new_component_storage = new_component_storages[new_component_index]
 
-                    local new_component = __component_duplicate_construct(
+                    local new_component = __component_duplicate(
                         fragment_default, fragment_duplicate, components[i])
 
                     new_component_storage[new_place] = new_component
@@ -6139,7 +6135,7 @@ function __builder_fns.entity_builder:set(fragment, ...)
     local fragment_default, fragment_construct, fragment_duplicate =
         __evolved_get(fragment, __DEFAULT, __CONSTRUCT, __DUPLICATE)
 
-    local component = __component_common_construct(
+    local component = __component_construct(
         fragment_default, fragment_construct, fragment_duplicate, ...)
 
     local fragment_list = self.__fragment_list
@@ -7017,12 +7013,12 @@ local function __update_chunk_tags_trace(chunk, fragment)
 
         if fragment_duplicate then
             for place = 1, chunk.__entity_count do
-                storage[place] = __component_duplicate_construct(
+                storage[place] = __component_duplicate(
                     fragment_default, fragment_duplicate)
             end
         else
-            local new_component = __component_simple_construct(
-                fragment_default)
+            local new_component = fragment_default
+            if new_component == nil then new_component = true end
 
             for place = 1, chunk.__entity_count do
                 storage[place] = new_component
