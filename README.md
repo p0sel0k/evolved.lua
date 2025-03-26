@@ -22,10 +22,8 @@
 
 ```
 TAG :: fragment
-
 NAME :: fragment
 DEFAULT :: fragment
-CONSTRUCT :: fragment
 DUPLICATE :: fragment
 
 INCLUDES :: fragment
@@ -78,7 +76,7 @@ has_any :: chunk | entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
 
-set :: entity, fragment, any... -> ()
+set :: entity, fragment, component -> ()
 remove :: entity, fragment... -> ()
 clear :: entity... -> ()
 destroy :: entity... -> ()
@@ -86,7 +84,7 @@ destroy :: entity... -> ()
 multi_set :: entity, fragment[], component[]? -> ()
 multi_remove :: entity, fragment[] -> ()
 
-batch_set :: query, fragment, any... -> ()
+batch_set :: query, fragment, component -> ()
 batch_remove :: query, fragment... -> ()
 batch_clear :: query... -> ()
 batch_destroy :: query... -> ()
@@ -116,7 +114,7 @@ collect_garbage :: ()
 
 ```
 entity :: entity_builder
-entity_builder:set :: fragment, any... -> entity_builder
+entity_builder:set :: fragment, component -> entity_builder
 entity_builder:build :: entity
 ```
 
@@ -126,7 +124,6 @@ fragment_builder:tag :: fragment_builder
 fragment_builder:name :: string -> fragment_builder
 fragment_builder:single :: component -> fragment_builder
 fragment_builder:default :: component -> fragment_builder
-fragment_builder:construct :: {any... -> component} -> fragment_builder
 fragment_builder:duplicate :: {component -> component} -> fragment_builder
 fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment_builder
 fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
