@@ -236,11 +236,11 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         for i = 1, N do
             local e = id()
-            insert(e, F1)
+            set(e, F1)
             entities[i] = e
         end
 
@@ -253,12 +253,12 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
+            set(e, F1)
+            set(e, F2)
             entities[i] = e
         end
 
@@ -271,13 +271,13 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
             entities[i] = e
         end
 
@@ -290,14 +290,14 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
-            insert(e, F4)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
+            set(e, F4)
             entities[i] = e
         end
 
@@ -310,15 +310,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
-            insert(e, F4)
-            insert(e, F5)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
+            set(e, F4)
+            set(e, F5)
             entities[i] = e
         end
 
@@ -333,12 +333,12 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         evo.defer()
         for i = 1, N do
             local e = id()
-            insert(e, F1)
+            set(e, F1)
             entities[i] = e
         end
         evo.commit()
@@ -352,13 +352,13 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         evo.defer()
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
+            set(e, F1)
+            set(e, F2)
             entities[i] = e
         end
         evo.commit()
@@ -372,14 +372,14 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         evo.defer()
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
             entities[i] = e
         end
         evo.commit()
@@ -393,15 +393,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         evo.defer()
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
-            insert(e, F4)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
+            set(e, F4)
             entities[i] = e
         end
         evo.commit()
@@ -415,16 +415,16 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local id = evo.id
-        local insert = evo.insert
+        local set = evo.set
 
         evo.defer()
         for i = 1, N do
             local e = id()
-            insert(e, F1)
-            insert(e, F2)
-            insert(e, F3)
-            insert(e, F4)
-            insert(e, F5)
+            set(e, F1)
+            set(e, F2)
+            set(e, F3)
+            set(e, F4)
+            set(e, F5)
             entities[i] = e
         end
         evo.commit()

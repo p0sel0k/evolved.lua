@@ -22,10 +22,9 @@
 
 ```
 TAG :: fragment
-
 NAME :: fragment
 DEFAULT :: fragment
-CONSTRUCT :: fragment
+DUPLICATE :: fragment
 
 INCLUDES :: fragment
 EXCLUDES :: fragment
@@ -44,6 +43,8 @@ EXECUTE :: fragment
 
 PROLOGUE :: fragment
 EPILOGUE :: fragment
+
+DISABLED :: fragment
 
 DESTROY_POLICY :: fragment
 DESTROY_POLICY_DESTROY_ENTITY :: id
@@ -75,29 +76,21 @@ has_any :: chunk | entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
 
-set :: entity, fragment, any... -> boolean, boolean
-assign :: entity, fragment, any... -> boolean, boolean
-insert :: entity, fragment, any... -> boolean, boolean
-remove :: entity, fragment... -> boolean, boolean
-clear :: entity... -> boolean, boolean
-destroy :: entity... -> boolean, boolean
+set :: entity, fragment, component -> ()
+remove :: entity, fragment... -> ()
+clear :: entity... -> ()
+destroy :: entity... -> ()
 
-multi_set :: entity, fragment[], component[]? -> boolean, boolean
-multi_assign :: entity, fragment[], component[]? -> boolean, boolean
-multi_insert :: entity, fragment[], component[]? -> boolean, boolean
-multi_remove :: entity, fragment[] -> boolean, boolean
+multi_set :: entity, fragment[], component[]? -> ()
+multi_remove :: entity, fragment[] -> ()
 
-batch_set :: chunk | query, fragment, any... -> integer, boolean
-batch_assign :: chunk | query, fragment, any... -> integer, boolean
-batch_insert :: chunk | query, fragment, any... -> integer, boolean
-batch_remove :: chunk | query, fragment... -> integer, boolean
-batch_clear :: chunk | query... -> integer, boolean
-batch_destroy :: chunk | query... -> integer, boolean
+batch_set :: query, fragment, component -> ()
+batch_remove :: query, fragment... -> ()
+batch_clear :: query... -> ()
+batch_destroy :: query... -> ()
 
-batch_multi_set :: chunk | query, fragment[], component[]? -> integer, boolean
-batch_multi_assign :: chunk | query, fragment[], component[]? -> integer, boolean
-batch_multi_insert :: chunk | query, fragment[], component[]? -> integer, boolean
-batch_multi_remove :: chunk | query, fragment[] -> integer, boolean
+batch_multi_set :: query, fragment[], component[]? -> ()
+batch_multi_remove :: query, fragment[] -> ()
 
 chunk :: fragment, fragment... -> chunk, entity[], integer
 
@@ -110,19 +103,19 @@ execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_sta
 
 process :: phase... -> ()
 
-spawn_at :: chunk?, fragment[]?, component[]? -> entity, boolean
-spawn_with :: fragment[]?, component[]? -> entity, boolean
+spawn_at :: chunk?, fragment[]?, component[]? -> entity
+spawn_with :: fragment[]?, component[]? -> entity
 
 debug_mode :: boolean -> ()
-collect_garbage :: boolean, boolean
+collect_garbage :: ()
 ```
 
 ## Builders
 
 ```
 entity :: entity_builder
-entity_builder:set :: fragment, any... -> entity_builder
-entity_builder:build :: entity, boolean
+entity_builder:set :: fragment, component -> entity_builder
+entity_builder:build :: entity
 ```
 
 ```
@@ -131,13 +124,13 @@ fragment_builder:tag :: fragment_builder
 fragment_builder:name :: string -> fragment_builder
 fragment_builder:single :: component -> fragment_builder
 fragment_builder:default :: component -> fragment_builder
-fragment_builder:construct :: {any... -> component} -> fragment_builder
+fragment_builder:duplicate :: {component -> component} -> fragment_builder
 fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment_builder
 fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
 fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder
 fragment_builder:on_remove :: {entity, fragment} -> fragment_builder
 fragment_builder:destroy_policy :: id -> fragment_builder
-fragment_builder:build :: fragment, boolean
+fragment_builder:build :: fragment
 ```
 
 ```
@@ -146,35 +139,42 @@ query_builder:name :: string -> query_builder
 query_builder:single :: component -> query_builder
 query_builder:include :: fragment... -> query_builder
 query_builder:exclude :: fragment... -> query_builder
-query_builder:build :: query, boolean
+query_builder:build :: query
 ```
 
 ```
 group :: group_builder
 group_builder:name :: string -> group_builder
 group_builder:single :: component -> group_builder
+group_builder:disable :: group_builder
 group_builder:phase :: phase -> group_builder
 group_builder:after :: group... -> group_builder
-group_builder:build :: group, boolean
+group_builder:prologue :: {} -> group_builder
+group_builder:epilogue :: {} -> group_builder
+group_builder:build :: group
 ```
 
 ```
 phase :: phase_builder
 phase_builder:name :: string -> phase_builder
 phase_builder:single :: component -> phase_builder
-phase_builder:build :: phase, boolean
+phase_builder:disable :: phase_builder
+phase_builder:prologue :: {} -> phase_builder
+phase_builder:epilogue :: {} -> phase_builder
+phase_builder:build :: phase
 ```
 
 ```
 system :: system_builder
 system_builder:name :: string -> system_builder
 system_builder:single :: component -> system_builder
+system_builder:disable :: system_builder
 system_builder:group :: group -> system_builder
 system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:prologue :: {} -> system_builder
 system_builder:epilogue :: {} -> system_builder
-system_builder:build :: system, boolean
+system_builder:build :: system
 ```
 
 ## [License (MIT)](./LICENSE.md)

@@ -1,12 +1,14 @@
 local basics = {}
 
 local __table_pack = (function()
+    ---@diagnostic disable-next-line: deprecated
     return table.pack or function(...)
         return { n = select('#', ...), ... }
     end
 end)()
 
 local __table_unpack = (function()
+    ---@diagnostic disable-next-line: deprecated
     return table.unpack or unpack
 end)()
 

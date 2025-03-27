@@ -2,14 +2,15 @@
 
 ## Backlog
 
-- should set/assign/insert return a constructed component?
-- enable/disable systems and groups
-- should systems support multiple groups?
-- should groups support multiple phases?
+- can we pass systems and groups to the process function?
+- builders should be rewritten :/
+- add evolved.spawn_as function
 
 ## After first release
 
 - cached queries
+- multi-phase groups
+- multi-group systems
 - observers and events
 - add INDEX fragment trait
 - add REQUIRES fragment trait
