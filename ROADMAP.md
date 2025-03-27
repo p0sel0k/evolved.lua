@@ -5,7 +5,6 @@
 - can we pass systems and groups to the process function?
 - builders should be rewritten :/
 - add evolved.spawn_as function
-- unroll __component_duplicate?
 
 ## After first release
 
