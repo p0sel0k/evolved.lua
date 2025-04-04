@@ -1,4 +1,4 @@
-name: all
+name: luajit
 
 on: [push, pull_request]
 
