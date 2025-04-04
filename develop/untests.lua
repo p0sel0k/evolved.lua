@@ -1,4 +1,5 @@
-require 'develop.unload' 'evolved'
+local basics = require 'develop.basics'
+basics.unload 'evolved'
 
 local evo = require 'evolved'
 
@@ -6246,7 +6247,7 @@ do
     do
         local c4_es, c4_ec = evo.entities(c4)
         assert(c4_es and #c4_es == 3 and c4_ec == 3)
-        assert(c4_es[1] == e14 and c4_es[2] == e24 and c4_es[3] == e124)
+        assert(c4_es[1] == e24 and c4_es[2] == e14 and c4_es[3] == e124)
     end
 
     assert(#evo.entities(c14) == 0)

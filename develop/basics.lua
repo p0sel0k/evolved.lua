@@ -12,6 +12,48 @@ local __table_unpack = (function()
     return table.unpack or unpack
 end)()
 
+---@param pattern string
+function basics.unload(pattern)
+    for name, _ in pairs(package.loaded) do
+        if name:match(pattern) then
+            package.loaded[name] = nil
+        end
+    end
+end
+
+---@param modname string
+function basics.describe_fuzz(modname)
+    print(string.format('| %s ... |', modname))
+
+    do
+        local iters = 0
+
+        local start_s = os.clock()
+        local start_kb = collectgarbage('count')
+
+        local success, result = pcall(function()
+            repeat
+                iters = iters + 1
+                basics.unload(modname)
+                require(modname)
+            until os.clock() - start_s > 0.5
+        end)
+
+        local finish_s = os.clock()
+        local finish_kb = collectgarbage('count')
+
+        if success then
+            print(string.format('|-- PASS | us: %.2f | op/s: %.2f | kb/i: %.2f | iters: %d',
+                (finish_s - start_s) * 1e6 / iters,
+                iters / (finish_s - start_s),
+                (finish_kb - start_kb) / iters,
+                iters))
+        else
+            print('|-- FUZZ FAIL: ' .. result)
+        end
+    end
+end
+
 ---@param name string
 ---@param loop fun(...): ...
 ---@param init? fun(): ...
