@@ -8112,6 +8112,6 @@ do
 
         assert(evo.get(e1, f2).x == 11 and evo.get(e1, f2).y == 22)
         assert(evo.get(e2, f2).x == 11 and evo.get(e2, f2).y == 22)
-        assert(evo.get(e1, f2) == evo.get(e2, f2))
+        assert(evo.get(e1, f2) ~= evo.get(e2, f2))
     end
 end
