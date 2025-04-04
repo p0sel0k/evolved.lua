@@ -1,5 +1,5 @@
 {
-    "[json][jsonc][lua][markdown]": {
+    "[json][jsonc][lua][markdown][yaml]": {
         "editor.formatOnSave": true,
         "files.insertFinalNewline": true,
         "files.trimFinalNewlines": true,
