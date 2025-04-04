@@ -1,5 +1,5 @@
-require 'develop.unload' 'evolved'
 local basics = require 'develop.basics'
+basics.unload 'evolved'
 
 local evo = require 'evolved'
 

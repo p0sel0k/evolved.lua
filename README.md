@@ -2,13 +2,19 @@
 
 > Evolved ECS (Entity-Component-System) for Lua
 
-[![language][badge.language]][language]
+[![lua5.1][badge.lua5.1]][lua5.1]
+[![lua5.4][badge.lua5.4]][lua5.4]
+[![luajit][badge.luajit]][luajit]
 [![license][badge.license]][license]
 
-[badge.language]: https://img.shields.io/badge/language-Lua-orange
+[badge.lua5.1]: https://img.shields.io/github/actions/workflow/status/BlackMATov/evolved.lua/.github/workflows/lua5.1.yml?label=Lua%205.1
+[badge.lua5.4]: https://img.shields.io/github/actions/workflow/status/BlackMATov/evolved.lua/.github/workflows/lua5.4.yml?label=Lua%205.4
+[badge.luajit]: https://img.shields.io/github/actions/workflow/status/BlackMATov/evolved.lua/.github/workflows/luajit.yml?label=LuaJIT
 [badge.license]: https://img.shields.io/badge/license-MIT-blue
 
-[language]: https://en.wikipedia.org/wiki/Lua_(programming_language)
+[lua5.1]: https://github.com/BlackMATov/evolved.lua/actions?query=workflow%3Alua5.1
+[lua5.4]: https://github.com/BlackMATov/evolved.lua/actions?query=workflow%3Alua5.4
+[luajit]: https://github.com/BlackMATov/evolved.lua/actions?query=workflow%3Aluajit
 [license]: https://en.wikipedia.org/wiki/MIT_License
 
 [evolved]: https://github.com/BlackMATov/evolved.lua
