@@ -1684,13 +1684,17 @@ local function __detach_all_entities(chunk)
 end
 
 ---@param entity evolved.entity
----@param chunk evolved.chunk
+---@param chunk? evolved.chunk
 ---@param fragment_list evolved.fragment[]
 ---@param fragment_count integer
 ---@param component_list evolved.component[]
 local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, component_list)
     if __defer_depth <= 0 then
         __error_fmt('spawn entity operations should be deferred')
+    end
+
+    if not chunk then
+        return
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -1829,13 +1833,17 @@ local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, c
 end
 
 ---@param entity evolved.entity
----@param chunk evolved.chunk
+---@param chunk? evolved.chunk
 ---@param fragment_list evolved.fragment[]
 ---@param fragment_count integer
 ---@param component_list evolved.component[]
 local function __spawn_entity_with(entity, chunk, fragment_list, fragment_count, component_list)
     if __defer_depth <= 0 then
         __error_fmt('spawn entity operations should be deferred')
+    end
+
+    if not chunk then
+        return
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -4061,7 +4069,7 @@ __defer_ops[__defer_op.batch_multi_remove] = function(bytes, index)
 end
 
 ---@param entity evolved.entity
----@param chunk evolved.chunk
+---@param chunk? evolved.chunk
 ---@param fragments evolved.fragment[]
 ---@param fragment_count integer
 ---@param components evolved.component[]
@@ -4080,7 +4088,7 @@ __defer_spawn_entity_at = function(entity, chunk, fragments, fragment_count, com
 
     bytecode[length + 1] = __defer_op.spawn_entity_at
     bytecode[length + 2] = entity
-    bytecode[length + 3] = __chunk_pin(chunk)
+    bytecode[length + 3] = chunk and __chunk_pin(chunk)
     bytecode[length + 4] = fragment_list
     bytecode[length + 5] = fragment_count
     bytecode[length + 6] = component_list
@@ -4090,13 +4098,13 @@ end
 
 __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
     local entity = bytes[index + 0]
-    local chunk = __chunk_unpin(bytes[index + 1])
+    local chunk = bytes[index + 1] and __chunk_unpin(bytes[index + 1])
     local fragment_list = bytes[index + 2]
     local fragment_count = bytes[index + 3]
     local component_list = bytes[index + 4]
 
     if __debug_mode then
-        __debug_fns.validate_chunk(chunk)
+        if chunk then __debug_fns.validate_chunk(chunk) end
         __debug_fns.validate_fragment_list(fragment_list, fragment_count)
     end
 
@@ -4112,7 +4120,7 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
 end
 
 ---@param entity evolved.entity
----@param chunk evolved.chunk
+---@param chunk? evolved.chunk
 ---@param fragments evolved.fragment[]
 ---@param fragment_count integer
 ---@param components evolved.component[]
@@ -4131,7 +4139,7 @@ __defer_spawn_entity_with = function(entity, chunk, fragments, fragment_count, c
 
     bytecode[length + 1] = __defer_op.spawn_entity_with
     bytecode[length + 2] = entity
-    bytecode[length + 3] = __chunk_pin(chunk)
+    bytecode[length + 3] = chunk and __chunk_pin(chunk)
     bytecode[length + 4] = fragment_list
     bytecode[length + 5] = fragment_count
     bytecode[length + 6] = component_list
@@ -4141,13 +4149,13 @@ end
 
 __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
     local entity = bytes[index + 0]
-    local chunk = __chunk_unpin(bytes[index + 1])
+    local chunk = bytes[index + 1] and __chunk_unpin(bytes[index + 1])
     local fragment_list = bytes[index + 2]
     local fragment_count = bytes[index + 3]
     local component_list = bytes[index + 4]
 
     if __debug_mode then
-        __debug_fns.validate_chunk(chunk)
+        if chunk then __debug_fns.validate_chunk(chunk) end
         __debug_fns.validate_fragment_list(fragment_list, fragment_count)
     end
 
@@ -5834,13 +5842,10 @@ __evolved_spawn_at = function(chunk, fragments, components)
     end
 
     local entity = __acquire_id()
-
-    if not chunk then
-        return entity
-    end
+    local entity_chunk = __chunk_with_fragment_list(chunk, fragments, fragment_count)
 
     if __defer_depth > 0 then
-        __defer_spawn_entity_at(entity, chunk,
+        __defer_spawn_entity_at(entity, entity_chunk,
             fragments, fragment_count,
             components, component_count)
         return entity
@@ -5848,7 +5853,7 @@ __evolved_spawn_at = function(chunk, fragments, components)
 
     __evolved_defer()
     do
-        __spawn_entity_at(entity, chunk, fragments, fragment_count, components)
+        __spawn_entity_at(entity, entity_chunk, fragments, fragment_count, components)
     end
     __evolved_commit()
 
@@ -5874,14 +5879,11 @@ __evolved_spawn_with = function(fragments, components)
         __debug_fns.validate_fragment_list(fragments, fragment_count)
     end
 
-    local entity, chunk = __acquire_id(), __chunk_fragment_list(fragments, fragment_count)
-
-    if not chunk then
-        return entity
-    end
+    local entity = __acquire_id()
+    local entity_chunk = __chunk_fragment_list(fragments, fragment_count)
 
     if __defer_depth > 0 then
-        __defer_spawn_entity_with(entity, chunk,
+        __defer_spawn_entity_with(entity, entity_chunk,
             fragments, fragment_count,
             components, component_count)
         return entity
@@ -5889,7 +5891,7 @@ __evolved_spawn_with = function(fragments, components)
 
     __evolved_defer()
     do
-        __spawn_entity_with(entity, chunk, fragments, fragment_count, components)
+        __spawn_entity_with(entity, entity_chunk, fragments, fragment_count, components)
     end
     __evolved_commit()
 
