@@ -8226,3 +8226,269 @@ do
         assert(evo.has(e, f2) and evo.get(e, f2) == 43)
     end
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f1, evo.NAME, 'f1')
+    evo.set(f2, evo.NAME, 'f2')
+
+    evo.set(f1, evo.DEFAULT, 42)
+    evo.set(f3, evo.TAG)
+
+    do
+        local p = evo.id()
+
+        do
+            local e = evo.spawn_as(p)
+            assert(evo.is_alive(e) and evo.is_empty(e))
+        end
+
+        do
+            local e = evo.spawn_as(p, {})
+            assert(evo.is_alive(e) and evo.is_empty(e))
+        end
+
+        do
+            local e = evo.spawn_as(p, {}, {})
+            assert(evo.is_alive(e) and evo.is_empty(e))
+        end
+
+        do
+            local e = evo.spawn_as(p, {}, { 43 })
+            assert(evo.is_alive(e) and evo.is_empty(e))
+        end
+    end
+
+    do
+        local p = evo.id()
+
+        do
+            local e = evo.spawn_as(p, { f1 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, { 43 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, { 43, 44 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1, f2 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2 }, { 44 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 44)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2, f1 }, { 44, 43 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 44)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1, f2, f3 }, { 43, 44 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 44)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1, f2, f3 }, { 43, 44, 45 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 44)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    do
+        local p = evo.id()
+        evo.set(p, f1, 42)
+
+        do
+            local e = evo.spawn_as(p)
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, {}, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, {}, { 43 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+    end
+
+    do
+        local p = evo.id()
+        evo.set(p, f1, 43)
+
+        do
+            local e = evo.spawn_as(p, { f1 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, { 44 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 44)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1 }, { 44, 45 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 44)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2 }, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f2 }, { 45 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 43)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 45)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1, f2 }, {})
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+
+        do
+            local e = evo.spawn_as(p, { f1, f2 }, { 44, 45 })
+            assert(evo.is_alive(e) and not evo.is_empty(e))
+            assert(evo.has(e, f1) and evo.get(e, f1) == 44)
+            assert(evo.has(e, f2) and evo.get(e, f2) == 45)
+        end
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local p = evo.id()
+
+    assert(evo.defer())
+    evo.set(p, f1, 42)
+    local e1 = evo.spawn_as(p)
+    local e2 = evo.spawn_as(p, { f2 }, { 44 })
+    local e3 = evo.spawn_as(p, { f1, f2 }, { 43, 44 })
+    assert(evo.is_alive(e1) and evo.is_empty(e1))
+    assert(evo.is_alive(e2) and evo.is_empty(e2))
+    assert(evo.is_alive(e3) and evo.is_empty(e3))
+    assert(evo.commit())
+
+    assert(evo.is_alive(e1) and not evo.is_empty(e1))
+    assert(evo.has(e1, f1) and evo.get(e1, f1) == 42)
+
+    assert(evo.is_alive(e2) and not evo.is_empty(e2))
+    assert(evo.has(e2, f1) and evo.get(e2, f1) == 42)
+    assert(evo.has(e2, f2) and evo.get(e2, f2) == 44)
+
+    assert(evo.is_alive(e3) and not evo.is_empty(e3))
+    assert(evo.has(e3, f1) and evo.get(e3, f1) == 43)
+    assert(evo.has(e3, f2) and evo.get(e3, f2) == 44)
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local p1 = evo.spawn_as(nil, { f2, f3 }, { 42, 43 })
+        local e1 = evo.spawn_as(p1, { f1 }, { 41 })
+
+        assert(evo.is_alive_all(p1, e1) and not evo.is_empty_any(p1, e1))
+
+        assert(not evo.has(p1, f1) and evo.get(p1, f1) == nil)
+        assert(evo.has(p1, f2) and evo.get(p1, f2) == 42)
+        assert(evo.has(p1, f3) and evo.get(p1, f3) == 43)
+
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 42)
+        assert(evo.has(e1, f3) and evo.get(e1, f3) == 43)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.DUPLICATE, function(v) return v * 2 end)
+
+    do
+        local p1 = evo.spawn_as(nil, { f2, f3 }, { 42, 43 })
+        local e1 = evo.spawn_as(p1, { f1 }, { 41 })
+
+        assert(evo.is_alive_all(p1, e1) and not evo.is_empty_any(p1, e1))
+
+        assert(not evo.has(p1, f1) and evo.get(p1, f1) == nil)
+        assert(evo.has(p1, f2) and evo.get(p1, f2) == 84)
+        assert(evo.has(p1, f3) and evo.get(p1, f3) == 43)
+
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 41)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 168)
+        assert(evo.has(e1, f3) and evo.get(e1, f3) == 43)
+    end
+end
