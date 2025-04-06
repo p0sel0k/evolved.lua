@@ -110,6 +110,7 @@ execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_sta
 process :: phase... -> ()
 
 spawn_at :: chunk?, fragment[]?, component[]? -> entity
+spawn_as :: entity?, fragment[]?, component[]? -> entity
 spawn_with :: fragment[]?, component[]? -> entity
 
 debug_mode :: boolean -> ()
