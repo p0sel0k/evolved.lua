@@ -5929,9 +5929,6 @@ do
     local q = evo.query():build()
     assert(evo.get(q, evo.NAME) == nil)
 
-    local p = evo.phase():build()
-    assert(evo.get(p, evo.NAME) == nil)
-
     local s = evo.system():build()
     assert(evo.get(s, evo.NAME) == nil)
 end
@@ -5939,7 +5936,6 @@ end
 do
     local fb = evo.fragment()
     local qb = evo.query()
-    local pb = evo.phase()
     local sb = evo.system()
 
     do
@@ -5948,9 +5944,6 @@ do
 
         local q = qb:name('query'):build()
         assert(evo.get(q, evo.NAME) == 'query')
-
-        local p = pb:name('phase'):build()
-        assert(evo.get(p, evo.NAME) == 'phase')
 
         local s = sb:name('system'):build()
         assert(evo.get(s, evo.NAME) == 'system')
@@ -5963,9 +5956,6 @@ do
         local q = qb:build()
         assert(evo.get(q, evo.NAME) == nil)
 
-        local p = pb:build()
-        assert(evo.get(p, evo.NAME) == nil)
-
         local s = sb:build()
         assert(evo.get(s, evo.NAME) == nil)
     end
@@ -5974,7 +5964,6 @@ end
 do
     local fb = evo.fragment()
     local qb = evo.query()
-    local pb = evo.phase()
     local sb = evo.system()
 
     do
@@ -5983,9 +5972,6 @@ do
 
         local q = qb:single(false):build()
         assert(evo.get(q, q) == false)
-
-        local p = pb:single(false):build()
-        assert(evo.get(p, p) == false)
 
         local s = sb:single(false):build()
         assert(evo.get(s, s) == false)
@@ -5997,9 +5983,6 @@ do
 
         local q = qb:build()
         assert(evo.get(q, q) == nil)
-
-        local p = pb:build()
-        assert(evo.get(p, p) == nil)
 
         local s = sb:build()
         assert(evo.get(s, s) == nil)
@@ -7315,7 +7298,7 @@ do
 end
 
 do
-    local gb = evo.group()
+    local gb = evo.system()
 
     local g1 = gb:build()
     local g2 = gb:name('g2'):build()
@@ -7329,29 +7312,9 @@ do
 end
 
 do
-    local g = evo.group():build()
+    local g = evo.system():build()
     local s = evo.system():group(g):build()
     assert(evo.get(s, evo.GROUP) == g)
-end
-
-do
-    local s1 = evo.group():build()
-    do
-        local after = evo.get(s1, evo.AFTER)
-        assert(after == nil)
-    end
-
-    local g2 = evo.group():after(s1):build()
-    do
-        local after = evo.get(g2, evo.AFTER)
-        assert(#after == 1 and after[1] == s1)
-    end
-
-    local g3 = evo.group():after(s1, g2):build()
-    do
-        local after = evo.get(g3, evo.AFTER)
-        assert(#after == 2 and after[1] == s1 and after[2] == g2)
-    end
 end
 
 do
