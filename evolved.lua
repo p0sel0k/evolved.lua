@@ -762,8 +762,6 @@ local __evolved_collect_garbage
 local __evolved_entity
 local __evolved_fragment
 local __evolved_query
-local __evolved_group
-local __evolved_phase
 local __evolved_system
 
 ---
@@ -7107,8 +7105,6 @@ evolved.collect_garbage = __evolved_collect_garbage
 evolved.entity = __evolved_entity
 evolved.fragment = __evolved_fragment
 evolved.query = __evolved_query
-evolved.group = __evolved_group
-evolved.phase = __evolved_phase
 evolved.system = __evolved_system
 
 evolved.collect_garbage()
