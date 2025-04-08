@@ -355,7 +355,7 @@ end
 ---@enum evolved.table_pool_tag
 local __table_pool_tag = {
     bytecode = 1,
-    chunk_stack = 2,
+    chunk_list = 2,
     system_list = 3,
     each_state = 4,
     execute_state = 5,
@@ -632,7 +632,7 @@ local function __execute_iterator(execute_state)
         end
     end
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_stack, true)
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
     __release_table(__table_pool_tag.execute_state, execute_state, true)
 end
 
@@ -820,7 +820,7 @@ end
 ---@param ... any additional trace arguments
 local function __trace_fragment_chunks(fragment, trace, ...)
     ---@type evolved.chunk[]
-    local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+    local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
 
     do
@@ -855,7 +855,7 @@ local function __trace_fragment_chunks(fragment, trace, ...)
         end
     end
 
-    __release_table(__table_pool_tag.chunk_stack, chunk_stack, true)
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
 end
 
 ---
@@ -5459,7 +5459,7 @@ __evolved_batch_set = function(query, fragment, component)
 
     do
         ---@type evolved.chunk[]
-        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local chunk_count = 0
 
         for chunk in __evolved_execute(query) do
@@ -5472,7 +5472,7 @@ __evolved_batch_set = function(query, fragment, component)
             __chunk_set(chunk, fragment, component)
         end
 
-        __release_table(__table_pool_tag.chunk_stack, chunk_list)
+        __release_table(__table_pool_tag.chunk_list, chunk_list)
     end
 
     __evolved_commit()
@@ -5503,7 +5503,7 @@ __evolved_batch_remove = function(query, ...)
 
     do
         ---@type evolved.chunk[]
-        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local chunk_count = 0
 
         for chunk in __evolved_execute(query) do
@@ -5516,7 +5516,7 @@ __evolved_batch_remove = function(query, ...)
             __chunk_remove(chunk, ...)
         end
 
-        __release_table(__table_pool_tag.chunk_stack, chunk_list)
+        __release_table(__table_pool_tag.chunk_list, chunk_list)
     end
 
     __evolved_commit()
@@ -5539,7 +5539,7 @@ __evolved_batch_clear = function(...)
 
     do
         ---@type evolved.chunk[]
-        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local chunk_count = 0
 
         for argument_index = 1, argument_count do
@@ -5562,7 +5562,7 @@ __evolved_batch_clear = function(...)
             __chunk_clear(chunk)
         end
 
-        __release_table(__table_pool_tag.chunk_stack, chunk_list)
+        __release_table(__table_pool_tag.chunk_list, chunk_list)
     end
 
     __evolved_commit()
@@ -5584,7 +5584,7 @@ __evolved_batch_destroy = function(...)
     __evolved_defer()
 
     do
-        local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local clearing_chunk_count = 0
 
         local purging_entity_list = __acquire_table(__table_pool_tag.entity_list)
@@ -5629,9 +5629,9 @@ __evolved_batch_destroy = function(...)
 
         if clearing_chunk_count > 0 then
             __clear_chunk_list(clearing_chunk_list, clearing_chunk_count)
-            __release_table(__table_pool_tag.chunk_stack, clearing_chunk_list)
+            __release_table(__table_pool_tag.chunk_list, clearing_chunk_list)
         else
-            __release_table(__table_pool_tag.chunk_stack, clearing_chunk_list, true)
+            __release_table(__table_pool_tag.chunk_list, clearing_chunk_list, true)
         end
 
         if purging_entity_count > 0 then
@@ -5673,7 +5673,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
 
     do
         ---@type evolved.chunk[]
-        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local chunk_count = 0
 
         for chunk in __evolved_execute(query) do
@@ -5686,7 +5686,7 @@ __evolved_batch_multi_set = function(query, fragments, components)
             __chunk_multi_set(chunk, fragments, fragment_count, components)
         end
 
-        __release_table(__table_pool_tag.chunk_stack, chunk_list)
+        __release_table(__table_pool_tag.chunk_list, chunk_list)
     end
 
     __evolved_commit()
@@ -5717,7 +5717,7 @@ __evolved_batch_multi_remove = function(query, fragments)
 
     do
         ---@type evolved.chunk[]
-        local chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local chunk_count = 0
 
         for chunk in __evolved_execute(query) do
@@ -5730,7 +5730,7 @@ __evolved_batch_multi_remove = function(query, fragments)
             __chunk_multi_remove(chunk, fragments, fragment_count)
         end
 
-        __release_table(__table_pool_tag.chunk_stack, chunk_list)
+        __release_table(__table_pool_tag.chunk_list, chunk_list)
     end
 
     __evolved_commit()
@@ -5875,7 +5875,7 @@ __evolved_execute = function(query)
     end
 
     ---@type evolved.chunk[]
-    local chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+    local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
 
     local query_includes = __query_sorted_includes[query]
@@ -6091,11 +6091,11 @@ __evolved_collect_garbage = function()
 
     do
         ---@type evolved.chunk[]
-        local working_chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+        local working_chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
         local working_chunk_stack_size = 0
 
         ---@type evolved.chunk[]
-        local postorder_chunk_stack = __acquire_table(__table_pool_tag.chunk_stack)
+        local postorder_chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
         local postorder_chunk_stack_size = 0
 
         for _, root_chunk in __lua_next, __root_chunks do
@@ -6140,8 +6140,8 @@ __evolved_collect_garbage = function()
             end
         end
 
-        __release_table(__table_pool_tag.chunk_stack, working_chunk_stack)
-        __release_table(__table_pool_tag.chunk_stack, postorder_chunk_stack)
+        __release_table(__table_pool_tag.chunk_list, working_chunk_stack)
+        __release_table(__table_pool_tag.chunk_list, postorder_chunk_stack)
     end
 
     __evolved_commit()
