@@ -15,18 +15,11 @@ local function vector2(x, y)
     return { x = x, y = y }
 end
 
-local phases = {
-    awake = evo.phase():build(),
-    physics = evo.phase():build(),
-    graphics = evo.phase():build(),
-    shutdown = evo.phase():build(),
-}
-
 local groups = {
-    awake = evo.group():phase(phases.awake):build(),
-    physics = evo.group():phase(phases.physics):build(),
-    graphics = evo.group():phase(phases.graphics):build(),
-    shutdown = evo.group():phase(phases.shutdown):build(),
+    awake = evo.system():build(),
+    physics = evo.system():build(),
+    graphics = evo.system():build(),
+    shutdown = evo.system():build(),
 }
 
 local singles = {
@@ -126,12 +119,12 @@ local shutdown_system = evo.system()
     end):build()
 
 do
-    evo.process(phases.awake)
+    evo.process(groups.awake)
 
     for _ = 1, 10 do
-        evo.process(phases.physics)
-        evo.process(phases.graphics)
+        evo.process(groups.physics)
+        evo.process(groups.graphics)
     end
 
-    evo.process(phases.shutdown)
+    evo.process(groups.shutdown)
 end

@@ -40,9 +40,7 @@ ON_ASSIGN :: fragment
 ON_INSERT :: fragment
 ON_REMOVE :: fragment
 
-PHASE :: fragment
 GROUP :: fragment
-AFTER :: fragment
 
 QUERY :: fragment
 EXECUTE :: fragment
@@ -107,7 +105,7 @@ components :: chunk, fragment... -> component[]...
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
-process :: phase... -> ()
+process :: system... -> ()
 
 spawn_at :: chunk?, fragment[]?, component[]? -> entity
 spawn_as :: entity?, fragment[]?, component[]? -> entity
@@ -150,37 +148,15 @@ query_builder:build :: query
 ```
 
 ```
-group :: group_builder
-group_builder:name :: string -> group_builder
-group_builder:single :: component -> group_builder
-group_builder:disable :: group_builder
-group_builder:phase :: phase -> group_builder
-group_builder:after :: group... -> group_builder
-group_builder:prologue :: {} -> group_builder
-group_builder:epilogue :: {} -> group_builder
-group_builder:build :: group
-```
-
-```
-phase :: phase_builder
-phase_builder:name :: string -> phase_builder
-phase_builder:single :: component -> phase_builder
-phase_builder:disable :: phase_builder
-phase_builder:prologue :: {} -> phase_builder
-phase_builder:epilogue :: {} -> phase_builder
-phase_builder:build :: phase
-```
-
-```
 system :: system_builder
 system_builder:name :: string -> system_builder
 system_builder:single :: component -> system_builder
-system_builder:disable :: system_builder
-system_builder:group :: group -> system_builder
+system_builder:group :: system -> system_builder
 system_builder:query :: query -> system_builder
 system_builder:execute :: {chunk, entity[], integer} -> system_builder
 system_builder:prologue :: {} -> system_builder
 system_builder:epilogue :: {} -> system_builder
+system_builder:disabled :: system_builder
 system_builder:build :: system
 ```
 
