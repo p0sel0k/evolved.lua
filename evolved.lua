@@ -2224,6 +2224,23 @@ local function __purge_chunk(chunk)
     chunk.__unreachable_or_collected = true
 end
 
+---@param chunk_list evolved.chunk[]
+---@param chunk_count integer
+local function __clear_chunk_list(chunk_list, chunk_count)
+    if __defer_depth <= 0 then
+        __error_fmt('this operation should be deferred')
+    end
+
+    if chunk_count == 0 then
+        return
+    end
+
+    for i = 1, chunk_count do
+        local chunk = chunk_list[i]
+        __chunk_clear(chunk)
+    end
+end
+
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
 local function __destroy_entity_list(entity_list, entity_count)
@@ -5711,6 +5728,9 @@ __evolved_batch_destroy = function(...)
     __evolved_defer()
 
     do
+        local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_stack)
+        local clearing_chunk_count = 0
+
         local purging_entity_list = __acquire_table(__table_pool_tag.entity_list)
         local purging_entity_count = 0
 
@@ -5725,7 +5745,10 @@ __evolved_batch_destroy = function(...)
             if __freelist_ids[query_index] ~= query then
                 -- this query is not alive, nothing to destroy
             else
-                for _, entity_list, entity_count in __evolved_execute(query) do
+                for chunk, entity_list, entity_count in __evolved_execute(query) do
+                    clearing_chunk_count = clearing_chunk_count + 1
+                    clearing_chunk_list[clearing_chunk_count] = chunk
+
                     for i = 1, entity_count do
                         local entity = entity_list[i]
 
@@ -5741,18 +5764,25 @@ __evolved_batch_destroy = function(...)
             end
         end
 
-        if purging_entity_count > 0 then
-            __destroy_entity_list(purging_entity_list, purging_entity_count)
-            __release_table(__table_pool_tag.entity_list, purging_entity_list)
-        else
-            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
-        end
-
         if purging_fragment_count > 0 then
             __destroy_fragment_list(purging_fragment_list, purging_fragment_count)
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list)
         else
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list, true)
+        end
+
+        if clearing_chunk_count > 0 then
+            __clear_chunk_list(clearing_chunk_list, clearing_chunk_count)
+            __release_table(__table_pool_tag.chunk_stack, clearing_chunk_list)
+        else
+            __release_table(__table_pool_tag.chunk_stack, clearing_chunk_list, true)
+        end
+
+        if purging_entity_count > 0 then
+            __destroy_entity_list(purging_entity_list, purging_entity_count)
+            __release_table(__table_pool_tag.entity_list, purging_entity_list)
+        else
+            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
         end
     end
 
