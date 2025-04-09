@@ -38,16 +38,16 @@ local evolved = {
 ---@alias evolved.storage evolved.component[]
 
 ---@alias evolved.default evolved.component
----@alias evolved.duplicate fun(c: evolved.component): evolved.component
+---@alias evolved.duplicate fun(component: evolved.component): evolved.component
 
----@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+---@alias evolved.execute fun(chunk: evolved.chunk, entity_list: evolved.entity[], entity_count: integer)
 ---@alias evolved.prologue fun()
 ---@alias evolved.epilogue fun()
 
----@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
----@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
----@alias evolved.insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
----@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
+---@alias evolved.set_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component?: evolved.component)
+---@alias evolved.assign_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component: evolved.component)
+---@alias evolved.insert_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component)
+---@alias evolved.remove_hook fun(entity: evolved.entity, fragment: evolved.fragment, component: evolved.component)
 
 ---@class (exact) evolved.chunk
 ---@field package __parent? evolved.chunk
@@ -5095,18 +5095,18 @@ function __evolved_destroy(...)
             end
         end
 
-        if purging_entity_count > 0 then
-            __destroy_entity_list(purging_entity_list, purging_entity_count)
-            __release_table(__table_pool_tag.entity_list, purging_entity_list)
-        else
-            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
-        end
-
         if purging_fragment_count > 0 then
             __destroy_fragment_list(purging_fragment_list, purging_fragment_count)
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list)
         else
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list, true)
+        end
+
+        if purging_entity_count > 0 then
+            __destroy_entity_list(purging_entity_list, purging_entity_count)
+            __release_table(__table_pool_tag.entity_list, purging_entity_list)
+        else
+            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
         end
     end
 
