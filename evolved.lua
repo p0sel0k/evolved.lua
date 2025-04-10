@@ -4139,6 +4139,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_at(entity, chunk, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -4190,6 +4194,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_as(entity, prefab, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -4241,6 +4249,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_with(entity, chunk, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -6154,9 +6166,9 @@ end
 local __builder_fns = {}
 
 ---@class evolved.entity_builder
----@field package __fragment_list? evolved.fragment[]
----@field package __component_list? evolved.component[]
----@field package __component_count? integer
+---@field package __fragment_list evolved.fragment[]
+---@field package __component_list evolved.component[]
+---@field package __component_count integer
 __builder_fns.entity_builder = {}
 __builder_fns.entity_builder.__index = __builder_fns.entity_builder
 
@@ -6203,7 +6215,11 @@ __builder_fns.system_builder.__index = __builder_fns.system_builder
 ---@return evolved.entity_builder builder
 ---@nodiscard
 function __evolved_entity()
-    return __lua_setmetatable({}, __builder_fns.entity_builder)
+    return __lua_setmetatable({
+        __fragment_list = {},
+        __component_list = {},
+        __component_count = 0,
+    }, __builder_fns.entity_builder)
 end
 
 ---@param fragment evolved.fragment
@@ -6212,19 +6228,8 @@ end
 function __builder_fns.entity_builder:set(fragment, component)
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-    local component_count = self.__component_count or 0
 
-    if component_count == 0 then
-        fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-        component_list = __acquire_table(__table_pool_tag.component_list)
-        self.__fragment_list = fragment_list
-        self.__component_list = component_list
-    end
-
-    ---@cast fragment_list -?
-    ---@cast component_list -?
-
-    component_count = component_count + 1
+    local component_count = self.__component_count + 1
     self.__component_count = component_count
 
     fragment_list[component_count] = fragment
@@ -6237,23 +6242,28 @@ end
 function __builder_fns.entity_builder:build()
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-    local component_count = self.__component_count or 0
 
-    self.__fragment_list = nil
-    self.__component_list = nil
-    self.__component_count = nil
+    local component_count = self.__component_count
+    self.__component_count = 0
 
-    if component_count == 0 then
-        return __evolved_id()
+    if __debug_mode then
+        __debug_fns.validate_fragment_list(fragment_list, component_count)
     end
 
-    ---@cast fragment_list -?
-    ---@cast component_list -?
+    local entity = __acquire_id()
+    local entity_chunk = __chunk_fragment_list(fragment_list, component_count)
 
-    local entity = __evolved_spawn_with(fragment_list, component_list)
+    if __defer_depth > 0 then
+        __defer_spawn_entity_with(entity, entity_chunk,
+            fragment_list, component_count,
+            component_list, component_count)
+    end
 
-    __release_table(__table_pool_tag.fragment_list, fragment_list)
-    __release_table(__table_pool_tag.component_list, component_list)
+    __evolved_defer()
+    do
+        __spawn_entity_with(entity, entity_chunk, fragment_list, component_count, component_list)
+    end
+    __evolved_commit()
 
     return entity
 end

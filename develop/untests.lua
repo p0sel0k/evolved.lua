@@ -3159,6 +3159,20 @@ do
 end
 
 do
+    local f1, f2 = evo.id(2)
+    local eb = evo.entity()
+
+    local e1 = eb:set(f1, 1):set(f2, 2):build()
+    local e2 = eb:set(f1, 11):build()
+
+    assert(evo.has(e1, f1) and evo.get(e1, f1) == 1)
+    assert(evo.has(e1, f2) and evo.get(e1, f2) == 2)
+
+    assert(evo.has(e2, f1) and evo.get(e2, f1) == 11)
+    assert(not evo.has(e2, f2) and evo.get(e2, f2) == nil)
+end
+
+do
     local f1, f2, f3 = evo.id(3)
 
     evo.set(f3, evo.TAG)
