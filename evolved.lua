@@ -724,6 +724,7 @@ local __evolved_has_all
 local __evolved_has_any
 
 local __evolved_get
+local __evolved_get_all
 
 local __evolved_set
 local __evolved_remove
@@ -1538,6 +1539,16 @@ end
 
 ---@param chunk evolved.chunk
 ---@param place integer
+---@param fragment evolved.fragment
+---@return evolved.component
+---@nodiscard
+local function __chunk_get_component(chunk, place, fragment)
+    local component_index = chunk.__component_indices[fragment]
+    return component_index and chunk.__component_storages[component_index][place]
+end
+
+---@param chunk evolved.chunk
+---@param place integer
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
@@ -1724,7 +1735,7 @@ local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, c
 
             ---@type evolved.default?, evolved.duplicate?
             local fragment_default, fragment_duplicate =
-                __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+                __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
             local new_component = fragment_default
 
@@ -1758,7 +1769,7 @@ local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, c
             if component_index then
                 ---@type evolved.default?, evolved.duplicate?
                 local fragment_default, fragment_duplicate =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
                 local new_component = component_list[i]
 
@@ -1807,7 +1818,7 @@ local function __spawn_entity_at(entity, chunk, fragment_list, fragment_count, c
 
             ---@type evolved.set_hook?, evolved.insert_hook?
             local fragment_on_set, fragment_on_insert =
-                __evolved_get(fragment, __ON_SET, __ON_INSERT)
+                __evolved_get_all(fragment, __ON_SET, __ON_INSERT)
 
             local component_index = chunk_component_indices[fragment]
 
@@ -1936,7 +1947,7 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
             if component_index then
                 ---@type evolved.default?, evolved.duplicate?
                 local fragment_default, fragment_duplicate =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
                 local new_component = component_list[i]
 
@@ -1985,7 +1996,7 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
 
             ---@type evolved.set_hook?, evolved.insert_hook?
             local fragment_on_set, fragment_on_insert =
-                __evolved_get(fragment, __ON_SET, __ON_INSERT)
+                __evolved_get_all(fragment, __ON_SET, __ON_INSERT)
 
             local component_index = chunk_component_indices[fragment]
 
@@ -2056,7 +2067,7 @@ local function __spawn_entity_with(entity, chunk, fragment_list, fragment_count,
             if component_index then
                 ---@type evolved.default?, evolved.duplicate?
                 local fragment_default, fragment_duplicate =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
                 local new_component = component_list[i]
 
@@ -2105,7 +2116,7 @@ local function __spawn_entity_with(entity, chunk, fragment_list, fragment_count,
 
             ---@type evolved.set_hook?, evolved.insert_hook?
             local fragment_on_set, fragment_on_insert =
-                __evolved_get(fragment, __ON_SET, __ON_INSERT)
+                __evolved_get_all(fragment, __ON_SET, __ON_INSERT)
 
             local component_index = chunk_component_indices[fragment]
 
@@ -2458,7 +2469,7 @@ function __chunk_set(old_chunk, fragment, component)
 
         if old_chunk_has_setup_hooks or old_chunk_has_assign_hooks then
             fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign =
-                __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
+                __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
         end
 
         if fragment_on_set or fragment_on_assign then
@@ -2561,7 +2572,7 @@ function __chunk_set(old_chunk, fragment, component)
 
         if new_chunk_has_setup_hooks or new_chunk_has_insert_hooks then
             fragment_default, fragment_duplicate, fragment_on_set, fragment_on_insert =
-                __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
+                __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
         end
 
         if new_entity_count == 0 then
@@ -2941,7 +2952,7 @@ function __chunk_multi_set(old_chunk, fragments, fragment_count, components)
 
             if old_chunk_has_setup_hooks or old_chunk_has_assign_hooks then
                 fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
             end
 
             if fragment_on_set or fragment_on_assign then
@@ -3097,7 +3108,7 @@ function __chunk_multi_set(old_chunk, fragments, fragment_count, components)
 
             if new_chunk_has_setup_hooks or new_chunk_has_assign_hooks or new_chunk_has_insert_hooks then
                 fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign, fragment_on_insert =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN, __ON_INSERT)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN, __ON_INSERT)
             end
 
             if inserted_set[fragment] or old_fragment_set[fragment] then
@@ -3424,7 +3435,7 @@ end
 
 ---@param system evolved.system
 local function __system_process(system)
-    local query, execute, prologue, epilogue = __evolved_get(system,
+    local query, execute, prologue, epilogue = __evolved_get_all(system,
         __QUERY, __EXECUTE, __PROLOGUE, __EPILOGUE)
 
     if prologue then
@@ -4718,10 +4729,31 @@ function __evolved_has_any(chunk_or_entity, ...)
 end
 
 ---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@return evolved.component
+---@nodiscard
+function __evolved_get(entity, fragment)
+    local entity_index = entity % 0x100000
+
+    if __freelist_ids[entity_index] ~= entity then
+        return
+    end
+
+    local chunk = __entity_chunks[entity_index]
+
+    if not chunk then
+        return
+    end
+
+    local place = __entity_places[entity_index]
+    return __chunk_get_component(chunk, place, fragment)
+end
+
+---@param entity evolved.entity
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-function __evolved_get(entity, ...)
+function __evolved_get_all(entity, ...)
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
@@ -4780,7 +4812,7 @@ function __evolved_set(entity, fragment, component)
 
         if old_chunk_has_setup_hooks or old_chunk_has_assign_hooks then
             fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign =
-                __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
+                __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
         end
 
         local old_component_index = old_component_indices[fragment]
@@ -4827,7 +4859,7 @@ function __evolved_set(entity, fragment, component)
 
         if new_chunk_has_setup_hooks or new_chunk_has_insert_hooks then
             fragment_default, fragment_duplicate, fragment_on_set, fragment_on_insert =
-                __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
+                __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
         end
 
         local new_place = new_entity_count + 1
@@ -5183,7 +5215,7 @@ function __evolved_multi_set(entity, fragments, components)
 
             if old_chunk_has_setup_hooks or old_chunk_has_assign_hooks then
                 fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN)
             end
 
             local old_component_index = old_component_indices[fragment]
@@ -5272,7 +5304,7 @@ function __evolved_multi_set(entity, fragments, components)
 
             if new_chunk_has_setup_hooks or new_chunk_has_assign_hooks or new_chunk_has_insert_hooks then
                 fragment_default, fragment_duplicate, fragment_on_set, fragment_on_assign, fragment_on_insert =
-                    __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN, __ON_INSERT)
+                    __evolved_get_all(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_ASSIGN, __ON_INSERT)
             end
 
             if inserted_set[fragment] or old_fragment_set[fragment] then
@@ -6301,24 +6333,64 @@ function __evolved_builder_mt:has_any(...)
 end
 
 ---@param fragment evolved.fragment
----@return evolved.component?
+---@return evolved.component
 ---@nodiscard
 function __evolved_builder_mt:get(fragment)
     local component_index = self.__fragment_set[fragment]
 
     if not component_index then
-        return nil
+        return
     end
 
     if component_index > self.__component_count then
-        return nil
+        return
     end
 
     if fragment ~= self.__fragment_list[component_index] then
-        return nil
+        return
     end
 
     return self.__component_list[component_index]
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+---@nodiscard
+function __evolved_builder_mt:get_all(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local get = self.get
+    local get_all = self.get_all
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return get(self, f1)
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return get(self, f1), get(self, f2)
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return get(self, f1), get(self, f2), get(self, f3)
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return get(self, f1), get(self, f2), get(self, f3), get(self, f4)
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return get(self, f1), get(self, f2), get(self, f3), get(self, f4),
+            get_all(self, __lua_select(5, ...))
+    end
 end
 
 ---@param fragment evolved.fragment
@@ -6332,7 +6404,7 @@ function __evolved_builder_mt:set(fragment, component)
     do
         ---@type evolved.default?, evolved.duplicate?
         local fragment_default, fragment_duplicate =
-            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+            __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
         if component == nil then
             component = fragment_default
@@ -6723,7 +6795,7 @@ local function __update_chunk_tags_trace(chunk, fragment)
 
         ---@type evolved.default?, evolved.duplicate?
         local fragment_default, fragment_duplicate =
-            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+            __evolved_get_all(fragment, __DEFAULT, __DUPLICATE)
 
         if fragment_duplicate then
             for place = 1, chunk.__entity_count do
@@ -6978,6 +7050,8 @@ evolved.is_empty_all = __evolved_is_empty_all
 evolved.is_empty_any = __evolved_is_empty_any
 
 evolved.get = __evolved_get
+evolved.get_all = __evolved_get_all
+
 evolved.has = __evolved_has
 evolved.has_all = __evolved_has_all
 evolved.has_any = __evolved_has_any
