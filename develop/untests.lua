@@ -8622,8 +8622,14 @@ do
     do
         local b = evo.builder()
 
+        assert(b:has_all())
+        assert(not b:has_any())
+
         assert(not b:has(f1) and b:get(f1) == nil)
         assert(not b:has(f2) and b:get(f2) == nil)
+
+        assert(not b:has_all(f1, f2))
+        assert(not b:has_any(f1, f2))
 
         do
             local e = b:build(true)
@@ -8637,6 +8643,9 @@ do
         assert(b:has(f1) and b:get(f1) == 41)
         assert(not b:has(f2) and b:get(f2) == nil)
 
+        assert(not b:has_all(f1, f2))
+        assert(b:has_any(f1, f2))
+
         do
             local e = b:build(true)
 
@@ -8648,6 +8657,9 @@ do
 
         assert(b:has(f1) and b:get(f1) == 41)
         assert(b:has(f2) and b:get(f2) == 42)
+
+        assert(b:has_all(f1, f2))
+        assert(b:has_any(f1, f2))
 
         do
             local e = b:build(true)
@@ -8661,6 +8673,9 @@ do
         assert(not b:has(f1) and b:get(f1) == nil)
         assert(b:has(f2) and b:get(f2) == 42)
 
+        assert(not b:has_all(f1, f2))
+        assert(b:has_any(f1, f2))
+
         do
             local e = b:build(true)
 
@@ -8669,6 +8684,9 @@ do
         end
 
         b:remove(f2)
+
+        assert(not b:has_all(f1, f2))
+        assert(not b:has_any(f1, f2))
 
         assert(not b:has(f1) and b:get(f1) == nil)
         assert(not b:has(f2) and b:get(f2) == nil)

@@ -120,6 +120,8 @@ collect_garbage :: ()
 ```
 builder :: builder
 builder:has :: fragment -> boolean
+builder:has_all :: fragment... -> boolean
+builder:has_any :: fragment... -> boolean
 builder:get :: fragment -> component
 builder:set :: fragment, component -> builder
 builder:remove :: fragment -> builder

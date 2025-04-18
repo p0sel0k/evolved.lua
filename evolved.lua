@@ -6220,6 +6220,86 @@ function __evolved_builder_mt:has(fragment)
     return true
 end
 
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __evolved_builder_mt:has_all(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return true
+    end
+
+    local has = self.has
+    local has_all = self.has_all
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return has(self, f1)
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return has(self, f1) and has(self, f2)
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return has(self, f1) and has(self, f2) and has(self, f3)
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return has(self, f1) and has(self, f2) and has(self, f3) and has(self, f4)
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return has(self, f1) and has(self, f2) and has(self, f3) and has(self, f4) and
+            has_all(self, __lua_select(5, ...))
+    end
+end
+
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __evolved_builder_mt:has_any(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return false
+    end
+
+    local has = self.has
+    local has_any = self.has_any
+
+    if fragment_count == 1 then
+        local f1 = ...
+        return has(self, f1)
+    end
+
+    if fragment_count == 2 then
+        local f1, f2 = ...
+        return has(self, f1) or has(self, f2)
+    end
+
+    if fragment_count == 3 then
+        local f1, f2, f3 = ...
+        return has(self, f1) or has(self, f2) or has(self, f3)
+    end
+
+    if fragment_count == 4 then
+        local f1, f2, f3, f4 = ...
+        return has(self, f1) or has(self, f2) or has(self, f3) or has(self, f4)
+    end
+
+    do
+        local f1, f2, f3, f4 = ...
+        return has(self, f1) or has(self, f2) or has(self, f3) or has(self, f4) or
+            has_any(self, __lua_select(5, ...))
+    end
+end
+
 ---@param fragment evolved.fragment
 ---@return evolved.component?
 ---@nodiscard
