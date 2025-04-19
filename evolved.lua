@@ -1602,16 +1602,10 @@ local __defer_remove
 local __defer_clear
 local __defer_destroy
 
-local __defer_multi_set
-local __defer_multi_remove
-
 local __defer_batch_set
 local __defer_batch_remove
 local __defer_batch_clear
 local __defer_batch_destroy
-
-local __defer_batch_multi_set
-local __defer_batch_multi_remove
 
 local __defer_spawn_entity_at
 local __defer_spawn_entity_as
@@ -3753,71 +3747,6 @@ __defer_ops[__defer_op.destroy] = function(bytes, index)
     return 1 + entity_count
 end
 
----@param entity evolved.entity
----@param fragments evolved.fragment[]
----@param fragment_count integer
----@param components evolved.component[]
----@param component_count integer
-function __defer_multi_set(entity, fragments, fragment_count, components, component_count)
-    ---@type evolved.fragment[]
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
-
-    ---@type evolved.component[]
-    local component_list = __acquire_table(__table_pool_tag.component_list)
-    __lua_table_move(components, 1, component_count, 1, component_list)
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.multi_set
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment_list
-    bytecode[length + 4] = component_list
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.multi_set] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragments = bytes[index + 1]
-    local components = bytes[index + 2]
-
-    __evolved_multi_set(entity, fragments, components)
-    __release_table(__table_pool_tag.fragment_list, fragments)
-    __release_table(__table_pool_tag.component_list, components)
-
-    return 3
-end
-
----@param entity evolved.entity
----@param fragments evolved.fragment[]
----@param fragment_count integer
-function __defer_multi_remove(entity, fragments, fragment_count)
-    ---@type evolved.fragment[]
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.multi_remove
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment_list
-
-    __defer_length = length + 3
-end
-
-__defer_ops[__defer_op.multi_remove] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragments = bytes[index + 1]
-
-    __evolved_multi_remove(entity, fragments)
-    __release_table(__table_pool_tag.fragment_list, fragments)
-
-    return 2
-end
-
 ---@param query evolved.query
 ---@param fragment evolved.fragment
 ---@param component evolved.component
@@ -4056,71 +3985,6 @@ __defer_ops[__defer_op.batch_destroy] = function(bytes, index)
     end
 
     return 1 + argument_count
-end
-
----@param query evolved.query
----@param fragments evolved.fragment[]
----@param fragment_count integer
----@param components evolved.component[]
----@param component_count integer
-function __defer_batch_multi_set(query, fragments, fragment_count, components, component_count)
-    ---@type evolved.fragment[]
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
-
-    ---@type evolved.component[]
-    local component_list = __acquire_table(__table_pool_tag.component_list)
-    __lua_table_move(components, 1, component_count, 1, component_list)
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_multi_set
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment_list
-    bytecode[length + 4] = component_list
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.batch_multi_set] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragments = bytes[index + 1]
-    local components = bytes[index + 2]
-
-    __evolved_batch_multi_set(query, fragments, components)
-    __release_table(__table_pool_tag.fragment_list, fragments)
-    __release_table(__table_pool_tag.component_list, components)
-
-    return 3
-end
-
----@param query evolved.query
----@param fragments evolved.fragment[]
----@param fragment_count integer
-function __defer_batch_multi_remove(query, fragments, fragment_count)
-    ---@type evolved.fragment[]
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_multi_remove
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment_list
-
-    __defer_length = length + 3
-end
-
-__defer_ops[__defer_op.batch_multi_remove] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragments = bytes[index + 1]
-
-    __evolved_batch_multi_remove(query, fragments)
-    __release_table(__table_pool_tag.fragment_list, fragments)
-
-    return 2
 end
 
 ---@param entity evolved.entity
