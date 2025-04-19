@@ -38,16 +38,16 @@ local evolved = {
 ---@alias evolved.storage evolved.component[]
 
 ---@alias evolved.default evolved.component
----@alias evolved.duplicate fun(c: evolved.component): evolved.component
+---@alias evolved.duplicate fun(component: evolved.component): evolved.component
 
----@alias evolved.execute fun(c: evolved.chunk, es: evolved.entity[], ec: integer)
+---@alias evolved.execute fun(chunk: evolved.chunk, entity_list: evolved.entity[], entity_count: integer)
 ---@alias evolved.prologue fun()
 ---@alias evolved.epilogue fun()
 
----@alias evolved.set_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc?: evolved.component)
----@alias evolved.assign_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component, oc: evolved.component)
----@alias evolved.insert_hook fun(e: evolved.entity, f: evolved.fragment, nc: evolved.component)
----@alias evolved.remove_hook fun(e: evolved.entity, f: evolved.fragment, c: evolved.component)
+---@alias evolved.set_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component?: evolved.component)
+---@alias evolved.assign_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component: evolved.component)
+---@alias evolved.insert_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component)
+---@alias evolved.remove_hook fun(entity: evolved.entity, fragment: evolved.fragment, component: evolved.component)
 
 ---@class (exact) evolved.chunk
 ---@field package __parent? evolved.chunk
@@ -759,10 +759,7 @@ local __evolved_spawn_with
 local __evolved_debug_mode
 local __evolved_collect_garbage
 
-local __evolved_entity
-local __evolved_fragment
-local __evolved_query
-local __evolved_system
+local __evolved_builder
 
 ---
 ---
@@ -4139,6 +4136,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_at(entity, chunk, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -4174,7 +4175,9 @@ __defer_ops[__defer_op.spawn_entity_at] = function(bytes, index)
 
     __evolved_defer()
     do
-        __spawn_entity_at(entity, chunk, fragment_list, fragment_count, component_list)
+        __spawn_entity_at(entity, chunk,
+            fragment_list, fragment_count,
+            component_list)
         __release_table(__table_pool_tag.fragment_list, fragment_list)
         __release_table(__table_pool_tag.component_list, component_list)
     end
@@ -4190,6 +4193,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_as(entity, prefab, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -4225,7 +4232,9 @@ __defer_ops[__defer_op.spawn_entity_as] = function(bytes, index)
 
     __evolved_defer()
     do
-        __spawn_entity_as(entity, prefab, fragment_list, fragment_count, component_list)
+        __spawn_entity_as(entity, prefab,
+            fragment_list, fragment_count,
+            component_list)
         __release_table(__table_pool_tag.fragment_list, fragment_list)
         __release_table(__table_pool_tag.component_list, component_list)
     end
@@ -4241,6 +4250,10 @@ end
 ---@param components evolved.component[]
 ---@param component_count integer
 function __defer_spawn_entity_with(entity, chunk, fragments, fragment_count, components, component_count)
+    if component_count > fragment_count then
+        component_count = fragment_count
+    end
+
     ---@type evolved.fragment[]
     local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
     __lua_table_move(fragments, 1, fragment_count, 1, fragment_list)
@@ -4276,7 +4289,9 @@ __defer_ops[__defer_op.spawn_entity_with] = function(bytes, index)
 
     __evolved_defer()
     do
-        __spawn_entity_with(entity, chunk, fragment_list, fragment_count, component_list)
+        __spawn_entity_with(entity, chunk,
+            fragment_list, fragment_count,
+            component_list)
         __release_table(__table_pool_tag.fragment_list, fragment_list)
         __release_table(__table_pool_tag.component_list, component_list)
     end
@@ -5095,18 +5110,18 @@ function __evolved_destroy(...)
             end
         end
 
-        if purging_entity_count > 0 then
-            __destroy_entity_list(purging_entity_list, purging_entity_count)
-            __release_table(__table_pool_tag.entity_list, purging_entity_list)
-        else
-            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
-        end
-
         if purging_fragment_count > 0 then
             __destroy_fragment_list(purging_fragment_list, purging_fragment_count)
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list)
         else
             __release_table(__table_pool_tag.fragment_list, purging_fragment_list, true)
+        end
+
+        if purging_entity_count > 0 then
+            __destroy_entity_list(purging_entity_list, purging_entity_count)
+            __release_table(__table_pool_tag.entity_list, purging_entity_list)
+        else
+            __release_table(__table_pool_tag.entity_list, purging_entity_list, true)
         end
     end
 
@@ -5985,7 +6000,9 @@ function __evolved_spawn_at(chunk, fragments, components)
 
     __evolved_defer()
     do
-        __spawn_entity_at(entity, entity_chunk, fragments, fragment_count, components)
+        __spawn_entity_at(entity, entity_chunk,
+            fragments, fragment_count,
+            components)
     end
     __evolved_commit()
 
@@ -6023,7 +6040,9 @@ function __evolved_spawn_as(prefab, fragments, components)
 
     __evolved_defer()
     do
-        __spawn_entity_as(entity, prefab, fragments, fragment_count, components)
+        __spawn_entity_as(entity, prefab,
+            fragments, fragment_count,
+            components)
     end
     __evolved_commit()
 
@@ -6061,7 +6080,9 @@ function __evolved_spawn_with(fragments, components)
 
     __evolved_defer()
     do
-        __spawn_entity_with(entity, entity_chunk, fragments, fragment_count, components)
+        __spawn_entity_with(entity, entity_chunk,
+            fragments, fragment_count,
+            components)
     end
     __evolved_commit()
 
@@ -6151,48 +6172,15 @@ end
 ---
 ---
 
-local __builder_fns = {}
-
----@class evolved.entity_builder
----@field package __fragment_list? evolved.fragment[]
----@field package __component_list? evolved.component[]
----@field package __component_count? integer
-__builder_fns.entity_builder = {}
-__builder_fns.entity_builder.__index = __builder_fns.entity_builder
-
----@class evolved.fragment_builder
----@field package __tag? boolean
----@field package __name? string
+---@class evolved.builder
+---@field package __prefab? evolved.entity
 ---@field package __single? evolved.component
----@field package __default? evolved.component
----@field package __duplicate? evolved.duplicate
----@field package __on_set? evolved.set_hook
----@field package __on_assign? evolved.set_hook
----@field package __on_insert? evolved.set_hook
----@field package __on_remove? evolved.remove_hook
----@field package __destroy_policy? evolved.id
-__builder_fns.fragment_builder = {}
-__builder_fns.fragment_builder.__index = __builder_fns.fragment_builder
-
----@class evolved.query_builder
----@field package __name? string
----@field package __single? evolved.component
----@field package __include_list? evolved.fragment[]
----@field package __exclude_list? evolved.fragment[]
-__builder_fns.query_builder = {}
-__builder_fns.query_builder.__index = __builder_fns.query_builder
-
----@class evolved.system_builder
----@field package __name? string
----@field package __single? evolved.component
----@field package __group? evolved.system
----@field package __query? evolved.query
----@field package __execute? evolved.execute
----@field package __prologue? evolved.prologue
----@field package __epilogue? evolved.epilogue
----@field package __disabled? boolean
-__builder_fns.system_builder = {}
-__builder_fns.system_builder.__index = __builder_fns.system_builder
+---@field package __fragment_set table<evolved.fragment, integer>
+---@field package __fragment_list evolved.fragment[]
+---@field package __component_list evolved.component[]
+---@field package __component_count integer
+local __evolved_builder_mt = {}
+__evolved_builder_mt.__index = __evolved_builder_mt
 
 ---
 ---
@@ -6200,520 +6188,401 @@ __builder_fns.system_builder.__index = __builder_fns.system_builder
 ---
 ---
 
----@return evolved.entity_builder builder
+---@return evolved.builder builder
 ---@nodiscard
-function __evolved_entity()
-    return __lua_setmetatable({}, __builder_fns.entity_builder)
+function __evolved_builder()
+    return __lua_setmetatable({
+        __fragment_set = {},
+        __fragment_list = {},
+        __component_list = {},
+        __component_count = 0,
+    }, __evolved_builder_mt)
+end
+
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+function __evolved_builder_mt:has(fragment)
+    local component_index = self.__fragment_set[fragment]
+
+    if not component_index then
+        return false
+    end
+
+    if component_index > self.__component_count then
+        return false
+    end
+
+    if fragment ~= self.__fragment_list[component_index] then
+        return false
+    end
+
+    return true
+end
+
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __evolved_builder_mt:has_all(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return true
+    end
+
+    return self:has(...) and self:has_all(__lua_select(2, ...))
+end
+
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __evolved_builder_mt:has_any(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return false
+    end
+
+    return self:has(...) or self:has_any(__lua_select(2, ...))
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+---@nodiscard
+function __evolved_builder_mt:get(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return
+    end
+
+    local fragment = ...
+
+    local component_index = self.__fragment_set[fragment]
+
+    if not component_index then
+        return nil, self:get(__lua_select(2, ...))
+    end
+
+    if component_index > self.__component_count then
+        return nil, self:get(__lua_select(2, ...))
+    end
+
+    if fragment ~= self.__fragment_list[component_index] then
+        return nil, self:get(__lua_select(2, ...))
+    end
+
+    return self.__component_list[component_index], self:get(__lua_select(2, ...))
 end
 
 ---@param fragment evolved.fragment
 ---@param component evolved.component
----@return evolved.entity_builder builder
-function __builder_fns.entity_builder:set(fragment, component)
+---@return evolved.builder builder
+function __evolved_builder_mt:set(fragment, component)
+    if __debug_mode then
+        __debug_fns.validate_fragment(fragment)
+    end
+
+    do
+        ---@type evolved.default?, evolved.duplicate?
+        local fragment_default, fragment_duplicate =
+            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+
+        if component == nil then
+            component = fragment_default
+        end
+
+        if component ~= nil and fragment_duplicate then
+            component = fragment_duplicate(component)
+        end
+
+        if component == nil then
+            component = true
+        end
+    end
+
+    local fragment_set = self.__fragment_set
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
-    local component_count = self.__component_count or 0
+    local component_count = self.__component_count
 
-    if component_count == 0 then
-        fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-        component_list = __acquire_table(__table_pool_tag.component_list)
-        self.__fragment_list = fragment_list
-        self.__component_list = component_list
-    end
+    local component_index = fragment_set[fragment]
 
-    ---@cast fragment_list -?
-    ---@cast component_list -?
-
-    component_count = component_count + 1
-    self.__component_count = component_count
-
-    fragment_list[component_count] = fragment
-    component_list[component_count] = component
-
-    return self
-end
-
----@return evolved.entity entity
-function __builder_fns.entity_builder:build()
-    local fragment_list = self.__fragment_list
-    local component_list = self.__component_list
-    local component_count = self.__component_count or 0
-
-    self.__fragment_list = nil
-    self.__component_list = nil
-    self.__component_count = nil
-
-    if component_count == 0 then
-        return __evolved_id()
-    end
-
-    ---@cast fragment_list -?
-    ---@cast component_list -?
-
-    local entity = __evolved_spawn_with(fragment_list, component_list)
-
-    __release_table(__table_pool_tag.fragment_list, fragment_list)
-    __release_table(__table_pool_tag.component_list, component_list)
-
-    return entity
-end
-
----
----
----
----
----
-
----@return evolved.fragment_builder builder
----@nodiscard
-function __evolved_fragment()
-    return __lua_setmetatable({}, __builder_fns.fragment_builder)
-end
-
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:tag()
-    self.__tag = true
-    return self
-end
-
----@param name string
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:name(name)
-    self.__name = name
-    return self
-end
-
----@param single evolved.component
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:single(single)
-    self.__single = single
-    return self
-end
-
----@param default evolved.component
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:default(default)
-    self.__default = default
-    return self
-end
-
----@param duplicate evolved.duplicate
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:duplicate(duplicate)
-    self.__duplicate = duplicate
-    return self
-end
-
----@param on_set evolved.set_hook
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:on_set(on_set)
-    self.__on_set = on_set
-    return self
-end
-
----@param on_assign evolved.assign_hook
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:on_assign(on_assign)
-    self.__on_assign = on_assign
-    return self
-end
-
----@param on_insert evolved.insert_hook
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:on_insert(on_insert)
-    self.__on_insert = on_insert
-    return self
-end
-
----@param on_remove evolved.remove_hook
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:on_remove(on_remove)
-    self.__on_remove = on_remove
-    return self
-end
-
----@param destroy_policy evolved.id
----@return evolved.fragment_builder builder
-function __builder_fns.fragment_builder:destroy_policy(destroy_policy)
-    self.__destroy_policy = destroy_policy
-    return self
-end
-
----@return evolved.fragment fragment
-function __builder_fns.fragment_builder:build()
-    local tag = self.__tag
-    local name = self.__name
-    local single = self.__single
-    local default = self.__default
-    local duplicate = self.__duplicate
-    local on_set = self.__on_set
-    local on_assign = self.__on_assign
-    local on_insert = self.__on_insert
-    local on_remove = self.__on_remove
-    local destroy_policy = self.__destroy_policy
-
-    self.__tag = nil
-    self.__name = nil
-    self.__single = nil
-    self.__default = nil
-    self.__duplicate = nil
-    self.__on_set = nil
-    self.__on_assign = nil
-    self.__on_insert = nil
-    self.__on_remove = nil
-    self.__destroy_policy = nil
-
-    local fragment = __evolved_id()
-
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    local component_list = __acquire_table(__table_pool_tag.component_list)
-    local component_count = 0
-
-    if tag then
+    if component_index
+        and component_index <= component_count
+        and fragment == fragment_list[component_index]
+    then
+        component_list[component_index] = component
+    else
         component_count = component_count + 1
-        fragment_list[component_count] = __TAG
-        component_list[component_count] = true
-    end
+        self.__component_count = component_count
 
-    if name then
-        component_count = component_count + 1
-        fragment_list[component_count] = __NAME
-        component_list[component_count] = name
-    end
-
-    if single ~= nil then
-        component_count = component_count + 1
+        fragment_set[fragment] = component_count
         fragment_list[component_count] = fragment
-        component_list[component_count] = single
+        component_list[component_count] = component
     end
 
-    if default ~= nil then
-        component_count = component_count + 1
-        fragment_list[component_count] = __DEFAULT
-        component_list[component_count] = default
-    end
-
-    if duplicate then
-        component_count = component_count + 1
-        fragment_list[component_count] = __DUPLICATE
-        component_list[component_count] = duplicate
-    end
-
-    if on_set then
-        component_count = component_count + 1
-        fragment_list[component_count] = __ON_SET
-        component_list[component_count] = on_set
-    end
-
-    if on_assign then
-        component_count = component_count + 1
-        fragment_list[component_count] = __ON_ASSIGN
-        component_list[component_count] = on_assign
-    end
-
-    if on_insert then
-        component_count = component_count + 1
-        fragment_list[component_count] = __ON_INSERT
-        component_list[component_count] = on_insert
-    end
-
-    if on_remove then
-        component_count = component_count + 1
-        fragment_list[component_count] = __ON_REMOVE
-        component_list[component_count] = on_remove
-    end
-
-    if destroy_policy then
-        component_count = component_count + 1
-        fragment_list[component_count] = __DESTROY_POLICY
-        component_list[component_count] = destroy_policy
-    end
-
-    __evolved_multi_set(fragment, fragment_list, component_list)
-
-    __release_table(__table_pool_tag.fragment_list, fragment_list)
-    __release_table(__table_pool_tag.component_list, component_list)
-
-    return fragment
-end
-
----
----
----
----
----
-
----@return evolved.query_builder builder
----@nodiscard
-function __evolved_query()
-    return __lua_setmetatable({}, __builder_fns.query_builder)
-end
-
----@param name string
----@return evolved.query_builder builder
-function __builder_fns.query_builder:name(name)
-    self.__name = name
-    return self
-end
-
----@param single evolved.component
----@return evolved.query_builder builder
-function __builder_fns.query_builder:single(single)
-    self.__single = single
     return self
 end
 
 ---@param ... evolved.fragment fragments
----@return evolved.query_builder builder
-function __builder_fns.query_builder:include(...)
-    local fragment_count = __lua_select('#', ...)
+---@return evolved.builder builder
+function __evolved_builder_mt:remove(...)
+    local fragment_count = select("#", ...)
 
     if fragment_count == 0 then
         return self
     end
 
-    local include_list = self.__include_list
+    local fragment = ...
 
-    if not include_list then
-        include_list = __lua_table_new(fragment_count, 0)
-        self.__include_list = include_list
+    local fragment_set = self.__fragment_set
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+    local component_count = self.__component_count
+
+    local component_index = fragment_set[fragment]
+
+    if component_index
+        and component_index <= component_count
+        and fragment == fragment_list[component_index]
+    then
+        if component_index ~= component_count then
+            local last_fragment = fragment_list[component_count]
+            local last_component = component_list[component_count]
+
+            fragment_set[last_fragment] = component_index
+            fragment_list[component_index] = last_fragment
+            component_list[component_index] = last_component
+        end
+
+        fragment_set[fragment] = nil
+        fragment_list[component_count] = nil
+        component_list[component_count] = nil
+
+        component_count = component_count - 1
+        self.__component_count = component_count
     end
 
-    local include_count = #include_list
+    return self:remove(__lua_select(2, ...))
+end
 
-    for i = 1, fragment_count do
+---@return evolved.builder builder
+function __evolved_builder_mt:clear()
+    self.__prefab = nil
+    self.__single = nil
+    self.__component_count = 0
+    return self
+end
+
+---@return evolved.builder builder
+function __evolved_builder_mt:tag()
+    return self:set(__TAG)
+end
+
+---@param name string
+---@return evolved.builder builder
+function __evolved_builder_mt:name(name)
+    return self:set(__NAME, name)
+end
+
+---@param prefab evolved.entity
+---@return evolved.builder builder
+function __evolved_builder_mt:prefab(prefab)
+    self.__prefab = prefab
+    return self
+end
+
+---@param single evolved.component
+---@return evolved.builder builder
+function __evolved_builder_mt:single(single)
+    self.__single = single == nil and true or single
+    return self
+end
+
+---@param default evolved.component
+---@return evolved.builder builder
+function __evolved_builder_mt:default(default)
+    return self:set(__DEFAULT, default)
+end
+
+---@param duplicate evolved.duplicate
+---@return evolved.builder builder
+function __evolved_builder_mt:duplicate(duplicate)
+    return self:set(__DUPLICATE, duplicate)
+end
+
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __evolved_builder_mt:include(...)
+    local argument_count = __lua_select('#', ...)
+
+    if argument_count == 0 then
+        return self
+    end
+
+    local include_list = self:get(__INCLUDES)
+    local include_count = include_list and #include_list or 0
+
+    if include_count == 0 then
+        include_list = __lua_table_new(argument_count, 0)
+    end
+
+    for i = 1, argument_count do
         ---@type evolved.fragment
         local fragment = __lua_select(i, ...)
         include_list[include_count + i] = fragment
     end
 
-    return self
+    return self:set(__INCLUDES, include_list)
 end
 
 ---@param ... evolved.fragment fragments
----@return evolved.query_builder builder
-function __builder_fns.query_builder:exclude(...)
-    local fragment_count = __lua_select('#', ...)
+---@return evolved.builder builder
+function __evolved_builder_mt:exclude(...)
+    local argument_count = __lua_select('#', ...)
 
-    if fragment_count == 0 then
+    if argument_count == 0 then
         return self
     end
 
-    local exclude_list = self.__exclude_list
+    local exclude_list = self:get(__EXCLUDES)
+    local exclude_count = exclude_list and #exclude_list or 0
 
-    if not exclude_list then
-        exclude_list = __lua_table_new(fragment_count, 0)
-        self.__exclude_list = exclude_list
+    if exclude_count == 0 then
+        exclude_list = __lua_table_new(argument_count, 0)
     end
 
-    local exclude_count = #exclude_list
-
-    for i = 1, fragment_count do
+    for i = 1, argument_count do
         ---@type evolved.fragment
         local fragment = __lua_select(i, ...)
         exclude_list[exclude_count + i] = fragment
     end
 
-    return self
+    return self:set(__EXCLUDES, exclude_list)
 end
 
----@return evolved.query query
-function __builder_fns.query_builder:build()
-    local name = self.__name
-    local single = self.__single
-    local include_list = self.__include_list
-    local exclude_list = self.__exclude_list
-
-    self.__name = nil
-    self.__single = nil
-    self.__include_list = nil
-    self.__exclude_list = nil
-
-    local query = __evolved_id()
-
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    local component_list = __acquire_table(__table_pool_tag.component_list)
-    local component_count = 0
-
-    if name then
-        component_count = component_count + 1
-        fragment_list[component_count] = __NAME
-        component_list[component_count] = name
-    end
-
-    if single ~= nil then
-        component_count = component_count + 1
-        fragment_list[component_count] = query
-        component_list[component_count] = single
-    end
-
-    if include_list then
-        component_count = component_count + 1
-        fragment_list[component_count] = __INCLUDES
-        component_list[component_count] = include_list
-    end
-
-    if exclude_list then
-        component_count = component_count + 1
-        fragment_list[component_count] = __EXCLUDES
-        component_list[component_count] = exclude_list
-    end
-
-    __evolved_multi_set(query, fragment_list, component_list)
-
-    __release_table(__table_pool_tag.fragment_list, fragment_list)
-    __release_table(__table_pool_tag.component_list, component_list)
-
-    return query
+---@param on_set evolved.set_hook
+---@return evolved.builder builder
+function __evolved_builder_mt:on_set(on_set)
+    return self:set(__ON_SET, on_set)
 end
 
----
----
----
----
----
-
----@return evolved.system_builder builder
----@nodiscard
-function __evolved_system()
-    return __lua_setmetatable({}, __builder_fns.system_builder)
+---@param on_assign evolved.assign_hook
+---@return evolved.builder builder
+function __evolved_builder_mt:on_assign(on_assign)
+    return self:set(__ON_ASSIGN, on_assign)
 end
 
----@param name string
----@return evolved.system_builder builder
-function __builder_fns.system_builder:name(name)
-    self.__name = name
-    return self
+---@param on_insert evolved.insert_hook
+---@return evolved.builder builder
+function __evolved_builder_mt:on_insert(on_insert)
+    return self:set(__ON_INSERT, on_insert)
 end
 
----@param single evolved.component
----@return evolved.system_builder builder
-function __builder_fns.system_builder:single(single)
-    self.__single = single
-    return self
+---@param on_remove evolved.remove_hook
+---@return evolved.builder builder
+function __evolved_builder_mt:on_remove(on_remove)
+    return self:set(__ON_REMOVE, on_remove)
 end
 
 ---@param group evolved.system
----@return evolved.system_builder builder
-function __builder_fns.system_builder:group(group)
-    self.__group = group
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:group(group)
+    return self:set(__GROUP, group)
 end
 
 ---@param query evolved.query
----@return evolved.system_builder builder
-function __builder_fns.system_builder:query(query)
-    self.__query = query
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:query(query)
+    return self:set(__QUERY, query)
 end
 
 ---@param execute evolved.execute
----@return evolved.system_builder builder
-function __builder_fns.system_builder:execute(execute)
-    self.__execute = execute
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:execute(execute)
+    return self:set(__EXECUTE, execute)
 end
 
 ---@param prologue evolved.prologue
----@return evolved.system_builder builder
-function __builder_fns.system_builder:prologue(prologue)
-    self.__prologue = prologue
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:prologue(prologue)
+    return self:set(__PROLOGUE, prologue)
 end
 
 ---@param epilogue evolved.epilogue
----@return evolved.system_builder builder
-function __builder_fns.system_builder:epilogue(epilogue)
-    self.__epilogue = epilogue
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:epilogue(epilogue)
+    return self:set(__EPILOGUE, epilogue)
 end
 
----@return evolved.system_builder builder
-function __builder_fns.system_builder:disabled()
-    self.__disabled = true
-    return self
+---@return evolved.builder builder
+function __evolved_builder_mt:disabled()
+    return self:set(__DISABLED)
 end
 
----@return evolved.system system
-function __builder_fns.system_builder:build()
-    local name = self.__name
+---@param destroy_policy evolved.id
+---@return evolved.builder builder
+function __evolved_builder_mt:destroy_policy(destroy_policy)
+    return self:set(__DESTROY_POLICY, destroy_policy)
+end
+
+---@param no_clear? boolean
+---@return evolved.entity entity
+function __evolved_builder_mt:build(no_clear)
+    local prefab = self.__prefab
     local single = self.__single
-    local group = self.__group
-    local query = self.__query
-    local execute = self.__execute
-    local prologue = self.__prologue
-    local epilogue = self.__epilogue
-    local disabled = self.__disabled
+    local fragment_list = self.__fragment_list
+    local component_list = self.__component_list
+    local component_count = self.__component_count
 
-    self.__name = nil
-    self.__single = nil
-    self.__group = nil
-    self.__query = nil
-    self.__execute = nil
-    self.__prologue = nil
-    self.__epilogue = nil
-    self.__disabled = nil
-
-    local system = __evolved_id()
-
-    local fragment_list = __acquire_table(__table_pool_tag.fragment_list)
-    local component_list = __acquire_table(__table_pool_tag.component_list)
-    local component_count = 0
-
-    if name then
-        component_count = component_count + 1
-        fragment_list[component_count] = __NAME
-        component_list[component_count] = name
+    if __debug_mode then
+        if prefab then __debug_fns.validate_prefab(prefab) end
+        __debug_fns.validate_fragment_list(fragment_list, component_count)
     end
+
+    local entity = __acquire_id()
 
     if single ~= nil then
         component_count = component_count + 1
-        fragment_list[component_count] = system
+        fragment_list[component_count] = entity
         component_list[component_count] = single
     end
 
-    if group then
-        component_count = component_count + 1
-        fragment_list[component_count] = __GROUP
-        component_list[component_count] = group
+    if not no_clear then
+        self:clear()
     end
 
-    if query then
-        component_count = component_count + 1
-        fragment_list[component_count] = __QUERY
-        component_list[component_count] = query
+    local entity_chunk = __chunk_fragment_list(fragment_list, component_count)
+
+    if __defer_depth > 0 then
+        if prefab then
+            __defer_spawn_entity_as(entity, prefab,
+                fragment_list, component_count,
+                component_list, component_count)
+        else
+            __defer_spawn_entity_with(entity, entity_chunk,
+                fragment_list, component_count,
+                component_list, component_count)
+        end
+        return entity
     end
 
-    if execute then
-        component_count = component_count + 1
-        fragment_list[component_count] = __EXECUTE
-        component_list[component_count] = execute
+    __evolved_defer()
+    do
+        if prefab then
+            __spawn_entity_as(entity, prefab,
+                fragment_list, component_count,
+                component_list)
+        else
+            __spawn_entity_with(entity, entity_chunk,
+                fragment_list, component_count,
+                component_list)
+        end
     end
+    __evolved_commit()
 
-    if prologue then
-        component_count = component_count + 1
-        fragment_list[component_count] = __PROLOGUE
-        component_list[component_count] = prologue
-    end
-
-    if epilogue then
-        component_count = component_count + 1
-        fragment_list[component_count] = __EPILOGUE
-        component_list[component_count] = epilogue
-    end
-
-    if disabled then
-        component_count = component_count + 1
-        fragment_list[component_count] = __DISABLED
-        component_list[component_count] = true
-    end
-
-    __evolved_multi_set(system, fragment_list, component_list)
-
-    __release_table(__table_pool_tag.fragment_list, fragment_list)
-    __release_table(__table_pool_tag.component_list, component_list)
-
-    return system
+    return entity
 end
 
 ---
@@ -7064,6 +6933,7 @@ evolved.is_empty_all = __evolved_is_empty_all
 evolved.is_empty_any = __evolved_is_empty_any
 
 evolved.get = __evolved_get
+
 evolved.has = __evolved_has
 evolved.has_all = __evolved_has_all
 evolved.has_any = __evolved_has_any
@@ -7102,10 +6972,7 @@ evolved.spawn_with = __evolved_spawn_with
 evolved.debug_mode = __evolved_debug_mode
 evolved.collect_garbage = __evolved_collect_garbage
 
-evolved.entity = __evolved_entity
-evolved.fragment = __evolved_fragment
-evolved.query = __evolved_query
-evolved.system = __evolved_system
+evolved.builder = __evolved_builder
 
 evolved.collect_garbage()
 
