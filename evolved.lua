@@ -1306,24 +1306,6 @@ local function __chunk_without_fragments(chunk, ...)
     return chunk
 end
 
----@param chunk? evolved.chunk
----@param fragment_list evolved.fragment[]
----@param fragment_count integer
----@return evolved.chunk?
----@nodiscard
-local function __chunk_without_fragment_list(chunk, fragment_list, fragment_count)
-    if fragment_count == 0 then
-        return chunk
-    end
-
-    for i = 1, fragment_count do
-        local fragment = fragment_list[i]
-        chunk = __chunk_without_fragment(chunk, fragment)
-    end
-
-    return chunk
-end
-
 ---
 ---
 ---
@@ -2961,24 +2943,18 @@ local __defer_op = {
     clear = 3,
     destroy = 4,
 
-    multi_set = 5,
-    multi_remove = 6,
+    batch_set = 5,
+    batch_remove = 6,
+    batch_clear = 7,
+    batch_destroy = 8,
 
-    batch_set = 7,
-    batch_remove = 8,
-    batch_clear = 9,
-    batch_destroy = 10,
+    spawn_entity_at = 9,
+    spawn_entity_as = 10,
+    spawn_entity_with = 11,
 
-    batch_multi_set = 11,
-    batch_multi_remove = 12,
+    call_hook = 12,
 
-    spawn_entity_at = 13,
-    spawn_entity_as = 14,
-    spawn_entity_with = 15,
-
-    call_hook = 16,
-
-    __count = 16,
+    __count = 12,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
