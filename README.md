@@ -124,7 +124,7 @@ builder:has_all :: fragment... -> boolean
 builder:has_any :: fragment... -> boolean
 builder:get :: fragment... -> component...
 builder:set :: fragment, component -> builder
-builder:remove :: fragment -> builder
+builder:remove :: fragment... -> builder
 builder:clear :: builder
 builder:tag :: builder
 builder:name :: string -> builder
@@ -145,7 +145,7 @@ builder:prologue :: {} -> builder
 builder:epilogue :: {} -> builder
 builder:disabled :: builder
 builder:destroy_policy :: id -> builder
-builder:build :: entity
+builder:build :: boolean -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)

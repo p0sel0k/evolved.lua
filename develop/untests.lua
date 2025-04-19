@@ -8789,3 +8789,75 @@ do
         end
     end
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local b = evo.builder():set(f1, 11):set(f2, 22)
+        assert(b == b:remove(f1))
+        assert(not b:has(f1) and b:get(f1) == nil)
+        assert(b:has(f2) and b:get(f2) == 22)
+        local e = b:build()
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 22)
+    end
+
+    do
+        local b = evo.builder():set(f1, 11):set(f2, 22)
+        assert(b == b:remove(f3, f1))
+        assert(not b:has(f1) and b:get(f1) == nil)
+        assert(b:has(f2) and b:get(f2) == 22)
+        local e = b:build()
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 22)
+    end
+
+    do
+        local b = evo.builder():set(f1, 11):set(f2, 22)
+        assert(b == b:remove(f1, f2))
+        assert(not b:has(f1) and b:get(f1) == nil)
+        assert(not b:has(f2) and b:get(f2) == nil)
+        local e = b:build()
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+    end
+
+    do
+        local b = evo.builder():set(f1, 11):set(f2, 22)
+        assert(b == b:remove(f2, f1, f1))
+        assert(not b:has(f1) and b:get(f1) == nil)
+        assert(not b:has(f2) and b:get(f2) == nil)
+        local e = b:build()
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+    end
+end
+
+do
+    local f1 = evo.id(1)
+
+    do
+        local b = evo.builder():set(f1, 11):single(1)
+
+        local e1 = b:build(true)
+        assert(evo.has(e1, e1) and evo.get(e1, e1) == 1)
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 11)
+
+        assert(not b:has(e1) and b:get(e1) == nil)
+
+        local e2 = b:build()
+
+        assert(not evo.has(e2, e1) and evo.get(e2, e1) == nil)
+
+        assert(evo.has(e2, e2) and evo.get(e2, e2) == 1)
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 11)
+
+        local e3 = b:build()
+
+        assert(not evo.has(e3, e1) and evo.get(e3, e1) == nil)
+        assert(not evo.has(e3, e2) and evo.get(e3, e2) == nil)
+        assert(not evo.has(e3, e3) and evo.get(e3, e3) == nil)
+        assert(not evo.has(e3, f1) and evo.get(e3, f1) == nil)
+    end
+end

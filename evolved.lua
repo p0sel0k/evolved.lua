@@ -6230,34 +6230,7 @@ function __evolved_builder_mt:has_all(...)
         return true
     end
 
-    local has = self.has
-    local has_all = self.has_all
-
-    if fragment_count == 1 then
-        local f1 = ...
-        return has(self, f1)
-    end
-
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        return has(self, f1) and has(self, f2)
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        return has(self, f1) and has(self, f2) and has(self, f3)
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        return has(self, f1) and has(self, f2) and has(self, f3) and has(self, f4)
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        return has(self, f1) and has(self, f2) and has(self, f3) and has(self, f4) and
-            has_all(self, __lua_select(5, ...))
-    end
+    return self:has(...) and self:has_all(__lua_select(2, ...))
 end
 
 ---@param ... evolved.fragment fragments
@@ -6270,34 +6243,7 @@ function __evolved_builder_mt:has_any(...)
         return false
     end
 
-    local has = self.has
-    local has_any = self.has_any
-
-    if fragment_count == 1 then
-        local f1 = ...
-        return has(self, f1)
-    end
-
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        return has(self, f1) or has(self, f2)
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        return has(self, f1) or has(self, f2) or has(self, f3)
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        return has(self, f1) or has(self, f2) or has(self, f3) or has(self, f4)
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        return has(self, f1) or has(self, f2) or has(self, f3) or has(self, f4) or
-            has_any(self, __lua_select(5, ...))
-    end
+    return self:has(...) or self:has_any(__lua_select(2, ...))
 end
 
 ---@param ... evolved.fragment fragments
@@ -6310,25 +6256,23 @@ function __evolved_builder_mt:get(...)
         return
     end
 
-    local get = self.get
-
     local fragment = ...
 
     local component_index = self.__fragment_set[fragment]
 
     if not component_index then
-        return nil, get(self, __lua_select(2, ...))
+        return nil, self:get(__lua_select(2, ...))
     end
 
     if component_index > self.__component_count then
-        return nil, get(self, __lua_select(2, ...))
+        return nil, self:get(__lua_select(2, ...))
     end
 
     if fragment ~= self.__fragment_list[component_index] then
-        return nil, get(self, __lua_select(2, ...))
+        return nil, self:get(__lua_select(2, ...))
     end
 
-    return self.__component_list[component_index], get(self, __lua_select(2, ...))
+    return self.__component_list[component_index], self:get(__lua_select(2, ...))
 end
 
 ---@param fragment evolved.fragment
@@ -6381,9 +6325,17 @@ function __evolved_builder_mt:set(fragment, component)
     return self
 end
 
----@param fragment evolved.fragment
+---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __evolved_builder_mt:remove(fragment)
+function __evolved_builder_mt:remove(...)
+    local fragment_count = select("#", ...)
+
+    if fragment_count == 0 then
+        return self
+    end
+
+    local fragment = ...
+
     local fragment_set = self.__fragment_set
     local fragment_list = self.__fragment_list
     local component_list = self.__component_list
@@ -6391,35 +6343,28 @@ function __evolved_builder_mt:remove(fragment)
 
     local component_index = fragment_set[fragment]
 
-    if not component_index then
-        return self
+    if component_index
+        and component_index <= component_count
+        and fragment == fragment_list[component_index]
+    then
+        if component_index ~= component_count then
+            local last_fragment = fragment_list[component_count]
+            local last_component = component_list[component_count]
+
+            fragment_set[last_fragment] = component_index
+            fragment_list[component_index] = last_fragment
+            component_list[component_index] = last_component
+        end
+
+        fragment_set[fragment] = nil
+        fragment_list[component_count] = nil
+        component_list[component_count] = nil
+
+        component_count = component_count - 1
+        self.__component_count = component_count
     end
 
-    if component_index > component_count then
-        return self
-    end
-
-    if fragment ~= fragment_list[component_index] then
-        return self
-    end
-
-    if component_index ~= component_count then
-        local last_fragment = fragment_list[component_count]
-        local last_component = component_list[component_count]
-
-        fragment_set[last_fragment] = component_index
-        fragment_list[component_index] = last_fragment
-        component_list[component_index] = last_component
-    end
-
-    fragment_set[fragment] = nil
-    fragment_list[component_count] = nil
-    component_list[component_count] = nil
-
-    component_count = component_count - 1
-    self.__component_count = component_count
-
-    return self
+    return self:remove(__lua_select(2, ...))
 end
 
 ---@return evolved.builder builder
