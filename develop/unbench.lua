@@ -4,9 +4,9 @@ basics.unload 'evolved'
 local evo = require 'evolved'
 
 local N = 1000
-local B = evo.entity()
+local B = evo.builder()
 local F1, F2, F3, F4, F5 = evo.id(5)
-local Q1 = evo.query():include(F1):build()
+local Q1 = evo.builder():include(F1):build()
 
 print '----------------------------------------'
 

@@ -54,11 +54,11 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Defer): %d entities',
         local a, b = evo.id(2)
 
         for i = 1, N do
-            evo.entity():set(a, i):build()
+            evo.builder():set(a, i):build()
         end
 
-        local A = evo.query():include(a):build()
-        local B = evo.query():include(b):build()
+        local A = evo.builder():include(a):build()
+        local B = evo.builder():include(b):build()
 
         return a, b, A, B
     end, function(_, _, A, _)
@@ -86,11 +86,11 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Manual): %d entities'
         local a, b = evo.id(2)
 
         for i = 1, N do
-            evo.entity():set(a, i):build()
+            evo.builder():set(a, i):build()
         end
 
-        local A = evo.query():include(a):build()
-        local B = evo.query():include(b):build()
+        local A = evo.builder():include(a):build()
+        local B = evo.builder():include(b):build()
 
         return a, b, A, B
     end, function(_, _, A, _)
@@ -167,15 +167,15 @@ basics.describe_bench(string.format('Evolved Simple Iteration: %d entities', N),
         local a, b, c, d, e = evo.id(5)
 
         for i = 1, N do
-            evo.entity():set(a, i):set(b, i):build()
-            evo.entity():set(a, i):set(b, i):set(c, i):build()
-            evo.entity():set(a, i):set(b, i):set(c, i):set(d, i):build()
-            evo.entity():set(a, i):set(b, i):set(c, i):set(e, i):build()
+            evo.builder():set(a, i):set(b, i):build()
+            evo.builder():set(a, i):set(b, i):set(c, i):build()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):build()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(e, i):build()
         end
 
-        local AB = evo.query():include(a, b):build()
-        local CD = evo.query():include(c, d):build()
-        local CE = evo.query():include(c, e):build()
+        local AB = evo.builder():include(a, b):build()
+        local CD = evo.builder():include(c, d):build()
+        local CE = evo.builder():include(c, e):build()
 
         return a, b, c, d, e, AB, CD, CE
     end, function(_, _, _, _, _, AB, CD, CE)
@@ -277,14 +277,14 @@ basics.describe_bench(string.format('Evolved Packed Iteration: %d entities', N),
         local a, b, c, d, e = evo.id(5)
 
         for i = 1, N do
-            evo.entity():set(a, i):set(b, i):set(c, i):set(d, i):set(e, i):build()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):set(e, i):build()
         end
 
-        local A = evo.query():include(a):build()
-        local B = evo.query():include(b):build()
-        local C = evo.query():include(c):build()
-        local D = evo.query():include(d):build()
-        local E = evo.query():include(e):build()
+        local A = evo.builder():include(a):build()
+        local B = evo.builder():include(b):build()
+        local C = evo.builder():include(c):build()
+        local D = evo.builder():include(d):build()
+        local E = evo.builder():include(e):build()
 
         return a, b, c, d, e, A, B, C, D, E
     end, function(_, _, _, _, _, A, _, _, _, _)
@@ -359,12 +359,12 @@ basics.describe_bench(string.format('Evolved Fragmented Iteration: %d entities',
 
         for _, char in ipairs(chars) do
             for i = 1, N do
-                evo.entity():set(char, i):set(data, i):build()
+                evo.builder():set(char, i):set(data, i):build()
             end
         end
 
-        local Data = evo.query():include(data):build()
-        local Last = evo.query():include(chars[#chars]):build()
+        local Data = evo.builder():include(data):build()
+        local Last = evo.builder():include(chars[#chars]):build()
 
         return data, chars[#chars], Data, Last
     end, function(_, _, Data, _)

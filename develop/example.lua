@@ -2,6 +2,8 @@
 
 local evo = require 'evolved'
 
+evo.debug_mode(true)
+
 ---@class evolved.vector2
 ---@field x number
 ---@field y number
@@ -16,41 +18,41 @@ local function vector2(x, y)
 end
 
 local groups = {
-    awake = evo.system():build(),
-    physics = evo.system():build(),
-    graphics = evo.system():build(),
-    shutdown = evo.system():build(),
+    awake = evo.builder():build(),
+    physics = evo.builder():build(),
+    graphics = evo.builder():build(),
+    shutdown = evo.builder():build(),
 }
 
 local singles = {
-    delta_time = evo.fragment():single(0.016):build(),
-    physics_gravity = evo.fragment():single(vector2(0, 9.81)):build(),
+    delta_time = evo.builder():single(0.016):build(),
+    physics_gravity = evo.builder():single(vector2(0, 9.81)):build(),
 }
 
 local fragments = {
-    force = evo.fragment():build(),
-    position = evo.fragment():build(),
-    velocity = evo.fragment():build(),
+    force = evo.builder():build(),
+    position = evo.builder():build(),
+    velocity = evo.builder():build(),
 }
 
 local queries = {
-    physics_bodies = evo.query()
+    physics_bodies = evo.builder()
         :include(fragments.force, fragments.position, fragments.velocity)
         :build(),
 }
 
-local awake_system = evo.system()
+local awake_system = evo.builder()
     :group(groups.awake)
     :prologue(function()
         print '-= | Awake | =-'
-        evo.entity()
+        evo.builder()
             :set(fragments.force, vector2(0, 0))
             :set(fragments.position, vector2(0, 0))
             :set(fragments.velocity, vector2(0, 0))
             :build()
     end):build()
 
-local integrate_forces_system = evo.system()
+local integrate_forces_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
@@ -71,7 +73,7 @@ local integrate_forces_system = evo.system()
         end
     end):build()
 
-local integrate_velocities_system = evo.system()
+local integrate_velocities_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
@@ -94,7 +96,7 @@ local integrate_velocities_system = evo.system()
         end
     end):build()
 
-local graphics_system = evo.system()
+local graphics_system = evo.builder()
     :group(groups.graphics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
@@ -111,7 +113,7 @@ local graphics_system = evo.system()
         end
     end):build()
 
-local shutdown_system = evo.system()
+local shutdown_system = evo.builder()
     :group(groups.shutdown)
     :epilogue(function()
         print '-= | Shutdown | =-'

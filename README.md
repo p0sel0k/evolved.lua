@@ -115,49 +115,37 @@ debug_mode :: boolean -> ()
 collect_garbage :: ()
 ```
 
-## Builders
+## Builder
 
 ```
-entity :: entity_builder
-entity_builder:set :: fragment, component -> entity_builder
-entity_builder:build :: entity
-```
-
-```
-fragment :: fragment_builder
-fragment_builder:tag :: fragment_builder
-fragment_builder:name :: string -> fragment_builder
-fragment_builder:single :: component -> fragment_builder
-fragment_builder:default :: component -> fragment_builder
-fragment_builder:duplicate :: {component -> component} -> fragment_builder
-fragment_builder:on_set :: {entity, fragment, component, component?} -> fragment_builder
-fragment_builder:on_assign :: {entity, fragment, component, component} -> fragment_builder
-fragment_builder:on_insert :: {entity, fragment, component} -> fragment_builder
-fragment_builder:on_remove :: {entity, fragment} -> fragment_builder
-fragment_builder:destroy_policy :: id -> fragment_builder
-fragment_builder:build :: fragment
-```
-
-```
-query :: query_builder
-query_builder:name :: string -> query_builder
-query_builder:single :: component -> query_builder
-query_builder:include :: fragment... -> query_builder
-query_builder:exclude :: fragment... -> query_builder
-query_builder:build :: query
-```
-
-```
-system :: system_builder
-system_builder:name :: string -> system_builder
-system_builder:single :: component -> system_builder
-system_builder:group :: system -> system_builder
-system_builder:query :: query -> system_builder
-system_builder:execute :: {chunk, entity[], integer} -> system_builder
-system_builder:prologue :: {} -> system_builder
-system_builder:epilogue :: {} -> system_builder
-system_builder:disabled :: system_builder
-system_builder:build :: system
+builder :: builder
+builder:has :: fragment -> boolean
+builder:has_all :: fragment... -> boolean
+builder:has_any :: fragment... -> boolean
+builder:get :: fragment... -> component...
+builder:set :: fragment, component -> builder
+builder:remove :: fragment... -> builder
+builder:clear :: builder
+builder:tag :: builder
+builder:name :: string -> builder
+builder:prefab :: entity -> builder
+builder:single :: component -> builder
+builder:default :: component -> builder
+builder:duplicate :: {component -> component} -> builder
+builder:include :: fragment... -> builder
+builder:exclude :: fragment... -> builder
+builder:on_set :: {entity, fragment, component, component?} -> builder
+builder:on_assign :: {entity, fragment, component, component} -> builder
+builder:on_insert :: {entity, fragment, component} -> builder
+builder:on_remove :: {entity, fragment} -> builder
+builder:group :: system -> builder
+builder:query :: query -> builder
+builder:execute :: {chunk, entity[], integer} -> builder
+builder:prologue :: {} -> builder
+builder:epilogue :: {} -> builder
+builder:disabled :: builder
+builder:destroy_policy :: id -> builder
+builder:build :: boolean -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)
