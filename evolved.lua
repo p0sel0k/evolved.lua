@@ -6943,16 +6943,10 @@ evolved.remove = __evolved_remove
 evolved.clear = __evolved_clear
 evolved.destroy = __evolved_destroy
 
-evolved.multi_set = __evolved_multi_set
-evolved.multi_remove = __evolved_multi_remove
-
 evolved.batch_set = __evolved_batch_set
 evolved.batch_remove = __evolved_batch_remove
 evolved.batch_clear = __evolved_batch_clear
 evolved.batch_destroy = __evolved_batch_destroy
-
-evolved.batch_multi_set = __evolved_batch_multi_set
-evolved.batch_multi_remove = __evolved_batch_multi_remove
 
 evolved.chunk = __evolved_chunk
 

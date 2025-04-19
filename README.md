@@ -85,16 +85,10 @@ remove :: entity, fragment... -> ()
 clear :: entity... -> ()
 destroy :: entity... -> ()
 
-multi_set :: entity, fragment[], component[]? -> ()
-multi_remove :: entity, fragment[] -> ()
-
 batch_set :: query, fragment, component -> ()
 batch_remove :: query, fragment... -> ()
 batch_clear :: query... -> ()
 batch_destroy :: query... -> ()
-
-batch_multi_set :: query, fragment[], component[]? -> ()
-batch_multi_remove :: query, fragment[] -> ()
 
 chunk :: fragment, fragment... -> chunk, entity[], integer
 
