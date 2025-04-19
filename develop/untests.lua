@@ -117,7 +117,7 @@ do
         assert(evo.get(e, f1) == nil)
         assert(evo.get(e, f2) == nil)
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == nil and c2 == nil)
     end
 
@@ -134,7 +134,7 @@ do
         assert(evo.get(e, f1) == 41)
         assert(evo.get(e, f2) == nil)
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == 41 and c2 == nil)
     end
 
@@ -151,7 +151,7 @@ do
         assert(evo.get(e, f1) == 41)
         assert(evo.get(e, f2) == 42)
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == 41 and c2 == 42)
     end
 end
@@ -166,7 +166,7 @@ do
 
     do
         assert(evo.has_all(e, f1, f2))
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == 41 and c2 == 42)
     end
 end
@@ -184,7 +184,7 @@ do
         assert(not evo.has(e, f1))
         assert(evo.has(e, f2))
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == nil and c2 == 42)
     end
 
@@ -198,7 +198,7 @@ do
         assert(evo.has(e, f1))
         assert(not evo.has(e, f2))
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == 41 and c2 == nil)
     end
 
@@ -211,7 +211,7 @@ do
 
         assert(not evo.has_any(e, f1, f2))
 
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == nil and c2 == nil)
     end
 end
@@ -3066,7 +3066,7 @@ do
     do
         local q = qb:build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(includes == nil)
         assert(excludes == nil)
     end
@@ -3074,7 +3074,7 @@ do
     do
         local q = qb:include(f1):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(#includes == 1 and includes[1] == f1)
         assert(excludes == nil)
     end
@@ -3082,7 +3082,7 @@ do
     do
         local q = qb:include(f1, f2):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(#includes == 2 and includes[1] == f1 and includes[2] == f2)
         assert(excludes == nil)
     end
@@ -3090,7 +3090,7 @@ do
     do
         local q = qb:include(f1):include(f2):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(#includes == 2 and includes[1] == f1 and includes[2] == f2)
         assert(excludes == nil)
     end
@@ -3098,7 +3098,7 @@ do
     do
         local q = qb:exclude(f1):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(includes == nil)
         assert(#excludes == 1 and excludes[1] == f1)
     end
@@ -3106,7 +3106,7 @@ do
     do
         local q = qb:exclude(f1, f2):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(includes == nil)
         assert(#excludes == 2 and excludes[1] == f1 and excludes[2] == f2)
     end
@@ -3114,7 +3114,7 @@ do
     do
         local q = qb:exclude(f1):exclude(f2):build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(includes == nil)
         assert(#excludes == 2 and excludes[1] == f1 and excludes[2] == f2)
     end
@@ -3125,7 +3125,7 @@ do
 
         local q = qb:build()
 
-        local includes, excludes = evo.get_all(q, evo.INCLUDES, evo.EXCLUDES)
+        local includes, excludes = evo.get(q, evo.INCLUDES, evo.EXCLUDES)
         assert(#includes == 1 and includes[1] == f1)
         assert(#excludes == 1 and excludes[1] == f2)
     end
@@ -4730,31 +4730,31 @@ do
         assert(c1 == 11)
     end
     do
-        local c1, c2 = evo.get_all(e, f1, f2)
+        local c1, c2 = evo.get(e, f1, f2)
         assert(c1 == 11 and c2 == 22)
     end
     do
-        local c2, c1 = evo.get_all(e, f2, f1)
+        local c2, c1 = evo.get(e, f2, f1)
         assert(c1 == 11 and c2 == 22)
     end
     do
-        local c1, c2, c3 = evo.get_all(e, f1, f2, f3)
+        local c1, c2, c3 = evo.get(e, f1, f2, f3)
         assert(c1 == 11 and c2 == 22 and c3 == 33)
     end
     do
-        local c3, c2, c1 = evo.get_all(e, f3, f2, f1)
+        local c3, c2, c1 = evo.get(e, f3, f2, f1)
         assert(c1 == 11 and c2 == 22 and c3 == 33)
     end
     do
-        local c1, c2, c3, c4 = evo.get_all(e, f1, f2, f3, f4)
+        local c1, c2, c3, c4 = evo.get(e, f1, f2, f3, f4)
         assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44)
     end
     do
-        local c1, c2, c3, c4, c5 = evo.get_all(e, f1, f2, f3, f4, f5)
+        local c1, c2, c3, c4, c5 = evo.get(e, f1, f2, f3, f4, f5)
         assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
     end
     do
-        local c5, c4, c3, c2, c1 = evo.get_all(e, f5, f4, f3, f2, f1)
+        local c5, c4, c3, c2, c1 = evo.get(e, f5, f4, f3, f2, f1)
         assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
     end
 end
@@ -8701,38 +8701,43 @@ do
 end
 
 do
-    local f1, f2, f3, f4, f5 = evo.id(5)
+    local f0, f1, f2, f3, f4, f5 = evo.id(6)
 
     do
         local b = evo.builder()
 
         do
-            assert(b:get_all() == nil)
+            assert(b:get() == nil)
         end
 
         do
-            local c1 = b:get_all(f1)
+            local c1 = b:get(f1)
             assert(c1 == nil)
         end
 
         do
-            local c1, c2 = b:get_all(f1, f2)
+            local c1, c2 = b:get(f1, f2)
             assert(c1 == nil and c2 == nil)
         end
 
         do
-            local c1, c2, c3 = b:get_all(f1, f2, f3)
+            local c1, c2, c3 = b:get(f1, f2, f3)
             assert(c1 == nil and c2 == nil and c3 == nil)
         end
 
         do
-            local c1, c2, c3, c4 = b:get_all(f1, f2, f3, f4)
+            local c1, c2, c3, c4 = b:get(f1, f2, f3, f4)
             assert(c1 == nil and c2 == nil and c3 == nil and c4 == nil)
         end
 
         do
-            local c1, c2, c3, c4, c5 = b:get_all(f1, f2, f3, f4, f5)
+            local c1, c2, c3, c4, c5 = b:get(f1, f2, f3, f4, f5)
             assert(c1 == nil and c2 == nil and c3 == nil and c4 == nil and c5 == nil)
+        end
+
+        do
+            local c0, c1, c2, c3, c4, c5 = b:get(f0, f1, f2, f3, f4, f5)
+            assert(c0 == nil and c1 == nil and c2 == nil and c3 == nil and c4 == nil and c5 == nil)
         end
     end
 
@@ -8740,32 +8745,47 @@ do
         local b = evo.builder():set(f1, 11):set(f2, 22):set(f3, 33):set(f4, 44):set(f5, 55)
 
         do
-            assert(b:get_all() == nil)
+            assert(b:get() == nil)
         end
 
         do
-            local c1 = b:get_all(f1)
+            local c1 = b:get(f1)
             assert(c1 == 11)
         end
 
         do
-            local c1, c2 = b:get_all(f1, f2)
+            local c1, c2 = b:get(f1, f2)
             assert(c1 == 11 and c2 == 22)
         end
 
         do
-            local c1, c2, c3 = b:get_all(f1, f2, f3)
+            local c1, c2, c3 = b:get(f1, f2, f3)
             assert(c1 == 11 and c2 == 22 and c3 == 33)
         end
 
         do
-            local c1, c2, c3, c4 = b:get_all(f1, f2, f3, f4)
+            local c1, c2, c3, c4 = b:get(f1, f2, f3, f4)
             assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44)
         end
 
         do
-            local c1, c2, c3, c4, c5 = b:get_all(f1, f2, f3, f4, f5)
+            local c1, c2, c3, c4, c5 = b:get(f1, f2, f3, f4, f5)
             assert(c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
+        end
+
+        do
+            local c0, c1, c2, c3, c4, c5 = b:get(f0, f1, f2, f3, f4, f5)
+            assert(c0 == nil and c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
+        end
+
+        do
+            local c1, c0, c2, c3, c4, c5 = b:get(f1, f0, f2, f3, f4, f5)
+            assert(c0 == nil and c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
+        end
+
+        do
+            local c5, c4, c3, c2, c1, c0 = b:get(f5, f4, f3, f2, f1, f0)
+            assert(c0 == nil and c1 == 11 and c2 == 22 and c3 == 33 and c4 == 44 and c5 == 55)
         end
     end
 end

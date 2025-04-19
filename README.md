@@ -78,8 +78,7 @@ has :: chunk | entity, fragment -> boolean
 has_all :: chunk | entity, fragment... -> boolean
 has_any :: chunk | entity, fragment... -> boolean
 
-get :: entity, fragment -> component
-get_all :: entity, fragment...  -> component...
+get :: entity, fragment...  -> component...
 
 set :: entity, fragment, component -> ()
 remove :: entity, fragment... -> ()
@@ -123,8 +122,7 @@ builder :: builder
 builder:has :: fragment -> boolean
 builder:has_all :: fragment... -> boolean
 builder:has_any :: fragment... -> boolean
-builder:get :: fragment -> component
-builder:get_all :: fragment... -> component...
+builder:get :: fragment... -> component...
 builder:set :: fragment, component -> builder
 builder:remove :: fragment -> builder
 builder:clear :: builder
