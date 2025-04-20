@@ -1872,10 +1872,10 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
                     new_component = true
                 end
 
-                local entity_component_index = chunk_component_indices[fragment]
-                local entity_component_storage = chunk_component_storages[entity_component_index]
+                local component_index = chunk_component_indices[fragment]
+                local component_storage = chunk_component_storages[component_index]
 
-                entity_component_storage[place] = new_component
+                component_storage[place] = new_component
             end
         else
             for prefab_component_index = 1, prefab_component_count do
@@ -1890,10 +1890,10 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
                     new_component = true
                 end
 
-                local entity_component_index = chunk_component_indices[fragment]
-                local entity_component_storage = chunk_component_storages[entity_component_index]
+                local component_index = chunk_component_indices[fragment]
+                local component_storage = chunk_component_storages[component_index]
 
-                entity_component_storage[place] = new_component
+                component_storage[place] = new_component
             end
         end
     end
@@ -1922,9 +1922,9 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
                     new_component = true
                 end
 
-                local entity_component_storage = chunk_component_storages[component_index]
+                local component_storage = chunk_component_storages[component_index]
 
-                entity_component_storage[place] = new_component
+                component_storage[place] = new_component
             end
         end
     else
@@ -1939,9 +1939,9 @@ local function __spawn_entity_as(entity, prefab, fragment_list, fragment_count, 
                     new_component = true
                 end
 
-                local entity_component_storage = chunk_component_storages[component_index]
+                local component_storage = chunk_component_storages[component_index]
 
-                entity_component_storage[place] = new_component
+                component_storage[place] = new_component
             end
         end
     end
