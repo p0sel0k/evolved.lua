@@ -66,17 +66,17 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
-is_alive :: chunk | entity -> boolean
-is_alive_all :: chunk | entity... -> boolean
-is_alive_any :: chunk | entity... -> boolean
+is_alive :: entity -> boolean
+is_alive_all :: entity... -> boolean
+is_alive_any :: entity... -> boolean
 
-is_empty :: chunk | entity -> boolean
-is_empty_all :: chunk | entity... -> boolean
-is_empty_any :: chunk | entity... -> boolean
+is_empty :: entity -> boolean
+is_empty_all :: entity... -> boolean
+is_empty_any :: entity... -> boolean
 
-has :: chunk | entity, fragment -> boolean
-has_all :: chunk | entity, fragment... -> boolean
-has_any :: chunk | entity, fragment... -> boolean
+has :: entity, fragment -> boolean
+has_all :: entity, fragment... -> boolean
+has_any :: entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
 
@@ -89,12 +89,6 @@ batch_set :: query, fragment, component -> ()
 batch_remove :: query, fragment... -> ()
 batch_clear :: query... -> ()
 batch_destroy :: query... -> ()
-
-chunk :: fragment, fragment... -> chunk, entity[], integer
-
-entities :: chunk -> entity[], integer
-fragments :: chunk -> fragment[], integer
-components :: chunk, fragment... -> component[]...
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
@@ -109,36 +103,67 @@ debug_mode :: boolean -> ()
 collect_garbage :: ()
 ```
 
+## Chunk
+
+```
+chunk :: fragment, fragment... -> chunk, entity[], integer
+
+chunk:is_alive :: boolean
+chunk:is_empty :: boolean
+
+chunk:has :: fragment -> boolean
+chunk:has_all :: fragment... -> boolean
+chunk:has_any :: fragment... -> boolean
+
+chunk:entities :: entity[], integer
+chunk:fragments :: fragment[], integer
+chunk:components :: fragment... -> component[]...
+```
+
 ## Builder
 
 ```
 builder :: builder
+
 builder:has :: fragment -> boolean
 builder:has_all :: fragment... -> boolean
 builder:has_any :: fragment... -> boolean
+
 builder:get :: fragment... -> component...
+
 builder:set :: fragment, component -> builder
 builder:remove :: fragment... -> builder
 builder:clear :: builder
+
 builder:tag :: builder
 builder:name :: string -> builder
+
 builder:prefab :: entity -> builder
 builder:single :: component -> builder
+
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
+
 builder:include :: fragment... -> builder
 builder:exclude :: fragment... -> builder
+
 builder:on_set :: {entity, fragment, component, component?} -> builder
 builder:on_assign :: {entity, fragment, component, component} -> builder
 builder:on_insert :: {entity, fragment, component} -> builder
 builder:on_remove :: {entity, fragment} -> builder
+
 builder:group :: system -> builder
+
 builder:query :: query -> builder
 builder:execute :: {chunk, entity[], integer} -> builder
+
 builder:prologue :: {} -> builder
 builder:epilogue :: {} -> builder
+
 builder:disabled :: builder
+
 builder:destroy_policy :: id -> builder
+
 builder:build :: boolean -> entity
 ```
 

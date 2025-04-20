@@ -101,8 +101,8 @@ end
 local all_chunk_query = evo.builder():build()
 
 for chunk in evo.execute(all_chunk_query) do
-    assert(not evo.has_any(chunk, __table_unpack(should_be_destroyed_entity_list)))
-    for _, fragment in ipairs(evo.fragments(chunk)) do
+    assert(not chunk:has_any(__table_unpack(should_be_destroyed_entity_list)))
+    for _, fragment in ipairs(chunk:fragments()) do
         assert(not evo.has_all(fragment, __table_unpack(destroying_include_list)))
     end
 end

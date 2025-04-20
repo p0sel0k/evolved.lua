@@ -62,7 +62,7 @@ local integrate_forces_system = evo.builder()
             evo.get(singles.physics_gravity, singles.physics_gravity)
 
         ---@type evolved.vector2[], evolved.vector2[]
-        local forces, velocities = evo.components(chunk,
+        local forces, velocities = chunk:components(
             fragments.force, fragments.velocity)
 
         for i = 1, entity_count do
@@ -82,7 +82,7 @@ local integrate_velocities_system = evo.builder()
             evo.get(singles.delta_time, singles.delta_time)
 
         ---@type evolved.vector2[], evolved.vector2[], evolved.vector2[]
-        local forces, positions, velocities = evo.components(chunk,
+        local forces, positions, velocities = chunk:components(
             fragments.force, fragments.position, fragments.velocity)
 
         for i = 1, entity_count do
@@ -101,7 +101,7 @@ local graphics_system = evo.builder()
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type evolved.vector2[]
-        local positions = evo.components(chunk,
+        local positions = chunk:components(
             fragments.position)
 
         for i = 1, entity_count do
