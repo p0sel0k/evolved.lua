@@ -6688,3 +6688,282 @@ do
         assert(not evo.has(e3, f1) and evo.get(e3, f1) == nil)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    do
+        local e = evo.spawn()
+        assert(evo.is_alive(e) and evo.is_empty(e))
+    end
+
+    do
+        local e = evo.spawn({})
+        assert(evo.is_alive(e) and evo.is_empty(e))
+    end
+
+    do
+        local e = evo.spawn({ [f1] = 1 })
+        assert(evo.is_alive(e) and not evo.is_empty(e))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 1)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+    end
+
+    do
+        local e = evo.spawn({ [f1] = 1, [f2] = 2 })
+        assert(evo.is_alive(e) and not evo.is_empty(e))
+        assert(evo.has(e, f1) and evo.get(e, f1) == 1)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 2)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        local p = evo.spawn()
+
+        local e1 = evo.clone(p)
+        assert(evo.is_alive(e1) and evo.is_empty(e1))
+
+        local e2 = evo.clone(p, {})
+        assert(evo.is_alive(e2) and evo.is_empty(e2))
+
+        local e3 = evo.clone(p, { [f1] = 11 })
+        assert(evo.is_alive(e3) and not evo.is_empty(e3))
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == 11)
+        assert(not evo.has(e3, f2) and evo.get(e3, f2) == nil)
+
+        local e4 = evo.clone(p, { [f1] = 11, [f2] = 22 })
+        assert(evo.is_alive(e4) and not evo.is_empty(e4))
+        assert(evo.has(e4, f1) and evo.get(e4, f1) == 11)
+        assert(evo.has(e4, f2) and evo.get(e4, f2) == 22)
+
+        local e5 = evo.clone(p, { [f3] = 33 })
+        assert(evo.is_alive(e5) and not evo.is_empty(e5))
+        assert(not evo.has(e5, f1) and evo.get(e5, f1) == nil)
+        assert(not evo.has(e5, f2) and evo.get(e5, f2) == nil)
+        assert(evo.has(e5, f3) and evo.get(e5, f3) == 33)
+
+        local e6 = evo.clone(p, { [f1] = 11, [f2] = 22, [f3] = 33 })
+        assert(evo.is_alive(e6) and not evo.is_empty(e6))
+        assert(evo.has(e6, f1) and evo.get(e6, f1) == 11)
+        assert(evo.has(e6, f2) and evo.get(e6, f2) == 22)
+        assert(evo.has(e6, f3) and evo.get(e6, f3) == 33)
+    end
+
+    do
+        local p = evo.spawn({ [f1] = 1 })
+
+        local e1 = evo.clone(p)
+        assert(evo.is_alive(e1) and not evo.is_empty(e1))
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 1)
+        assert(not evo.has(e1, f2) and evo.get(e1, f2) == nil)
+
+        local e2 = evo.clone(p, {})
+        assert(evo.is_alive(e2) and not evo.is_empty(e2))
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 1)
+        assert(not evo.has(e2, f2) and evo.get(e2, f2) == nil)
+
+        local e3 = evo.clone(p, { [f1] = 11 })
+        assert(evo.is_alive(e3) and not evo.is_empty(e3))
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == 11)
+        assert(not evo.has(e3, f2) and evo.get(e3, f2) == nil)
+
+        local e4 = evo.clone(p, { [f2] = 22 })
+        assert(evo.is_alive(e4) and not evo.is_empty(e4))
+        assert(evo.has(e4, f1) and evo.get(e4, f1) == 1)
+        assert(evo.has(e4, f2) and evo.get(e4, f2) == 22)
+
+        local e5 = evo.clone(p, { [f1] = 11, [f2] = 22 })
+        assert(evo.is_alive(e5) and not evo.is_empty(e5))
+        assert(evo.has(e5, f1) and evo.get(e5, f1) == 11)
+        assert(evo.has(e5, f2) and evo.get(e5, f2) == 22)
+
+        local e6 = evo.clone(p, { [f3] = 33 })
+        assert(evo.is_alive(e6) and not evo.is_empty(e6))
+        assert(evo.has(e6, f1) and evo.get(e6, f1) == 1)
+        assert(not evo.has(e6, f2) and evo.get(e6, f2) == nil)
+        assert(evo.has(e6, f3) and evo.get(e6, f3) == 33)
+
+        local e7 = evo.clone(p, { [f1] = 11, [f2] = 22, [f3] = 33 })
+        assert(evo.is_alive(e7) and not evo.is_empty(e7))
+        assert(evo.has(e7, f1) and evo.get(e7, f1) == 11)
+        assert(evo.has(e7, f2) and evo.get(e7, f2) == 22)
+        assert(evo.has(e7, f3) and evo.get(e7, f3) == 33)
+    end
+
+    do
+        local p = evo.spawn({ [f1] = 1, [f2] = 2 })
+
+        local e1 = evo.clone(p)
+        assert(evo.is_alive(e1) and not evo.is_empty(e1))
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == 1)
+        assert(evo.has(e1, f2) and evo.get(e1, f2) == 2)
+
+        local e2 = evo.clone(p, {})
+        assert(evo.is_alive(e2) and not evo.is_empty(e2))
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 1)
+        assert(evo.has(e2, f2) and evo.get(e2, f2) == 2)
+
+        local e3 = evo.clone(p, { [f1] = 11 })
+        assert(evo.is_alive(e3) and not evo.is_empty(e3))
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == 11)
+        assert(evo.has(e3, f2) and evo.get(e3, f2) == 2)
+
+        local e4 = evo.clone(p, { [f2] = 22 })
+        assert(evo.is_alive(e4) and not evo.is_empty(e4))
+        assert(evo.has(e4, f1) and evo.get(e4, f1) == 1)
+        assert(evo.has(e4, f2) and evo.get(e4, f2) == 22)
+
+        local e5 = evo.clone(p, { [f1] = 11, [f2] = 22 })
+        assert(evo.is_alive(e5) and not evo.is_empty(e5))
+        assert(evo.has(e5, f1) and evo.get(e5, f1) == 11)
+        assert(evo.has(e5, f2) and evo.get(e5, f2) == 22)
+
+        local e6 = evo.clone(p, { [f3] = 33 })
+        assert(evo.is_alive(e6) and not evo.is_empty(e6))
+        assert(evo.has(e6, f1) and evo.get(e6, f1) == 1)
+        assert(evo.has(e6, f2) and evo.get(e6, f2) == 2)
+        assert(evo.has(e6, f3) and evo.get(e6, f3) == 33)
+
+        local e7 = evo.clone(p, { [f1] = 11, [f2] = 22, [f3] = 33 })
+        assert(evo.is_alive(e7) and not evo.is_empty(e7))
+        assert(evo.has(e7, f1) and evo.get(e7, f1) == 11)
+        assert(evo.has(e7, f2) and evo.get(e7, f2) == 22)
+        assert(evo.has(e7, f3) and evo.get(e7, f3) == 33)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    do
+        assert(evo.defer())
+
+        local e1 = evo.spawn()
+        local e2 = evo.spawn({})
+        local e3 = evo.spawn({ [f1] = 11 })
+        local e4 = evo.spawn({ [f1] = 11, [f2] = 22 })
+
+        assert(evo.is_alive(e1) and evo.is_empty(e1))
+        assert(evo.is_alive(e2) and evo.is_empty(e2))
+        assert(evo.is_alive(e3) and evo.is_empty(e3))
+        assert(evo.is_alive(e4) and evo.is_empty(e4))
+
+        assert(evo.commit())
+
+        assert(evo.is_alive(e1) and evo.is_empty(e1))
+        assert(evo.is_alive(e2) and evo.is_empty(e2))
+        assert(evo.is_alive(e3) and not evo.is_empty(e3))
+        assert(evo.is_alive(e4) and not evo.is_empty(e4))
+
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == 11)
+        assert(not evo.has(e3, f2) and evo.get(e3, f2) == nil)
+
+        assert(evo.has(e4, f1) and evo.get(e4, f1) == 11)
+        assert(evo.has(e4, f2) and evo.get(e4, f2) == 22)
+    end
+
+    do
+        local p1 = evo.spawn()
+        local p2 = evo.spawn({ [f1] = 1 })
+        local p3 = evo.spawn({ [f1] = 1, [f2] = 2 })
+
+        assert(evo.defer())
+
+        local e1a = evo.clone(p1)
+        local e1b = evo.clone(p1, {})
+        local e1c = evo.clone(p1, { [f1] = 11 })
+        local e1d = evo.clone(p1, { [f2] = 22 })
+        local e1e = evo.clone(p1, { [f1] = 11, [f2] = 22 })
+        local e1f = evo.clone(p1, { [f3] = 33 })
+        local e1g = evo.clone(p1, { [f1] = 11, [f2] = 22, [f3] = 33 })
+
+        local e2a = evo.clone(p2)
+        local e2b = evo.clone(p2, {})
+        local e2c = evo.clone(p2, { [f1] = 11 })
+        local e2d = evo.clone(p2, { [f2] = 22 })
+        local e2e = evo.clone(p2, { [f1] = 11, [f2] = 22 })
+        local e2f = evo.clone(p2, { [f3] = 33 })
+        local e2g = evo.clone(p2, { [f1] = 11, [f2] = 22, [f3] = 33 })
+
+        local e3a = evo.clone(p3)
+        local e3b = evo.clone(p3, {})
+        local e3c = evo.clone(p3, { [f1] = 11 })
+        local e3d = evo.clone(p3, { [f2] = 22 })
+        local e3e = evo.clone(p3, { [f1] = 11, [f2] = 22 })
+        local e3f = evo.clone(p3, { [f3] = 33 })
+        local e3g = evo.clone(p3, { [f1] = 11, [f2] = 22, [f3] = 33 })
+
+        assert(evo.is_alive_all(e1a, e1b, e1c, e1d, e1e, e1f, e1g))
+        assert(evo.is_alive_all(e2a, e2b, e2c, e2d, e2e, e2f, e2g))
+        assert(evo.is_alive_all(e3a, e3b, e3c, e3d, e3e, e3f, e3g))
+
+        assert(evo.is_empty_all(e1a, e1b, e1c, e1d, e1e, e1f, e1g))
+        assert(evo.is_empty_all(e2a, e2b, e2c, e2d, e2e, e2f, e2g))
+        assert(evo.is_empty_all(e3a, e3b, e3c, e3d, e3e, e3f, e3g))
+
+        assert(evo.commit())
+
+        assert(not evo.has(e1a, f1) and not evo.has(e1a, f2))
+        assert(not evo.has(e1b, f1) and not evo.has(e1b, f2))
+
+        assert(evo.has(e1c, f1) and evo.get(e1c, f1) == 11 and not evo.has(e1c, f2))
+        assert(not evo.has(e1d, f1) and evo.has(e1d, f2) and evo.get(e1d, f2) == 22)
+
+        assert(not evo.has(e1f, f1) and evo.get(e1f, f1) == nil)
+        assert(not evo.has(e1f, f2) and evo.get(e1f, f2) == nil)
+        assert(evo.has(e1f, f3) and evo.get(e1f, f3) == 33)
+
+        assert(evo.has(e1g, f1) and evo.get(e1g, f1) == 11)
+        assert(evo.has(e1g, f2) and evo.get(e1g, f2) == 22)
+        assert(evo.has(e1g, f3) and evo.get(e1g, f3) == 33)
+
+        assert(evo.has(e2a, f1) and evo.get(e2a, f1) == 1)
+        assert(not evo.has(e2a, f2) and evo.get(e2a, f2) == nil)
+
+        assert(evo.has(e2b, f1) and evo.get(e2b, f1) == 1)
+        assert(not evo.has(e2b, f2) and evo.get(e2b, f2) == nil)
+
+        assert(evo.has(e2c, f1) and evo.get(e2c, f1) == 11)
+        assert(not evo.has(e2c, f2) and evo.get(e2c, f2) == nil)
+
+        assert(evo.has(e2d, f1) and evo.get(e2d, f1) == 1)
+        assert(evo.has(e2d, f2) and evo.get(e2d, f2) == 22)
+
+        assert(evo.has(e2e, f1) and evo.get(e2e, f1) == 11)
+        assert(evo.has(e2e, f2) and evo.get(e2e, f2) == 22)
+
+        assert(evo.has(e2f, f1) and evo.get(e2f, f1) == 1)
+        assert(not evo.has(e2f, f2) and evo.get(e2f, f2) == nil)
+        assert(evo.has(e2f, f3) and evo.get(e2f, f3) == 33)
+
+        assert(evo.has(e2g, f1) and evo.get(e2g, f1) == 11)
+        assert(evo.has(e2g, f2) and evo.get(e2g, f2) == 22)
+        assert(evo.has(e2g, f3) and evo.get(e2g, f3) == 33)
+
+        assert(evo.has(e3a, f1) and evo.get(e3a, f1) == 1)
+        assert(evo.has(e3a, f2) and evo.get(e3a, f2) == 2)
+
+        assert(evo.has(e3b, f1) and evo.get(e3b, f1) == 1)
+        assert(evo.has(e3b, f2) and evo.get(e3b, f2) == 2)
+
+        assert(evo.has(e3c, f1) and evo.get(e3c, f1) == 11)
+        assert(evo.has(e3c, f2) and evo.get(e3c, f2) == 2)
+
+        assert(evo.has(e3d, f1) and evo.get(e3d, f1) == 1)
+        assert(evo.has(e3d, f2) and evo.get(e3d, f2) == 22)
+
+        assert(evo.has(e3e, f1) and evo.get(e3e, f1) == 11)
+        assert(evo.has(e3e, f2) and evo.get(e3e, f2) == 22)
+
+        assert(evo.has(e3f, f1) and evo.get(e3f, f1) == 1)
+        assert(evo.has(e3f, f2) and evo.get(e3f, f2) == 2)
+        assert(evo.has(e3f, f3) and evo.get(e3f, f3) == 33)
+
+        assert(evo.has(e3g, f1) and evo.get(e3g, f1) == 11)
+        assert(evo.has(e3g, f2) and evo.get(e3g, f2) == 22)
+        assert(evo.has(e3g, f3) and evo.get(e3g, f3) == 33)
+    end
+end
