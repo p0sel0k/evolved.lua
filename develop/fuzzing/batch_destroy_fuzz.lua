@@ -81,7 +81,7 @@ end
 
 do
     local r = math.random(1, 2)
-    local q = evo.builder():include(__table_unpack(destroying_include_list)):build()
+    local q = evo.builder():include(__table_unpack(destroying_include_list)):spawn()
 
     if r == 1 then
         evo.batch_destroy(q)
@@ -98,7 +98,7 @@ end
 ---
 ---
 
-local all_chunk_query = evo.builder():build()
+local all_chunk_query = evo.spawn()
 
 for chunk in evo.execute(all_chunk_query) do
     assert(not chunk:has_any(__table_unpack(should_be_destroyed_entity_list)))

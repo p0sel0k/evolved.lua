@@ -18,27 +18,27 @@ local function vector2(x, y)
 end
 
 local groups = {
-    awake = evo.builder():build(),
-    physics = evo.builder():build(),
-    graphics = evo.builder():build(),
-    shutdown = evo.builder():build(),
+    awake = evo.spawn(),
+    physics = evo.spawn(),
+    graphics = evo.spawn(),
+    shutdown = evo.spawn(),
 }
 
 local singles = {
-    delta_time = evo.builder():single(0.016):build(),
-    physics_gravity = evo.builder():single(vector2(0, 9.81)):build(),
+    delta_time = evo.spawn_single(0.016),
+    physics_gravity = evo.spawn_single(vector2(0, 9.81)),
 }
 
 local fragments = {
-    force = evo.builder():build(),
-    position = evo.builder():build(),
-    velocity = evo.builder():build(),
+    force = evo.spawn(),
+    position = evo.spawn(),
+    velocity = evo.spawn(),
 }
 
 local queries = {
     physics_bodies = evo.builder()
         :include(fragments.force, fragments.position, fragments.velocity)
-        :build(),
+        :spawn(),
 }
 
 local awake_system = evo.builder()
@@ -49,8 +49,8 @@ local awake_system = evo.builder()
             :set(fragments.force, vector2(0, 0))
             :set(fragments.position, vector2(0, 0))
             :set(fragments.velocity, vector2(0, 0))
-            :build()
-    end):build()
+            :spawn()
+    end):spawn()
 
 local integrate_forces_system = evo.builder()
     :group(groups.physics)
@@ -71,7 +71,7 @@ local integrate_forces_system = evo.builder()
             velocity.x = velocity.x + (physics_gravity.x + force.x) * delta_time
             velocity.y = velocity.y + (physics_gravity.y + force.y) * delta_time
         end
-    end):build()
+    end):spawn()
 
 local integrate_velocities_system = evo.builder()
     :group(groups.physics)
@@ -94,7 +94,7 @@ local integrate_velocities_system = evo.builder()
             force.x = 0
             force.y = 0
         end
-    end):build()
+    end):spawn()
 
 local graphics_system = evo.builder()
     :group(groups.graphics)
@@ -111,14 +111,14 @@ local graphics_system = evo.builder()
                 '|-> {entity %d} at {%.4f, %.4f}',
                 entity, position.x, position.y))
         end
-    end):build()
+    end):spawn()
 
 local shutdown_system = evo.builder()
     :group(groups.shutdown)
     :epilogue(function()
         print '-= | Shutdown | =-'
         evo.batch_destroy(queries.physics_bodies)
-    end):build()
+    end):spawn()
 
 do
     evo.process(groups.awake)

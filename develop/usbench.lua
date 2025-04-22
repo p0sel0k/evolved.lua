@@ -40,9 +40,9 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Defer): %d entities',
     function(a, b, A, B)
         evo.defer()
         do
-            for chunk, entities in evo.execute(A) do
+            for chunk, _, entity_count in evo.execute(A) do
                 local as = chunk:components(a)
-                for i = 1, #entities do
+                for i = 1, entity_count do
                     evo.set(evo.id(), b, as[i])
                 end
             end
@@ -54,11 +54,11 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Defer): %d entities',
         local a, b = evo.id(2)
 
         for i = 1, N do
-            evo.builder():set(a, i):build()
+            evo.builder():set(a, i):spawn()
         end
 
-        local A = evo.builder():include(a):build()
-        local B = evo.builder():include(b):build()
+        local A = evo.builder():include(a):spawn()
+        local B = evo.builder():include(b):spawn()
 
         return a, b, A, B
     end, function(_, _, A, _)
@@ -68,15 +68,17 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Defer): %d entities',
 basics.describe_bench(string.format('Evolved Entity Cycle (Manual): %d entities', N),
     function(a, b, A, B)
         local to_create = {}
+        local to_create_count = 0
 
-        for chunk, entities in evo.execute(A) do
+        for chunk, _, entity_count in evo.execute(A) do
             local as = chunk:components(a)
-            for i = 1, #entities do
-                to_create[#to_create + 1] = as[i]
+            for i = 1, entity_count do
+                to_create_count = to_create_count + 1
+                to_create[to_create_count] = as[i]
             end
         end
 
-        for i = 1, #to_create do
+        for i = 1, to_create_count do
             local e = evo.id()
             evo.set(e, b, to_create[i])
         end
@@ -86,11 +88,11 @@ basics.describe_bench(string.format('Evolved Entity Cycle (Manual): %d entities'
         local a, b = evo.id(2)
 
         for i = 1, N do
-            evo.builder():set(a, i):build()
+            evo.builder():set(a, i):spawn()
         end
 
-        local A = evo.builder():include(a):build()
-        local B = evo.builder():include(b):build()
+        local A = evo.builder():include(a):spawn()
+        local B = evo.builder():include(b):spawn()
 
         return a, b, A, B
     end, function(_, _, A, _)
@@ -143,23 +145,23 @@ basics.describe_bench(string.format('Evolved Simple Iteration: %d entities', N),
     ---@param CD evolved.query
     ---@param CE evolved.query
     function(a, b, c, d, e, AB, CD, CE)
-        for chunk, entities in evo.execute(AB) do
+        for chunk, _, entity_count in evo.execute(AB) do
             local as, bs = chunk:components(a, b)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 as[i], bs[i] = bs[i], as[i]
             end
         end
 
-        for chunk, entities in evo.execute(CD) do
+        for chunk, _, entity_count in evo.execute(CD) do
             local cs, ds = chunk:components(c, d)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 cs[i], ds[i] = ds[i], cs[i]
             end
         end
 
-        for chunk, entities in evo.execute(CE) do
+        for chunk, _, entity_count in evo.execute(CE) do
             local cs, es = chunk:components(c, e)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 cs[i], es[i] = es[i], cs[i]
             end
         end
@@ -167,15 +169,15 @@ basics.describe_bench(string.format('Evolved Simple Iteration: %d entities', N),
         local a, b, c, d, e = evo.id(5)
 
         for i = 1, N do
-            evo.builder():set(a, i):set(b, i):build()
-            evo.builder():set(a, i):set(b, i):set(c, i):build()
-            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):build()
-            evo.builder():set(a, i):set(b, i):set(c, i):set(e, i):build()
+            evo.builder():set(a, i):set(b, i):spawn()
+            evo.builder():set(a, i):set(b, i):set(c, i):spawn()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):spawn()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(e, i):spawn()
         end
 
-        local AB = evo.builder():include(a, b):build()
-        local CD = evo.builder():include(c, d):build()
-        local CE = evo.builder():include(c, e):build()
+        local AB = evo.builder():include(a, b):spawn()
+        local CD = evo.builder():include(c, d):spawn()
+        local CE = evo.builder():include(c, e):spawn()
 
         return a, b, c, d, e, AB, CD, CE
     end, function(_, _, _, _, _, AB, CD, CE)
@@ -239,37 +241,37 @@ basics.describe_bench(string.format('Evolved Packed Iteration: %d entities', N),
     ---@param D evolved.query
     ---@param E evolved.query
     function(a, b, c, d, e, A, B, C, D, E)
-        for chunk, entities in evo.execute(A) do
+        for chunk, _, entity_count in evo.execute(A) do
             local as = chunk:components(a)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 as[i] = as[i] * 2
             end
         end
 
-        for chunk, entities in evo.execute(B) do
+        for chunk, _, entity_count in evo.execute(B) do
             local bs = chunk:components(b)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 bs[i] = bs[i] * 2
             end
         end
 
-        for chunk, entities in evo.execute(C) do
+        for chunk, _, entity_count in evo.execute(C) do
             local cs = chunk:components(c)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 cs[i] = cs[i] * 2
             end
         end
 
-        for chunk, entities in evo.execute(D) do
+        for chunk, _, entity_count in evo.execute(D) do
             local ds = chunk:components(d)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 ds[i] = ds[i] * 2
             end
         end
 
-        for chunk, entities in evo.execute(E) do
+        for chunk, _, entity_count in evo.execute(E) do
             local es = chunk:components(e)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 es[i] = es[i] * 2
             end
         end
@@ -277,14 +279,14 @@ basics.describe_bench(string.format('Evolved Packed Iteration: %d entities', N),
         local a, b, c, d, e = evo.id(5)
 
         for i = 1, N do
-            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):set(e, i):build()
+            evo.builder():set(a, i):set(b, i):set(c, i):set(d, i):set(e, i):spawn()
         end
 
-        local A = evo.builder():include(a):build()
-        local B = evo.builder():include(b):build()
-        local C = evo.builder():include(c):build()
-        local D = evo.builder():include(d):build()
-        local E = evo.builder():include(e):build()
+        local A = evo.builder():include(a):spawn()
+        local B = evo.builder():include(b):spawn()
+        local C = evo.builder():include(c):spawn()
+        local D = evo.builder():include(d):spawn()
+        local E = evo.builder():include(e):spawn()
 
         return a, b, c, d, e, A, B, C, D, E
     end, function(_, _, _, _, _, A, _, _, _, _)
@@ -334,16 +336,16 @@ basics.describe_bench(string.format('Evolved Fragmented Iteration: %d entities',
     ---@param Data evolved.query
     ---@param Last evolved.query
     function(data, last, Data, Last)
-        for chunk, entities in evo.execute(Data) do
+        for chunk, _, entity_count in evo.execute(Data) do
             local ds = chunk:components(data)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 ds[i] = ds[i] * 2
             end
         end
 
-        for chunk, entities in evo.execute(Last) do
+        for chunk, _, entity_count in evo.execute(Last) do
             local ls = chunk:components(last)
-            for i = 1, #entities do
+            for i = 1, entity_count do
                 ls[i] = ls[i] * 2
             end
         end
@@ -359,16 +361,14 @@ basics.describe_bench(string.format('Evolved Fragmented Iteration: %d entities',
 
         for _, char in ipairs(chars) do
             for i = 1, N do
-                evo.builder():set(char, i):set(data, i):build()
+                evo.builder():set(char, i):set(data, i):spawn()
             end
         end
 
-        local Data = evo.builder():include(data):build()
-        local Last = evo.builder():include(chars[#chars]):build()
+        local Data = evo.builder():include(data):spawn()
+        local Last = evo.builder():include(chars[#chars]):spawn()
 
         return data, chars[#chars], Data, Last
     end, function(_, _, Data, _)
         evo.batch_destroy(Data)
     end)
-
-print '----------------------------------------'

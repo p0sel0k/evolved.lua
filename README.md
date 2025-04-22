@@ -29,6 +29,7 @@
 ```
 TAG :: fragment
 NAME :: fragment
+
 DEFAULT :: fragment
 DUPLICATE :: fragment
 
@@ -98,8 +99,8 @@ process :: system... -> ()
 spawn :: <fragment, component>? -> entity
 clone :: entity -> <fragment, component>? -> entity
 
-spawn_at :: chunk?, fragment[]?, component[]? -> entity
-spawn_as :: entity?, fragment[]?, component[]? -> entity
+spawn_single :: component, <fragment, component>? -> entity
+clone_single :: entity -> component -> <fragment, component>? -> entity
 
 debug_mode :: boolean -> ()
 collect_garbage :: ()
@@ -140,9 +141,6 @@ builder:clear :: builder
 builder:tag :: builder
 builder:name :: string -> builder
 
-builder:prefab :: entity -> builder
-builder:single :: component -> builder
-
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
 
@@ -166,7 +164,11 @@ builder:disabled :: builder
 
 builder:destroy_policy :: id -> builder
 
-builder:build :: boolean -> entity
+builder:spawn :: entity
+builder:clone :: entity -> entity
+
+builder:spawn_single :: component -> entity
+builder:clone_single :: entity -> component -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)
