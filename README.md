@@ -100,7 +100,6 @@ clone :: entity -> <fragment, component>? -> entity
 
 spawn_at :: chunk?, fragment[]?, component[]? -> entity
 spawn_as :: entity?, fragment[]?, component[]? -> entity
-spawn_with :: fragment[]?, component[]? -> entity
 
 debug_mode :: boolean -> ()
 collect_garbage :: ()

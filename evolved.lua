@@ -727,7 +727,6 @@ local __evolved_clone
 
 local __evolved_spawn_at
 local __evolved_spawn_as
-local __evolved_spawn_with
 
 local __evolved_debug_mode
 local __evolved_collect_garbage
@@ -5300,46 +5299,6 @@ function __evolved_spawn_as(prefab, fragments, components)
     return entity
 end
 
----@param fragments? evolved.fragment[]
----@param components? evolved.component[]
----@return evolved.entity entity
-function __evolved_spawn_with(fragments, components)
-    if not fragments then
-        fragments = __safe_tbls.__EMPTY_FRAGMENT_LIST
-    end
-
-    if not components then
-        components = __safe_tbls.__EMPTY_COMPONENT_LIST
-    end
-
-    local fragment_count = #fragments
-    local component_count = #components
-
-    if __debug_mode then
-        __debug_fns.validate_fragment_list(fragments, fragment_count)
-    end
-
-    local entity = __acquire_id()
-    local entity_chunk = __chunk_fragment_list(fragments, fragment_count)
-
-    if __defer_depth > 0 then
-        __defer_spawn_entity_with(entity, entity_chunk,
-            fragments, fragment_count,
-            components, component_count)
-        return entity
-    end
-
-    __evolved_defer()
-    do
-        __spawn_entity_with(entity, entity_chunk,
-            fragments, fragment_count,
-            components)
-    end
-    __evolved_commit()
-
-    return entity
-end
-
 ---
 ---
 ---
@@ -6330,7 +6289,6 @@ evolved.clone = __evolved_clone
 
 evolved.spawn_at = __evolved_spawn_at
 evolved.spawn_as = __evolved_spawn_as
-evolved.spawn_with = __evolved_spawn_with
 
 evolved.debug_mode = __evolved_debug_mode
 evolved.collect_garbage = __evolved_collect_garbage
