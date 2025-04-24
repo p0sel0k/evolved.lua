@@ -67,6 +67,9 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
+spawn :: <fragment, component>? -> entity
+clone :: entity -> <fragment, component>? -> entity
+
 is_alive :: entity -> boolean
 is_alive_all :: entity... -> boolean
 is_alive_any :: entity... -> boolean
@@ -96,9 +99,6 @@ execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_sta
 
 process :: system... -> ()
 
-spawn :: <fragment, component>? -> entity
-clone :: entity -> <fragment, component>? -> entity
-
 debug_mode :: boolean -> ()
 collect_garbage :: ()
 ```
@@ -124,6 +124,9 @@ chunk:components :: fragment... -> component[]...
 
 ```
 builder :: builder
+
+builder:spawn :: entity
+builder:clone :: entity -> entity
 
 builder:has :: fragment -> boolean
 builder:has_all :: fragment... -> boolean
@@ -160,9 +163,6 @@ builder:epilogue :: {} -> builder
 builder:disabled :: builder
 
 builder:destroy_policy :: id -> builder
-
-builder:spawn :: entity
-builder:clone :: entity -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)

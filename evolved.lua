@@ -694,6 +694,9 @@ local __evolved_unpack
 local __evolved_defer
 local __evolved_commit
 
+local __evolved_spawn
+local __evolved_clone
+
 local __evolved_is_alive
 local __evolved_is_alive_all
 local __evolved_is_alive_any
@@ -722,9 +725,6 @@ local __evolved_each
 local __evolved_execute
 
 local __evolved_process
-
-local __evolved_spawn
-local __evolved_clone
 
 local __evolved_debug_mode
 local __evolved_collect_garbage
@@ -3431,6 +3431,60 @@ function __evolved_commit()
     return true
 end
 
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity
+function __evolved_spawn(components)
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        __debug_fns.validate_component_map(components)
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_spawn_entity(entity, components)
+    else
+        __evolved_defer()
+        do
+            __spawn_entity(entity, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
+end
+
+---@param prefab evolved.entity
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity
+function __evolved_clone(prefab, components)
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        __debug_fns.validate_prefab(prefab)
+        __debug_fns.validate_component_map(components)
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_clone_entity(entity, prefab, components)
+    else
+        __evolved_defer()
+        do
+            __clone_entity(entity, prefab, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
+end
+
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
@@ -4218,12 +4272,6 @@ function __evolved_batch_destroy(...)
     __evolved_commit()
 end
 
----
----
----
----
----
-
 ---@param entity evolved.entity
 ---@return evolved.each_iterator iterator
 ---@return evolved.each_state? iterator_state
@@ -4340,72 +4388,6 @@ function __evolved_process(...)
         end
     end
 end
-
----
----
----
----
----
-
----@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
-function __evolved_spawn(components)
-    if not components then
-        components = __safe_tbls.__EMPTY_COMPONENT_MAP
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_spawn_entity(entity, components)
-    else
-        __evolved_defer()
-        do
-            __spawn_entity(entity, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
-end
-
----@param prefab evolved.entity
----@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
-function __evolved_clone(prefab, components)
-    if not components then
-        components = __safe_tbls.__EMPTY_COMPONENT_MAP
-    end
-
-    if __debug_mode then
-        __debug_fns.validate_prefab(prefab)
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_clone_entity(entity, prefab, components)
-    else
-        __evolved_defer()
-        do
-            __clone_entity(entity, prefab, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
-end
-
----
----
----
----
----
 
 ---@param yesno boolean
 function __evolved_debug_mode(yesno)
@@ -4615,6 +4597,54 @@ function __evolved_builder()
     return __lua_setmetatable({
         __components = {},
     }, __debug_fns.builder_mt)
+end
+
+---@return evolved.entity
+function __debug_fns.builder_mt:spawn()
+    local components = self.__components
+
+    if __debug_mode then
+        __debug_fns.validate_component_map(components)
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_spawn_entity(entity, components)
+    else
+        __evolved_defer()
+        do
+            __spawn_entity(entity, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
+end
+
+---@param prefab evolved.entity
+---@return evolved.entity
+function __debug_fns.builder_mt:clone(prefab)
+    local components = self.__components
+
+    if __debug_mode then
+        __debug_fns.validate_prefab(prefab)
+        __debug_fns.validate_component_map(components)
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_clone_entity(entity, prefab, components)
+    else
+        __evolved_defer()
+        do
+            __clone_entity(entity, prefab, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
 end
 
 ---@param fragment evolved.fragment
@@ -4958,54 +4988,6 @@ function __debug_fns.builder_mt:destroy_policy(destroy_policy)
     return self:set(__DESTROY_POLICY, destroy_policy)
 end
 
----@return evolved.entity
-function __debug_fns.builder_mt:spawn()
-    local components = self.__components
-
-    if __debug_mode then
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_spawn_entity(entity, components)
-    else
-        __evolved_defer()
-        do
-            __spawn_entity(entity, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
-end
-
----@param prefab evolved.entity
----@return evolved.entity
-function __debug_fns.builder_mt:clone(prefab)
-    local components = self.__components
-
-    if __debug_mode then
-        __debug_fns.validate_prefab(prefab)
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_clone_entity(entity, prefab, components)
-    else
-        __evolved_defer()
-        do
-            __clone_entity(entity, prefab, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
-end
-
 ---
 ---
 ---
@@ -5313,6 +5295,7 @@ end)
 
 evolved.TAG = __TAG
 evolved.NAME = __NAME
+
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE
 
@@ -5346,6 +5329,9 @@ evolved.unpack = __evolved_unpack
 evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
 
+evolved.spawn = __evolved_spawn
+evolved.clone = __evolved_clone
+
 evolved.is_alive = __evolved_is_alive
 evolved.is_alive_all = __evolved_is_alive_all
 evolved.is_alive_any = __evolved_is_alive_any
@@ -5374,9 +5360,6 @@ evolved.each = __evolved_each
 evolved.execute = __evolved_execute
 
 evolved.process = __evolved_process
-
-evolved.spawn = __evolved_spawn
-evolved.clone = __evolved_clone
 
 evolved.debug_mode = __evolved_debug_mode
 evolved.collect_garbage = __evolved_collect_garbage
