@@ -17,16 +17,16 @@ local function vector2(x, y)
     return { x = x, y = y }
 end
 
+local consts = {
+    delta_time = 0.016,
+    physics_gravity = vector2(0, 9.81),
+}
+
 local groups = {
     awake = evo.spawn(),
     physics = evo.spawn(),
     graphics = evo.spawn(),
     shutdown = evo.spawn(),
-}
-
-local singles = {
-    delta_time = evo.spawn_single(0.016),
-    physics_gravity = evo.spawn_single(vector2(0, 9.81)),
 }
 
 local fragments = {
@@ -56,10 +56,8 @@ local integrate_forces_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type number, evolved.vector2
         local delta_time, physics_gravity =
-            evo.get(singles.delta_time, singles.delta_time),
-            evo.get(singles.physics_gravity, singles.physics_gravity)
+            consts.delta_time, consts.physics_gravity
 
         ---@type evolved.vector2[], evolved.vector2[]
         local forces, velocities = chunk:components(
@@ -77,9 +75,8 @@ local integrate_velocities_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type number
         local delta_time =
-            evo.get(singles.delta_time, singles.delta_time)
+            consts.delta_time
 
         ---@type evolved.vector2[], evolved.vector2[], evolved.vector2[]
         local forces, positions, velocities = chunk:components(

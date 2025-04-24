@@ -99,9 +99,6 @@ process :: system... -> ()
 spawn :: <fragment, component>? -> entity
 clone :: entity -> <fragment, component>? -> entity
 
-spawn_single :: component, <fragment, component>? -> entity
-clone_single :: entity -> component -> <fragment, component>? -> entity
-
 debug_mode :: boolean -> ()
 collect_garbage :: ()
 ```
@@ -166,9 +163,6 @@ builder:destroy_policy :: id -> builder
 
 builder:spawn :: entity
 builder:clone :: entity -> entity
-
-builder:spawn_single :: component -> entity
-builder:clone_single :: entity -> component -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)

@@ -3817,23 +3817,6 @@ do
 end
 
 do
-    do
-        local f = evo.builder():default():spawn()
-        assert(evo.has(f, evo.DEFAULT))
-    end
-
-    do
-        local f = evo.builder():spawn_single()
-        assert(evo.has(f, f))
-    end
-
-    do
-        local f = evo.builder():spawn_single(42)
-        assert(evo.has(f, f) and evo.get(f, f) == 42)
-    end
-end
-
-do
     local f1, f2 = evo.id(2)
 
     local e1a = evo.builder():set(f1, 1):spawn()
@@ -3890,34 +3873,6 @@ do
 
         local s = sb:clear():spawn()
         assert(evo.get(s, evo.NAME) == nil)
-    end
-end
-
-do
-    local fb = evo.builder()
-    local qb = evo.builder()
-    local sb = evo.builder()
-
-    do
-        local f = fb:spawn_single(false)
-        assert(evo.get(f, f) == false)
-
-        local q = qb:spawn_single(false)
-        assert(evo.get(q, q) == false)
-
-        local s = sb:spawn_single(false)
-        assert(evo.get(s, s) == false)
-    end
-
-    do
-        local f = fb:spawn()
-        assert(evo.get(f, f) == nil)
-
-        local q = qb:spawn()
-        assert(evo.get(q, q) == nil)
-
-        local s = sb:spawn()
-        assert(evo.get(s, s) == nil)
     end
 end
 
@@ -5083,13 +5038,9 @@ do
 
     local g1 = gb:clear():spawn()
     local g2 = gb:clear():name('g2'):spawn()
-    local g3 = gb:clear():spawn_single(42)
-    local g4 = gb:clear():name('g4'):spawn_single(43)
 
     assert(not evo.has(g1, evo.NAME) and not evo.has(g1, g1))
     assert(evo.get(g2, evo.NAME) == 'g2' and not evo.has(g2, g2))
-    assert(not evo.has(g3, evo.NAME) and evo.get(g3, g3) == 42)
-    assert(evo.get(g4, evo.NAME) == 'g4' and evo.get(g4, g4) == 43)
 end
 
 do
@@ -5924,34 +5875,6 @@ do
         local e = b:spawn()
         assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
         assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
-    end
-end
-
-do
-    local f1 = evo.id(1)
-
-    do
-        local b = evo.builder():set(f1, 11)
-
-        local e1 = b:spawn_single(1)
-        assert(evo.has(e1, e1) and evo.get(e1, e1) == 1)
-        assert(evo.has(e1, f1) and evo.get(e1, f1) == 11)
-
-        assert(not b:has(e1) and b:get(e1) == nil)
-
-        local e2 = b:spawn_single(1)
-
-        assert(not evo.has(e2, e1) and evo.get(e2, e1) == nil)
-
-        assert(evo.has(e2, e2) and evo.get(e2, e2) == 1)
-        assert(evo.has(e2, f1) and evo.get(e2, f1) == 11)
-
-        local e3 = b:clear():spawn()
-
-        assert(not evo.has(e3, e1) and evo.get(e3, e1) == nil)
-        assert(not evo.has(e3, e2) and evo.get(e3, e2) == nil)
-        assert(not evo.has(e3, e3) and evo.get(e3, e3) == nil)
-        assert(not evo.has(e3, f1) and evo.get(e3, f1) == nil)
     end
 end
 
