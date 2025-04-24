@@ -29,6 +29,7 @@
 ```
 TAG :: fragment
 NAME :: fragment
+
 DEFAULT :: fragment
 DUPLICATE :: fragment
 
@@ -66,17 +67,20 @@ unpack :: id -> integer, integer
 defer :: boolean
 commit :: boolean
 
-is_alive :: chunk | entity -> boolean
-is_alive_all :: chunk | entity... -> boolean
-is_alive_any :: chunk | entity... -> boolean
+spawn :: <fragment, component>? -> entity
+clone :: entity -> <fragment, component>? -> entity
 
-is_empty :: chunk | entity -> boolean
-is_empty_all :: chunk | entity... -> boolean
-is_empty_any :: chunk | entity... -> boolean
+alive :: entity -> boolean
+alive_all :: entity... -> boolean
+alive_any :: entity... -> boolean
 
-has :: chunk | entity, fragment -> boolean
-has_all :: chunk | entity, fragment... -> boolean
-has_any :: chunk | entity, fragment... -> boolean
+empty :: entity -> boolean
+empty_all :: entity... -> boolean
+empty_any :: entity... -> boolean
+
+has :: entity, fragment -> boolean
+has_all :: entity, fragment... -> boolean
+has_any :: entity, fragment... -> boolean
 
 get :: entity, fragment...  -> component...
 
@@ -85,67 +89,80 @@ remove :: entity, fragment... -> ()
 clear :: entity... -> ()
 destroy :: entity... -> ()
 
-multi_set :: entity, fragment[], component[]? -> ()
-multi_remove :: entity, fragment[] -> ()
-
 batch_set :: query, fragment, component -> ()
 batch_remove :: query, fragment... -> ()
 batch_clear :: query... -> ()
 batch_destroy :: query... -> ()
-
-batch_multi_set :: query, fragment[], component[]? -> ()
-batch_multi_remove :: query, fragment[] -> ()
-
-chunk :: fragment, fragment... -> chunk, entity[], integer
-
-entities :: chunk -> entity[], integer
-fragments :: chunk -> fragment[], integer
-components :: chunk, fragment... -> component[]...
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
 process :: system... -> ()
 
-spawn_at :: chunk?, fragment[]?, component[]? -> entity
-spawn_as :: entity?, fragment[]?, component[]? -> entity
-spawn_with :: fragment[]?, component[]? -> entity
-
 debug_mode :: boolean -> ()
 collect_garbage :: ()
+```
+
+## Chunk
+
+```
+chunk :: fragment, fragment... -> chunk, entity[], integer
+
+chunk:alive :: boolean
+chunk:empty :: boolean
+
+chunk:has :: fragment -> boolean
+chunk:has_all :: fragment... -> boolean
+chunk:has_any :: fragment... -> boolean
+
+chunk:entities :: entity[], integer
+chunk:fragments :: fragment[], integer
+chunk:components :: fragment... -> component[]...
 ```
 
 ## Builder
 
 ```
 builder :: builder
+
+builder:spawn :: entity
+builder:clone :: entity -> entity
+
 builder:has :: fragment -> boolean
 builder:has_all :: fragment... -> boolean
 builder:has_any :: fragment... -> boolean
+
 builder:get :: fragment... -> component...
+
 builder:set :: fragment, component -> builder
 builder:remove :: fragment... -> builder
 builder:clear :: builder
+
 builder:tag :: builder
 builder:name :: string -> builder
-builder:prefab :: entity -> builder
-builder:single :: component -> builder
+
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
+
 builder:include :: fragment... -> builder
 builder:exclude :: fragment... -> builder
+
 builder:on_set :: {entity, fragment, component, component?} -> builder
 builder:on_assign :: {entity, fragment, component, component} -> builder
 builder:on_insert :: {entity, fragment, component} -> builder
 builder:on_remove :: {entity, fragment} -> builder
+
 builder:group :: system -> builder
+
 builder:query :: query -> builder
 builder:execute :: {chunk, entity[], integer} -> builder
+
 builder:prologue :: {} -> builder
 builder:epilogue :: {} -> builder
+
 builder:disabled :: builder
+
 builder:destroy_policy :: id -> builder
-builder:build :: boolean -> entity
 ```
 
 ## [License (MIT)](./LICENSE.md)
