@@ -70,13 +70,13 @@ commit :: boolean
 spawn :: <fragment, component>? -> entity
 clone :: entity -> <fragment, component>? -> entity
 
-is_alive :: entity -> boolean
-is_alive_all :: entity... -> boolean
-is_alive_any :: entity... -> boolean
+alive :: entity -> boolean
+alive_all :: entity... -> boolean
+alive_any :: entity... -> boolean
 
-is_empty :: entity -> boolean
-is_empty_all :: entity... -> boolean
-is_empty_any :: entity... -> boolean
+empty :: entity -> boolean
+empty_all :: entity... -> boolean
+empty_any :: entity... -> boolean
 
 has :: entity, fragment -> boolean
 has_all :: entity, fragment... -> boolean
@@ -108,8 +108,8 @@ collect_garbage :: ()
 ```
 chunk :: fragment, fragment... -> chunk, entity[], integer
 
-chunk:is_alive :: boolean
-chunk:is_empty :: boolean
+chunk:alive :: boolean
+chunk:empty :: boolean
 
 chunk:has :: fragment -> boolean
 chunk:has_all :: fragment... -> boolean

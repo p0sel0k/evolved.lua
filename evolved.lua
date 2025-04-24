@@ -697,13 +697,13 @@ local __evolved_commit
 local __evolved_spawn
 local __evolved_clone
 
-local __evolved_is_alive
-local __evolved_is_alive_all
-local __evolved_is_alive_any
+local __evolved_alive
+local __evolved_alive_all
+local __evolved_alive_any
 
-local __evolved_is_empty
-local __evolved_is_empty_all
-local __evolved_is_empty_any
+local __evolved_empty
+local __evolved_empty_all
+local __evolved_empty_any
 
 local __evolved_has
 local __evolved_has_all
@@ -3488,7 +3488,7 @@ end
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
-function __evolved_is_alive(entity)
+function __evolved_alive(entity)
     local entity_index = entity % 0x100000
     return __freelist_ids[entity_index] == entity
 end
@@ -3496,7 +3496,7 @@ end
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-function __evolved_is_alive_all(...)
+function __evolved_alive_all(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -3520,7 +3520,7 @@ end
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-function __evolved_is_alive_any(...)
+function __evolved_alive_any(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -3544,7 +3544,7 @@ end
 ---@param entity evolved.entity
 ---@return boolean
 ---@nodiscard
-function __evolved_is_empty(entity)
+function __evolved_empty(entity)
     local entity_index = entity % 0x100000
     return __freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index]
 end
@@ -3552,7 +3552,7 @@ end
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-function __evolved_is_empty_all(...)
+function __evolved_empty_all(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -3576,7 +3576,7 @@ end
 ---@param ... evolved.entity entities
 ---@return boolean
 ---@nodiscard
-function __evolved_is_empty_any(...)
+function __evolved_empty_any(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -4479,13 +4479,13 @@ end
 
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:is_alive()
+function __debug_fns.chunk_mt:alive()
     return not self.__unreachable_or_collected
 end
 
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:is_empty()
+function __debug_fns.chunk_mt:empty()
     return self.__unreachable_or_collected or self.__entity_count == 0
 end
 
@@ -5332,13 +5332,13 @@ evolved.commit = __evolved_commit
 evolved.spawn = __evolved_spawn
 evolved.clone = __evolved_clone
 
-evolved.is_alive = __evolved_is_alive
-evolved.is_alive_all = __evolved_is_alive_all
-evolved.is_alive_any = __evolved_is_alive_any
+evolved.alive = __evolved_alive
+evolved.alive_all = __evolved_alive_all
+evolved.alive_any = __evolved_alive_any
 
-evolved.is_empty = __evolved_is_empty
-evolved.is_empty_all = __evolved_is_empty_all
-evolved.is_empty_any = __evolved_is_empty_any
+evolved.empty = __evolved_empty
+evolved.empty_all = __evolved_empty_all
+evolved.empty_any = __evolved_empty_any
 
 evolved.get = __evolved_get
 

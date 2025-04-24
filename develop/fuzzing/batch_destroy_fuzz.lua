@@ -108,7 +108,7 @@ for chunk in evo.execute(all_chunk_query) do
 end
 
 for _, destroyed_entity in ipairs(should_be_destroyed_entity_list) do
-    assert(not evo.is_alive(destroyed_entity))
+    assert(not evo.alive(destroyed_entity))
 end
 
 ---
