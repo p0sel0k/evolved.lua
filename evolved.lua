@@ -102,6 +102,42 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---
 ---
 
+---@class evolved.chunk
+---@field package __parent? evolved.chunk
+---@field package __child_set table<evolved.chunk, integer>
+---@field package __child_list evolved.chunk[]
+---@field package __child_count integer
+---@field package __entity_list evolved.entity[]
+---@field package __entity_count integer
+---@field package __fragment evolved.fragment
+---@field package __fragment_set table<evolved.fragment, integer>
+---@field package __fragment_list evolved.fragment[]
+---@field package __fragment_count integer
+---@field package __component_count integer
+---@field package __component_indices table<evolved.fragment, integer>
+---@field package __component_storages evolved.storage[]
+---@field package __component_fragments evolved.fragment[]
+---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __unreachable_or_collected boolean
+---@field package __has_setup_hooks boolean
+---@field package __has_assign_hooks boolean
+---@field package __has_insert_hooks boolean
+---@field package __has_remove_hooks boolean
+local __chunk_mt = {}
+__chunk_mt.__index = __chunk_mt
+
+---@class evolved.builder
+---@field package __components table<evolved.fragment, evolved.component>
+local __builder_mt = {}
+__builder_mt.__index = __builder_mt
+
+---
+---
+---
+---
+---
+
 local __lua_next = next
 local __lua_pcall = pcall
 local __lua_select = select
@@ -832,80 +868,6 @@ end
 
 local __debug_fns = {}
 
----@class evolved.chunk
----@field package __parent? evolved.chunk
----@field package __child_set table<evolved.chunk, integer>
----@field package __child_list evolved.chunk[]
----@field package __child_count integer
----@field package __entity_list evolved.entity[]
----@field package __entity_count integer
----@field package __fragment evolved.fragment
----@field package __fragment_set table<evolved.fragment, integer>
----@field package __fragment_list evolved.fragment[]
----@field package __fragment_count integer
----@field package __component_count integer
----@field package __component_indices table<evolved.fragment, integer>
----@field package __component_storages evolved.storage[]
----@field package __component_fragments evolved.fragment[]
----@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
----@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
----@field package __unreachable_or_collected boolean
----@field package __has_setup_hooks boolean
----@field package __has_assign_hooks boolean
----@field package __has_insert_hooks boolean
----@field package __has_remove_hooks boolean
-__debug_fns.chunk_mt = {}
-__debug_fns.chunk_mt.__index = __debug_fns.chunk_mt
-
----@class evolved.builder
----@field package __components table<evolved.fragment, evolved.component>
-__debug_fns.builder_mt = {}
-__debug_fns.builder_mt.__index = __debug_fns.builder_mt
-
----
----
----
----
----
-
----@param self evolved.chunk
-function __debug_fns.chunk_mt.__tostring(self)
-    local fragment_names = {} ---@type string[]
-
-    for i = 1, self.__fragment_count do
-        fragment_names[i] = __id_name(self.__fragment_list[i])
-    end
-
-    return string.format('<%s>', table.concat(fragment_names, ', '))
-end
-
----@param self evolved.builder
-function __debug_fns.builder_mt.__tostring(self)
-    local fragment_list = {} ---@type evolved.fragment[]
-    local fragment_count = 0 ---@type integer
-
-    for fragment in __lua_next, self.__components do
-        fragment_count = fragment_count + 1
-        fragment_list[fragment_count] = fragment
-    end
-
-    __lua_table_sort(fragment_list)
-
-    local fragment_names = {} ---@type string[]
-
-    for i = 1, fragment_count do
-        fragment_names[i] = __id_name(fragment_list[i])
-    end
-
-    return string.format('<%s>', table.concat(fragment_names, ', '))
-end
-
----
----
----
----
----
-
 ---@param chunk evolved.chunk
 function __debug_fns.validate_chunk(chunk)
     if chunk.__unreachable_or_collected then
@@ -1012,10 +974,10 @@ end
 ---@nodiscard
 local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
-    local chunk_fragment_set = __lua_setmetatable({}, __debug_fns.chunk_fragment_set_mt)
+    local chunk_fragment_set = {}
 
     ---@type evolved.fragment[]
-    local chunk_fragment_list = __lua_setmetatable({}, __debug_fns.chunk_fragment_list_mt)
+    local chunk_fragment_list = {}
 
     ---@type integer
     local chunk_fragment_count = 0
@@ -1024,13 +986,13 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_component_count = 0
 
     ---@type table<evolved.fragment, integer>
-    local chunk_component_indices = __lua_setmetatable({}, __debug_fns.chunk_component_indices_mt)
+    local chunk_component_indices = {}
 
     ---@type evolved.storage[]
-    local chunk_component_storages = __lua_setmetatable({}, __debug_fns.chunk_component_storages_mt)
+    local chunk_component_storages = {}
 
     ---@type evolved.fragment[]
-    local chunk_component_fragments = __lua_setmetatable({}, __debug_fns.chunk_component_fragments_mt)
+    local chunk_component_fragments = {}
 
     local has_setup_hooks = (chunk_parent and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
@@ -1067,7 +1029,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_assign_hooks = has_assign_hooks,
         __has_insert_hooks = has_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
-    }, __debug_fns.chunk_mt)
+    }, __chunk_mt)
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -4477,57 +4439,67 @@ function __evolved_chunk(fragment, ...)
     return chunk, chunk.__entity_list, chunk.__entity_count
 end
 
+function __chunk_mt:__tostring()
+    local fragment_names = {} ---@type string[]
+
+    for i = 1, self.__fragment_count do
+        fragment_names[i] = __id_name(self.__fragment_list[i])
+    end
+
+    return string.format('<%s>', table.concat(fragment_names, ', '))
+end
+
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:alive()
+function __chunk_mt:alive()
     return not self.__unreachable_or_collected
 end
 
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:empty()
+function __chunk_mt:empty()
     return self.__unreachable_or_collected or self.__entity_count == 0
 end
 
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:has(fragment)
+function __chunk_mt:has(fragment)
     return __chunk_has_fragment(self, fragment)
 end
 
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:has_all(...)
+function __chunk_mt:has_all(...)
     return __chunk_has_all_fragments(self, ...)
 end
 
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __debug_fns.chunk_mt:has_any(...)
+function __chunk_mt:has_any(...)
     return __chunk_has_any_fragments(self, ...)
 end
 
 ---@return evolved.entity[] entity_list
 ---@return integer entity_count
 ---@nodiscard
-function __debug_fns.chunk_mt:entities()
+function __chunk_mt:entities()
     return self.__entity_list, self.__entity_count
 end
 
 ---@return evolved.fragment[] fragment_list
 ---@return integer fragment_count
 ---@nodiscard
-function __debug_fns.chunk_mt:fragments()
+function __chunk_mt:fragments()
     return self.__fragment_list, self.__fragment_count
 end
 
 ---@param ... evolved.fragment fragments
 ---@return evolved.storage ... storages
 ---@nodiscard
-function __debug_fns.chunk_mt:components(...)
+function __chunk_mt:components(...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
@@ -4596,11 +4568,31 @@ end
 function __evolved_builder()
     return __lua_setmetatable({
         __components = {},
-    }, __debug_fns.builder_mt)
+    }, __builder_mt)
+end
+
+function __builder_mt:__tostring()
+    local fragment_list = {} ---@type evolved.fragment[]
+    local fragment_count = 0 ---@type integer
+
+    for fragment in __lua_next, self.__components do
+        fragment_count = fragment_count + 1
+        fragment_list[fragment_count] = fragment
+    end
+
+    __lua_table_sort(fragment_list)
+
+    local fragment_names = {} ---@type string[]
+
+    for i = 1, fragment_count do
+        fragment_names[i] = __id_name(fragment_list[i])
+    end
+
+    return string.format('<%s>', table.concat(fragment_names, ', '))
 end
 
 ---@return evolved.entity
-function __debug_fns.builder_mt:spawn()
+function __builder_mt:spawn()
     local components = self.__components
 
     if __debug_mode then
@@ -4624,7 +4616,7 @@ end
 
 ---@param prefab evolved.entity
 ---@return evolved.entity
-function __debug_fns.builder_mt:clone(prefab)
+function __builder_mt:clone(prefab)
     local components = self.__components
 
     if __debug_mode then
@@ -4650,14 +4642,14 @@ end
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-function __debug_fns.builder_mt:has(fragment)
+function __builder_mt:has(fragment)
     return self.__components[fragment] ~= nil
 end
 
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __debug_fns.builder_mt:has_all(...)
+function __builder_mt:has_all(...)
     local fragment_count = select("#", ...)
 
     if fragment_count == 0 then
@@ -4696,7 +4688,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __debug_fns.builder_mt:has_any(...)
+function __builder_mt:has_any(...)
     local fragment_count = select("#", ...)
 
     if fragment_count == 0 then
@@ -4735,7 +4727,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-function __debug_fns.builder_mt:get(...)
+function __builder_mt:get(...)
     local fragment_count = select("#", ...)
 
     if fragment_count == 0 then
@@ -4774,7 +4766,7 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:set(fragment, component)
+function __builder_mt:set(fragment, component)
     if __debug_mode then
         __debug_fns.validate_fragment(fragment)
     end
@@ -4804,7 +4796,7 @@ end
 
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:remove(...)
+function __builder_mt:remove(...)
     local fragment_count = select("#", ...)
 
     if fragment_count == 0 then
@@ -4845,37 +4837,37 @@ function __debug_fns.builder_mt:remove(...)
 end
 
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:clear()
+function __builder_mt:clear()
     __lua_table_clear(self.__components)
     return self
 end
 
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:tag()
+function __builder_mt:tag()
     return self:set(__TAG)
 end
 
 ---@param name string
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:name(name)
+function __builder_mt:name(name)
     return self:set(__NAME, name)
 end
 
 ---@param default evolved.component
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:default(default)
+function __builder_mt:default(default)
     return self:set(__DEFAULT, default)
 end
 
 ---@param duplicate evolved.duplicate
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:duplicate(duplicate)
+function __builder_mt:duplicate(duplicate)
     return self:set(__DUPLICATE, duplicate)
 end
 
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:include(...)
+function __builder_mt:include(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -4900,7 +4892,7 @@ end
 
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:exclude(...)
+function __builder_mt:exclude(...)
     local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
@@ -4925,66 +4917,66 @@ end
 
 ---@param on_set evolved.set_hook
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:on_set(on_set)
+function __builder_mt:on_set(on_set)
     return self:set(__ON_SET, on_set)
 end
 
 ---@param on_assign evolved.assign_hook
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:on_assign(on_assign)
+function __builder_mt:on_assign(on_assign)
     return self:set(__ON_ASSIGN, on_assign)
 end
 
 ---@param on_insert evolved.insert_hook
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:on_insert(on_insert)
+function __builder_mt:on_insert(on_insert)
     return self:set(__ON_INSERT, on_insert)
 end
 
 ---@param on_remove evolved.remove_hook
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:on_remove(on_remove)
+function __builder_mt:on_remove(on_remove)
     return self:set(__ON_REMOVE, on_remove)
 end
 
 ---@param group evolved.system
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:group(group)
+function __builder_mt:group(group)
     return self:set(__GROUP, group)
 end
 
 ---@param query evolved.query
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:query(query)
+function __builder_mt:query(query)
     return self:set(__QUERY, query)
 end
 
 ---@param execute evolved.execute
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:execute(execute)
+function __builder_mt:execute(execute)
     return self:set(__EXECUTE, execute)
 end
 
 ---@param prologue evolved.prologue
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:prologue(prologue)
+function __builder_mt:prologue(prologue)
     return self:set(__PROLOGUE, prologue)
 end
 
 ---@param epilogue evolved.epilogue
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:epilogue(epilogue)
+function __builder_mt:epilogue(epilogue)
     return self:set(__EPILOGUE, epilogue)
 end
 
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:disabled()
+function __builder_mt:disabled()
     return self:set(__DISABLED)
 end
 
 ---@param destroy_policy evolved.id
 ---@return evolved.builder builder
-function __debug_fns.builder_mt:destroy_policy(destroy_policy)
+function __builder_mt:destroy_policy(destroy_policy)
     return self:set(__DESTROY_POLICY, destroy_policy)
 end
 
