@@ -3163,6 +3163,7 @@ __defer_ops[__defer_op.spawn_entity] = function(bytes, index)
     local component_map = bytes[index + 1]
 
     if __debug_mode then
+        __debug_fns.validate_entity(entity)
         __debug_fns.validate_component_map(component_map)
     end
 
@@ -3204,6 +3205,8 @@ __defer_ops[__defer_op.clone_entity] = function(bytes, index)
     local component_map = bytes[index + 2]
 
     if __debug_mode then
+        __debug_fns.validate_entity(entity)
+        __debug_fns.validate_prefab(prefab)
         __debug_fns.validate_component_map(component_map)
     end
 
