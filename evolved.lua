@@ -692,27 +692,32 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 local __safe_tbls = {
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty fragment set') end
+        __tostring = function() return 'empty fragment set' end,
+        __newindex = function() __error_fmt 'attempt to modify empty fragment set' end
     }),
 
     ---@type evolved.fragment[]
     __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty fragment list') end
+        __tostring = function() return 'empty fragment list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty fragment list' end
     }),
 
     ---@type table<evolved.fragment, evolved.component>
     __EMPTY_COMPONENT_MAP = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component map') end
+        __tostring = function() return 'empty component map' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component map' end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component list') end
+        __tostring = function() return 'empty component list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component list' end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component storage') end
+        __tostring = function() return 'empty component storage' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component storage' end
     }),
 }
 
