@@ -124,6 +124,7 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---@field package __has_assign_hooks boolean
 ---@field package __has_insert_hooks boolean
 ---@field package __has_remove_hooks boolean
+---@field package __has_hidden_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
@@ -1013,6 +1014,9 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
+    local has_hidden_fragments = (chunk_parent and chunk_parent.__has_hidden_fragments)
+        or __evolved_has(chunk_fragment, __HIDDEN)
+
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
         __parent = nil,
@@ -1036,6 +1040,7 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_assign_hooks = has_assign_hooks,
         __has_insert_hooks = has_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
+        __has_hidden_fragments = has_hidden_fragments,
     }, __chunk_mt)
 
     if chunk_parent then
@@ -5023,10 +5028,14 @@ local function __update_chunk_caches_trace(chunk)
     local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
+    local has_hidden_fragments = (chunk_parent and chunk_parent.__has_hidden_fragments)
+        or __evolved_has(chunk_fragment, __HIDDEN)
+
     chunk.__has_setup_hooks = has_setup_hooks
     chunk.__has_assign_hooks = has_assign_hooks
     chunk.__has_insert_hooks = has_insert_hooks
     chunk.__has_remove_hooks = has_remove_hooks
+    chunk.__has_hidden_fragments = has_hidden_fragments
 
     return true
 end
@@ -5118,6 +5127,10 @@ local function __update_fragment_tags(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_tags_trace, fragment)
 end
 
+local function __update_fragment_hiddens(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
 ---@param fragment evolved.fragment
 local function __update_fragment_defaults(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
@@ -5130,6 +5143,9 @@ end
 
 __evolved_set(__TAG, __ON_INSERT, __update_fragment_tags)
 __evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags)
+
+__evolved_set(__HIDDEN, __ON_INSERT, __update_fragment_hiddens)
+__evolved_set(__HIDDEN, __ON_REMOVE, __update_fragment_hiddens)
 
 __evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults)
 __evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults)
