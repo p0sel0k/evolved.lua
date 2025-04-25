@@ -1225,6 +1225,32 @@ local function __chunk_without_fragments(chunk, ...)
     return chunk
 end
 
+---@param chunk? evolved.chunk
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_without_hidden_fragments(chunk)
+    if not chunk then
+        return nil
+    end
+
+    if not chunk.__has_hidden_fragments then
+        return chunk
+    end
+
+    local chunk_fragment_list = chunk.__fragment_list
+    local chunk_fragment_count = chunk.__fragment_count
+
+    for i = chunk_fragment_count, 1, -1 do
+        local fragment = chunk_fragment_list[i]
+
+        if __evolved_has(fragment, __HIDDEN) then
+            chunk = __chunk_without_fragment(chunk, fragment)
+        end
+    end
+
+    return chunk
+end
+
 ---
 ---
 ---
@@ -1660,7 +1686,9 @@ local function __clone_entity(entity, prefab, components)
     local prefab_chunk = __entity_chunks[prefab_index]
     local prefab_place = __entity_places[prefab_index]
 
-    local chunk = __chunk_with_components(prefab_chunk, components)
+    local chunk = __chunk_with_components(
+        __chunk_without_hidden_fragments(prefab_chunk),
+        components)
 
     if not chunk then
         return
@@ -1694,46 +1722,50 @@ local function __clone_entity(entity, prefab, components)
         if prefab_chunk.__has_setup_hooks then
             for prefab_component_index = 1, prefab_component_count do
                 local fragment = prefab_component_fragments[prefab_component_index]
-
-                ---@type evolved.duplicate?
-                local fragment_duplicate =
-                    __evolved_get(fragment, __DUPLICATE)
-
-                local prefab_component_storage = prefab_component_storages[prefab_component_index]
-                local prefab_component = prefab_component_storage[prefab_place]
-
-                local new_component = prefab_component
-
-                if new_component ~= nil and fragment_duplicate then
-                    new_component = fragment_duplicate(new_component)
-                end
-
-                if new_component == nil then
-                    new_component = true
-                end
-
                 local component_index = chunk_component_indices[fragment]
-                local component_storage = chunk_component_storages[component_index]
 
-                component_storage[place] = new_component
+                if component_index then
+                    ---@type evolved.duplicate?
+                    local fragment_duplicate =
+                        __evolved_get(fragment, __DUPLICATE)
+
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    local new_component = prefab_component
+
+                    if new_component ~= nil and fragment_duplicate then
+                        new_component = fragment_duplicate(new_component)
+                    end
+
+                    if new_component == nil then
+                        new_component = true
+                    end
+
+                    local component_storage = chunk_component_storages[component_index]
+
+                    component_storage[place] = new_component
+                end
             end
         else
             for prefab_component_index = 1, prefab_component_count do
                 local fragment = prefab_component_fragments[prefab_component_index]
-
-                local prefab_component_storage = prefab_component_storages[prefab_component_index]
-                local prefab_component = prefab_component_storage[prefab_place]
-
-                local new_component = prefab_component
-
-                if new_component == nil then
-                    new_component = true
-                end
-
                 local component_index = chunk_component_indices[fragment]
-                local component_storage = chunk_component_storages[component_index]
 
-                component_storage[place] = new_component
+                if component_index then
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    local new_component = prefab_component
+
+                    if new_component == nil then
+                        new_component = true
+                    end
+
+                    local component_storage = chunk_component_storages[component_index]
+
+                    component_storage[place] = new_component
+                end
             end
         end
     end

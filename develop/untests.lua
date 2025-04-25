@@ -5,7 +5,7 @@ local evo = require 'evolved'
 
 evo.debug_mode(true)
 
-do
+if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == nil then
     local i = evo.id()
 
     for _ = 1, 0xFFFFE do
@@ -6154,5 +6154,84 @@ do
         assert(evo.has(e3g, f1) and evo.get(e3g, f1) == 11)
         assert(evo.has(e3g, f2) and evo.get(e3g, f2) == 22)
         assert(evo.has(e3g, f3) and evo.get(e3g, f3) == 33)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.HIDDEN)
+    evo.set(f3, evo.HIDDEN)
+
+    do
+        local p = evo.spawn { [f1] = 11, [f2] = 22 }
+        local e = evo.clone(p)
+
+        assert(evo.has(p, f1) and evo.get(p, f1) == 11)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 11)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+    end
+
+    do
+        local p = evo.spawn { [f1] = 11, [f2] = 22, [f3] = 33 }
+        local e = evo.clone(p)
+
+        assert(evo.has(p, f1) and evo.get(p, f1) == 11)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+        assert(evo.has(p, f3) and evo.get(p, f3) == 33)
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 11)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+        assert(not evo.has(e, f3) and evo.get(e, f3) == nil)
+    end
+
+    do
+        local p = evo.spawn { [f2] = 22 }
+        local e = evo.clone(p)
+
+        assert(not evo.has(p, f1) and evo.get(p, f1) == nil)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+        assert(not evo.has(p, f3) and evo.get(p, f3) == nil)
+
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+        assert(not evo.has(e, f3) and evo.get(e, f3) == nil)
+    end
+    do
+        local p = evo.spawn { [f2] = 22, [f3] = 33 }
+        local e = evo.clone(p)
+
+        assert(not evo.has(p, f1) and evo.get(p, f1) == nil)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+        assert(evo.has(p, f3) and evo.get(p, f3) == 33)
+
+        assert(not evo.has(e, f1) and evo.get(e, f1) == nil)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+        assert(not evo.has(e, f3) and evo.get(e, f3) == nil)
+    end
+
+    do
+        local p = evo.spawn { [f1] = 11, [f2] = 22 }
+        local e = evo.clone(p, { [f2] = 2 })
+
+        assert(evo.has(p, f1) and evo.get(p, f1) == 11)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 11)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 2)
+    end
+
+    do
+        local p = evo.spawn { [f1] = 11, [f2] = 22 }
+        local e = evo.clone(p, { [f2] = 2, [f3] = 3 })
+
+        assert(evo.has(p, f1) and evo.get(p, f1) == 11)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 11)
+        assert(evo.has(e, f2) and evo.get(e, f2) == 2)
+        assert(evo.has(e, f3) and evo.get(e, f3) == 3)
     end
 end
