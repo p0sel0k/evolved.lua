@@ -29,7 +29,9 @@
 ```
 TAG :: fragment
 NAME :: fragment
+PREFAB :: fragment
 
+HIDDEN :: fragment
 DEFAULT :: fragment
 DUPLICATE :: fragment
 
@@ -140,7 +142,9 @@ builder:clear :: builder
 
 builder:tag :: builder
 builder:name :: string -> builder
+builder:prefab :: builder
 
+builder:hidden :: builder
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
 

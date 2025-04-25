@@ -657,7 +657,9 @@ end
 
 local __TAG = __acquire_id()
 local __NAME = __acquire_id()
+local __PREFAB = __acquire_id()
 
+local __HIDDEN = __acquire_id()
 local __DEFAULT = __acquire_id()
 local __DUPLICATE = __acquire_id()
 
@@ -4861,6 +4863,16 @@ function __builder_mt:name(name)
     return self:set(__NAME, name)
 end
 
+---@return evolved.builder builder
+function __builder_mt:prefab()
+    return self:set(__PREFAB)
+end
+
+---@return evolved.builder builder
+function __builder_mt:hidden()
+    return self:set(__HIDDEN)
+end
+
 ---@param default evolved.component
 ---@return evolved.builder builder
 function __builder_mt:default(default)
@@ -5133,7 +5145,9 @@ __evolved_set(__DUPLICATE, __ON_REMOVE, __update_fragment_duplicates)
 
 __evolved_set(__TAG, __NAME, 'TAG')
 __evolved_set(__NAME, __NAME, 'NAME')
+__evolved_set(__PREFAB, __NAME, 'PREFAB')
 
+__evolved_set(__HIDDEN, __NAME, 'HIDDEN')
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
 
@@ -5166,6 +5180,12 @@ __evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_F
 ---
 
 __evolved_set(__TAG, __TAG)
+
+__evolved_set(__PREFAB, __TAG)
+__evolved_set(__PREFAB, __HIDDEN)
+
+__evolved_set(__HIDDEN, __TAG)
+__evolved_set(__HIDDEN, __HIDDEN)
 
 __evolved_set(__INCLUDES, __DEFAULT, {})
 __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
@@ -5295,7 +5315,9 @@ end)
 
 evolved.TAG = __TAG
 evolved.NAME = __NAME
+evolved.PREFAB = __PREFAB
 
+evolved.HIDDEN = __HIDDEN
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE
 
