@@ -31,7 +31,9 @@ TAG :: fragment
 NAME :: fragment
 PREFAB :: fragment
 
-HIDDEN :: fragment
+UNIQUE :: fragment
+EXPLICIT :: fragment
+
 DEFAULT :: fragment
 DUPLICATE :: fragment
 

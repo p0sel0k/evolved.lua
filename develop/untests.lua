@@ -6160,8 +6160,8 @@ end
 do
     local f1, f2, f3 = evo.id(3)
 
-    evo.set(f2, evo.HIDDEN)
-    evo.set(f3, evo.HIDDEN)
+    evo.set(f2, evo.UNIQUE)
+    evo.set(f3, evo.UNIQUE)
 
     do
         local p = evo.spawn { [f1] = 11, [f2] = 22 }
@@ -6239,7 +6239,7 @@ end
 do
     local f1, f2, f3 = evo.id(3)
 
-    evo.set(f2, evo.HIDDEN)
+    evo.set(f2, evo.UNIQUE)
 
     do
         local p = evo.spawn { [f1] = 11, [f2] = 22, [f3] = 33 }
@@ -6275,7 +6275,7 @@ do
 
         for c in evo.execute(q) do
             local fs, fc = c:fragments()
-            for i = 1, fc do assert(not evo.has(fs[i], evo.HIDDEN)) end
+            for i = 1, fc do assert(not evo.has(fs[i], evo.EXPLICIT)) end
         end
     end
 
@@ -6284,7 +6284,7 @@ do
 
         for c in evo.execute(q) do
             local fs, fc = c:fragments()
-            for i = 1, fc do assert(not evo.has(fs[i], evo.HIDDEN)) end
+            for i = 1, fc do assert(not evo.has(fs[i], evo.EXPLICIT)) end
         end
     end
 end
@@ -6292,7 +6292,7 @@ end
 do
     local f1, f2 = evo.id(2)
 
-    evo.set(f2, evo.HIDDEN)
+    evo.set(f2, evo.EXPLICIT)
 
     local e1 = evo.builder():set(f1, 11):spawn()
     local e2 = evo.builder():set(f1, 11):set(f2, 22):spawn()

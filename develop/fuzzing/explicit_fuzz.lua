@@ -33,7 +33,7 @@ for _, entity in ipairs(all_entity_list) do
     end
 
     if math.random(1, 5) == 1 then
-        evo.set(entity, evo.HIDDEN)
+        evo.set(entity, evo.EXPLICIT)
     end
 end
 
@@ -64,7 +64,7 @@ for _ = 1, 100 do
         local fragment_list, fragment_count = chunk:fragments()
         for i = 1, fragment_count do
             local fragment = fragment_list[i]
-            assert(include_set[fragment] or not evo.has(fragment, evo.HIDDEN))
+            assert(include_set[fragment] or not evo.has(fragment, evo.EXPLICIT))
         end
     end
 
