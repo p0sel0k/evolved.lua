@@ -124,6 +124,8 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---@field package __has_assign_hooks boolean
 ---@field package __has_insert_hooks boolean
 ---@field package __has_remove_hooks boolean
+---@field package __has_hidden_major boolean
+---@field package __has_hidden_minors boolean
 ---@field package __has_hidden_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
@@ -619,22 +621,18 @@ local function __execute_iterator(execute_state)
         local chunk_child_list = chunk.__child_list
         local chunk_child_count = chunk.__child_count
 
-        if exclude_set then
-            for i = 1, chunk_child_count do
-                local chunk_child = chunk_child_list[i]
-                local chunk_child_fragment = chunk_child.__fragment
+        for i = 1, chunk_child_count do
+            local chunk_child = chunk_child_list[i]
+            local chunk_child_fragment = chunk_child.__fragment
 
-                if not exclude_set[chunk_child_fragment] then
-                    chunk_stack_size = chunk_stack_size + 1
-                    chunk_stack[chunk_stack_size] = chunk_child
-                end
+            local is_chunk_child_matched =
+                (not chunk_child.__has_hidden_major) and
+                (not exclude_set or not exclude_set[chunk_child_fragment])
+
+            if is_chunk_child_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = chunk_child
             end
-        else
-            __lua_table_move(
-                chunk_child_list, 1, chunk_child_count,
-                chunk_stack_size + 1, chunk_stack)
-
-            chunk_stack_size = chunk_stack_size + chunk_child_count
         end
 
         local chunk_entity_list = chunk.__entity_list
@@ -693,6 +691,12 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 
 local __safe_tbls = {
+    ---@type evolved.entity[]
+    __EMPTY_ENTITY_LIST = __lua_setmetatable({}, {
+        __tostring = function() return 'empty entity list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty entity list' end
+    }),
+
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment set' end,
@@ -1002,20 +1006,21 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type evolved.fragment[]
     local chunk_component_fragments = {}
 
-    local has_setup_hooks = (chunk_parent and chunk_parent.__has_setup_hooks)
+    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
 
-    local has_assign_hooks = (chunk_parent and chunk_parent.__has_assign_hooks)
+    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
-    local has_insert_hooks = (chunk_parent and chunk_parent.__has_insert_hooks)
+    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
-    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
-    local has_hidden_fragments = (chunk_parent and chunk_parent.__has_hidden_fragments)
-        or __evolved_has(chunk_fragment, __HIDDEN)
+    local has_hidden_major = __evolved_has(chunk_fragment, __HIDDEN)
+    local has_hidden_minors = chunk_parent ~= nil and chunk_parent.__has_hidden_fragments
+    local has_hidden_fragments = has_hidden_major or has_hidden_minors
 
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
@@ -1040,6 +1045,8 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_assign_hooks = has_assign_hooks,
         __has_insert_hooks = has_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
+        __has_hidden_major = has_hidden_major,
+        __has_hidden_minors = has_hidden_minors,
         __has_hidden_fragments = has_hidden_fragments,
     }, __chunk_mt)
 
@@ -1237,18 +1244,26 @@ local function __chunk_without_hidden_fragments(chunk)
         return chunk
     end
 
-    local chunk_fragment_list = chunk.__fragment_list
-    local chunk_fragment_count = chunk.__fragment_count
+    while chunk and chunk.__has_hidden_major do
+        chunk = chunk.__parent
+    end
 
-    for i = chunk_fragment_count, 1, -1 do
-        local fragment = chunk_fragment_list[i]
+    local new_chunk = nil
 
-        if __evolved_has(fragment, __HIDDEN) then
-            chunk = __chunk_without_fragment(chunk, fragment)
+    if chunk then
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        for i = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[i]
+
+            if not __evolved_has(fragment, __HIDDEN) then
+                new_chunk = __chunk_with_fragment(new_chunk, fragment)
+            end
         end
     end
 
-    return chunk
+    return new_chunk
 end
 
 ---
@@ -4329,6 +4344,7 @@ function __evolved_execute(query)
     local chunk_stack_size = 0
 
     local query_includes = __query_sorted_includes[query]
+    local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
     local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
 
@@ -4353,6 +4369,20 @@ function __evolved_execute(query)
                 (query_exclude_count == 0 or not __chunk_has_any_fragment_list(
                     major_chunk, query_exclude_list, query_exclude_count))
 
+            if is_major_chunk_matched and major_chunk.__has_hidden_minors then
+                local major_chunk_fragment_list = major_chunk.__fragment_list
+                local major_chunk_fragment_count = major_chunk.__fragment_count
+
+                for major_chunk_fragment_index = 1, major_chunk_fragment_count - 1 do
+                    local major_chunk_fragment = major_chunk_fragment_list[major_chunk_fragment_index]
+
+                    if not query_include_set[major_chunk_fragment] and __evolved_has(major_chunk_fragment, __HIDDEN) then
+                        is_major_chunk_matched = false
+                        break
+                    end
+                end
+            end
+
             if is_major_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = major_chunk
@@ -4360,15 +4390,24 @@ function __evolved_execute(query)
         end
     elseif query_exclude_count > 0 then
         for root_fragment, root_chunk in __lua_next, __root_chunks do
-            if not query_exclude_set[root_fragment] then
+            local is_root_chunk_matched =
+                not root_chunk.__has_hidden_major and
+                not query_exclude_set[root_fragment]
+
+            if is_root_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = root_chunk
             end
         end
     else
         for _, root_chunk in __lua_next, __root_chunks do
-            chunk_stack_size = chunk_stack_size + 1
-            chunk_stack[chunk_stack_size] = root_chunk
+            local is_root_chunk_matched =
+                not root_chunk.__has_hidden_major
+
+            if is_root_chunk_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = root_chunk
+            end
         end
     end
 
@@ -5048,25 +5087,29 @@ end
 local function __update_chunk_caches_trace(chunk)
     local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
 
-    local has_setup_hooks = (chunk_parent and chunk_parent.__has_setup_hooks)
+    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
 
-    local has_assign_hooks = (chunk_parent and chunk_parent.__has_assign_hooks)
+    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
-    local has_insert_hooks = (chunk_parent and chunk_parent.__has_insert_hooks)
+    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
-    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
 
-    local has_hidden_fragments = (chunk_parent and chunk_parent.__has_hidden_fragments)
-        or __evolved_has(chunk_fragment, __HIDDEN)
+    local has_hidden_major = __evolved_has(chunk_fragment, __HIDDEN)
+    local has_hidden_minors = chunk_parent ~= nil and chunk_parent.__has_hidden_fragments
+    local has_hidden_fragments = has_hidden_major or has_hidden_minors
 
     chunk.__has_setup_hooks = has_setup_hooks
     chunk.__has_assign_hooks = has_assign_hooks
     chunk.__has_insert_hooks = has_insert_hooks
     chunk.__has_remove_hooks = has_remove_hooks
+
+    chunk.__has_hidden_major = has_hidden_major
+    chunk.__has_hidden_minors = has_hidden_minors
     chunk.__has_hidden_fragments = has_hidden_fragments
 
     return true

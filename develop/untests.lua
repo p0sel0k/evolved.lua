@@ -6235,3 +6235,87 @@ do
         assert(evo.has(e, f3) and evo.get(e, f3) == 3)
     end
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f2, evo.HIDDEN)
+
+    do
+        local p = evo.spawn { [f1] = 11, [f2] = 22, [f3] = 33 }
+        local e = evo.clone(p)
+
+        assert(evo.has(p, f1) and evo.get(p, f1) == 11)
+        assert(evo.has(p, f2) and evo.get(p, f2) == 22)
+        assert(evo.has(p, f3) and evo.get(p, f3) == 33)
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 11)
+        assert(not evo.has(e, f2) and evo.get(e, f2) == nil)
+        assert(evo.has(e, f3) and evo.get(e, f3) == 33)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local p = evo.builder():prefab():set(f1, 11):set(f2, 22):spawn()
+    local e = evo.clone(p)
+
+    do
+        local q = evo.builder():include(f1, f2):spawn()
+        local iter, state = evo.execute(q)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1, f2))
+        assert(entity_count == 1 and entity_list[1] == e)
+    end
+
+    do
+        local q = evo.builder():exclude(f1):spawn()
+
+        for c in evo.execute(q) do
+            local fs, fc = c:fragments()
+            for i = 1, fc do assert(not evo.has(fs[i], evo.HIDDEN)) end
+        end
+    end
+
+    do
+        local q = evo.builder():spawn()
+
+        for c in evo.execute(q) do
+            local fs, fc = c:fragments()
+            for i = 1, fc do assert(not evo.has(fs[i], evo.HIDDEN)) end
+        end
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    evo.set(f2, evo.HIDDEN)
+
+    local e1 = evo.builder():set(f1, 11):spawn()
+    local e2 = evo.builder():set(f1, 11):set(f2, 22):spawn()
+
+    do
+        local q = evo.builder():include(f1):spawn()
+        local iter, state = evo.execute(q)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1))
+        assert(entity_count == 1 and entity_list[1] == e1)
+        chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
+    end
+
+    do
+        local q = evo.builder():include(f1, f2):spawn()
+        local iter, state = evo.execute(q)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1, f2))
+        assert(entity_count == 1 and entity_list[1] == e2)
+        chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
+    end
+end
