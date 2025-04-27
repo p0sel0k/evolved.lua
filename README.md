@@ -146,7 +146,9 @@ builder:tag :: builder
 builder:name :: string -> builder
 builder:prefab :: builder
 
-builder:hidden :: builder
+builder:unique :: builder
+builder:explicit :: builder
+
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
 

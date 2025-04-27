@@ -5311,18 +5311,19 @@ __evolved_set(__PREFAB, __UNIQUE)
 __evolved_set(__PREFAB, __EXPLICIT)
 
 __evolved_set(__UNIQUE, __TAG)
-__evolved_set(__UNIQUE, __UNIQUE)
-__evolved_set(__UNIQUE, __EXPLICIT)
 
 __evolved_set(__EXPLICIT, __TAG)
-__evolved_set(__EXPLICIT, __UNIQUE)
-__evolved_set(__EXPLICIT, __EXPLICIT)
 
 __evolved_set(__INCLUDES, __DEFAULT, {})
 __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
 
 __evolved_set(__EXCLUDES, __DEFAULT, {})
 __evolved_set(__EXCLUDES, __DUPLICATE, __list_copy)
+
+__evolved_set(__ON_SET, __UNIQUE)
+__evolved_set(__ON_ASSIGN, __UNIQUE)
+__evolved_set(__ON_INSERT, __UNIQUE)
+__evolved_set(__ON_REMOVE, __UNIQUE)
 
 __evolved_set(__DISABLED, __TAG)
 
