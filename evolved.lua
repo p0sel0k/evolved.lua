@@ -124,6 +124,12 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---@field package __has_assign_hooks boolean
 ---@field package __has_insert_hooks boolean
 ---@field package __has_remove_hooks boolean
+---@field package __has_unique_major boolean
+---@field package __has_unique_minors boolean
+---@field package __has_unique_fragments boolean
+---@field package __has_explicit_major boolean
+---@field package __has_explicit_minors boolean
+---@field package __has_explicit_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
@@ -618,22 +624,18 @@ local function __execute_iterator(execute_state)
         local chunk_child_list = chunk.__child_list
         local chunk_child_count = chunk.__child_count
 
-        if exclude_set then
-            for i = 1, chunk_child_count do
-                local chunk_child = chunk_child_list[i]
-                local chunk_child_fragment = chunk_child.__fragment
+        for i = 1, chunk_child_count do
+            local chunk_child = chunk_child_list[i]
+            local chunk_child_fragment = chunk_child.__fragment
 
-                if not exclude_set[chunk_child_fragment] then
-                    chunk_stack_size = chunk_stack_size + 1
-                    chunk_stack[chunk_stack_size] = chunk_child
-                end
+            local is_chunk_child_matched =
+                (not chunk_child.__has_explicit_major) and
+                (not exclude_set or not exclude_set[chunk_child_fragment])
+
+            if is_chunk_child_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = chunk_child
             end
-        else
-            __lua_table_move(
-                chunk_child_list, 1, chunk_child_count,
-                chunk_stack_size + 1, chunk_stack)
-
-            chunk_stack_size = chunk_stack_size + chunk_child_count
         end
 
         local chunk_entity_list = chunk.__entity_list
@@ -657,6 +659,10 @@ end
 
 local __TAG = __acquire_id()
 local __NAME = __acquire_id()
+local __PREFAB = __acquire_id()
+
+local __UNIQUE = __acquire_id()
+local __EXPLICIT = __acquire_id()
 
 local __DEFAULT = __acquire_id()
 local __DUPLICATE = __acquire_id()
@@ -690,29 +696,40 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 
 local __safe_tbls = {
+    ---@type evolved.entity[]
+    __EMPTY_ENTITY_LIST = __lua_setmetatable({}, {
+        __tostring = function() return 'empty entity list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty entity list' end
+    }),
+
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty fragment set') end
+        __tostring = function() return 'empty fragment set' end,
+        __newindex = function() __error_fmt 'attempt to modify empty fragment set' end
     }),
 
     ---@type evolved.fragment[]
     __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty fragment list') end
+        __tostring = function() return 'empty fragment list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty fragment list' end
     }),
 
     ---@type table<evolved.fragment, evolved.component>
     __EMPTY_COMPONENT_MAP = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component map') end
+        __tostring = function() return 'empty component map' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component map' end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component list') end
+        __tostring = function() return 'empty component list' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component list' end
     }),
 
     ---@type evolved.component[]
     __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
-        __newindex = function() __error_fmt('attempt to modify empty component storage') end
+        __tostring = function() return 'empty component storage' end,
+        __newindex = function() __error_fmt 'attempt to modify empty component storage' end
     }),
 }
 
@@ -994,17 +1011,25 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type evolved.fragment[]
     local chunk_component_fragments = {}
 
-    local has_setup_hooks = (chunk_parent and chunk_parent.__has_setup_hooks)
+    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
 
-    local has_assign_hooks = (chunk_parent and chunk_parent.__has_assign_hooks)
+    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
-    local has_insert_hooks = (chunk_parent and chunk_parent.__has_insert_hooks)
+    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
-    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
+
+    local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
+    local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
+    local has_unique_fragments = has_unique_major or has_unique_minors
+
+    local has_explicit_major = __evolved_has(chunk_fragment, __EXPLICIT)
+    local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
+    local has_explicit_fragments = has_explicit_major or has_explicit_minors
 
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
@@ -1029,6 +1054,12 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __has_assign_hooks = has_assign_hooks,
         __has_insert_hooks = has_insert_hooks,
         __has_remove_hooks = has_remove_hooks,
+        __has_unique_major = has_unique_major,
+        __has_unique_minors = has_unique_minors,
+        __has_unique_fragments = has_unique_fragments,
+        __has_explicit_major = has_explicit_major,
+        __has_explicit_minors = has_explicit_minors,
+        __has_explicit_fragments = has_explicit_fragments,
     }, __chunk_mt)
 
     if chunk_parent then
@@ -1211,6 +1242,40 @@ local function __chunk_without_fragments(chunk, ...)
     end
 
     return chunk
+end
+
+---@param chunk? evolved.chunk
+---@return evolved.chunk?
+---@nodiscard
+local function __chunk_without_unique_fragments(chunk)
+    if not chunk then
+        return nil
+    end
+
+    if not chunk.__has_unique_fragments then
+        return chunk
+    end
+
+    while chunk and chunk.__has_unique_major do
+        chunk = chunk.__parent
+    end
+
+    local new_chunk = nil
+
+    if chunk then
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        for i = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[i]
+
+            if not __evolved_has(fragment, __UNIQUE) then
+                new_chunk = __chunk_with_fragment(new_chunk, fragment)
+            end
+        end
+    end
+
+    return new_chunk
 end
 
 ---
@@ -1648,7 +1713,9 @@ local function __clone_entity(entity, prefab, components)
     local prefab_chunk = __entity_chunks[prefab_index]
     local prefab_place = __entity_places[prefab_index]
 
-    local chunk = __chunk_with_components(prefab_chunk, components)
+    local chunk = __chunk_with_components(
+        __chunk_without_unique_fragments(prefab_chunk),
+        components)
 
     if not chunk then
         return
@@ -1682,46 +1749,50 @@ local function __clone_entity(entity, prefab, components)
         if prefab_chunk.__has_setup_hooks then
             for prefab_component_index = 1, prefab_component_count do
                 local fragment = prefab_component_fragments[prefab_component_index]
-
-                ---@type evolved.duplicate?
-                local fragment_duplicate =
-                    __evolved_get(fragment, __DUPLICATE)
-
-                local prefab_component_storage = prefab_component_storages[prefab_component_index]
-                local prefab_component = prefab_component_storage[prefab_place]
-
-                local new_component = prefab_component
-
-                if new_component ~= nil and fragment_duplicate then
-                    new_component = fragment_duplicate(new_component)
-                end
-
-                if new_component == nil then
-                    new_component = true
-                end
-
                 local component_index = chunk_component_indices[fragment]
-                local component_storage = chunk_component_storages[component_index]
 
-                component_storage[place] = new_component
+                if component_index then
+                    ---@type evolved.duplicate?
+                    local fragment_duplicate =
+                        __evolved_get(fragment, __DUPLICATE)
+
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    local new_component = prefab_component
+
+                    if new_component ~= nil and fragment_duplicate then
+                        new_component = fragment_duplicate(new_component)
+                    end
+
+                    if new_component == nil then
+                        new_component = true
+                    end
+
+                    local component_storage = chunk_component_storages[component_index]
+
+                    component_storage[place] = new_component
+                end
             end
         else
             for prefab_component_index = 1, prefab_component_count do
                 local fragment = prefab_component_fragments[prefab_component_index]
-
-                local prefab_component_storage = prefab_component_storages[prefab_component_index]
-                local prefab_component = prefab_component_storage[prefab_place]
-
-                local new_component = prefab_component
-
-                if new_component == nil then
-                    new_component = true
-                end
-
                 local component_index = chunk_component_indices[fragment]
-                local component_storage = chunk_component_storages[component_index]
 
-                component_storage[place] = new_component
+                if component_index then
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    local new_component = prefab_component
+
+                    if new_component == nil then
+                        new_component = true
+                    end
+
+                    local component_storage = chunk_component_storages[component_index]
+
+                    component_storage[place] = new_component
+                end
             end
         end
     end
@@ -4285,6 +4356,7 @@ function __evolved_execute(query)
     local chunk_stack_size = 0
 
     local query_includes = __query_sorted_includes[query]
+    local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
     local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
 
@@ -4309,6 +4381,20 @@ function __evolved_execute(query)
                 (query_exclude_count == 0 or not __chunk_has_any_fragment_list(
                     major_chunk, query_exclude_list, query_exclude_count))
 
+            if is_major_chunk_matched and major_chunk.__has_explicit_minors then
+                local major_chunk_fragment_list = major_chunk.__fragment_list
+                local major_chunk_fragment_count = major_chunk.__fragment_count
+
+                for major_chunk_fragment_index = 1, major_chunk_fragment_count - 1 do
+                    local major_chunk_fragment = major_chunk_fragment_list[major_chunk_fragment_index]
+
+                    if not query_include_set[major_chunk_fragment] and __evolved_has(major_chunk_fragment, __EXPLICIT) then
+                        is_major_chunk_matched = false
+                        break
+                    end
+                end
+            end
+
             if is_major_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = major_chunk
@@ -4316,15 +4402,24 @@ function __evolved_execute(query)
         end
     elseif query_exclude_count > 0 then
         for root_fragment, root_chunk in __lua_next, __root_chunks do
-            if not query_exclude_set[root_fragment] then
+            local is_root_chunk_matched =
+                not root_chunk.__has_explicit_major and
+                not query_exclude_set[root_fragment]
+
+            if is_root_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = root_chunk
             end
         end
     else
         for _, root_chunk in __lua_next, __root_chunks do
-            chunk_stack_size = chunk_stack_size + 1
-            chunk_stack[chunk_stack_size] = root_chunk
+            local is_root_chunk_matched =
+                not root_chunk.__has_explicit_major
+
+            if is_root_chunk_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = root_chunk
+            end
         end
     end
 
@@ -4856,6 +4951,21 @@ function __builder_mt:name(name)
     return self:set(__NAME, name)
 end
 
+---@return evolved.builder builder
+function __builder_mt:prefab()
+    return self:set(__PREFAB)
+end
+
+---@return evolved.builder builder
+function __builder_mt:unique()
+    return self:set(__UNIQUE)
+end
+
+---@return evolved.builder builder
+function __builder_mt:explicit()
+    return self:set(__EXPLICIT)
+end
+
 ---@param default evolved.component
 ---@return evolved.builder builder
 function __builder_mt:default(default)
@@ -4994,22 +5104,38 @@ end
 local function __update_chunk_caches_trace(chunk)
     local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
 
-    local has_setup_hooks = (chunk_parent and chunk_parent.__has_setup_hooks)
+    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
 
-    local has_assign_hooks = (chunk_parent and chunk_parent.__has_assign_hooks)
+    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
 
-    local has_insert_hooks = (chunk_parent and chunk_parent.__has_insert_hooks)
+    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
         or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
 
-    local has_remove_hooks = (chunk_parent and chunk_parent.__has_remove_hooks)
+    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
+
+    local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
+    local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
+    local has_unique_fragments = has_unique_major or has_unique_minors
+
+    local has_explicit_major = __evolved_has(chunk_fragment, __EXPLICIT)
+    local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
+    local has_explicit_fragments = has_explicit_major or has_explicit_minors
 
     chunk.__has_setup_hooks = has_setup_hooks
     chunk.__has_assign_hooks = has_assign_hooks
     chunk.__has_insert_hooks = has_insert_hooks
     chunk.__has_remove_hooks = has_remove_hooks
+
+    chunk.__has_unique_major = has_unique_major
+    chunk.__has_unique_minors = has_unique_minors
+    chunk.__has_unique_fragments = has_unique_fragments
+
+    chunk.__has_explicit_major = has_explicit_major
+    chunk.__has_explicit_minors = has_explicit_minors
+    chunk.__has_explicit_fragments = has_explicit_fragments
 
     return true
 end
@@ -5101,6 +5227,14 @@ local function __update_fragment_tags(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_tags_trace, fragment)
 end
 
+local function __update_fragment_uniques(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
+local function __update_fragment_explicits(fragment)
+    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
+end
+
 ---@param fragment evolved.fragment
 local function __update_fragment_defaults(fragment)
     __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
@@ -5113,6 +5247,12 @@ end
 
 __evolved_set(__TAG, __ON_INSERT, __update_fragment_tags)
 __evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags)
+
+__evolved_set(__UNIQUE, __ON_INSERT, __update_fragment_uniques)
+__evolved_set(__UNIQUE, __ON_REMOVE, __update_fragment_uniques)
+
+__evolved_set(__EXPLICIT, __ON_INSERT, __update_fragment_explicits)
+__evolved_set(__EXPLICIT, __ON_REMOVE, __update_fragment_explicits)
 
 __evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults)
 __evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults)
@@ -5128,6 +5268,10 @@ __evolved_set(__DUPLICATE, __ON_REMOVE, __update_fragment_duplicates)
 
 __evolved_set(__TAG, __NAME, 'TAG')
 __evolved_set(__NAME, __NAME, 'NAME')
+__evolved_set(__PREFAB, __NAME, 'PREFAB')
+
+__evolved_set(__UNIQUE, __NAME, 'UNIQUE')
+__evolved_set(__EXPLICIT, __NAME, 'EXPLICIT')
 
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
@@ -5162,11 +5306,24 @@ __evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_F
 
 __evolved_set(__TAG, __TAG)
 
+__evolved_set(__PREFAB, __TAG)
+__evolved_set(__PREFAB, __UNIQUE)
+__evolved_set(__PREFAB, __EXPLICIT)
+
+__evolved_set(__UNIQUE, __TAG)
+
+__evolved_set(__EXPLICIT, __TAG)
+
 __evolved_set(__INCLUDES, __DEFAULT, {})
 __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
 
 __evolved_set(__EXCLUDES, __DEFAULT, {})
 __evolved_set(__EXCLUDES, __DUPLICATE, __list_copy)
+
+__evolved_set(__ON_SET, __UNIQUE)
+__evolved_set(__ON_ASSIGN, __UNIQUE)
+__evolved_set(__ON_INSERT, __UNIQUE)
+__evolved_set(__ON_REMOVE, __UNIQUE)
 
 __evolved_set(__DISABLED, __TAG)
 
@@ -5290,6 +5447,10 @@ end)
 
 evolved.TAG = __TAG
 evolved.NAME = __NAME
+evolved.PREFAB = __PREFAB
+
+evolved.UNIQUE = __UNIQUE
+evolved.EXPLICIT = __EXPLICIT
 
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE
@@ -5335,11 +5496,11 @@ evolved.empty = __evolved_empty
 evolved.empty_all = __evolved_empty_all
 evolved.empty_any = __evolved_empty_any
 
-evolved.get = __evolved_get
-
 evolved.has = __evolved_has
 evolved.has_all = __evolved_has_all
 evolved.has_any = __evolved_has_any
+
+evolved.get = __evolved_get
 
 evolved.set = __evolved_set
 evolved.remove = __evolved_remove

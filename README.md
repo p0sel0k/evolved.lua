@@ -29,6 +29,10 @@
 ```
 TAG :: fragment
 NAME :: fragment
+PREFAB :: fragment
+
+UNIQUE :: fragment
+EXPLICIT :: fragment
 
 DEFAULT :: fragment
 DUPLICATE :: fragment
@@ -140,6 +144,10 @@ builder:clear :: builder
 
 builder:tag :: builder
 builder:name :: string -> builder
+builder:prefab :: builder
+
+builder:unique :: builder
+builder:explicit :: builder
 
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
