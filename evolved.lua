@@ -5496,11 +5496,11 @@ evolved.empty = __evolved_empty
 evolved.empty_all = __evolved_empty_all
 evolved.empty_any = __evolved_empty_any
 
-evolved.get = __evolved_get
-
 evolved.has = __evolved_has
 evolved.has_all = __evolved_has_all
 evolved.has_any = __evolved_has_any
+
+evolved.get = __evolved_get
 
 evolved.set = __evolved_set
 evolved.remove = __evolved_remove
