@@ -5326,6 +5326,8 @@ __evolved_set(__ON_INSERT, __UNIQUE)
 __evolved_set(__ON_REMOVE, __UNIQUE)
 
 __evolved_set(__DISABLED, __TAG)
+__evolved_set(__DISABLED, __UNIQUE)
+__evolved_set(__DISABLED, __EXPLICIT)
 
 ---
 ---
