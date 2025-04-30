@@ -6,7 +6,7 @@ local evo = require 'evolved'
 local N = 1000
 local B = evo.builder()
 local F1, F2, F3, F4, F5 = evo.id(5)
-local Q1 = evo.builder():include(F1):build()
+local Q1 = evo.builder():include(F1):spawn()
 
 print '----------------------------------------'
 
@@ -440,11 +440,11 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = B.set
-        local build = B.build
+        local spawn = B.spawn
 
         for i = 1, N do
             set(B, F1)
-            entities[i] = build(B)
+            entities[i] = spawn(B)
         end
 
         evo.batch_destroy(Q1)
@@ -456,12 +456,12 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = B.set
-        local build = B.build
+        local spawn = B.spawn
 
         for i = 1, N do
             set(B, F1)
             set(B, F2)
-            entities[i] = build(B)
+            entities[i] = spawn(B)
         end
 
         evo.batch_destroy(Q1)
@@ -473,13 +473,13 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = B.set
-        local build = B.build
+        local spawn = B.spawn
 
         for i = 1, N do
             set(B, F1)
             set(B, F2)
             set(B, F3)
-            entities[i] = build(B)
+            entities[i] = spawn(B)
         end
 
         evo.batch_destroy(Q1)
@@ -491,14 +491,14 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = B.set
-        local build = B.build
+        local spawn = B.spawn
 
         for i = 1, N do
             set(B, F1)
             set(B, F2)
             set(B, F3)
             set(B, F4)
-            entities[i] = build(B)
+            entities[i] = spawn(B)
         end
 
         evo.batch_destroy(Q1)
@@ -510,7 +510,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
     ---@param entities evolved.id[]
     function(entities)
         local set = B.set
-        local build = B.build
+        local spawn = B.spawn
 
         for i = 1, N do
             set(B, F1)
@@ -518,7 +518,7 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
             set(B, F3)
             set(B, F4)
             set(B, F5)
-            entities[i] = build(B)
+            entities[i] = spawn(B)
         end
 
         evo.batch_destroy(Q1)
@@ -528,15 +528,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('create and destroy %d entities with 1 components / multi-set', N),
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn', N),
     ---@param entities evolved.id[]
     function(entities)
-        local set = evo.multi_set
+        local spawn = evo.spawn
+
+        local components = { [F1] = true }
 
         for i = 1, N do
-            local e = evo.id()
-            set(e, { F1 })
-            entities[i] = e
+            entities[i] = spawn(components)
         end
 
         evo.batch_destroy(Q1)
@@ -544,15 +544,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 2 components / multi-set', N),
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn', N),
     ---@param entities evolved.id[]
     function(entities)
-        local set = evo.multi_set
+        local spawn = evo.spawn
+
+        local components = { [F1] = true, [F2] = true }
 
         for i = 1, N do
-            local e = evo.id()
-            set(e, { F1, F2 })
-            entities[i] = e
+            entities[i] = spawn(components)
         end
 
         evo.batch_destroy(Q1)
@@ -560,15 +560,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 3 components / multi-set', N),
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn', N),
     ---@param entities evolved.id[]
     function(entities)
-        local set = evo.multi_set
+        local spawn = evo.spawn
+
+        local components = { [F1] = true, [F2] = true, [F3] = true }
 
         for i = 1, N do
-            local e = evo.id()
-            set(e, { F1, F2, F3 })
-            entities[i] = e
+            entities[i] = spawn(components)
         end
 
         evo.batch_destroy(Q1)
@@ -576,15 +576,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 4 components / multi-set', N),
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn', N),
     ---@param entities evolved.id[]
     function(entities)
-        local set = evo.multi_set
+        local spawn = evo.spawn
+
+        local components = { [F1] = true, [F2] = true, [F3] = true, [F4] = true }
 
         for i = 1, N do
-            local e = evo.id()
-            set(e, { F1, F2, F3, F4 })
-            entities[i] = e
+            entities[i] = spawn(components)
         end
 
         evo.batch_destroy(Q1)
@@ -592,112 +592,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 5 components / multi-set', N),
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn', N),
     ---@param entities evolved.id[]
     function(entities)
-        local set = evo.multi_set
+        local spawn = evo.spawn
+
+        local components = { [F1] = true, [F2] = true, [F3] = true, [F4] = true, [F5] = true }
 
         for i = 1, N do
-            local e = evo.id()
-            set(e, { F1, F2, F3, F4, F5 })
-            entities[i] = e
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-print '----------------------------------------'
-
-basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn_at', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_at = evo.spawn_at
-
-        local fragments = { F1 }
-        local components = { true }
-
-        local chunk = evo.chunk(F1)
-
-        for i = 1, N do
-            entities[i] = spawn_at(chunk, fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn_at', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_at = evo.spawn_at
-
-        local fragments = { F1, F2 }
-        local components = { true, true }
-
-        local chunk = evo.chunk(F1, F2)
-
-        for i = 1, N do
-            entities[i] = spawn_at(chunk, fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn_at', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_at = evo.spawn_at
-
-        local fragments = { F1, F2, F3 }
-        local components = { true, true, true }
-
-        local chunk = evo.chunk(F1, F2, F3)
-
-        for i = 1, N do
-            entities[i] = spawn_at(chunk, fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn_at', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_at = evo.spawn_at
-
-        local fragments = { F1, F2, F3, F4 }
-        local components = { true, true, true, true }
-
-        local chunk = evo.chunk(F1, F2, F3, F4)
-
-        for i = 1, N do
-            entities[i] = spawn_at(chunk, fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn_at', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_at = evo.spawn_at
-
-        local fragments = { F1, F2, F3, F4, F5 }
-        local components = { true, true, true, true, true }
-
-        local chunk = evo.chunk(F1, F2, F3, F4, F5)
-
-        for i = 1, N do
-            entities[i] = spawn_at(chunk, fragments, components)
+            entities[i] = spawn(components)
         end
 
         evo.batch_destroy(Q1)
@@ -707,18 +610,16 @@ basics.describe_bench(string.format('create and destroy %d entities with 5 compo
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn_as', N),
+
+basics.describe_bench(string.format('create and destroy %d entities with 1 components / clone', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_as = evo.spawn_as
+        local clone = evo.clone
 
-        local fragments = { F1 }
-        local components = { true }
-
-        local prefab = evo.spawn_with(fragments, components)
+        local prefab = evo.spawn({ [F1] = true })
 
         for i = 1, N do
-            entities[i] = spawn_as(prefab, fragments, components)
+            entities[i] = clone(prefab)
         end
 
         evo.batch_destroy(Q1)
@@ -726,18 +627,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 1 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn_as', N),
+basics.describe_bench(string.format('create and destroy %d entities with 2 components / clone', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_as = evo.spawn_as
+        local clone = evo.clone
 
-        local fragments = { F1, F2 }
-        local components = { true, true }
-
-        local prefab = evo.spawn_with(fragments, components)
+        local prefab = evo.spawn({ [F1] = true, [F2] = true })
 
         for i = 1, N do
-            entities[i] = spawn_as(prefab, fragments, components)
+            entities[i] = clone(prefab)
         end
 
         evo.batch_destroy(Q1)
@@ -745,18 +643,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 2 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn_as', N),
+basics.describe_bench(string.format('create and destroy %d entities with 3 components / clone', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_as = evo.spawn_as
+        local clone = evo.clone
 
-        local fragments = { F1, F2, F3 }
-        local components = { true, true, true }
-
-        local prefab = evo.spawn_with(fragments, components)
+        local prefab = evo.spawn({ [F1] = true, [F2] = true, [F3] = true })
 
         for i = 1, N do
-            entities[i] = spawn_as(prefab, fragments, components)
+            entities[i] = clone(prefab)
         end
 
         evo.batch_destroy(Q1)
@@ -764,18 +659,15 @@ basics.describe_bench(string.format('create and destroy %d entities with 3 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn_as', N),
+basics.describe_bench(string.format('create and destroy %d entities with 4 components / clone', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_as = evo.spawn_as
+        local clone = evo.clone
 
-        local fragments = { F1, F2, F3, F4 }
-        local components = { true, true, true, true }
-
-        local prefab = evo.spawn_with(fragments, components)
+        local prefab = evo.spawn({ [F1] = true, [F2] = true, [F3] = true, [F4] = true })
 
         for i = 1, N do
-            entities[i] = spawn_as(prefab, fragments, components)
+            entities[i] = clone(prefab)
         end
 
         evo.batch_destroy(Q1)
@@ -783,110 +675,18 @@ basics.describe_bench(string.format('create and destroy %d entities with 4 compo
         return {}
     end)
 
-basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn_as', N),
+basics.describe_bench(string.format('create and destroy %d entities with 5 components / clone', N),
     ---@param entities evolved.id[]
     function(entities)
-        local spawn_as = evo.spawn_as
+        local clone = evo.clone
 
-        local fragments = { F1, F2, F3, F4, F5 }
-        local components = { true, true, true, true, true }
-
-        local prefab = evo.spawn_with(fragments, components)
+        local prefab = evo.spawn({ [F1] = true, [F2] = true, [F3] = true, [F4] = true, [F5] = true })
 
         for i = 1, N do
-            entities[i] = spawn_as(prefab, fragments, components)
+            entities[i] = clone(prefab)
         end
 
         evo.batch_destroy(Q1)
     end, function()
         return {}
     end)
-
-print '----------------------------------------'
-
-basics.describe_bench(string.format('create and destroy %d entities with 1 components / spawn_with', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_with = evo.spawn_with
-
-        local fragments = { F1 }
-        local components = { true }
-
-        for i = 1, N do
-            entities[i] = spawn_with(fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 2 components / spawn_with', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_with = evo.spawn_with
-
-        local fragments = { F1, F2 }
-        local components = { true, true }
-
-        for i = 1, N do
-            entities[i] = spawn_with(fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 3 components / spawn_with', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_with = evo.spawn_with
-
-        local fragments = { F1, F2, F3 }
-        local components = { true, true, true }
-
-        for i = 1, N do
-            entities[i] = spawn_with(fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 4 components / spawn_with', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_with = evo.spawn_with
-
-        local fragments = { F1, F2, F3, F4 }
-        local components = { true, true, true, true }
-
-        for i = 1, N do
-            entities[i] = spawn_with(fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-basics.describe_bench(string.format('create and destroy %d entities with 5 components / spawn_with', N),
-    ---@param entities evolved.id[]
-    function(entities)
-        local spawn_with = evo.spawn_with
-
-        local fragments = { F1, F2, F3, F4, F5 }
-        local components = { true, true, true, true, true }
-
-        for i = 1, N do
-            entities[i] = spawn_with(fragments, components)
-        end
-
-        evo.batch_destroy(Q1)
-    end, function()
-        return {}
-    end)
-
-print '----------------------------------------'

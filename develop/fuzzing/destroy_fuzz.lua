@@ -102,19 +102,19 @@ end
 ---
 ---
 
-local all_chunk_query = evo.builder():build()
+local all_chunk_query = evo.spawn()
 
 for chunk in evo.execute(all_chunk_query) do
-    assert(not evo.has_any(chunk, __table_unpack(destroying_entity_list)))
-    assert(not evo.has_any(chunk, __table_unpack(should_be_destroyed_entity_list)))
+    assert(not chunk:has_any(__table_unpack(destroying_entity_list)))
+    assert(not chunk:has_any(__table_unpack(should_be_destroyed_entity_list)))
 end
 
 for _, destroying_entity in ipairs(destroying_entity_list) do
-    assert(not evo.is_alive(destroying_entity))
+    assert(not evo.alive(destroying_entity))
 end
 
 for _, destroyed_entity in ipairs(should_be_destroyed_entity_list) do
-    assert(not evo.is_alive(destroyed_entity))
+    assert(not evo.alive(destroyed_entity))
 end
 
 ---

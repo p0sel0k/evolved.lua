@@ -2,10 +2,6 @@
 
 ## Backlog
 
-- builders should be rewritten :/
-- add PREFAB entity trait
-- is/has_all/any for lists?
-
 ## After first release
 
 - cached queries

@@ -17,28 +17,28 @@ local function vector2(x, y)
     return { x = x, y = y }
 end
 
-local groups = {
-    awake = evo.builder():build(),
-    physics = evo.builder():build(),
-    graphics = evo.builder():build(),
-    shutdown = evo.builder():build(),
+local consts = {
+    delta_time = 0.016,
+    physics_gravity = vector2(0, 9.81),
 }
 
-local singles = {
-    delta_time = evo.builder():single(0.016):build(),
-    physics_gravity = evo.builder():single(vector2(0, 9.81)):build(),
+local groups = {
+    awake = evo.spawn(),
+    physics = evo.spawn(),
+    graphics = evo.spawn(),
+    shutdown = evo.spawn(),
 }
 
 local fragments = {
-    force = evo.builder():build(),
-    position = evo.builder():build(),
-    velocity = evo.builder():build(),
+    force = evo.spawn(),
+    position = evo.spawn(),
+    velocity = evo.spawn(),
 }
 
 local queries = {
     physics_bodies = evo.builder()
         :include(fragments.force, fragments.position, fragments.velocity)
-        :build(),
+        :spawn(),
 }
 
 local awake_system = evo.builder()
@@ -49,20 +49,18 @@ local awake_system = evo.builder()
             :set(fragments.force, vector2(0, 0))
             :set(fragments.position, vector2(0, 0))
             :set(fragments.velocity, vector2(0, 0))
-            :build()
-    end):build()
+            :spawn()
+    end):spawn()
 
 local integrate_forces_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type number, evolved.vector2
         local delta_time, physics_gravity =
-            evo.get(singles.delta_time, singles.delta_time),
-            evo.get(singles.physics_gravity, singles.physics_gravity)
+            consts.delta_time, consts.physics_gravity
 
         ---@type evolved.vector2[], evolved.vector2[]
-        local forces, velocities = evo.components(chunk,
+        local forces, velocities = chunk:components(
             fragments.force, fragments.velocity)
 
         for i = 1, entity_count do
@@ -71,18 +69,17 @@ local integrate_forces_system = evo.builder()
             velocity.x = velocity.x + (physics_gravity.x + force.x) * delta_time
             velocity.y = velocity.y + (physics_gravity.y + force.y) * delta_time
         end
-    end):build()
+    end):spawn()
 
 local integrate_velocities_system = evo.builder()
     :group(groups.physics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
-        ---@type number
         local delta_time =
-            evo.get(singles.delta_time, singles.delta_time)
+            consts.delta_time
 
         ---@type evolved.vector2[], evolved.vector2[], evolved.vector2[]
-        local forces, positions, velocities = evo.components(chunk,
+        local forces, positions, velocities = chunk:components(
             fragments.force, fragments.position, fragments.velocity)
 
         for i = 1, entity_count do
@@ -94,14 +91,14 @@ local integrate_velocities_system = evo.builder()
             force.x = 0
             force.y = 0
         end
-    end):build()
+    end):spawn()
 
 local graphics_system = evo.builder()
     :group(groups.graphics)
     :query(queries.physics_bodies)
     :execute(function(chunk, entities, entity_count)
         ---@type evolved.vector2[]
-        local positions = evo.components(chunk,
+        local positions = chunk:components(
             fragments.position)
 
         for i = 1, entity_count do
@@ -111,14 +108,14 @@ local graphics_system = evo.builder()
                 '|-> {entity %d} at {%.4f, %.4f}',
                 entity, position.x, position.y))
         end
-    end):build()
+    end):spawn()
 
 local shutdown_system = evo.builder()
     :group(groups.shutdown)
     :epilogue(function()
         print '-= | Shutdown | =-'
         evo.batch_destroy(queries.physics_bodies)
-    end):build()
+    end):spawn()
 
 do
     evo.process(groups.awake)

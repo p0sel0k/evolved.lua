@@ -5,5 +5,11 @@ require 'develop.usbench'
 
 local basics = require 'develop.basics'
 
+print '----------------------------------------'
 basics.describe_fuzz 'develop.fuzzing.destroy_fuzz'
+print '----------------------------------------'
 basics.describe_fuzz 'develop.fuzzing.batch_destroy_fuzz'
+print '----------------------------------------'
+basics.describe_fuzz 'develop.fuzzing.explicit_fuzz'
+print '----------------------------------------'
+basics.describe_fuzz 'develop.fuzzing.unique_fuzz'
