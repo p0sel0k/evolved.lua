@@ -29,13 +29,15 @@
 ```
 TAG :: fragment
 NAME :: fragment
-PREFAB :: fragment
 
 UNIQUE :: fragment
 EXPLICIT :: fragment
 
 DEFAULT :: fragment
 DUPLICATE :: fragment
+
+PREFAB :: fragment
+DISABLED :: fragment
 
 INCLUDES :: fragment
 EXCLUDES :: fragment
@@ -52,8 +54,6 @@ EXECUTE :: fragment
 
 PROLOGUE :: fragment
 EPILOGUE :: fragment
-
-DISABLED :: fragment
 
 DESTROY_POLICY :: fragment
 DESTROY_POLICY_DESTROY_ENTITY :: id
@@ -144,13 +144,15 @@ builder:clear :: builder
 
 builder:tag :: builder
 builder:name :: string -> builder
-builder:prefab :: builder
 
 builder:unique :: builder
 builder:explicit :: builder
 
 builder:default :: component -> builder
 builder:duplicate :: {component -> component} -> builder
+
+builder:prefab :: builder
+builder:disabled :: builder
 
 builder:include :: fragment... -> builder
 builder:exclude :: fragment... -> builder
@@ -167,8 +169,6 @@ builder:execute :: {chunk, entity[], integer} -> builder
 
 builder:prologue :: {} -> builder
 builder:epilogue :: {} -> builder
-
-builder:disabled :: builder
 
 builder:destroy_policy :: id -> builder
 ```

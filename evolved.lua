@@ -659,13 +659,15 @@ end
 
 local __TAG = __acquire_id()
 local __NAME = __acquire_id()
-local __PREFAB = __acquire_id()
 
 local __UNIQUE = __acquire_id()
 local __EXPLICIT = __acquire_id()
 
 local __DEFAULT = __acquire_id()
 local __DUPLICATE = __acquire_id()
+
+local __PREFAB = __acquire_id()
+local __DISABLED = __acquire_id()
 
 local __INCLUDES = __acquire_id()
 local __EXCLUDES = __acquire_id()
@@ -682,8 +684,6 @@ local __EXECUTE = __acquire_id()
 
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
-
-local __DISABLED = __acquire_id()
 
 local __DESTROY_POLICY = __acquire_id()
 local __DESTROY_POLICY_DESTROY_ENTITY = __acquire_id()
@@ -4952,11 +4952,6 @@ function __builder_mt:name(name)
 end
 
 ---@return evolved.builder builder
-function __builder_mt:prefab()
-    return self:set(__PREFAB)
-end
-
----@return evolved.builder builder
 function __builder_mt:unique()
     return self:set(__UNIQUE)
 end
@@ -4976,6 +4971,16 @@ end
 ---@return evolved.builder builder
 function __builder_mt:duplicate(duplicate)
     return self:set(__DUPLICATE, duplicate)
+end
+
+---@return evolved.builder builder
+function __builder_mt:prefab()
+    return self:set(__PREFAB)
+end
+
+---@return evolved.builder builder
+function __builder_mt:disabled()
+    return self:set(__DISABLED)
 end
 
 ---@param ... evolved.fragment fragments
@@ -5080,11 +5085,6 @@ end
 ---@return evolved.builder builder
 function __builder_mt:epilogue(epilogue)
     return self:set(__EPILOGUE, epilogue)
-end
-
----@return evolved.builder builder
-function __builder_mt:disabled()
-    return self:set(__DISABLED)
 end
 
 ---@param destroy_policy evolved.id
@@ -5268,13 +5268,15 @@ __evolved_set(__DUPLICATE, __ON_REMOVE, __update_fragment_duplicates)
 
 __evolved_set(__TAG, __NAME, 'TAG')
 __evolved_set(__NAME, __NAME, 'NAME')
-__evolved_set(__PREFAB, __NAME, 'PREFAB')
 
 __evolved_set(__UNIQUE, __NAME, 'UNIQUE')
 __evolved_set(__EXPLICIT, __NAME, 'EXPLICIT')
 
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
+
+__evolved_set(__PREFAB, __NAME, 'PREFAB')
+__evolved_set(__DISABLED, __NAME, 'DISABLED')
 
 __evolved_set(__INCLUDES, __NAME, 'INCLUDES')
 __evolved_set(__EXCLUDES, __NAME, 'EXCLUDES')
@@ -5292,8 +5294,6 @@ __evolved_set(__EXECUTE, __NAME, 'EXECUTE')
 __evolved_set(__PROLOGUE, __NAME, 'PROLOGUE')
 __evolved_set(__EPILOGUE, __NAME, 'EPILOGUE')
 
-__evolved_set(__DISABLED, __NAME, 'DISABLED')
-
 __evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY')
 __evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY')
 __evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT')
@@ -5306,13 +5306,17 @@ __evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_F
 
 __evolved_set(__TAG, __TAG)
 
+__evolved_set(__UNIQUE, __TAG)
+
+__evolved_set(__EXPLICIT, __TAG)
+
 __evolved_set(__PREFAB, __TAG)
 __evolved_set(__PREFAB, __UNIQUE)
 __evolved_set(__PREFAB, __EXPLICIT)
 
-__evolved_set(__UNIQUE, __TAG)
-
-__evolved_set(__EXPLICIT, __TAG)
+__evolved_set(__DISABLED, __TAG)
+__evolved_set(__DISABLED, __UNIQUE)
+__evolved_set(__DISABLED, __EXPLICIT)
 
 __evolved_set(__INCLUDES, __DEFAULT, {})
 __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
@@ -5324,10 +5328,6 @@ __evolved_set(__ON_SET, __UNIQUE)
 __evolved_set(__ON_ASSIGN, __UNIQUE)
 __evolved_set(__ON_INSERT, __UNIQUE)
 __evolved_set(__ON_REMOVE, __UNIQUE)
-
-__evolved_set(__DISABLED, __TAG)
-__evolved_set(__DISABLED, __UNIQUE)
-__evolved_set(__DISABLED, __EXPLICIT)
 
 ---
 ---
@@ -5449,13 +5449,15 @@ end)
 
 evolved.TAG = __TAG
 evolved.NAME = __NAME
-evolved.PREFAB = __PREFAB
 
 evolved.UNIQUE = __UNIQUE
 evolved.EXPLICIT = __EXPLICIT
 
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE
+
+evolved.PREFAB = __PREFAB
+evolved.DISABLED = __DISABLED
 
 evolved.INCLUDES = __INCLUDES
 evolved.EXCLUDES = __EXCLUDES
@@ -5472,8 +5474,6 @@ evolved.EXECUTE = __EXECUTE
 
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
-
-evolved.DISABLED = __DISABLED
 
 evolved.DESTROY_POLICY = __DESTROY_POLICY
 evolved.DESTROY_POLICY_DESTROY_ENTITY = __DESTROY_POLICY_DESTROY_ENTITY
