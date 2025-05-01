@@ -144,10 +144,14 @@ __builder_mt.__index = __builder_mt
 ---
 ---
 
+local __lua_error = error
 local __lua_next = next
 local __lua_pcall = pcall
+local __lua_print = print
 local __lua_select = select
 local __lua_setmetatable = setmetatable
+local __lua_string_format = string.format
+local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 
 ---@type fun(narray: integer, nhash: integer): table
@@ -288,16 +292,16 @@ end)()
 ---@param ... any
 ---@diagnostic disable-next-line: unused-local, unused-function
 local function __error_fmt(fmt, ...)
-    error(string.format('| evolved.lua | %s',
-        string.format(fmt, ...)))
+    __lua_error(__lua_string_format('| evolved.lua | %s',
+        __lua_string_format(fmt, ...)))
 end
 
 ---@param fmt string
 ---@param ... any
 ---@diagnostic disable-next-line: unused-local, unused-function
 local function __warning_fmt(fmt, ...)
-    print(string.format('| evolved.lua | %s',
-        string.format(fmt, ...)))
+    __lua_print(__lua_string_format('| evolved.lua | %s',
+        __lua_string_format(fmt, ...)))
 end
 
 ---
@@ -803,7 +807,7 @@ local function __id_name(id)
     end
 
     local id_index, id_version = __evolved_unpack(id)
-    return string.format('$%d#%d:%d', id, id_index, id_version)
+    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
 end
 
 ---@generic K
@@ -832,49 +836,6 @@ end
 ---@diagnostic disable-next-line: unused-local
 local function __component_storage(fragment)
     return {}
-end
-
----@param fragment evolved.fragment
----@param trace fun(chunk: evolved.chunk, ...: any): boolean
----@param ... any additional trace arguments
-local function __trace_fragment_chunks(fragment, trace, ...)
-    ---@type evolved.chunk[]
-    local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
-    local chunk_stack_size = 0
-
-    do
-        local major_chunks = __major_chunks[fragment]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
-
-        if major_chunk_count > 0 then
-            __lua_table_move(
-                major_chunk_list, 1, major_chunk_count,
-                chunk_stack_size + 1, chunk_stack)
-
-            chunk_stack_size = chunk_stack_size + major_chunk_count
-        end
-    end
-
-    while chunk_stack_size > 0 do
-        local chunk = chunk_stack[chunk_stack_size]
-
-        chunk_stack[chunk_stack_size] = nil
-        chunk_stack_size = chunk_stack_size - 1
-
-        if trace(chunk, ...) then
-            local chunk_child_list = chunk.__child_list
-            local chunk_child_count = chunk.__child_count
-
-            __lua_table_move(
-                chunk_child_list, 1, chunk_child_count,
-                chunk_stack_size + 1, chunk_stack)
-
-            chunk_stack_size = chunk_stack_size + chunk_child_count
-        end
-    end
-
-    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
 end
 
 ---
@@ -985,11 +946,18 @@ end
 ---
 ---
 
+local __new_chunk
+local __update_chunk_tags
+local __update_chunk_flags
+local __trace_major_chunks
+local __update_major_chunks_hook
+local __update_major_chunks_trace
+
 ---@param chunk_parent? evolved.chunk
 ---@param chunk_fragment evolved.fragment
 ---@return evolved.chunk
 ---@nodiscard
-local function __new_chunk(chunk_parent, chunk_fragment)
+function __new_chunk(chunk_parent, chunk_fragment)
     ---@type table<evolved.fragment, integer>
     local chunk_fragment_set = {}
 
@@ -999,37 +967,24 @@ local function __new_chunk(chunk_parent, chunk_fragment)
     ---@type integer
     local chunk_fragment_count = 0
 
-    ---@type integer
-    local chunk_component_count = 0
+    if chunk_parent then
+        local parent_fragment_list = chunk_parent.__fragment_list
+        local parent_fragment_count = chunk_parent.__fragment_count
 
-    ---@type table<evolved.fragment, integer>
-    local chunk_component_indices = {}
+        for parent_fragment_index = 1, parent_fragment_count do
+            local parent_fragment = parent_fragment_list[parent_fragment_index]
 
-    ---@type evolved.storage[]
-    local chunk_component_storages = {}
+            chunk_fragment_count = __assoc_list_insert_ex(
+                chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
+                parent_fragment)
+        end
+    end
 
-    ---@type evolved.fragment[]
-    local chunk_component_fragments = {}
-
-    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
-        or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
-
-    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
-        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
-
-    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
-        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
-
-    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
-        or __evolved_has(chunk_fragment, __ON_REMOVE)
-
-    local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
-    local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
-    local has_unique_fragments = has_unique_major or has_unique_minors
-
-    local has_explicit_major = __evolved_has(chunk_fragment, __EXPLICIT)
-    local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
-    local has_explicit_fragments = has_explicit_major or has_explicit_minors
+    do
+        chunk_fragment_count = chunk_fragment_count + 1
+        chunk_fragment_set[chunk_fragment] = chunk_fragment_count
+        chunk_fragment_list[chunk_fragment_count] = chunk_fragment
+    end
 
     ---@type evolved.chunk
     local chunk = __lua_setmetatable({
@@ -1043,72 +998,34 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __fragment_set = chunk_fragment_set,
         __fragment_list = chunk_fragment_list,
         __fragment_count = chunk_fragment_count,
-        __component_count = chunk_component_count,
-        __component_indices = chunk_component_indices,
-        __component_storages = chunk_component_storages,
-        __component_fragments = chunk_component_fragments,
+        __component_count = 0,
+        __component_indices = {},
+        __component_storages = {},
+        __component_fragments = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
         __unreachable_or_collected = false,
-        __has_setup_hooks = has_setup_hooks,
-        __has_assign_hooks = has_assign_hooks,
-        __has_insert_hooks = has_insert_hooks,
-        __has_remove_hooks = has_remove_hooks,
-        __has_unique_major = has_unique_major,
-        __has_unique_minors = has_unique_minors,
-        __has_unique_fragments = has_unique_fragments,
-        __has_explicit_major = has_explicit_major,
-        __has_explicit_minors = has_explicit_minors,
-        __has_explicit_fragments = has_explicit_fragments,
+        __has_setup_hooks = false,
+        __has_assign_hooks = false,
+        __has_insert_hooks = false,
+        __has_remove_hooks = false,
+        __has_unique_major = false,
+        __has_unique_minors = false,
+        __has_unique_fragments = false,
+        __has_explicit_major = false,
+        __has_explicit_minors = false,
+        __has_explicit_fragments = false,
     }, __chunk_mt)
 
     if chunk_parent then
-        local parent_fragment_list = chunk_parent.__fragment_list
-        local parent_fragment_count = chunk_parent.__fragment_count
+        chunk.__parent = chunk_parent
 
-        for parent_fragment_index = 1, parent_fragment_count do
-            local parent_fragment = parent_fragment_list[parent_fragment_index]
-
-            chunk_fragment_count = __assoc_list_insert_ex(
-                chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
-                parent_fragment)
-
-            if not __evolved_has(parent_fragment, __TAG) then
-                chunk_component_count = chunk_component_count + 1
-                local component_storage = __component_storage(parent_fragment)
-                local component_storage_index = chunk_component_count
-                chunk_component_indices[parent_fragment] = component_storage_index
-                chunk_component_storages[component_storage_index] = component_storage
-                chunk_component_fragments[component_storage_index] = parent_fragment
-            end
-        end
-
-        chunk.__parent, chunk_parent.__child_count = chunk_parent, __assoc_list_insert_ex(
+        chunk_parent.__child_count = __assoc_list_insert_ex(
             chunk_parent.__child_set, chunk_parent.__child_list, chunk_parent.__child_count,
             chunk)
 
         chunk_parent.__with_fragment_edges[chunk_fragment] = chunk
         chunk.__without_fragment_edges[chunk_fragment] = chunk_parent
-    end
-
-    do
-        chunk_fragment_count = __assoc_list_insert_ex(
-            chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
-            chunk_fragment)
-
-        if not __evolved_has(chunk_fragment, __TAG) then
-            chunk_component_count = chunk_component_count + 1
-            local component_storage = __component_storage(chunk_fragment)
-            local component_storage_index = chunk_component_count
-            chunk_component_indices[chunk_fragment] = component_storage_index
-            chunk_component_storages[component_storage_index] = component_storage
-            chunk_component_fragments[component_storage_index] = chunk_fragment
-        end
-    end
-
-    do
-        chunk.__fragment_count = chunk_fragment_count
-        chunk.__component_count = chunk_component_count
     end
 
     if not chunk_parent then
@@ -1140,8 +1057,176 @@ local function __new_chunk(chunk_parent, chunk_fragment)
         __assoc_list_insert(minor_chunks, chunk)
     end
 
+    __update_chunk_tags(chunk)
+    __update_chunk_flags(chunk)
+
     return chunk
 end
+
+---@param chunk evolved.chunk
+function __update_chunk_tags(chunk)
+    local fragment_list = chunk.__fragment_list
+    local fragment_count = chunk.__fragment_count
+
+    local component_count = chunk.__component_count
+    local component_indices = chunk.__component_indices
+    local component_storages = chunk.__component_storages
+    local component_fragments = chunk.__component_fragments
+
+    for i = 1, fragment_count do
+        local fragment = fragment_list[i]
+        local component_index = component_indices[fragment]
+
+        if component_index and __evolved_has(fragment, __TAG) then
+            if component_index ~= component_count then
+                local last_component_storage = component_storages[component_count]
+                local last_component_fragment = component_fragments[component_count]
+                component_indices[last_component_fragment] = component_index
+                component_storages[component_index] = last_component_storage
+                component_fragments[component_index] = last_component_fragment
+            end
+
+            component_indices[fragment] = nil
+            component_storages[component_count] = nil
+            component_fragments[component_count] = nil
+
+            component_count = component_count - 1
+            chunk.__component_count = component_count
+        end
+
+        if not component_index and not __evolved_has(fragment, __TAG) then
+            component_count = component_count + 1
+            chunk.__component_count = component_count
+
+            local component_storage = __component_storage(fragment)
+            local component_storage_index = component_count
+
+            component_indices[fragment] = component_storage_index
+            component_storages[component_storage_index] = component_storage
+            component_fragments[component_storage_index] = fragment
+
+            ---@type evolved.default?, evolved.duplicate?
+            local fragment_default, fragment_duplicate =
+                __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+
+            if fragment_duplicate then
+                for place = 1, chunk.__entity_count do
+                    local new_component = fragment_default
+                    if new_component ~= nil then new_component = fragment_duplicate(new_component) end
+                    if new_component == nil then new_component = true end
+                    component_storage[place] = new_component
+                end
+            else
+                local new_component = fragment_default
+                if new_component == nil then new_component = true end
+                for place = 1, chunk.__entity_count do
+                    component_storage[place] = new_component
+                end
+            end
+        end
+    end
+end
+
+---@param chunk evolved.chunk
+function __update_chunk_flags(chunk)
+    local chunk_parent = chunk.__parent
+    local chunk_fragment = chunk.__fragment
+
+    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
+        or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
+
+    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
+        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
+
+    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
+        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
+
+    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
+        or __evolved_has(chunk_fragment, __ON_REMOVE)
+
+    local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
+    local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
+    local has_unique_fragments = has_unique_major or has_unique_minors
+
+    local has_explicit_major = __evolved_has(chunk_fragment, __EXPLICIT)
+    local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
+    local has_explicit_fragments = has_explicit_major or has_explicit_minors
+
+    chunk.__has_setup_hooks = has_setup_hooks
+    chunk.__has_assign_hooks = has_assign_hooks
+    chunk.__has_insert_hooks = has_insert_hooks
+    chunk.__has_remove_hooks = has_remove_hooks
+
+    chunk.__has_unique_major = has_unique_major
+    chunk.__has_unique_minors = has_unique_minors
+    chunk.__has_unique_fragments = has_unique_fragments
+
+    chunk.__has_explicit_major = has_explicit_major
+    chunk.__has_explicit_minors = has_explicit_minors
+    chunk.__has_explicit_fragments = has_explicit_fragments
+end
+
+---@param major evolved.fragment
+---@param trace fun(chunk: evolved.chunk, ...: any): boolean
+---@param ... any additional trace arguments
+function __trace_major_chunks(major, trace, ...)
+    ---@type evolved.chunk[]
+    local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
+    local chunk_stack_size = 0
+
+    do
+        local major_chunks = __major_chunks[major]
+        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+
+        if major_chunk_count > 0 then
+            __lua_table_move(
+                major_chunk_list, 1, major_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + major_chunk_count
+        end
+    end
+
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
+
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
+
+        if trace(chunk, ...) then
+            local chunk_child_list = chunk.__child_list
+            local chunk_child_count = chunk.__child_count
+
+            __lua_table_move(
+                chunk_child_list, 1, chunk_child_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + chunk_child_count
+        end
+    end
+
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
+end
+
+---@param major evolved.fragment
+function __update_major_chunks_hook(major)
+    __trace_major_chunks(major, __update_major_chunks_trace)
+end
+
+---@param chunk evolved.chunk
+---@return boolean
+function __update_major_chunks_trace(chunk)
+    __update_chunk_tags(chunk)
+    __update_chunk_flags(chunk)
+    return true
+end
+
+---
+---
+---
+---
+---
 
 ---@param chunk? evolved.chunk
 ---@param fragment evolved.fragment
@@ -4144,7 +4229,7 @@ end
 ---@param query evolved.query
 ---@param ... evolved.fragment fragments
 function __evolved_batch_remove(query, ...)
-    local fragment_count = select('#', ...)
+    local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
         return
@@ -4187,7 +4272,7 @@ end
 
 ---@param ... evolved.query queries
 function __evolved_batch_clear(...)
-    local argument_count = select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
         return
@@ -4233,7 +4318,7 @@ end
 
 ---@param ... evolved.query queries
 function __evolved_batch_destroy(...)
-    local argument_count = select('#', ...)
+    local argument_count = __lua_select('#', ...)
 
     if argument_count == 0 then
         return
@@ -4544,7 +4629,7 @@ function __chunk_mt:__tostring()
         fragment_names[i] = __id_name(self.__fragment_list[i])
     end
 
-    return string.format('<%s>', table.concat(fragment_names, ', '))
+    return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
 end
 
 ---@return boolean
@@ -4686,7 +4771,7 @@ function __builder_mt:__tostring()
         fragment_names[i] = __id_name(fragment_list[i])
     end
 
-    return string.format('<%s>', table.concat(fragment_names, ', '))
+    return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
 end
 
 ---@return evolved.entity
@@ -4748,7 +4833,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has_all(...)
-    local fragment_count = select("#", ...)
+    local fragment_count = __lua_select("#", ...)
 
     if fragment_count == 0 then
         return true
@@ -4787,7 +4872,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has_any(...)
-    local fragment_count = select("#", ...)
+    local fragment_count = __lua_select("#", ...)
 
     if fragment_count == 0 then
         return false
@@ -4826,7 +4911,7 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __builder_mt:get(...)
-    local fragment_count = select("#", ...)
+    local fragment_count = __lua_select("#", ...)
 
     if fragment_count == 0 then
         return
@@ -4895,7 +4980,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
 function __builder_mt:remove(...)
-    local fragment_count = select("#", ...)
+    local fragment_count = __lua_select("#", ...)
 
     if fragment_count == 0 then
         return self
@@ -5099,61 +5184,15 @@ end
 ---
 ---
 
----@param chunk evolved.chunk
----@return boolean
-local function __update_chunk_caches_trace(chunk)
-    local chunk_parent, chunk_fragment = chunk.__parent, chunk.__fragment
+__evolved_set(__ON_SET, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__ON_INSERT, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__ON_REMOVE, __ON_INSERT, __update_major_chunks_hook)
 
-    local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
-        or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
-
-    local has_assign_hooks = (chunk_parent ~= nil and chunk_parent.__has_assign_hooks)
-        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_ASSIGN)
-
-    local has_insert_hooks = (chunk_parent ~= nil and chunk_parent.__has_insert_hooks)
-        or __evolved_has_any(chunk_fragment, __ON_SET, __ON_INSERT)
-
-    local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
-        or __evolved_has(chunk_fragment, __ON_REMOVE)
-
-    local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
-    local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
-    local has_unique_fragments = has_unique_major or has_unique_minors
-
-    local has_explicit_major = __evolved_has(chunk_fragment, __EXPLICIT)
-    local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
-    local has_explicit_fragments = has_explicit_major or has_explicit_minors
-
-    chunk.__has_setup_hooks = has_setup_hooks
-    chunk.__has_assign_hooks = has_assign_hooks
-    chunk.__has_insert_hooks = has_insert_hooks
-    chunk.__has_remove_hooks = has_remove_hooks
-
-    chunk.__has_unique_major = has_unique_major
-    chunk.__has_unique_minors = has_unique_minors
-    chunk.__has_unique_fragments = has_unique_fragments
-
-    chunk.__has_explicit_major = has_explicit_major
-    chunk.__has_explicit_minors = has_explicit_minors
-    chunk.__has_explicit_fragments = has_explicit_fragments
-
-    return true
-end
-
----@param fragment evolved.fragment
-local function __update_fragment_hooks(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
-end
-
-__evolved_set(__ON_SET, __ON_INSERT, __update_fragment_hooks)
-__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_fragment_hooks)
-__evolved_set(__ON_INSERT, __ON_INSERT, __update_fragment_hooks)
-__evolved_set(__ON_REMOVE, __ON_INSERT, __update_fragment_hooks)
-
-__evolved_set(__ON_SET, __ON_REMOVE, __update_fragment_hooks)
-__evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_fragment_hooks)
-__evolved_set(__ON_INSERT, __ON_REMOVE, __update_fragment_hooks)
-__evolved_set(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks)
+__evolved_set(__ON_SET, __ON_REMOVE, __update_major_chunks_hook)
+__evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_major_chunks_hook)
+__evolved_set(__ON_INSERT, __ON_REMOVE, __update_major_chunks_hook)
+__evolved_set(__ON_REMOVE, __ON_REMOVE, __update_major_chunks_hook)
 
 ---
 ---
@@ -5161,104 +5200,20 @@ __evolved_set(__ON_REMOVE, __ON_REMOVE, __update_fragment_hooks)
 ---
 ---
 
----@param chunk evolved.chunk
----@param fragment evolved.fragment
----@return boolean
-local function __update_chunk_tags_trace(chunk, fragment)
-    local component_count = chunk.__component_count
-    local component_indices = chunk.__component_indices
-    local component_storages = chunk.__component_storages
-    local component_fragments = chunk.__component_fragments
+__evolved_set(__TAG, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__TAG, __ON_REMOVE, __update_major_chunks_hook)
 
-    local component_index = component_indices[fragment]
+__evolved_set(__UNIQUE, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__UNIQUE, __ON_REMOVE, __update_major_chunks_hook)
 
-    if component_index and __evolved_has(fragment, __TAG) then
-        if component_index ~= component_count then
-            local last_component_storage = component_storages[component_count]
-            local last_component_fragment = component_fragments[component_count]
-            component_indices[last_component_fragment] = component_index
-            component_storages[component_index] = last_component_storage
-            component_fragments[component_index] = last_component_fragment
-        end
+__evolved_set(__EXPLICIT, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__EXPLICIT, __ON_REMOVE, __update_major_chunks_hook)
 
-        component_indices[fragment] = nil
-        component_storages[component_count] = nil
-        component_fragments[component_count] = nil
+__evolved_set(__DEFAULT, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks_hook)
 
-        component_count = component_count - 1
-        chunk.__component_count = component_count
-    end
-
-    if not component_index and not __evolved_has(fragment, __TAG) then
-        component_count = component_count + 1
-        chunk.__component_count = component_count
-
-        local component_storage = __component_storage(fragment)
-        local component_storage_index = component_count
-
-        component_indices[fragment] = component_storage_index
-        component_storages[component_storage_index] = component_storage
-        component_fragments[component_storage_index] = fragment
-
-        ---@type evolved.default?, evolved.duplicate?
-        local fragment_default, fragment_duplicate =
-            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
-
-        if fragment_duplicate then
-            for place = 1, chunk.__entity_count do
-                local new_component = fragment_default
-                if new_component ~= nil then new_component = fragment_duplicate(new_component) end
-                if new_component == nil then new_component = true end
-                component_storage[place] = new_component
-            end
-        else
-            local new_component = fragment_default
-            if new_component == nil then new_component = true end
-            for place = 1, chunk.__entity_count do
-                component_storage[place] = new_component
-            end
-        end
-    end
-
-    return true
-end
-
-local function __update_fragment_tags(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_tags_trace, fragment)
-end
-
-local function __update_fragment_uniques(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
-end
-
-local function __update_fragment_explicits(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
-end
-
----@param fragment evolved.fragment
-local function __update_fragment_defaults(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
-end
-
----@param fragment evolved.fragment
-local function __update_fragment_duplicates(fragment)
-    __trace_fragment_chunks(fragment, __update_chunk_caches_trace, fragment)
-end
-
-__evolved_set(__TAG, __ON_INSERT, __update_fragment_tags)
-__evolved_set(__TAG, __ON_REMOVE, __update_fragment_tags)
-
-__evolved_set(__UNIQUE, __ON_INSERT, __update_fragment_uniques)
-__evolved_set(__UNIQUE, __ON_REMOVE, __update_fragment_uniques)
-
-__evolved_set(__EXPLICIT, __ON_INSERT, __update_fragment_explicits)
-__evolved_set(__EXPLICIT, __ON_REMOVE, __update_fragment_explicits)
-
-__evolved_set(__DEFAULT, __ON_INSERT, __update_fragment_defaults)
-__evolved_set(__DEFAULT, __ON_REMOVE, __update_fragment_defaults)
-
-__evolved_set(__DUPLICATE, __ON_INSERT, __update_fragment_duplicates)
-__evolved_set(__DUPLICATE, __ON_REMOVE, __update_fragment_duplicates)
+__evolved_set(__DUPLICATE, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__DUPLICATE, __ON_REMOVE, __update_major_chunks_hook)
 
 ---
 ---
