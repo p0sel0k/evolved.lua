@@ -104,7 +104,11 @@ We created an entity called `player` and two fragments called `health` and `stam
 
 We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about modifying operations. For now, let's just say that they are used to set and get components from entities through fragments.
 
-The main thing to understand here is that we can attach any data to any identifier using other identifiers. And yes, since fragments are just identifiers, we can use them as entities too! This is very useful for marking fragments with some metadata, for example.
+The main thing to understand here is that we can attach any data to any identifier using other identifiers.
+
+### Traits
+
+Since fragments are just identifiers, we can use them as entities too! Fragments of fragments are usually called `traits`. This is very useful for marking fragments with some metadata, for example.
 
 ```lua
 local evolved = require 'evolved'
@@ -122,4 +126,17 @@ evolved.set(player, position, {x = 0, y = 0})
 evolved.set(player, velocity, {x = 0, y = 0})
 ```
 
-In this example, we created a fragment called `serializable` and marked the fragments `position` and `velocity` as serializable. After that, we can write a function that will serialize entities, and this function will serialize only fragments that are marked as serializable. This is a very powerful feature of the library, and it allows us to create very flexible systems. By the way, fragments of fragments are usually called `traits`.
+In this example, we create a trait called `serializable` and mark the fragments `position` and `velocity` as serializable. After that, we can write a function that will serialize entities, and this function will serialize only fragments that are marked as serializable. This is a very powerful feature of the library, and it allows us to create very flexible systems.
+
+### Singletons
+
+Fragments can even be attached to themselves. This is called a singleton. Use this when you want to store some data without having a separate entity. For example, you can use it to store global data, like the game state or the current level.
+
+```lua
+local evolved = require 'evolved'
+
+local gravity = evolved.id()
+evolved.set(gravity, gravity, 10)
+
+assert(evolved.get(gravity, gravity) == 10)
+```
