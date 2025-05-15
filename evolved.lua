@@ -3458,7 +3458,7 @@ end
 function __evolved_id(count)
     count = count or 1
 
-    if count == 0 then
+    if count <= 0 then
         return
     end
 

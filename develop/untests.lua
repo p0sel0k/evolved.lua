@@ -57,6 +57,10 @@ end
 
 do
     do
+        local i0 = evo.id(-1)
+        assert(type(i0) == 'nil')
+    end
+    do
         local i0 = evo.id(0)
         assert(type(i0) == 'nil')
     end
