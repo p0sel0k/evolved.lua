@@ -2,7 +2,7 @@
 
 ## Identifiers
 
-Identifier is a packed 40-bit integer number. The first 20 bits are the index, and the last 20 bits are the version. To create a new identifier, use the `evolved.id` function.
+An identifier is a packed 40-bit integer. The first 20 bits represent the index, and the last 20 bits represent the version. To create a new identifier, use the `evolved.id` function.
 
 ```lua
 ---@param count? integer
@@ -10,7 +10,7 @@ Identifier is a packed 40-bit integer number. The first 20 bits are the index, a
 function evolved.id(count) end
 ```
 
-The `count` parameter is optional and defaults to `1`. The function returns one or more identifiers, depending on the `count` parameter. Maximum number of alive identifiers is `2^20-1` (1048575). After that, the function will throw an error `"| evolved.lua | id index overflow"`.
+The `count` parameter is optional and defaults to `1`. The function returns one or more identifiers, depending on the `count` parameter. The maximum number of alive identifiers is `2^20-1` (1048575). After that, the function will throw an error: `| evolved.lua | id index overflow`.
 
 Identifiers can be recycled. When an identifier is no longer needed, use the `evolved.destroy` function to destroy it. This will free up the identifier for reuse.
 
@@ -19,11 +19,11 @@ Identifiers can be recycled. When an identifier is no longer needed, use the `ev
 function evolved.destroy(...) end
 ```
 
-The `destroy` function takes one or more identifiers as arguments. Destroyed identifiers will be added to the recycler free list. It is safe to destroy identifiers that are not alive (the function will just ignore them).
+The `evolved.destroy` function takes one or more identifiers as arguments. Destroyed identifiers will be added to the recycler free list. It is safe to call `evolved.destroy` on identifiers that are not alive; the function will simply ignore them.
 
-After destroying an identifier, it can be reused by calling the `evolved.id` function again. The new identifier will have the same index as the destroyed one, but a different version. The version is incremented each time an identifier is destroyed. This mechanism allows us to reuse indices and know if an identifier is alive or not.
+After destroying an identifier, it can be reused by calling the `evolved.id` function again. The new identifier will have the same index as the destroyed one, but a different version. The version is incremented each time an identifier is destroyed. This mechanism allows us to reuse indices and to know whether an identifier is alive or not.
 
-The `evolved.alive` function set can be used to check if identifiers are alive or not.
+The set of `evolved.alive` functions can be used to check whether identifiers are alive.
 
 ```lua
 ---@param id evolved.id
@@ -39,7 +39,7 @@ function evolved.alive_all(...) end
 function evolved.alive_any(...) end
 ```
 
-Sometimes (for debugging purposes for example), it is necessary to extract the index and version from an identifier (or pack them back). The `evolved.pack` and `evolved.unpack` functions can be used for this purpose.
+Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier, or to pack them back into an identifier. The `evolved.pack` and `evolved.unpack` functions can be used for this purpose.
 
 ```lua
 ---@param index integer
@@ -53,24 +53,24 @@ function evolved.pack(index, version) end
 function evolved.unpack(id) end
 ```
 
-Here is an little example of how to use identifiers:
+Here is a short example of how to use identifiers:
 
 ```lua
 local evolved = require 'evolved'
 
 local id = evolved.id() -- create a new identifier
-assert(evolved.alive(id)) -- check if the identifier is alive
+assert(evolved.alive(id)) -- check that the identifier is alive
 
 local index, version = evolved.unpack(id) -- unpack the identifier
 assert(evolved.pack(index, version) == id) -- pack it back
 
 evolved.destroy(id) -- destroy the identifier
-assert(not evolved.alive(id)) -- check if the identifier is not alive now
+assert(not evolved.alive(id)) -- check that the identifier is not alive now
 ```
 
 ## Entities, Fragments, and Components
 
-First of all, we need to understand that entities and fragments are just identifiers. The differences between them are purely semantic. Entities are used to represent objects in the world, while fragments are used to represent types of components that can be attached to entities. Components, in the other hand, are any data that is attached to entities through fragments.
+First, we need to understand that entities and fragments are just identifiers. The difference between them is purely semantic. Entities are used to represent objects in the world, while fragments are used to represent types of components that can be attached to entities. Components, on the other hand, are any data that is attached to entities through fragments.
 
 Here is a simple example of how to attach a component to an entity:
 
@@ -83,7 +83,7 @@ evolved.set(entity, fragment, 100)
 assert(evolved.get(entity, fragment) == 100)
 ```
 
-Yeah, I know, it's not very clear yet. But don't worry, we'll get there. In the next example, I'm going to name the entity and fragment, so it will be easier to understand what's going on here.
+I know it's not very clear yet, but don't worry, we'll get there. In the next example, I'm going to name the entity and fragment, so it will be easier to understand what's going on here.
 
 ```lua
 local evolved = require 'evolved'
@@ -100,11 +100,11 @@ assert(evolved.get(player, health) == 100)
 assert(evolved.get(player, stamina) == 50)
 ```
 
-We have created an entity called `player` and two fragments called `health` and `stamina`. We have attached the components `100` and `50` to the entity through our fragments. After that, we can retrieve the components using the `evolved.get` function.
+We created an entity called `player` and two fragments called `health` and `stamina`. We attached the components `100` and `50` to the entity through these fragments. After that, we can retrieve the components using the `evolved.get` function.
 
-We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about modifying operations. For now, let's just say that they are used to setting and getting components from entities through fragments.
+We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about modifying operations. For now, let's just say that they are used to set and get components from entities through fragments.
 
-The main thing to understand here is that we can attach any data to any identifiers using another identifiers. And yes, since fragments are just identifiers, we can use them as entities too! This very useful for marking fragments with some metadata, for example.
+The main thing to understand here is that we can attach any data to any identifier using other identifiers. And yes, since fragments are just identifiers, we can use them as entities too! This is very useful for marking fragments with some metadata, for example.
 
 ```lua
 local evolved = require 'evolved'
@@ -122,4 +122,4 @@ evolved.set(player, position, {x = 0, y = 0})
 evolved.set(player, velocity, {x = 0, y = 0})
 ```
 
-In this example, we have created a fragment called `serializable` and marked the fragments `position` and `velocity` as serializable. After that, we can write a function that will serialize entities. And this function will serialize only fragments that are marked as serializable. This is a very powerful feature of the library, and it allows us to create very flexible systems. Btw, fragments of fragments are usually called `traits`.
+In this example, we created a fragment called `serializable` and marked the fragments `position` and `velocity` as serializable. After that, we can write a function that will serialize entities, and this function will serialize only fragments that are marked as serializable. This is a very powerful feature of the library, and it allows us to create very flexible systems. By the way, fragments of fragments are usually called `traits`.
