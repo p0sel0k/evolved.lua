@@ -108,7 +108,7 @@ assert(evolved.get(player, stamina) == 50)
 
 We created an entity called `player` and two fragments called `health` and `stamina`. We attached the components `100` and `50` to the entity through these fragments. After that, we can retrieve the components using the `evolved.get` function.
 
-We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about modifying operations. For now, let's just say that they are used to set and get components from entities through fragments.
+We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about [modifying operations](#modifying-operations). For now, let's just say that they are used to set and get components from entities through fragments.
 
 The main thing to understand here is that you can attach any data to any identifier by using other identifiers.
 
@@ -149,7 +149,7 @@ assert(evolved.get(gravity, gravity) == 10)
 
 ## Chunks
 
-The next thing we need to understand is that all non-empty entities are stored in chunks. Chunks are just tables that store entities and their components together. Each unique combination of fragments is stored in a separate chunk. This means that if you have two entities with the same fragments, they will be stored in the `<health, stamina>` chunk. If you have another entity with the fragments `health`, `stamina`, and `mana`, it will be stored in the `<health, stamina, mana>` chunk. This is very useful for performance reasons, as it allows us to store entities with the same fragments together, making it easier to iterate, filter, and process them.
+The next thing we need to understand is that all non-empty entities are stored in chunks. Chunks are just tables that store entities and their components together. Each unique combination of fragments is stored in a separate chunk. This means that if you have two entities with `health` and `stamina` fragments, they will be stored in the `<health, stamina>` chunk. If you have another entity with `health`, `stamina`, and `mana` fragments, it will be stored in the `<health, stamina, mana>` chunk. This is very useful for performance reasons, as it allows us to store entities with the same fragments together, making it easier to iterate, filter, and process them.
 
 ```lua
 local evolved = require 'evolved'
@@ -262,6 +262,8 @@ Every time we add or remove a fragment from an entity, the entity will be migrat
 
 You should try to avoid structural changes, especially in performance-critical code. For example, you can spawn entities with all the fragments they will ever need and avoid changing them during the entity's lifetime. Overriding existing components is not a structural change, so you can do it freely.
 
+### Spawning Entities
+
 ```lua
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity
@@ -299,3 +301,107 @@ local enemy2 = evolved.clone(enemy1, {
 evolved.set(enemy1, health, 75)
 evolved.set(enemy1, stamina, 42)
 ```
+
+### Entity Builders
+
+Another way to avoid structural changes when spawning entities is to use the `evolved.builder` fluid interface. The `evolved.builder` function returns a builder object that allows you to spawn entities with a specific set of fragments and components without necessity setting them one by one with structural changes for each change.
+
+```lua
+local evolved = require 'evolved'
+
+local health, stamina = evolved.id(2)
+
+local enemy = evolved.builder()
+    :set(health, 100)
+    :set(stamina, 50)
+    :spawn()
+```
+
+Builders can be reused, so you can create a builder with a specific set of fragments and components and then use it to spawn multiple entities with the same fragments and components.
+
+## Access Operations
+
+The library provides all the necessary functions to access entities and their components. I'm not going to cover all the accessor functions here, because they are pretty straightforward and self-explanatory. You can check the [API Reference](#api-reference) for all of them. Here are some of the most important ones:
+
+```lua
+---@param entity evolved.entity
+---@return boolean
+function evolved.alive(entity) end
+
+---@param entity evolved.entity
+---@return boolean
+function evolved.empty(entity) end
+
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+function evolved.has(entity, fragment) end
+
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+function evolved.get(entity, ...) end
+```
+
+The `evolved.alive` function checks whether an entity is alive. The `evolved.empty` function checks whether an entity is empty (has no fragments). The `evolved.has` function checks whether an entity has a specific fragment. The `evolved.get` function retrieves the components of an entity for the specified fragments. If the entity doesn't have some of the fragments, the function will return `nil` for them.
+
+All of these functions can be safely called on non-alive entities and non-alive fragments. Also, they do not cause any structural changes, because they do not modify anything.
+
+## Modifying Operations
+
+The library provides a classic set of functions for modifying entities. These functions are used to set, get, remove, and check fragments on entities.
+
+```lua
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+function evolved.set(entity, fragment, component) end
+
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+function evolved.remove(entity, ...)
+
+---@param ... evolved.entity entities
+function evolved.clear(...)
+
+---@param ... evolved.entity entities
+function evolved.destroy(...)
+```
+
+The `evolved.set` function is used to set a component on an entity. If the entity doesn't have this fragment, it will be added, with causing a structural change, of course. If the entity already has the fragment, the component will be overridden. The function should not be called on non-alive entities, because it is not possible to set any component on a destroyed entity, ignoring this can lead to errors. [Debug Mode](#debug-mode) can be used to check this kind of error.
+
+Use the `evolved.remove` function to remove fragments from an entity. If the entity doesn't have some of the fragments, they will be ignored. When one or more fragments are removed from an entity, the entity will be migrated to a new chunk, which is a structural change. When you want to remove more than one fragment, pass all of them as arguments. Do not remove fragments one by one, as this will cause a structural change for each fragment. The `evolved.remove` function will ignore non-alive entities, because post-conditions are satisfied (destroyed entities do not have any fragments, including those that we want to remove).
+
+To remove all fragments from an entity, use the `evolved.clear` function. This function will remove all fragments at once, with causing only one structural change. The `evolved.clear` function does not destroy the entity, it just removes all fragments from it. The entity after this operation will be empty, but it will be still alive. You can use this function to clear more than one entity at once, passing them as arguments. The function will ignore empty and non-alive entities.
+
+To destroy an entity, use the `evolved.destroy` function. This function will remove all fragments from the entity and free the identifier of the entity for reuse. The `evolved.destroy` function will ignore non-alive entities. To destroy more than one entity, pass them as arguments.
+
+## Debug Mode
+
+The library has a debug mode that can be enabled by the `evolved.debug_mode` function. When the debug mode is enabled, the library will check for incorrect usages of the API and throw errors when they are detected. This is very useful for debugging and development, but it can slow down performance a bit.
+
+```lua
+---@param yesno boolean
+function evolved.debug_mode(yesno) end
+```
+
+The debug mode is disabled by default, so you need to enable it manually. I strongly recommend doing this in the development environment. You can even leave it enabled in production, but only if you are sure the performance is acceptable for your case.
+
+```lua
+local evolved = require 'evolved'
+
+evolved.debug_mode(true)
+
+local entity = evolved.id()
+
+local fragment = evolved.id()
+evolved.destroy(fragment)
+
+-- try to use the destroyed fragment
+evolved.set(entity, fragment, 42)
+
+-- [error] | evolved.lua | the fragment ($1048599#23:1) is not alive and cannot be used
+```
+
+## API Reference
+
+> coming soon...
