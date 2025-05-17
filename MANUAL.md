@@ -402,6 +402,145 @@ evolved.set(entity, fragment, 42)
 -- [error] | evolved.lua | the fragment ($1048599#23:1) is not alive and cannot be used
 ```
 
+## Queries
+
+One of the most important features of any ECS library is the ability to process entities by filters or queries. `evolved.lua` provides a simple and efficient way to do this.
+
+First, you need to create a query that describes which entities you want to process. You can specify fragments you want to include, and fragments you want to exclude. Queries are just identifiers with a special predefined fragments: `evolved.INCLUDES` and `evolved.EXCLUDES`. These fragments expect a list of fragments as their components.
+
+```lua
+local evolved = require 'evolved'
+
+local health, poisoned, resistant = evolved.id(3)
+
+local query = evolved.id()
+evolved.set(query, evolved.INCLUDES, { health, poisoned })
+evolved.set(query, evolved.EXCLUDES, { resistant })
+```
+
+The builder interface can be used to create queries too. It is more convenient to use, because the builder has special methods for including and excluding fragments. Here is a simple example of this:
+
+```lua
+local query = evolved.builder()
+    :include(health, poisoned)
+    :exclude(resistant)
+    :spawn()
+```
+
+We don't have to set both `evolved.INCLUDES` and `evolved.EXCLUDES` fragments, we can even do it without filters at all, then the query will match all chunks in the world.
+
+After the query is created, we are ready to process our filtered by this query entities. You can do this by using the `evolved.execute` function. This function takes a query as an argument and returns an iterator that can be used to iterate over all matching with the query chunks.
+
+```lua
+---@param query evolved.query
+---@return evolved.execute_iterator iterator
+---@return evolved.execute_state? iterator_state
+function evolved.execute(query) end
+```
+
+```lua
+for chunk, entity_list, entity_count in evolved.execute(query) do
+    ---@type number[]
+    local health_components = chunk:components(health)
+
+    for i = 1, entity_count do
+        health_components[i] = health_components[i] - 1
+    end
+end
+```
+
+As you can see, `evolved.execute_iterator` returns a chunk, a list of entities in the chunk, and the number of entities in this chunk. We [already know](#chunks) how to use chunks, so we can use the chunk's methods to retrieve the components of the entities in the chunk, change them, and so on.
+
+But I haven't mentioned one important thing yet: [structural changes](#structural-changes) are not allowed during any iteration over chunks. This means that you cannot add or remove fragments from entities while iterating. Also, you cannot destroy or spawn entities because this will cause structural changes too. This is done to avoid inconsistencies in the iteration process. If we allow structural changes here, we might skip some entities during iteration, or process the same entity multiple times. The [debug mode](#debug-mode) can catch this kind of error.
+
+### Deferred Operations
+
+Now we know that structural changes are not allowed during iteration, but what if we want to make some structural changes after the iteration is finished? For example, we might want to remove some fragments from entities after we have processed them, or we might want to spawn new entities while processing existing ones. To do all of this, we can use deferred operations.
+
+```lua
+---@return boolean started
+function evolved.defer() end
+
+---@return boolean committed
+function evolved.commit() end
+```
+
+The `evolved.defer` function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The `evolved.commit` function closes a last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The `evolved.commit` function will apply all queued changes only when the last deferred scope is closed.
+
+```lua
+local evolved = require 'evolved'
+
+local health, poisoned = evolved.id(2)
+
+local player = evolved.builder()
+    :set(health, 100)
+    :set(poisoned, true)
+    :spawn()
+
+-- start a deferred scope
+evolved.defer()
+
+-- this removal will be queued, not applied immediately
+evolved.remove(player, poisoned)
+
+-- the player still has the poisoned fragment inside the deferred scope
+assert(evolved.has(player, poisoned))
+
+-- commit the deferred operations
+evolved.commit()
+
+-- now the poisoned fragment is removed
+assert(not evolved.has(player, poisoned))
+```
+
+### Batch Operations
+
+The library provides a set of functions for batch operations. These functions are used to perform modifying operations on multiple chunks at once. This is very useful for performance reasons.
+
+```lua
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param component evolved.component
+function evolved.batch_set(query, fragment, component) end
+
+---@param query evolved.query
+---@param ... evolved.fragment fragments
+function evolved.batch_remove(query, ...) end
+
+---@param ... evolved.query queries
+function evolved.batch_clear(...) end
+
+---@param ... evolved.query queries
+function evolved.batch_destroy(...) end
+```
+
+These functions are similar to the common [modifying operations](#modifying-operations), but they take a query as an argument instead of an entity. Here is a classic example that provides a huge performance boost when applied.
+
+```lua
+local evolved = require 'evolved'
+
+local destroying_mark = evolved.id()
+
+local destroying_mark_query = evolved.builder()
+    :include(destroying_mark)
+    :spawn()
+
+-- destroy all entities with the destroying_mark fragment
+evolved.batch_destroy(destroying_mark_query)
+```
+
+You should always prefer batch operations over common modifying operations when you need to perform a simple operation like destroying or removing fragments from multiple entities at once. Instead of applying the operation to each entity one by one, batch operations will apply the operation chunk by chunk.
+
+In all other respects, batch operations behave the same way as the common modifying operations that we have already covered. They can, of course, be used with [deferred operations](#deferred-operations) too.
+
+## Systems
+
+> coming soon...
+
+## Predefs
+
+> coming soon...
+
 ## API Reference
 
 > coming soon...
