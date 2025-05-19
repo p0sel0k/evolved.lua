@@ -686,99 +686,577 @@ And one more thing about systems. Execution callbacks are called in the [deferre
 
 #### `evolved.id`
 
+```lua
+---@param count? integer
+---@return evolved.id ... ids
+---@nodiscard
+function evolved.id(count) end
+```
+
 #### `evolved.pack`
+
+```lua
+---@param index integer
+---@param version integer
+---@return evolved.id id
+---@nodiscard
+function evolved.pack(index, version) end
+```
+
 #### `evolved.unpack`
 
+```lua
+---@param id evolved.id
+---@return integer index
+---@return integer version
+---@nodiscard
+function evolved.unpack(id) end
+```
+
 #### `evolved.defer`
+
+```lua
+---@return boolean started
+function evolved.defer() end
+```
+
 #### `evolved.commit`
 
+```lua
+---@return boolean committed
+function evolved.commit() end
+```
+
 #### `evolved.spawn`
+
+```lua
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity
+function evolved.spawn(components) end
+```
+
 #### `evolved.clone`
 
+```lua
+---@param prefab evolved.entity
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity
+function evolved.clone(prefab, components) end
+```
+
 #### `evolved.alive`
+
+```lua
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+function evolved.alive(entity) end
+```
+
 #### `evolved.alive_all`
+
+```lua
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+function evolved.alive_all(...) end
+```
+
 #### `evolved.alive_any`
 
+```lua
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+function evolved.alive_any(...) end
+```
+
 #### `evolved.empty`
+
+```lua
+---@param entity evolved.entity
+---@return boolean
+---@nodiscard
+function evolved.empty(entity) end
+```
+
 #### `evolved.empty_all`
+
+```lua
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+function evolved.empty_all(...) end
+```
+
 #### `evolved.empty_any`
 
+```lua
+---@param ... evolved.entity entities
+---@return boolean
+---@nodiscard
+function evolved.empty_any(...) end
+```
+
 #### `evolved.has`
+
+```lua
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+function evolved.has(entity, fragment) end
+```
+
 #### `evolved.has_all`
+
+```lua
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function evolved.has_all(entity, ...) end
+```
+
 #### `evolved.has_any`
+
+```lua
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function evolved.has_any(entity, ...) end
+```
 
 #### `evolved.get`
 
+```lua
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+---@nodiscard
+function evolved.get(entity, ...) end
+```
+
 #### `evolved.set`
+
+```lua
+---@param entity evolved.entity
+---@param fragment evolved.fragment
+---@param component evolved.component
+function evolved.set(entity, fragment, component) end
+```
+
 #### `evolved.remove`
+
+```lua
+---@param entity evolved.entity
+---@param ... evolved.fragment fragments
+function evolved.remove(entity, ...) end
+```
+
 #### `evolved.clear`
+
+```lua
+---@param ... evolved.entity entities
+function evolved.clear(...) end
+```
+
 #### `evolved.destroy`
 
+```lua
+---@param ... evolved.entity entities
+function evolved.destroy(...) end
+```
+
 #### `evolved.batch_set`
+
+```lua
+---@param query evolved.query
+---@param fragment evolved.fragment
+---@param component evolved.component
+function evolved.batch_set(query, fragment, component) end
+```
+
 #### `evolved.batch_remove`
+
+```lua
+---@param query evolved.query
+---@param ... evolved.fragment fragments
+function evolved.batch_remove(query, ...) end
+```
+
 #### `evolved.batch_clear`
+
+```lua
+---@param ... evolved.query queries
+function evolved.batch_clear(...) end
+```
+
 #### `evolved.batch_destroy`
 
+```lua
+---@param ... evolved.query queries
+function evolved.batch_destroy(...) end
+```
+
 #### `evolved.each`
+
+```lua
+---@param entity evolved.entity
+---@return evolved.each_iterator iterator
+---@return evolved.each_state? iterator_state
+---@nodiscard
+function evolved.each(entity) end
+```
+
 #### `evolved.execute`
+
+```lua
+---@param query evolved.query
+---@return evolved.execute_iterator iterator
+---@return evolved.execute_state? iterator_state
+---@nodiscard
+function evolved.execute(query) end
+```
 
 #### `evolved.process`
 
+```lua
+---@param ... evolved.system systems
+function evolved.process(...) end
+```
+
 #### `evolved.debug_mode`
+
+```lua
+---@param yesno boolean
+function evolved.debug_mode(yesno) end
+```
+
 #### `evolved.collect_garbage`
+
+```lua
+function evolved.collect_garbage() end
+```
+
 
 #### `evolved.chunk`
 
+```lua
+---@param fragment evolved.fragment
+---@param ... evolved.fragment fragments
+---@return evolved.chunk chunk
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+---@nodiscard
+function evolved.chunk(fragment, ...) end
+```
+
 #### `evolved.chunk_mt:alive`
+
+```lua
+---@return boolean
+---@nodiscard
+function __chunk_mt:alive() end
+```
+
 #### `evolved.chunk_mt:empty`
 
+```lua
+---@return boolean
+---@nodiscard
+function __chunk_mt:empty() end
+```
+
 #### `evolved.chunk_mt:has`
+
+```lua
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+function __chunk_mt:has(fragment) end
+```
+
 #### `evolved.chunk_mt:has_all`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __chunk_mt:has_all(...) end
+```
+
 #### `evolved.chunk_mt:has_any`
 
+```lua
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __chunk_mt:has_any(...) end
+```
+
 #### `evolved.chunk_mt:entities`
+
+```lua
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+---@nodiscard
+function __chunk_mt:entities() end
+```
+
 #### `evolved.chunk_mt:fragments`
+
+```lua
+---@return evolved.fragment[] fragment_list
+---@return integer fragment_count
+---@nodiscard
+function __chunk_mt:fragments() end
+```
+
 #### `evolved.chunk_mt:components`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.storage ... storages
+---@nodiscard
+function __chunk_mt:components(...) end
+```
 
 #### `evolved.builder`
 
+```lua
+---@return evolved.builder builder
+---@nodiscard
+function evolved.builder() end
+```
+
 #### `evolved.builder_mt:spawn`
+
+```lua
+---@return evolved.entity
+function __builder_mt:spawn() end
+```
+
 #### `evolved.builder_mt:clone`
 
+```lua
+---@param prefab evolved.entity
+---@return evolved.entity
+function __builder_mt:clone(prefab) end
+```
+
 #### `evolved.builder_mt:has`
+
+```lua
+---@param fragment evolved.fragment
+---@return boolean
+---@nodiscard
+function __builder_mt:has(fragment) end
+```
+
 #### `evolved.builder_mt:has_all`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __builder_mt:has_all(...) end
+```
+
 #### `evolved.builder_mt:has_any`
 
+```lua
+---@param ... evolved.fragment fragments
+---@return boolean
+---@nodiscard
+function __builder_mt:has_any(...) end
+```
+
+#### `evolved.builder_mt:get`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.component ... components
+---@nodiscard
+function __builder_mt:get(...) end
+```
+
 #### `evolved.builder_mt:set`
+
+```lua
+---@param fragment evolved.fragment
+---@param component evolved.component
+---@return evolved.builder builder
+function __builder_mt:set(fragment, component) end
+```
+
 #### `evolved.builder_mt:remove`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __builder_mt:remove(...) end
+```
+
 #### `evolved.builder_mt:clear`
 
+```lua
+---@return evolved.builder builder
+function __builder_mt:clear() end
+```
+
 #### `evolved.builder_mt:tag`
+
+```lua
+---@return evolved.builder builder
+function __builder_mt:tag() end
+```
+
 #### `evolved.builder_mt:name`
 
+```lua
+---@param name string
+---@return evolved.builder builder
+function __builder_mt:name(name) end
+```
+
 #### `evolved.builder_mt:unique`
+
+```lua
+---@return evolved.builder builder
+function __builder_mt:unique() end
+```
+
 #### `evolved.builder_mt:explicit`
 
+```lua
+---@return evolved.builder builder
+function __builder_mt:explicit() end
+```
+
 #### `evolved.builder_mt:default`
+
+```lua
+---@param default evolved.component
+---@return evolved.builder builder
+function __builder_mt:default(default) end
+```
+
 #### `evolved.builder_mt:duplicate`
 
+```lua
+---@param duplicate evolved.duplicate
+---@return evolved.builder builder
+function __builder_mt:duplicate(duplicate) end
+```
+
 #### `evolved.builder_mt:prefab`
+
+```lua
+---@return evolved.builder builder
+function __builder_mt:prefab() end
+```
+
 #### `evolved.builder_mt:disabled`
 
+```lua
+---@return evolved.builder builder
+function __builder_mt:disabled() end
+```
+
 #### `evolved.builder_mt:include`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __builder_mt:include(...) end
+```
+
 #### `evolved.builder_mt:exclude`
 
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __builder_mt:exclude(...) end
+```
+
 #### `evolved.builder_mt:on_set`
+
+```lua
+---@param on_set evolved.set_hook
+---@return evolved.builder builder
+function __builder_mt:on_set(on_set) end
+```
+
 #### `evolved.builder_mt:on_assign`
+
+```lua
+---@param on_assign evolved.assign_hook
+---@return evolved.builder builder
+function __builder_mt:on_assign(on_assign) end
+```
+
 #### `evolved.builder_mt:on_insert`
+
+```lua
+---@param on_insert evolved.insert_hook
+---@return evolved.builder builder
+function __builder_mt:on_insert(on_insert) end
+```
+
 #### `evolved.builder_mt:on_remove`
+
+```lua
+---@param on_remove evolved.remove_hook
+---@return evolved.builder builder
+function __builder_mt:on_remove(on_remove) end
+```
 
 #### `evolved.builder_mt:group`
 
+```lua
+---@param group evolved.system
+---@return evolved.builder builder
+function __builder_mt:group(group) end
+```
+
 #### `evolved.builder_mt:query`
+
+```lua
+---@param query evolved.query
+---@return evolved.builder builder
+function __builder_mt:query(query) end
+```
+
 #### `evolved.builder_mt:execute`
 
+```lua
+---@param execute evolved.execute
+---@return evolved.builder builder
+function __builder_mt:execute(execute) end
+```
+
 #### `evolved.builder_mt:prologue`
+
+```lua
+---@param prologue evolved.prologue
+---@return evolved.builder builder
+function __builder_mt:prologue(prologue) end
+```
+
 #### `evolved.builder_mt:epilogue`
 
+```lua
+---@param epilogue evolved.epilogue
+---@return evolved.builder builder
+function __builder_mt:epilogue(epilogue) end
+```
+
 #### `evolved.builder_mt:destroy_policy`
+
+```lua
+---@param destroy_policy evolved.id
+---@return evolved.builder builder
+function __builder_mt:destroy_policy(destroy_policy) end
+```
