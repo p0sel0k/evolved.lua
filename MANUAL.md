@@ -1,4 +1,4 @@
-# Manual
+# Overview
 
 ## Identifiers
 
@@ -638,53 +638,53 @@ The prologue and epilogue fragments do not require an explicit query. They will 
 
 And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), this means that all modifying operations inside the callback will be queued and applied after the system processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
 
-## API Reference
+# API Reference
 
-### Predefs
+## Predefs
 
-#### `evolved.TAG`
+### `evolved.TAG`
 
-#### `evolved.NAME`
+### `evolved.NAME`
 
-#### `evolved.UNIQUE`
+### `evolved.UNIQUE`
 
-#### `evolved.EXPLICIT`
+### `evolved.EXPLICIT`
 
-#### `evolved.DEFAULT`
+### `evolved.DEFAULT`
 
-#### `evolved.DUPLICATE`
+### `evolved.DUPLICATE`
 
-#### `evolved.PREFAB`
+### `evolved.PREFAB`
 
-#### `evolved.DISABLED`
+### `evolved.DISABLED`
 
-#### `evolved.INCLUDES`
+### `evolved.INCLUDES`
 
-#### `evolved.EXCLUDES`
+### `evolved.EXCLUDES`
 
-#### `evolved.ON_SET`
+### `evolved.ON_SET`
 
-#### `evolved.ON_ASSIGN`
+### `evolved.ON_ASSIGN`
 
-#### `evolved.ON_INSERT`
+### `evolved.ON_INSERT`
 
-#### `evolved.ON_REMOVE`
+### `evolved.ON_REMOVE`
 
-#### `evolved.GROUP`
+### `evolved.GROUP`
 
-#### `evolved.QUERY`
+### `evolved.QUERY`
 
-#### `evolved.EXECUTE`
+### `evolved.EXECUTE`
 
-#### `evolved.PROLOGUE`
+### `evolved.PROLOGUE`
 
-#### `evolved.EPILOGUE`
+### `evolved.EPILOGUE`
 
-#### `evolved.DESTROY_POLICY`
+### `evolved.DESTROY_POLICY`
 
-### Functions
+## Functions
 
-#### `evolved.id`
+### `evolved.id`
 
 ```lua
 ---@param count? integer
@@ -693,7 +693,7 @@ And one more thing about systems. Execution callbacks are called in the [deferre
 function evolved.id(count) end
 ```
 
-#### `evolved.pack`
+### `evolved.pack`
 
 ```lua
 ---@param index integer
@@ -703,7 +703,7 @@ function evolved.id(count) end
 function evolved.pack(index, version) end
 ```
 
-#### `evolved.unpack`
+### `evolved.unpack`
 
 ```lua
 ---@param id evolved.id
@@ -713,21 +713,21 @@ function evolved.pack(index, version) end
 function evolved.unpack(id) end
 ```
 
-#### `evolved.defer`
+### `evolved.defer`
 
 ```lua
 ---@return boolean started
 function evolved.defer() end
 ```
 
-#### `evolved.commit`
+### `evolved.commit`
 
 ```lua
 ---@return boolean committed
 function evolved.commit() end
 ```
 
-#### `evolved.spawn`
+### `evolved.spawn`
 
 ```lua
 ---@param components? table<evolved.fragment, evolved.component>
@@ -735,7 +735,7 @@ function evolved.commit() end
 function evolved.spawn(components) end
 ```
 
-#### `evolved.clone`
+### `evolved.clone`
 
 ```lua
 ---@param prefab evolved.entity
@@ -744,7 +744,7 @@ function evolved.spawn(components) end
 function evolved.clone(prefab, components) end
 ```
 
-#### `evolved.alive`
+### `evolved.alive`
 
 ```lua
 ---@param entity evolved.entity
@@ -753,7 +753,7 @@ function evolved.clone(prefab, components) end
 function evolved.alive(entity) end
 ```
 
-#### `evolved.alive_all`
+### `evolved.alive_all`
 
 ```lua
 ---@param ... evolved.entity entities
@@ -762,7 +762,7 @@ function evolved.alive(entity) end
 function evolved.alive_all(...) end
 ```
 
-#### `evolved.alive_any`
+### `evolved.alive_any`
 
 ```lua
 ---@param ... evolved.entity entities
@@ -771,7 +771,7 @@ function evolved.alive_all(...) end
 function evolved.alive_any(...) end
 ```
 
-#### `evolved.empty`
+### `evolved.empty`
 
 ```lua
 ---@param entity evolved.entity
@@ -780,7 +780,7 @@ function evolved.alive_any(...) end
 function evolved.empty(entity) end
 ```
 
-#### `evolved.empty_all`
+### `evolved.empty_all`
 
 ```lua
 ---@param ... evolved.entity entities
@@ -789,7 +789,7 @@ function evolved.empty(entity) end
 function evolved.empty_all(...) end
 ```
 
-#### `evolved.empty_any`
+### `evolved.empty_any`
 
 ```lua
 ---@param ... evolved.entity entities
@@ -798,7 +798,7 @@ function evolved.empty_all(...) end
 function evolved.empty_any(...) end
 ```
 
-#### `evolved.has`
+### `evolved.has`
 
 ```lua
 ---@param entity evolved.entity
@@ -808,7 +808,7 @@ function evolved.empty_any(...) end
 function evolved.has(entity, fragment) end
 ```
 
-#### `evolved.has_all`
+### `evolved.has_all`
 
 ```lua
 ---@param entity evolved.entity
@@ -818,7 +818,7 @@ function evolved.has(entity, fragment) end
 function evolved.has_all(entity, ...) end
 ```
 
-#### `evolved.has_any`
+### `evolved.has_any`
 
 ```lua
 ---@param entity evolved.entity
@@ -828,7 +828,7 @@ function evolved.has_all(entity, ...) end
 function evolved.has_any(entity, ...) end
 ```
 
-#### `evolved.get`
+### `evolved.get`
 
 ```lua
 ---@param entity evolved.entity
@@ -838,7 +838,7 @@ function evolved.has_any(entity, ...) end
 function evolved.get(entity, ...) end
 ```
 
-#### `evolved.set`
+### `evolved.set`
 
 ```lua
 ---@param entity evolved.entity
@@ -847,7 +847,7 @@ function evolved.get(entity, ...) end
 function evolved.set(entity, fragment, component) end
 ```
 
-#### `evolved.remove`
+### `evolved.remove`
 
 ```lua
 ---@param entity evolved.entity
@@ -855,21 +855,21 @@ function evolved.set(entity, fragment, component) end
 function evolved.remove(entity, ...) end
 ```
 
-#### `evolved.clear`
+### `evolved.clear`
 
 ```lua
 ---@param ... evolved.entity entities
 function evolved.clear(...) end
 ```
 
-#### `evolved.destroy`
+### `evolved.destroy`
 
 ```lua
 ---@param ... evolved.entity entities
 function evolved.destroy(...) end
 ```
 
-#### `evolved.batch_set`
+### `evolved.batch_set`
 
 ```lua
 ---@param query evolved.query
@@ -878,7 +878,7 @@ function evolved.destroy(...) end
 function evolved.batch_set(query, fragment, component) end
 ```
 
-#### `evolved.batch_remove`
+### `evolved.batch_remove`
 
 ```lua
 ---@param query evolved.query
@@ -886,21 +886,21 @@ function evolved.batch_set(query, fragment, component) end
 function evolved.batch_remove(query, ...) end
 ```
 
-#### `evolved.batch_clear`
+### `evolved.batch_clear`
 
 ```lua
 ---@param ... evolved.query queries
 function evolved.batch_clear(...) end
 ```
 
-#### `evolved.batch_destroy`
+### `evolved.batch_destroy`
 
 ```lua
 ---@param ... evolved.query queries
 function evolved.batch_destroy(...) end
 ```
 
-#### `evolved.each`
+### `evolved.each`
 
 ```lua
 ---@param entity evolved.entity
@@ -910,7 +910,7 @@ function evolved.batch_destroy(...) end
 function evolved.each(entity) end
 ```
 
-#### `evolved.execute`
+### `evolved.execute`
 
 ```lua
 ---@param query evolved.query
@@ -920,28 +920,27 @@ function evolved.each(entity) end
 function evolved.execute(query) end
 ```
 
-#### `evolved.process`
+### `evolved.process`
 
 ```lua
 ---@param ... evolved.system systems
 function evolved.process(...) end
 ```
 
-#### `evolved.debug_mode`
+### `evolved.debug_mode`
 
 ```lua
 ---@param yesno boolean
 function evolved.debug_mode(yesno) end
 ```
 
-#### `evolved.collect_garbage`
+### `evolved.collect_garbage`
 
 ```lua
 function evolved.collect_garbage() end
 ```
 
-
-#### `evolved.chunk`
+### `evolved.chunk`
 
 ```lua
 ---@param fragment evolved.fragment
@@ -953,77 +952,77 @@ function evolved.collect_garbage() end
 function evolved.chunk(fragment, ...) end
 ```
 
-#### `evolved.chunk_mt:alive`
+### `evolved.chunk_mt:alive`
 
 ```lua
 ---@return boolean
 ---@nodiscard
-function __chunk_mt:alive() end
+function evolved.chunk_mt:alive() end
 ```
 
-#### `evolved.chunk_mt:empty`
+### `evolved.chunk_mt:empty`
 
 ```lua
 ---@return boolean
 ---@nodiscard
-function __chunk_mt:empty() end
+function evolved.chunk_mt:empty() end
 ```
 
-#### `evolved.chunk_mt:has`
+### `evolved.chunk_mt:has`
 
 ```lua
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-function __chunk_mt:has(fragment) end
+function evolved.chunk_mt:has(fragment) end
 ```
 
-#### `evolved.chunk_mt:has_all`
+### `evolved.chunk_mt:has_all`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __chunk_mt:has_all(...) end
+function evolved.chunk_mt:has_all(...) end
 ```
 
-#### `evolved.chunk_mt:has_any`
+### `evolved.chunk_mt:has_any`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __chunk_mt:has_any(...) end
+function evolved.chunk_mt:has_any(...) end
 ```
 
-#### `evolved.chunk_mt:entities`
+### `evolved.chunk_mt:entities`
 
 ```lua
 ---@return evolved.entity[] entity_list
 ---@return integer entity_count
 ---@nodiscard
-function __chunk_mt:entities() end
+function evolved.chunk_mt:entities() end
 ```
 
-#### `evolved.chunk_mt:fragments`
+### `evolved.chunk_mt:fragments`
 
 ```lua
 ---@return evolved.fragment[] fragment_list
 ---@return integer fragment_count
 ---@nodiscard
-function __chunk_mt:fragments() end
+function evolved.chunk_mt:fragments() end
 ```
 
-#### `evolved.chunk_mt:components`
+### `evolved.chunk_mt:components`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return evolved.storage ... storages
 ---@nodiscard
-function __chunk_mt:components(...) end
+function evolved.chunk_mt:components(...) end
 ```
 
-#### `evolved.builder`
+### `evolved.builder`
 
 ```lua
 ---@return evolved.builder builder
@@ -1031,232 +1030,232 @@ function __chunk_mt:components(...) end
 function evolved.builder() end
 ```
 
-#### `evolved.builder_mt:spawn`
+### `evolved.builder_mt:spawn`
 
 ```lua
 ---@return evolved.entity
-function __builder_mt:spawn() end
+function evolved.builder_mt:spawn() end
 ```
 
-#### `evolved.builder_mt:clone`
+### `evolved.builder_mt:clone`
 
 ```lua
 ---@param prefab evolved.entity
 ---@return evolved.entity
-function __builder_mt:clone(prefab) end
+function evolved.builder_mt:clone(prefab) end
 ```
 
-#### `evolved.builder_mt:has`
+### `evolved.builder_mt:has`
 
 ```lua
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-function __builder_mt:has(fragment) end
+function evolved.builder_mt:has(fragment) end
 ```
 
-#### `evolved.builder_mt:has_all`
+### `evolved.builder_mt:has_all`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __builder_mt:has_all(...) end
+function evolved.builder_mt:has_all(...) end
 ```
 
-#### `evolved.builder_mt:has_any`
+### `evolved.builder_mt:has_any`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-function __builder_mt:has_any(...) end
+function evolved.builder_mt:has_any(...) end
 ```
 
-#### `evolved.builder_mt:get`
+### `evolved.builder_mt:get`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-function __builder_mt:get(...) end
+function evolved.builder_mt:get(...) end
 ```
 
-#### `evolved.builder_mt:set`
+### `evolved.builder_mt:set`
 
 ```lua
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 ---@return evolved.builder builder
-function __builder_mt:set(fragment, component) end
+function evolved.builder_mt:set(fragment, component) end
 ```
 
-#### `evolved.builder_mt:remove`
+### `evolved.builder_mt:remove`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __builder_mt:remove(...) end
+function evolved.builder_mt:remove(...) end
 ```
 
-#### `evolved.builder_mt:clear`
+### `evolved.builder_mt:clear`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:clear() end
+function evolved.builder_mt:clear() end
 ```
 
-#### `evolved.builder_mt:tag`
+### `evolved.builder_mt:tag`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:tag() end
+function evolved.builder_mt:tag() end
 ```
 
-#### `evolved.builder_mt:name`
+### `evolved.builder_mt:name`
 
 ```lua
 ---@param name string
 ---@return evolved.builder builder
-function __builder_mt:name(name) end
+function evolved.builder_mt:name(name) end
 ```
 
-#### `evolved.builder_mt:unique`
+### `evolved.builder_mt:unique`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:unique() end
+function evolved.builder_mt:unique() end
 ```
 
-#### `evolved.builder_mt:explicit`
+### `evolved.builder_mt:explicit`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:explicit() end
+function evolved.builder_mt:explicit() end
 ```
 
-#### `evolved.builder_mt:default`
+### `evolved.builder_mt:default`
 
 ```lua
 ---@param default evolved.component
 ---@return evolved.builder builder
-function __builder_mt:default(default) end
+function evolved.builder_mt:default(default) end
 ```
 
-#### `evolved.builder_mt:duplicate`
+### `evolved.builder_mt:duplicate`
 
 ```lua
 ---@param duplicate evolved.duplicate
 ---@return evolved.builder builder
-function __builder_mt:duplicate(duplicate) end
+function evolved.builder_mt:duplicate(duplicate) end
 ```
 
-#### `evolved.builder_mt:prefab`
+### `evolved.builder_mt:prefab`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:prefab() end
+function evolved.builder_mt:prefab() end
 ```
 
-#### `evolved.builder_mt:disabled`
+### `evolved.builder_mt:disabled`
 
 ```lua
 ---@return evolved.builder builder
-function __builder_mt:disabled() end
+function evolved.builder_mt:disabled() end
 ```
 
-#### `evolved.builder_mt:include`
-
-```lua
----@param ... evolved.fragment fragments
----@return evolved.builder builder
-function __builder_mt:include(...) end
-```
-
-#### `evolved.builder_mt:exclude`
+### `evolved.builder_mt:include`
 
 ```lua
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
-function __builder_mt:exclude(...) end
+function evolved.builder_mt:include(...) end
 ```
 
-#### `evolved.builder_mt:on_set`
+### `evolved.builder_mt:exclude`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function evolved.builder_mt:exclude(...) end
+```
+
+### `evolved.builder_mt:on_set`
 
 ```lua
 ---@param on_set evolved.set_hook
 ---@return evolved.builder builder
-function __builder_mt:on_set(on_set) end
+function evolved.builder_mt:on_set(on_set) end
 ```
 
-#### `evolved.builder_mt:on_assign`
+### `evolved.builder_mt:on_assign`
 
 ```lua
 ---@param on_assign evolved.assign_hook
 ---@return evolved.builder builder
-function __builder_mt:on_assign(on_assign) end
+function evolved.builder_mt:on_assign(on_assign) end
 ```
 
-#### `evolved.builder_mt:on_insert`
+### `evolved.builder_mt:on_insert`
 
 ```lua
 ---@param on_insert evolved.insert_hook
 ---@return evolved.builder builder
-function __builder_mt:on_insert(on_insert) end
+function evolved.builder_mt:on_insert(on_insert) end
 ```
 
-#### `evolved.builder_mt:on_remove`
+### `evolved.builder_mt:on_remove`
 
 ```lua
 ---@param on_remove evolved.remove_hook
 ---@return evolved.builder builder
-function __builder_mt:on_remove(on_remove) end
+function evolved.builder_mt:on_remove(on_remove) end
 ```
 
-#### `evolved.builder_mt:group`
+### `evolved.builder_mt:group`
 
 ```lua
 ---@param group evolved.system
 ---@return evolved.builder builder
-function __builder_mt:group(group) end
+function evolved.builder_mt:group(group) end
 ```
 
-#### `evolved.builder_mt:query`
+### `evolved.builder_mt:query`
 
 ```lua
 ---@param query evolved.query
 ---@return evolved.builder builder
-function __builder_mt:query(query) end
+function evolved.builder_mt:query(query) end
 ```
 
-#### `evolved.builder_mt:execute`
+### `evolved.builder_mt:execute`
 
 ```lua
 ---@param execute evolved.execute
 ---@return evolved.builder builder
-function __builder_mt:execute(execute) end
+function evolved.builder_mt:execute(execute) end
 ```
 
-#### `evolved.builder_mt:prologue`
+### `evolved.builder_mt:prologue`
 
 ```lua
 ---@param prologue evolved.prologue
 ---@return evolved.builder builder
-function __builder_mt:prologue(prologue) end
+function evolved.builder_mt:prologue(prologue) end
 ```
 
-#### `evolved.builder_mt:epilogue`
+### `evolved.builder_mt:epilogue`
 
 ```lua
 ---@param epilogue evolved.epilogue
 ---@return evolved.builder builder
-function __builder_mt:epilogue(epilogue) end
+function evolved.builder_mt:epilogue(epilogue) end
 ```
 
-#### `evolved.builder_mt:destroy_policy`
+### `evolved.builder_mt:destroy_policy`
 
 ```lua
 ---@param destroy_policy evolved.id
 ---@return evolved.builder builder
-function __builder_mt:destroy_policy(destroy_policy) end
+function evolved.builder_mt:destroy_policy(destroy_policy) end
 ```
