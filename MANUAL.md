@@ -2,7 +2,7 @@
 
 ## Identifiers
 
-An identifier is a packed 40-bit integer. The first 20 bits represent the index, and the last 20 bits represent the version. To create a new identifier, use the `evolved.id` function.
+An identifier is a packed 40-bit integer. The first 20 bits represent the index, and the last 20 bits represent the version. To create a new identifier, use the [`evolved.id`](#evolvedid) function.
 
 ```lua
 ---@param count? integer
@@ -12,18 +12,18 @@ function evolved.id(count) end
 
 The `count` parameter is optional and defaults to `1`. The function returns one or more identifiers depending on the `count` parameter. The maximum number of alive identifiers is `2^20-1` (1048575). After that, the function will throw an error: `| evolved.lua | id index overflow`.
 
-Identifiers can be recycled. When an identifier is no longer needed, use the `evolved.destroy` function to destroy it. This will free the identifier for reuse.
+Identifiers can be recycled. When an identifier is no longer needed, use the [`evolved.destroy`](#evolveddestroy) function to destroy it. This will free the identifier for reuse.
 
 ```lua
 ---@param ... evolved.id ids
 function evolved.destroy(...) end
 ```
 
-The `evolved.destroy` function takes one or more identifiers as arguments. Destroyed identifiers will be added to the recycler free list. It is safe to call `evolved.destroy` on identifiers that are not alive; the function will simply ignore them.
+The [`evolved.destroy`](#evolveddestroy) function takes one or more identifiers as arguments. Destroyed identifiers will be added to the recycler free list. It is safe to call [`evolved.destroy`](#evolveddestroy) on identifiers that are not alive; the function will simply ignore them.
 
-After destroying an identifier, it can be reused by calling the `evolved.id` function again. The new identifier will have the same index as the destroyed one, but a different version. The version is incremented each time an identifier is destroyed. This mechanism allows us to reuse indices and to know whether an identifier is alive or not.
+After destroying an identifier, it can be reused by calling the [`evolved.id`](#evolvedid) function again. The new identifier will have the same index as the destroyed one, but a different version. The version is incremented each time an identifier is destroyed. This mechanism allows us to reuse indices and to know whether an identifier is alive or not.
 
-The set of `evolved.alive` functions can be used to check whether identifiers are alive.
+The set of [`evolved.alive`](#evolvedalive) functions can be used to check whether identifiers are alive.
 
 ```lua
 ---@param id evolved.id
@@ -39,7 +39,7 @@ function evolved.alive_all(...) end
 function evolved.alive_any(...) end
 ```
 
-Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier or to pack them back into an identifier. The `evolved.pack` and `evolved.unpack` functions can be used for this purpose.
+Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier or to pack them back into an identifier. The [`evolved.pack`](#evolvedpack) and [`evolved.unpack`](#evolvedunpack) functions can be used for this purpose.
 
 ```lua
 ---@param index integer
@@ -106,9 +106,9 @@ assert(evolved.get(player, health) == 100)
 assert(evolved.get(player, stamina) == 50)
 ```
 
-We created an entity called `player` and two fragments called `health` and `stamina`. We attached the components `100` and `50` to the entity through these fragments. After that, we can retrieve the components using the `evolved.get` function.
+We created an entity called `player` and two fragments called `health` and `stamina`. We attached the components `100` and `50` to the entity through these fragments. After that, we can retrieve the components using the [`evolved.get`](#evolvedget) function.
 
-We'll cover the `evolved.set` and `evolved.get` functions in more detail later in the section about [modifying operations](#modifying-operations). For now, let's just say that they are used to set and get components from entities through fragments.
+We'll cover the [`evolved.set`](#evolvedset) and [`evolved.get`](#evolvedget) functions in more detail later in the section about [modifying operations](#modifying-operations). For now, let's just say that they are used to set and get components from entities through fragments.
 
 The main thing to understand here is that you can attach any data to any identifier by using other identifiers.
 
@@ -181,7 +181,7 @@ Here is what the chunks will look like after the code above has executed:
 | ------- | :----: | :-----: | :---: |
 | entity3 |   50   |   30    |  20   |
 
-Usually, you don't need to operate on chunks directly, but you can use the `evolved.chunk` function to get the specific chunk.
+Usually, you don't need to operate on chunks directly, but you can use the [`evolved.chunk`](#evolvedchunk) function to get the specific chunk.
 
 ```lua
 ---@param fragment evolved.fragment
@@ -190,7 +190,7 @@ Usually, you don't need to operate on chunks directly, but you can use the `evol
 function evolved.chunk(fragment, ...) end
 ```
 
-The `evolved.chunk` function takes one or more fragments as arguments and returns the chunk for this combination. After that, you can use the chunk's methods to retrieve their entities, fragments, and components.
+The [`evolved.chunk`](#evolvedchunk) function takes one or more fragments as arguments and returns the chunk for this combination. After that, you can use the chunk's methods to retrieve their entities, fragments, and components.
 
 ```lua
 ---@param self evolved.chunk
@@ -275,9 +275,9 @@ function evolved.spawn(components) end
 function evolved.clone(prefab, components) end
 ```
 
-The `evolved.spawn` function allows you to spawn an entity with all the necessary fragments. It takes a table of components as an argument, where the keys are fragments and the values are components. By the way, you don't need to create this `components` table every time; consider using a predefined table for maximum performance.
+The [`evolved.spawn`](#evolvedspawn) function allows you to spawn an entity with all the necessary fragments. It takes a table of components as an argument, where the keys are fragments and the values are components. By the way, you don't need to create this `components` table every time; consider using a predefined table for maximum performance.
 
-You can also use the `evolved.clone` function to clone an existing entity. This is useful for creating entities with the same fragments as an existing entity but with different components.
+You can also use the [`evolved.clone`](#evolvedclone) function to clone an existing entity. This is useful for creating entities with the same fragments as an existing entity but with different components.
 
 ```lua
 local evolved = require 'evolved'
@@ -304,7 +304,7 @@ evolved.set(enemy1, stamina, 42)
 
 ### Entity Builders
 
-Another way to avoid structural changes when spawning entities is to use the `evolved.builder` fluid interface. The `evolved.builder` function returns a builder object that allows you to spawn entities with a specific set of fragments and components without necessity setting them one by one with structural changes for each change.
+Another way to avoid structural changes when spawning entities is to use the [`evolved.builder`](#evolvedbuilder) fluid interface. The [`evolved.builder`](#evolvedbuilder) function returns a builder object that allows you to spawn entities with a specific set of fragments and components without necessity setting them one by one with structural changes for each change.
 
 ```lua
 local evolved = require 'evolved'
@@ -342,7 +342,7 @@ function evolved.has(entity, fragment) end
 function evolved.get(entity, ...) end
 ```
 
-The `evolved.alive` function checks whether an entity is alive. The `evolved.empty` function checks whether an entity is empty (has no fragments). The `evolved.has` function checks whether an entity has a specific fragment. The `evolved.get` function retrieves the components of an entity for the specified fragments. If the entity doesn't have some of the fragments, the function will return `nil` for them.
+The [`evolved.alive`](#evolvedalive) function checks whether an entity is alive. The [`evolved.empty`](#evolvedempty) function checks whether an entity is empty (has no fragments). The [`evolved.has`](#evolvedhas) function checks whether an entity has a specific fragment. The [`evolved.get`](#evolvedget) function retrieves the components of an entity for the specified fragments. If the entity doesn't have some of the fragments, the function will return `nil` for them.
 
 All of these functions can be safely called on non-alive entities and non-alive fragments. Also, they do not cause any structural changes, because they do not modify anything.
 
@@ -367,17 +367,17 @@ function evolved.clear(...)
 function evolved.destroy(...)
 ```
 
-The `evolved.set` function is used to set a component on an entity. If the entity doesn't have this fragment, it will be added, with causing a structural change, of course. If the entity already has the fragment, the component will be overridden. The function should not be called on non-alive entities, because it is not possible to set any component on a destroyed entity, ignoring this can lead to errors. [Debug Mode](#debug-mode) can be used to check this kind of error.
+The [`evolved.set`](#evolvedset) function is used to set a component on an entity. If the entity doesn't have this fragment, it will be added, with causing a structural change, of course. If the entity already has the fragment, the component will be overridden. The function should not be called on non-alive entities, because it is not possible to set any component on a destroyed entity, ignoring this can lead to errors. [Debug Mode](#debug-mode) can be used to check this kind of error.
 
-Use the `evolved.remove` function to remove fragments from an entity. If the entity doesn't have some of the fragments, they will be ignored. When one or more fragments are removed from an entity, the entity will be migrated to a new chunk, which is a structural change. When you want to remove more than one fragment, pass all of them as arguments. Do not remove fragments one by one, as this will cause a structural change for each fragment. The `evolved.remove` function will ignore non-alive entities, because post-conditions are satisfied (destroyed entities do not have any fragments, including those that we want to remove).
+Use the [`evolved.remove`](#evolvedremove) function to remove fragments from an entity. If the entity doesn't have some of the fragments, they will be ignored. When one or more fragments are removed from an entity, the entity will be migrated to a new chunk, which is a structural change. When you want to remove more than one fragment, pass all of them as arguments. Do not remove fragments one by one, as this will cause a structural change for each fragment. The [`evolved.remove`](#evolvedremove) function will ignore non-alive entities, because post-conditions are satisfied (destroyed entities do not have any fragments, including those that we want to remove).
 
-To remove all fragments from an entity, use the `evolved.clear` function. This function will remove all fragments at once, with causing only one structural change. The `evolved.clear` function does not destroy the entity, it just removes all fragments from it. The entity after this operation will be empty, but it will be still alive. You can use this function to clear more than one entity at once, passing them as arguments. The function will ignore empty and non-alive entities.
+To remove all fragments from an entity, use the [`evolved.clear`](#evolvedclear) function. This function will remove all fragments at once, with causing only one structural change. The [`evolved.clear`](#evolvedclear) function does not destroy the entity, it just removes all fragments from it. The entity after this operation will be empty, but it will be still alive. You can use this function to clear more than one entity at once, passing them as arguments. The function will ignore empty and non-alive entities.
 
-To destroy an entity, use the `evolved.destroy` function. This function will remove all fragments from the entity and free the identifier of the entity for reuse. The `evolved.destroy` function will ignore non-alive entities. To destroy more than one entity, pass them as arguments.
+To destroy an entity, use the [`evolved.destroy`](#evolveddestroy) function. This function will remove all fragments from the entity and free the identifier of the entity for reuse. The [`evolved.destroy`](#evolveddestroy) function will ignore non-alive entities. To destroy more than one entity, pass them as arguments.
 
 ## Debug Mode
 
-The library has a debug mode that can be enabled by the `evolved.debug_mode` function. When the debug mode is enabled, the library will check for incorrect usages of the API and throw errors when they are detected. This is very useful for debugging and development, but it can slow down performance a bit.
+The library has a debug mode that can be enabled by the [`evolved.debug_mode`](#evolveddebug_mode) function. When the debug mode is enabled, the library will check for incorrect usages of the API and throw errors when they are detected. This is very useful for debugging and development, but it can slow down performance a bit.
 
 ```lua
 ---@param yesno boolean
@@ -406,7 +406,7 @@ evolved.set(entity, fragment, 42)
 
 One of the most important features of any ECS library is the ability to process entities by filters or queries. `evolved.lua` provides a simple and efficient way to do this.
 
-First, you need to create a query that describes which entities you want to process. You can specify fragments you want to include, and fragments you want to exclude. Queries are just identifiers with a special predefined fragments: `evolved.INCLUDES` and `evolved.EXCLUDES`. These fragments expect a list of fragments as their components.
+First, you need to create a query that describes which entities you want to process. You can specify fragments you want to include, and fragments you want to exclude. Queries are just identifiers with a special predefined fragments: [`evolved.INCLUDES`](#evolvedincludes) and [`evolved.EXCLUDES`](#evolvedexcludes). These fragments expect a list of fragments as their components.
 
 ```lua
 local evolved = require 'evolved'
@@ -427,9 +427,9 @@ local query = evolved.builder()
     :spawn()
 ```
 
-We don't have to set both `evolved.INCLUDES` and `evolved.EXCLUDES` fragments, we can even do it without filters at all, then the query will match all chunks in the world.
+We don't have to set both [`evolved.INCLUDES`](#evolvedincludes) and [`evolved.EXCLUDES`](#evolvedexcludes) fragments, we can even do it without filters at all, then the query will match all chunks in the world.
 
-After the query is created, we are ready to process our filtered by this query entities. You can do this by using the `evolved.execute` function. This function takes a query as an argument and returns an iterator that can be used to iterate over all matching with the query chunks.
+After the query is created, we are ready to process our filtered by this query entities. You can do this by using the [`evolved.execute`](#evolvedexecute) function. This function takes a query as an argument and returns an iterator that can be used to iterate over all matching with the query chunks.
 
 ```lua
 ---@param query evolved.query
@@ -465,7 +465,7 @@ function evolved.defer() end
 function evolved.commit() end
 ```
 
-The `evolved.defer` function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The `evolved.commit` function closes a last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The `evolved.commit` function will apply all queued changes only when the last deferred scope is closed.
+The [`evolved.defer`](#evolveddefer) function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The [`evolved.commit`](#evolvedcommit) function closes a last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The [`evolved.commit`](#evolvedcommit) function will apply all queued changes only when the last deferred scope is closed.
 
 ```lua
 local evolved = require 'evolved'
@@ -535,7 +535,7 @@ In all other respects, batch operations behave the same way as the common modify
 
 ## Systems
 
-Usually, we want to organize our processing of entities into systems that will be executed in a specific order. The library has a way to do this using special `evolved.QUERY` and `evolved.EXECUTE` fragments that are used to specify the system's queries and execution callbacks. And yes, systems are just entities with special fragments.
+Usually, we want to organize our processing of entities into systems that will be executed in a specific order. The library has a way to do this using special [`evolved.QUERY`](#evolvedquery) and [`evolved.EXECUTE`](#evolvedexecute) fragments that are used to specify the system's queries and execution callbacks. And yes, systems are just entities with special fragments.
 
 ```lua
 local evolved = require 'evolved'
@@ -560,14 +560,14 @@ local system = evolved.builder()
     end):spawn()
 ```
 
-The `evolved.process` function is used to process systems. It takes systems as arguments and executes them in the order they were passed.
+The [`evolved.process`](#evolvedprocess) function is used to process systems. It takes systems as arguments and executes them in the order they were passed.
 
 ```lua
 ---@param ... evolved.system systems
 function evolved.process(...) end
 ```
 
-To group systems together, you can use the `evolved.GROUP` fragment. Systems with a specified group will be processed when you call the `evolved.process` function with this group. For example, you can group all physics systems together and process them in one `evolved.process` call.
+To group systems together, you can use the [`evolved.GROUP`](#evolvedgroup) fragment. Systems with a specified group will be processed when you call the [`evolved.process`](#evolvedprocess) function with this group. For example, you can group all physics systems together and process them in one [`evolved.process`](#evolvedprocess) call.
 
 ```lua
 local evolved = require 'evolved'
@@ -617,7 +617,7 @@ evolved.builder()
 evolved.process(physics_group)
 ```
 
-Systems and groups also can have the `evolved.PROLOGUE` and `evolved.EPILOGUE` fragments. These fragments are used to specify callbacks that will be executed before and after the system or group is processed. This is useful for setting up and tearing down systems or groups, or for performing some additional processing before or after the main processing.
+Systems and groups also can have the [`evolved.PROLOGUE`](#evolvedprologue) and [`evolved.EPILOGUE`](#evolvedepilogue) fragments. These fragments are used to specify callbacks that will be executed before and after the system or group is processed. This is useful for setting up and tearing down systems or groups, or for performing some additional processing before or after the main processing.
 
 ```lua
 local evolved = require 'evolved'
@@ -638,10 +638,147 @@ The prologue and epilogue fragments do not require an explicit query. They will 
 
 And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), this means that all modifying operations inside the callback will be queued and applied after the system processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
 
-## Predefs
-
-> coming soon...
-
 ## API Reference
 
-> coming soon...
+### Predefs
+
+#### `evolved.TAG`
+
+#### `evolved.NAME`
+
+#### `evolved.UNIQUE`
+
+#### `evolved.EXPLICIT`
+
+#### `evolved.DEFAULT`
+
+#### `evolved.DUPLICATE`
+
+#### `evolved.PREFAB`
+
+#### `evolved.DISABLED`
+
+#### `evolved.INCLUDES`
+
+#### `evolved.EXCLUDES`
+
+#### `evolved.ON_SET`
+
+#### `evolved.ON_ASSIGN`
+
+#### `evolved.ON_INSERT`
+
+#### `evolved.ON_REMOVE`
+
+#### `evolved.GROUP`
+
+#### `evolved.QUERY`
+
+#### `evolved.EXECUTE`
+
+#### `evolved.PROLOGUE`
+
+#### `evolved.EPILOGUE`
+
+#### `evolved.DESTROY_POLICY`
+
+### Functions
+
+#### `evolved.id`
+
+#### `evolved.pack`
+#### `evolved.unpack`
+
+#### `evolved.defer`
+#### `evolved.commit`
+
+#### `evolved.spawn`
+#### `evolved.clone`
+
+#### `evolved.alive`
+#### `evolved.alive_all`
+#### `evolved.alive_any`
+
+#### `evolved.empty`
+#### `evolved.empty_all`
+#### `evolved.empty_any`
+
+#### `evolved.has`
+#### `evolved.has_all`
+#### `evolved.has_any`
+
+#### `evolved.get`
+
+#### `evolved.set`
+#### `evolved.remove`
+#### `evolved.clear`
+#### `evolved.destroy`
+
+#### `evolved.batch_set`
+#### `evolved.batch_remove`
+#### `evolved.batch_clear`
+#### `evolved.batch_destroy`
+
+#### `evolved.each`
+#### `evolved.execute`
+
+#### `evolved.process`
+
+#### `evolved.debug_mode`
+#### `evolved.collect_garbage`
+
+#### `evolved.chunk`
+
+#### `evolved.chunk_mt:alive`
+#### `evolved.chunk_mt:empty`
+
+#### `evolved.chunk_mt:has`
+#### `evolved.chunk_mt:has_all`
+#### `evolved.chunk_mt:has_any`
+
+#### `evolved.chunk_mt:entities`
+#### `evolved.chunk_mt:fragments`
+#### `evolved.chunk_mt:components`
+
+#### `evolved.builder`
+
+#### `evolved.builder_mt:spawn`
+#### `evolved.builder_mt:clone`
+
+#### `evolved.builder_mt:has`
+#### `evolved.builder_mt:has_all`
+#### `evolved.builder_mt:has_any`
+
+#### `evolved.builder_mt:set`
+#### `evolved.builder_mt:remove`
+#### `evolved.builder_mt:clear`
+
+#### `evolved.builder_mt:tag`
+#### `evolved.builder_mt:name`
+
+#### `evolved.builder_mt:unique`
+#### `evolved.builder_mt:explicit`
+
+#### `evolved.builder_mt:default`
+#### `evolved.builder_mt:duplicate`
+
+#### `evolved.builder_mt:prefab`
+#### `evolved.builder_mt:disabled`
+
+#### `evolved.builder_mt:include`
+#### `evolved.builder_mt:exclude`
+
+#### `evolved.builder_mt:on_set`
+#### `evolved.builder_mt:on_assign`
+#### `evolved.builder_mt:on_insert`
+#### `evolved.builder_mt:on_remove`
+
+#### `evolved.builder_mt:group`
+
+#### `evolved.builder_mt:query`
+#### `evolved.builder_mt:execute`
+
+#### `evolved.builder_mt:prologue`
+#### `evolved.builder_mt:epilogue`
+
+#### `evolved.builder_mt:destroy_policy`
