@@ -529,13 +529,114 @@ local destroying_mark_query = evolved.builder()
 evolved.batch_destroy(destroying_mark_query)
 ```
 
-You should always prefer batch operations over common modifying operations when you need to perform a simple operation like destroying or removing fragments from multiple entities at once. Instead of applying the operation to each entity one by one, batch operations will apply the operation chunk by chunk.
+You should always prefer batch operations over common modifying operations when you need to perform simple operations like destroying or removing fragments from multiple entities at once. Instead of applying the operation to each entity one by one, batch operations will apply the operation chunk by chunk.
 
-In all other respects, batch operations behave the same way as the common modifying operations that we have already covered. They can, of course, be used with [deferred operations](#deferred-operations) too.
+In all other respects, batch operations behave the same way as the common modifying operations that we have already covered. Of course, they can also be used with [deferred operations](#deferred-operations).
 
 ## Systems
 
-> coming soon...
+Usually, we want to organize our processing of entities into systems that will be executed in a specific order. The library has a way to do this using special `evolved.QUERY` and `evolved.EXECUTE` fragments that are used to specify the system's queries and execution callbacks. And yes, systems are just entities with special fragments.
+
+```lua
+local evolved = require 'evolved'
+
+local health, max_health = evolved.id(2)
+
+local query = evolved.builder()
+    :include(health, max_health)
+    :spawn()
+
+local system = evolved.builder()
+    :query(query)
+    :execute(function(chunk, entity_list, entity_count)
+        local health_components = chunk:components(health)
+        local max_health_components = chunk:components(max_health)
+
+        for i = 1, entity_count do
+            health_components[i] = math.min(
+                health_components[i] + 1,
+                max_health_components[i])
+        end
+    end):spawn()
+```
+
+The `evolved.process` function is used to process systems. It takes systems as arguments and executes them in the order they were passed.
+
+```lua
+---@param ... evolved.system systems
+function evolved.process(...) end
+```
+
+To group systems together, you can use the `evolved.GROUP` fragment. Systems with a specified group will be processed when you call the `evolved.process` function with this group. For example, you can group all physics systems together and process them in one `evolved.process` call.
+
+```lua
+local evolved = require 'evolved'
+
+local gravity_x = 0
+local gravity_y = -9.81
+
+local position_x, position_y = evolved.id(2)
+local velocity_x, velocity_y = evolved.id(2)
+
+local physical_body_query = evolved.builder()
+    :include(position_x, position_y)
+    :include(velocity_x, velocity_y)
+    :spawn()
+
+local physics_group = evolved.id()
+
+evolved.builder()
+    :group(physics_group)
+    :query(physical_body_query)
+    :execute(function(chunk, entity_list, entity_count)
+        local vx = chunk:components(velocity_x)
+        local vy = chunk:components(velocity_y)
+
+        for i = 1, entity_count do
+            vx[i] = vx[i] + gravity_x
+            vy[i] = vy[i] + gravity_y
+        end
+    end):spawn()
+
+evolved.builder()
+    :group(physics_group)
+    :query(physical_body_query)
+    :execute(function(chunk, entity_list, entity_count)
+        local px = chunk:components(position_x)
+        local py = chunk:components(position_y)
+
+        local vx = chunk:components(velocity_x)
+        local vy = chunk:components(velocity_y)
+
+        for i = 1, entity_count do
+            px[i] = px[i] + vx[i]
+            py[i] = py[i] + vy[i]
+        end
+    end):spawn()
+
+evolved.process(physics_group)
+```
+
+Systems and groups also can have the `evolved.PROLOGUE` and `evolved.EPILOGUE` fragments. These fragments are used to specify callbacks that will be executed before and after the system or group is processed. This is useful for setting up and tearing down systems or groups, or for performing some additional processing before or after the main processing.
+
+```lua
+local evolved = require 'evolved'
+
+local system = evolved.builder()
+    :prologue(function()
+        print('Prologue')
+    end)
+    :epilogue(function()
+        print('Epilogue')
+    end)
+    :spawn()
+
+evolved.process(system)
+```
+
+The prologue and epilogue fragments do not require an explicit query. They will be executed before and after the system is processed, regardless of the query.
+
+And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), this means that all modifying operations inside the callback will be queued and applied after the system processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
 
 ## Predefs
 
