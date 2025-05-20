@@ -34,6 +34,12 @@ luarocks install evolved.lua
 
 Or just clone the [repository](https://github.com/BlackMATov/evolved.lua) and copy the [evolved.lua](evolved.lua) file to your project.
 
+## Quick Start
+
+To start using `evolved.lua`, read the [Overview](#overview) section first. It will give you a basic understanding of how the library works and how to use it. After that, check the full-featured [Example](develop/example.lua), which demonstrates complex usage of the library. Finally, refer to the [Cheat Sheet](#cheat-sheet) for a quick reference of all the functions and classes provided by the library.
+
+Enjoy! :suspect:
+
 ## Cheat Sheet
 
 ### Aliases
@@ -220,6 +226,12 @@ builder_mt:destroy_policy :: id -> builder
 ```
 
 ## Overview
+
+The library is designed to be simple and highly efficient. It uses an archetype-based approach to store entities and their components. This allows you to filter and process your entities very efficiently, especially when you have many of them.
+
+If you are familiar with the ECS (Entity-Component-System) pattern, you will feel right at home. If not, I highly recommend reading about it first. Here is a good starting point: [Entity Component System FAQ](https://github.com/SanderMertens/ecs-faq).
+
+Let's get started! :godmode:
 
 ### Identifiers
 
