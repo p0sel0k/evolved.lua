@@ -227,7 +227,7 @@ builder_mt:destroy_policy :: id -> builder
 
 ## Overview
 
-The library is designed to be simple and highly efficient. It uses an archetype-based approach to store entities and their components. This allows you to filter and process your entities very efficiently, especially when you have many of them.
+The library is designed to be simple and highly performant. It uses an archetype-based approach to store entities and their components. This allows you to filter and process your entities very efficiently, especially when you have many of them.
 
 If you are familiar with the ECS (Entity-Component-System) pattern, you will feel right at home. If not, I highly recommend reading about it first. Here is a good starting point: [Entity Component System FAQ](https://github.com/SanderMertens/ecs-faq).
 
@@ -959,6 +959,62 @@ local all_enemies_including_disabled = evolved.builder()
     :include(enemy_tag)
     :include(evolved.DISABLED)
     :spawn()
+```
+
+#### Shared Components
+
+Often, we want to store components as tables, and by default, these tables will be shared between entities. This means that if you modify the table in one entity, it will be modified in all entities that share this table. Sometimes this is what we want. For example, when we want to share a configuration or some resource between entities. But in other cases, we want each entity to have its own copy of the table. For example, if we want to store the position of an entity as a table, we don't want to share this table with other entities. Yes, we can copy the table manually, but the library provides a little bit of syntactic sugar for this.
+
+```lua
+local evolved = require 'evolved'
+
+local initial_position = { x = 0, y = 0 }
+
+local position = evolved.id()
+
+local enemy1 = evolved.builder()
+    :set(position, initial_position)
+    :spawn()
+
+local enemy2 = evolved.builder()
+    :set(position, initial_position)
+    :spawn()
+
+-- the enemy1 and enemy2 share the same table,
+-- and that's definitely not what we want in this case
+assert(evolved.get(enemy1, position) == evolved.get(enemy2, position))
+```
+
+To avoid this, `evolved.lua` provides a fragment trait called [`evolved.DUPLICATE`](#evolvedduplicate). This trait expects a function that will be called when the component of this fragment is set. The function should return a new table to be used as the component for the entity. This way, each entity will have its own copy of the table, and modifying one entity will not affect the others.
+
+To make this example clearer, we will also use the [`evolved.DEFAULT`](#evolveddefault) fragment trait. This trait is used to specify a default value for the component. The default value will be used when the component is not set explicitly.
+
+```lua
+local evolved = require 'evolved'
+
+local function vector2(x, y)
+    return { x = x, y = y }
+end
+
+local function vector2_duplicate(v)
+    return { x = v.x, y = v.y }
+end
+
+local position = evolved.builder()
+    :default(vector2(0, 0))
+    :duplicate(vector2_duplicate)
+    :spawn()
+
+local enemy1 = evolved.builder()
+    :set(position)
+    :spawn()
+
+local enemy2 = evolved.builder()
+    :set(position)
+    :spawn()
+
+-- the enemy1 and enemy2 have different tables now
+assert(evolved.get(enemy1, position) ~= evolved.get(enemy2, position))
 ```
 
 # API Reference
