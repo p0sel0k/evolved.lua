@@ -24,6 +24,38 @@
 - [lua](https://www.lua.org/) **>= 5.1**
 - [luajit](https://luajit.org/) **>= 2.0**
 
+## Aliases
+
+```
+id :: implementation-specific
+
+entity :: id
+fragment :: id
+query :: id
+system :: id
+
+component :: any
+storage :: component[]
+
+default :: component
+duplicate :: {component -> component}
+
+execute :: {chunk, entity[], integer}
+prologue :: {}
+epilogue :: {}
+
+set_hook :: {entity, fragment, component, component?}
+assign_hook :: {entity, fragment, component, component}
+insert_hook :: {entity, fragment, component}
+remove_hook :: {entity, fragment, component}
+
+each_state :: implementation-specific
+execute_state :: implementation-specific
+
+each_iterator :: {each_state? -> fragment?, component?}
+execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
+```
+
 ## Predefs
 
 ```
@@ -112,16 +144,16 @@ collect_garbage :: ()
 ```
 chunk :: fragment, fragment... -> chunk, entity[], integer
 
-chunk:alive :: boolean
-chunk:empty :: boolean
+chunk_mt:alive :: boolean
+chunk_mt:empty :: boolean
 
-chunk:has :: fragment -> boolean
-chunk:has_all :: fragment... -> boolean
-chunk:has_any :: fragment... -> boolean
+chunk_mt:has :: fragment -> boolean
+chunk_mt:has_all :: fragment... -> boolean
+chunk_mt:has_any :: fragment... -> boolean
 
-chunk:entities :: entity[], integer
-chunk:fragments :: fragment[], integer
-chunk:components :: fragment... -> component[]...
+chunk_mt:entities :: entity[], integer
+chunk_mt:fragments :: fragment[], integer
+chunk_mt:components :: fragment... -> storage...
 ```
 
 ## Builder
@@ -129,48 +161,48 @@ chunk:components :: fragment... -> component[]...
 ```
 builder :: builder
 
-builder:spawn :: entity
-builder:clone :: entity -> entity
+builder_mt:spawn :: entity
+builder_mt:clone :: entity -> entity
 
-builder:has :: fragment -> boolean
-builder:has_all :: fragment... -> boolean
-builder:has_any :: fragment... -> boolean
+builder_mt:has :: fragment -> boolean
+builder_mt:has_all :: fragment... -> boolean
+builder_mt:has_any :: fragment... -> boolean
 
-builder:get :: fragment... -> component...
+builder_mt:get :: fragment... -> component...
 
-builder:set :: fragment, component -> builder
-builder:remove :: fragment... -> builder
-builder:clear :: builder
+builder_mt:set :: fragment, component -> builder
+builder_mt:remove :: fragment... -> builder
+builder_mt:clear :: builder
 
-builder:tag :: builder
-builder:name :: string -> builder
+builder_mt:tag :: builder
+builder_mt:name :: string -> builder
 
-builder:unique :: builder
-builder:explicit :: builder
+builder_mt:unique :: builder
+builder_mt:explicit :: builder
 
-builder:default :: component -> builder
-builder:duplicate :: {component -> component} -> builder
+builder_mt:default :: component -> builder
+builder_mt:duplicate :: {component -> component} -> builder
 
-builder:prefab :: builder
-builder:disabled :: builder
+builder_mt:prefab :: builder
+builder_mt:disabled :: builder
 
-builder:include :: fragment... -> builder
-builder:exclude :: fragment... -> builder
+builder_mt:include :: fragment... -> builder
+builder_mt:exclude :: fragment... -> builder
 
-builder:on_set :: {entity, fragment, component, component?} -> builder
-builder:on_assign :: {entity, fragment, component, component} -> builder
-builder:on_insert :: {entity, fragment, component} -> builder
-builder:on_remove :: {entity, fragment} -> builder
+builder_mt:on_set :: {entity, fragment, component, component?} -> builder
+builder_mt:on_assign :: {entity, fragment, component, component} -> builder
+builder_mt:on_insert :: {entity, fragment, component} -> builder
+builder_mt:on_remove :: {entity, fragment} -> builder
 
-builder:group :: system -> builder
+builder_mt:group :: system -> builder
 
-builder:query :: query -> builder
-builder:execute :: {chunk, entity[], integer} -> builder
+builder_mt:query :: query -> builder
+builder_mt:execute :: {chunk, entity[], integer} -> builder
 
-builder:prologue :: {} -> builder
-builder:epilogue :: {} -> builder
+builder_mt:prologue :: {} -> builder
+builder_mt:epilogue :: {} -> builder
 
-builder:destroy_policy :: id -> builder
+builder_mt:destroy_policy :: id -> builder
 ```
 
 ## [License (MIT)](./LICENSE.md)

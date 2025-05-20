@@ -193,20 +193,17 @@ function evolved.chunk(fragment, ...) end
 The [`evolved.chunk`](#evolvedchunk) function takes one or more fragments as arguments and returns the chunk for this combination. After that, you can use the chunk's methods to retrieve their entities, fragments, and components.
 
 ```lua
----@param self evolved.chunk
 ---@return evolved.entity[] entity_list
 ---@return integer entity_count
 function chunk_mt:entities() end
 
----@param self evolved.chunk
 ---@return evolved.fragment[] fragment_list
 ---@return integer fragment_count
 function chunk_mt:fragments() end
 
----@param self evolved.chunk
 ---@param ... evolved.fragment fragments
----@return evolved.component[] ... component_lists
-function chunk_mt:components(...) end
+---@return evolved.storage ... storages
+function chunk_mt:components(...)
 ```
 
 Full example:
@@ -348,7 +345,7 @@ All of these functions can be safely called on non-alive entities and non-alive 
 
 ## Modifying Operations
 
-The library provides a classic set of functions for modifying entities. These functions are used to set, get, remove, and check fragments on entities.
+The library provides a classic set of functions for modifying entities. These functions are used to add, override, and remove fragments from entities.
 
 ```lua
 ---@param entity evolved.entity
@@ -637,6 +634,47 @@ evolved.process(system)
 The prologue and epilogue fragments do not require an explicit query. They will be executed before and after the system is processed, regardless of the query.
 
 And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), this means that all modifying operations inside the callback will be queued and applied after the system processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
+
+## Advanced Topics
+
+### Fragment Tags
+
+Sometimes you want to have a fragment without a component. For example, you might want to have some marks that will be used to mark entities for processing. Fragments without components are called `tags`. Such fragments take up less memory, because they do not require any components to be stored. Migration of entities with tags is faster, because the library does not need to migrate components, only the tags themselves. To create a tag, mark the fragment with the [`evolved.TAG`](#evolvedtag) fragment.
+
+```lua
+local evolved = require 'evolved'
+
+local player_tag = evolved.id()
+evolved.set(player_tag, evolved.TAG)
+
+local player = evolved.id()
+evolved.set(player, player_tag)
+
+-- player has the player_tag fragment
+assert(evolved.has(player, player_tag))
+
+-- player_tag is a tag, so it doesn't have a component
+assert(evolved.get(player, player_tag) == nil)
+```
+
+### Fragment Hooks
+
+The library provides a way to execute callbacks when fragments are set, assigned, inserted, or removed from entities. This is done using special fragments: [`evolved.ON_SET`](#evolvedon_set), [`evolved.ON_ASSIGN`](#evolvedon_assign), [`evolved.ON_INSERT`](#evolvedon_insert), and [`evolved.ON_REMOVE`](#evolvedon_remove). These fragments are used to specify the callbacks that will be executed when the corresponding operation is performed on the fragment.
+
+```lua
+local evolved = require 'evolved'
+
+local health = evolved.builder()
+    :on_set(function(entity, fragment, component)
+        print('health set to ' .. component)
+    end):spawn()
+
+local player = evolved.id()
+evolved.set(player, health, 100) -- prints "health set to 100"
+evolved.set(player, health, 200) -- prints "health set to 200"
+```
+
+Use [`evolved.ON_SET`](#evolvedon_set) for callbacks on fragment insert or override, [`evolved.ON_ASSIGN`](#evolvedon_assign) for overrides, and [`evolved.ON_INSERT`](#evolvedon_insert)/[`evolved.ON_REMOVE`](#evolvedon_remove) for insertions or removals.
 
 # API Reference
 
@@ -940,6 +978,8 @@ function evolved.debug_mode(yesno) end
 function evolved.collect_garbage() end
 ```
 
+## Chunk
+
 ### `evolved.chunk`
 
 ```lua
@@ -1021,6 +1061,8 @@ function evolved.chunk_mt:fragments() end
 ---@nodiscard
 function evolved.chunk_mt:components(...) end
 ```
+
+## Builder
 
 ### `evolved.builder`
 
