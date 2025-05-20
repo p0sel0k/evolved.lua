@@ -534,7 +534,7 @@ evolved.set(enemy1, stamina, 42)
 
 #### Entity Builders
 
-Another way to avoid structural changes when spawning entities is to use the [`evolved.builder`](#evolvedbuilder) fluid interface. The [`evolved.builder`](#evolvedbuilder) function returns a builder object that allows you to spawn entities with a specific set of fragments and components without necessity setting them one by one with structural changes for each change.
+Another way to avoid structural changes when spawning entities is to use the [`evolved.builder`](#evolvedbuilder) fluid interface. The [`evolved.builder`](#evolvedbuilder) function returns a builder object that allows you to spawn entities with a specific set of fragments and components without the necessity of setting them one by one with structural changes for each change.
 
 ```lua
 local evolved = require 'evolved'
@@ -601,7 +601,7 @@ The [`evolved.set`](#evolvedset) function is used to set a component on an entit
 
 Use the [`evolved.remove`](#evolvedremove) function to remove fragments from an entity. If the entity doesn't have some of the fragments, they will be ignored. When one or more fragments are removed from an entity, the entity will be migrated to a new chunk, which is a structural change. When you want to remove more than one fragment, pass all of them as arguments. Do not remove fragments one by one, as this will cause a structural change for each fragment. The [`evolved.remove`](#evolvedremove) function will ignore non-alive entities, because post-conditions are satisfied (destroyed entities do not have any fragments, including those that we want to remove).
 
-To remove all fragments from an entity, use the [`evolved.clear`](#evolvedclear) function. This function will remove all fragments at once, with causing only one structural change. The [`evolved.clear`](#evolvedclear) function does not destroy the entity, it just removes all fragments from it. The entity after this operation will be empty, but it will be still alive. You can use this function to clear more than one entity at once, passing them as arguments. The function will ignore empty and non-alive entities.
+To remove all fragments from an entity, use the [`evolved.clear`](#evolvedclear) function. This function will remove all fragments at once, causing only one structural change. The [`evolved.clear`](#evolvedclear) function does not destroy the entity, it just removes all fragments from it. The entity after this operation will be empty, but it will still be alive. You can use this function to clear more than one entity at once, passing them as arguments. The function will ignore empty and non-alive entities.
 
 To destroy an entity, use the [`evolved.destroy`](#evolveddestroy) function. This function will remove all fragments from the entity and free the identifier of the entity for reuse. The [`evolved.destroy`](#evolveddestroy) function will ignore non-alive entities. To destroy more than one entity, pass them as arguments.
 
@@ -684,7 +684,7 @@ end
 As you can see, `evolved.execute_iterator` returns a chunk, a list of entities in the chunk, and the number of entities in this chunk. We [already know](#chunks) how to use chunks, so we can use the chunk's methods to retrieve the components of the entities in the chunk, change them, and so on.
 
 > [!NOTE]
-> But I haven't mentioned one important thing yet: [structural changes](#structural-changes) are not allowed during any iteration over chunks. This means that you cannot insert or remove fragments from entities while iterating. Also, you cannot destroy or spawn entities because this will cause structural changes too. This is done to avoid inconsistencies in the iteration process. If we allow structural changes here, we might skip some entities during iteration, or process the same entity multiple times. The [debug mode](#debug-mode) can catch this kind of error.
+> But I haven't mentioned one important thing yet: [structural changes](#structural-changes) are not allowed during any iteration over chunks. This means that you cannot insert or remove fragments from entities while iterating. Also, you cannot destroy or spawn entities because this will cause structural changes too. This is done to avoid inconsistencies in the iteration process. If we allowed structural changes here, we might skip some entities during iteration, or process the same entity multiple times. The [debug mode](#debug-mode) can catch this kind of error.
 
 #### Deferred Operations
 
@@ -698,7 +698,7 @@ function evolved.defer() end
 function evolved.commit() end
 ```
 
-The [`evolved.defer`](#evolveddefer) function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The [`evolved.commit`](#evolvedcommit) function closes a last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The [`evolved.commit`](#evolvedcommit) function will apply all queued changes only when the last deferred scope is closed.
+The [`evolved.defer`](#evolveddefer) function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The [`evolved.commit`](#evolvedcommit) function closes the last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The [`evolved.commit`](#evolvedcommit) function will apply all queued changes only when the last deferred scope is closed.
 
 ```lua
 local evolved = require 'evolved'
@@ -871,7 +871,7 @@ evolved.process(system)
 The prologue and epilogue fragments do not require an explicit query. They will be executed before and after the system is processed, regardless of the query.
 
 > [!NOTE]
-> And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), this means that all modifying operations inside the callback will be queued and applied after the system processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
+> And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), which means that all modifying operations inside the callback will be queued and applied after the system has processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
 
 ### Advanced Topics
 
@@ -934,7 +934,7 @@ local enemy_clone = evolved.clone(enemy_prefab)
 -- the enemy_prefab has the evolved.PREFAB fragment
 assert(evolved.has(enemy_prefab, evolved.PREFAB))
 
--- but the enemy_clone doesn't have it because it is marked as unique
+-- but the enemy_clone doesn't have it, because it is marked as unique
 assert(not evolved.has(enemy_clone, evolved.PREFAB))
 ```
 
