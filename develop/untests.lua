@@ -57,6 +57,10 @@ end
 
 do
     do
+        local i0 = evo.id(-1)
+        assert(type(i0) == 'nil')
+    end
+    do
         local i0 = evo.id(0)
         assert(type(i0) == 'nil')
     end
@@ -498,42 +502,44 @@ do
     local e = evo.id()
 
     local remove_count = 0
-    local last_removed_component = nil
+    local removed_sum = 0
 
     evo.set(f1, evo.ON_REMOVE, function(entity, fragment, component)
         assert(entity == e)
         assert(fragment == f1)
         remove_count = remove_count + 1
-        last_removed_component = component
+        removed_sum = removed_sum + component
     end)
 
     evo.set(f2, evo.ON_REMOVE, function(entity, fragment, component)
         assert(entity == e)
         assert(fragment == f2)
         remove_count = remove_count + 1
-        last_removed_component = component
+        removed_sum = removed_sum + component
     end)
 
     evo.set(e, f1, 42)
     evo.remove(e, f1, f2)
     assert(remove_count == 1)
-    assert(last_removed_component == 42)
+    assert(removed_sum == 42)
 
     evo.set(e, f1, 42)
     evo.set(e, f2, 43)
     evo.remove(e, f1, f2, f2)
     assert(remove_count == 3)
-    assert(last_removed_component == 43)
+    assert(removed_sum == 42 + 42 + 43)
 
     evo.set(e, f1, 44)
     evo.set(e, f2, 45)
     evo.clear(e)
     assert(remove_count == 5)
+    assert(removed_sum == 42 + 42 + 43 + 44 + 45)
 
     evo.set(e, f1, 46)
     evo.set(e, f2, 47)
     evo.destroy(e)
     assert(remove_count == 7)
+    assert(removed_sum == 42 + 42 + 43 + 44 + 45 + 46 + 47)
 end
 
 do

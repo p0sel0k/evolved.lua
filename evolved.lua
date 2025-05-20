@@ -2544,21 +2544,20 @@ function __chunk_remove(old_chunk, ...)
         return
     end
 
-    local old_fragment_set = old_chunk.__fragment_set
+    local old_fragment_list = old_chunk.__fragment_list
+    local old_fragment_count = old_chunk.__fragment_count
     local old_component_indices = old_chunk.__component_indices
     local old_component_storages = old_chunk.__component_storages
 
     if old_chunk.__has_remove_hooks then
-        ---@type table<evolved.fragment, boolean>
-        local removed_set = __acquire_table(__table_pool_tag.fragment_set)
+        ---@type table<evolved.fragment, integer>
+        local new_fragment_set = new_chunk and new_chunk.__fragment_set
+            or __safe_tbls.__EMPTY_FRAGMENT_SET
 
-        for i = 1, fragment_count do
-            ---@type evolved.fragment
-            local fragment = __lua_select(i, ...)
+        for i = 1, old_fragment_count do
+            local fragment = old_fragment_list[i]
 
-            if not removed_set[fragment] and old_fragment_set[fragment] then
-                removed_set[fragment] = true
-
+            if not new_fragment_set[fragment] then
                 ---@type evolved.remove_hook?
                 local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
 
@@ -2582,8 +2581,6 @@ function __chunk_remove(old_chunk, ...)
                 end
             end
         end
-
-        __release_table(__table_pool_tag.fragment_set, removed_set)
     end
 
     if new_chunk then
@@ -3461,7 +3458,7 @@ end
 function __evolved_id(count)
     count = count or 1
 
-    if count == 0 then
+    if count <= 0 then
         return
     end
 
@@ -3990,21 +3987,20 @@ function __evolved_remove(entity, ...)
     __evolved_defer()
 
     do
-        local old_fragment_set = old_chunk.__fragment_set
+        local old_fragment_list = old_chunk.__fragment_list
+        local old_fragment_count = old_chunk.__fragment_count
         local old_component_indices = old_chunk.__component_indices
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
-            ---@type table<evolved.fragment, boolean>
-            local removed_set = __acquire_table(__table_pool_tag.fragment_set)
+            ---@type table<evolved.fragment, integer>
+            local new_fragment_set = new_chunk and new_chunk.__fragment_set
+                or __safe_tbls.__EMPTY_FRAGMENT_SET
 
-            for i = 1, fragment_count do
-                ---@type evolved.fragment
-                local fragment = __lua_select(i, ...)
+            for i = 1, old_fragment_count do
+                local fragment = old_fragment_list[i]
 
-                if not removed_set[fragment] and old_fragment_set[fragment] then
-                    removed_set[fragment] = true
-
+                if not new_fragment_set[fragment] then
                     ---@type evolved.remove_hook?
                     local fragment_on_remove = __evolved_get(fragment, __ON_REMOVE)
 
@@ -4021,8 +4017,6 @@ function __evolved_remove(entity, ...)
                     end
                 end
             end
-
-            __release_table(__table_pool_tag.fragment_set, removed_set)
         end
 
         if new_chunk then
