@@ -940,7 +940,7 @@ assert(not evolved.has(enemy_clone, evolved.PREFAB))
 
 #### Explicit Fragments
 
-In some cases, you might want to hide chunks with certain fragments from queries by default. For example, the library has a special fragment called `evolved.DISABLED` that behaves this way. This fragment is marked with the [`evolved.EXPLICIT`](#evolvedexplicit) fragment trait, which means it will be hidden from queries unless you explicitly include it. This is useful for fragments that are used for internal or editor purposes and should not be exposed to queries by default.
+In some cases, you might want to hide chunks with certain fragments from queries by default. For example, the library has a special fragment called [`evolved.DISABLED`](#evolveddisabled) that behaves this way. This fragment is marked with the [`evolved.EXPLICIT`](#evolvedexplicit) fragment trait, which means it will be hidden from queries unless you explicitly include it. This is useful for fragments that are used for internal or editor purposes and should not be exposed to queries by default.
 
 Additionally, the [`evolved.PREFAB`](#evolvedprefab) fragment is also marked with the [`evolved.EXPLICIT`](#evolvedexplicit) fragment trait. This prevents prefabs from being processed in queries at runtime. Prefabs are used only for cloning entities, so they should not be processed by default.
 
