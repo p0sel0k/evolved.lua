@@ -914,6 +914,53 @@ evolved.set(player, health, 200) -- prints "health set to 200"
 
 Use [`evolved.ON_SET`](#evolvedon_set) for callbacks on fragment insert or override, [`evolved.ON_ASSIGN`](#evolvedon_assign) for overrides, and [`evolved.ON_INSERT`](#evolvedon_insert)/[`evolved.ON_REMOVE`](#evolvedon_remove) for insertions or removals.
 
+#### Unique Fragments
+
+Some fragments should not be cloned when cloning entities. For example, `evolved.lua` has a special fragment called `evolved.PREFAB`, which marks entities used as sources for cloning. This fragment should not be present on the cloned entities. To prevent a fragment from being cloned, mark it as unique using the [`evolved.UNIQUE`](#evolvedunique) fragment trait. This ensures the fragment will not be copied when cloning entities.
+
+```lua
+local evolved = require 'evolved'
+
+local health, stamina = evolved.id(2)
+
+local enemy_prefab = evolved.builder()
+    :prefab()
+    :set(health, 100)
+    :set(stamina, 50)
+    :spawn()
+
+local enemy_clone = evolved.clone(enemy_prefab)
+
+-- the enemy_prefab has the evolved.PREFAB fragment
+assert(evolved.has(enemy_prefab, evolved.PREFAB))
+
+-- but the enemy_clone doesn't have it because it is marked as unique
+assert(not evolved.has(enemy_clone, evolved.PREFAB))
+```
+
+#### Explicit Fragments
+
+In some cases, you might want to hide chunks with certain fragments from queries by default. For example, the library has a special fragment called `evolved.DISABLED` that behaves this way. This fragment is marked with the [`evolved.EXPLICIT`](#evolvedexplicit) fragment trait, which means it will be hidden from queries unless you explicitly include it. This is useful for fragments that are used for internal or editor purposes and should not be exposed to queries by default.
+
+Additionally, the [`evolved.PREFAB`](#evolvedprefab) fragment is also marked with the [`evolved.EXPLICIT`](#evolvedexplicit) fragment trait. This prevents prefabs from being processed in queries at runtime. Prefabs are used only for cloning entities, so they should not be processed by default.
+
+```lua
+local evolved = require 'evolved'
+
+local enemy_tag = evolved.builder()
+    :tag()
+    :spawn()
+
+local only_enabled_enemies = evolved.builder()
+    :include(enemy_tag)
+    :spawn()
+
+local all_enemies_including_disabled = evolved.builder()
+    :include(enemy_tag)
+    :include(evolved.DISABLED)
+    :spawn()
+```
+
 # API Reference
 
 ## Predefs
