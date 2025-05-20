@@ -19,6 +19,28 @@
 
 [evolved]: https://github.com/BlackMATov/evolved.lua
 
+## Introduction
+
+`evolved.lua` is a fast and flexible ECS (Entity-Component-System) library for Lua. It is designed to be simple and easy to use, while providing all the features needed to create complex systems with blazing performance. Before we start exploring the library, let's take a look at the main advantages of using `evolved.lua`:
+
+### Performance
+
+This library is designed to be fast. Many techniques are employed to achieve this. It uses an archetype-based approach to store entities and their components. Components are stored in contiguous arrays in a SoA (Structure of Arrays) manner, which allows for fast iteration and processing. Chunks are used to group entities with the same set of components together, enabling efficient filtering through queries. Additionally, all operations are designed to minimize GC (Garbage Collector) pressure and avoid unnecessary allocations. I have tried to take into account all the performance pitfalls of vanilla Lua and LuaJIT.
+
+Not all the optimizations I want to implement are done yet, but I will be working on them. However, I can already say that the library is fast enough for most use cases.
+
+### Simplicity
+
+I have tried to keep the [API](#cheat-sheet) as simple and intuitive as possible. I also keep the number of functions under control. All the functions are self-explanatory and easy to use. After reading the [Overview](#overview) section, you should be able to use the library without any problems.
+
+And yes, the library has some unusual concepts at its core, but once you get the hang of it, you will find it's very easy to use.
+
+### Flexibility
+
+`evolved.lua` is not just about keeping components in entities. It's a full-fledged ECS library that allows you to create complex [systems](#systems) and processes. You can create [queries](#queries) with filters, use [deferred operations](#deferred-operations), and [batch operations](#batch-operations). You can also create systems that process entities in a specific order. The library is designed to be flexible and extensible, so you can easily add your own features and functionality. Features like [fragment hooks](#fragment-hooks) allow you to manage your components in a more flexible way, synchronizing them with external systems or libraries. The library also provides syntactic sugar like the [entity builder](#entity-builders) for creating entities, fragments, and systems to make your life easier.
+
+On the other hand, `evolved.lua` tries to be minimalistic and does not provide features that can be implemented outside the library. I'm trying to find a balance between minimalism and the number of possibilities, which forces me to make flexible decisions in the library's design. I hope you will find this balance acceptable.
+
 ## Requirements
 
 - [lua](https://www.lua.org/) **>= 5.1**
