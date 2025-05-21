@@ -1039,6 +1039,53 @@ local enemy2 = evolved.builder()
 assert(evolved.get(enemy1, position) ~= evolved.get(enemy2, position))
 ```
 
+#### Destruction Policies
+
+Typically, fragments remain alive for the entire lifetime of the program. However, in some cases, you might want to destroy fragments when they are no longer needed. For example, you can use some runtime entities as fragments for other entities. In this case, you might want to destroy such fragments even while they are still attached to other entities. Since entities cannot have destroyed fragments, a destruction policy must be applied to resolve this. By default, the library will remove the destroyed fragment from all entities that have it.
+
+```lua
+local evolved = require 'evolved'
+
+local world = evolved.builder()
+    :tag()
+    :spawn()
+
+local entity = evolved.builder()
+    :set(world)
+    :spawn()
+
+-- destroy the world fragment that is attached to the entity
+evolved.destroy(world)
+
+-- the entity is still alive, but it no longer has the world fragment
+assert(evolved.alive(entity) and not evolved.has(entity, world))
+```
+
+The default behavior works well in most cases, but you can change it by using the [`evolved.DESTROY_POLICY`](#evolveddestroy_policy) fragment. This fragment expects one of the following predefined identifiers:
+
+- [`evolved.DESTROY_POLICY_DESTROY_ENTITY`](#evolveddestroy_policy_destroy_entity) will destroy any entity that has the destroyed fragment. This is useful for cases like the one above, where you want to destroy all entities when their world is destroyed.
+
+- [`evolved.DESTROY_POLICY_REMOVE_FRAGMENT`](#evolveddestroy_policy_remove_fragment) will remove the destroyed fragment from all entities that have it. This is the default behavior, so you don't have to set it explicitly, but you can if you want.
+
+```lua
+local evolved = require 'evolved'
+
+local world = evolved.builder()
+    :tag()
+    :destroy_policy(evolved.DESTROY_POLICY_DESTROY_ENTITY)
+    :spawn()
+
+local entity = evolved.builder()
+    :set(world)
+    :spawn()
+
+-- destroy the world fragment that is attached to the entity
+evolved.destroy(world)
+
+-- the entity is destroyed together with the world fragment now
+assert(not evolved.alive(entity))
+```
+
 # API Reference
 
 ## Predefs
@@ -1082,6 +1129,10 @@ assert(evolved.get(enemy1, position) ~= evolved.get(enemy2, position))
 ### `evolved.EPILOGUE`
 
 ### `evolved.DESTROY_POLICY`
+
+### `evolved.DESTROY_POLICY_DESTROY_ENTITY`
+
+### `evolved.DESTROY_POLICY_REMOVE_FRAGMENT`
 
 ## Functions
 
