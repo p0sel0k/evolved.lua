@@ -127,9 +127,9 @@ EXECUTE :: fragment
 PROLOGUE :: fragment
 EPILOGUE :: fragment
 
-DESTROY_POLICY :: fragment
-DESTROY_POLICY_DESTROY_ENTITY :: id
-DESTROY_POLICY_REMOVE_FRAGMENT :: id
+DESTRUCTION_POLICY :: fragment
+DESTRUCTION_POLICY_DESTROY_ENTITY :: id
+DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
 ```
 
 ### Functions
@@ -244,7 +244,7 @@ builder_mt:execute :: {chunk, entity[], integer} -> builder
 builder_mt:prologue :: {} -> builder
 builder_mt:epilogue :: {} -> builder
 
-builder_mt:destroy_policy :: id -> builder
+builder_mt:destruction_policy :: id -> builder
 ```
 
 ## Overview
@@ -1061,18 +1061,18 @@ evolved.destroy(world)
 assert(evolved.alive(entity) and not evolved.has(entity, world))
 ```
 
-The default behavior works well in most cases, but you can change it by using the [`evolved.DESTROY_POLICY`](#evolveddestroy_policy) fragment. This fragment expects one of the following predefined identifiers:
+The default behavior works well in most cases, but you can change it by using the [`evolved.DESTRUCTION_POLICY`](#evolveddestruction_policy) fragment. This fragment expects one of the following predefined identifiers:
 
-- [`evolved.DESTROY_POLICY_DESTROY_ENTITY`](#evolveddestroy_policy_destroy_entity) will destroy any entity that has the destroyed fragment. This is useful for cases like the one above, where you want to destroy all entities when their world is destroyed.
+- [`evolved.DESTRUCTION_POLICY_DESTROY_ENTITY`](#evolveddestruction_policy_destroy_entity) will destroy any entity that has the destroyed fragment. This is useful for cases like the one above, where you want to destroy all entities when their world is destroyed.
 
-- [`evolved.DESTROY_POLICY_REMOVE_FRAGMENT`](#evolveddestroy_policy_remove_fragment) will remove the destroyed fragment from all entities that have it. This is the default behavior, so you don't have to set it explicitly, but you can if you want.
+- [`evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT`](#evolveddestruction_policy_remove_fragment) will remove the destroyed fragment from all entities that have it. This is the default behavior, so you don't have to set it explicitly, but you can if you want.
 
 ```lua
 local evolved = require 'evolved'
 
 local world = evolved.builder()
     :tag()
-    :destroy_policy(evolved.DESTROY_POLICY_DESTROY_ENTITY)
+    :destruction_policy(evolved.DESTRUCTION_POLICY_DESTROY_ENTITY)
     :spawn()
 
 local entity = evolved.builder()
@@ -1128,11 +1128,11 @@ assert(not evolved.alive(entity))
 
 ### `evolved.EPILOGUE`
 
-### `evolved.DESTROY_POLICY`
+### `evolved.DESTRUCTION_POLICY`
 
-### `evolved.DESTROY_POLICY_DESTROY_ENTITY`
+### `evolved.DESTRUCTION_POLICY_DESTROY_ENTITY`
 
-### `evolved.DESTROY_POLICY_REMOVE_FRAGMENT`
+### `evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT`
 
 ## Functions
 
@@ -1710,12 +1710,12 @@ function evolved.builder_mt:prologue(prologue) end
 function evolved.builder_mt:epilogue(epilogue) end
 ```
 
-#### `evolved.builder_mt:destroy_policy`
+#### `evolved.builder_mt:destruction_policy`
 
 ```lua
----@param destroy_policy evolved.id
+---@param destruction_policy evolved.id
 ---@return evolved.builder builder
-function evolved.builder_mt:destroy_policy(destroy_policy) end
+function evolved.builder_mt:destruction_policy(destruction_policy) end
 ```
 
 ## [License (MIT)](./LICENSE.md)

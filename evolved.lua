@@ -1,7 +1,7 @@
 local evolved = {
     __HOMEPAGE = 'https://github.com/BlackMATov/evolved.lua',
     __DESCRIPTION = 'Evolved ECS (Entity-Component-System) for Lua',
-    __VERSION = '0.0.1',
+    __VERSION = '1.0.0',
     __LICENSE = [[
         MIT License
 
@@ -715,9 +715,9 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
-local __DESTROY_POLICY = __acquire_id()
-local __DESTROY_POLICY_DESTROY_ENTITY = __acquire_id()
-local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
+local __DESTRUCTION_POLICY = __acquire_id()
+local __DESTRUCTION_POLICY_DESTROY_ENTITY = __acquire_id()
+local __DESTRUCTION_POLICY_REMOVE_FRAGMENT = __acquire_id()
 
 ---
 ---
@@ -726,12 +726,6 @@ local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 
 local __safe_tbls = {
-    ---@type evolved.entity[]
-    __EMPTY_ENTITY_LIST = __lua_setmetatable({}, {
-        __tostring = function() return 'empty entity list' end,
-        __newindex = function() __error_fmt 'attempt to modify empty entity list' end
-    }),
-
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment set' end,
@@ -872,14 +866,6 @@ end
 
 local __debug_fns = {}
 
----@param chunk evolved.chunk
-function __debug_fns.validate_chunk(chunk)
-    if chunk.__unreachable_or_collected then
-        __error_fmt('the chunk (%s) is unreachable or collected and cannot be used',
-            chunk)
-    end
-end
-
 ---@param entity evolved.entity
 function __debug_fns.validate_entity(entity)
     local entity_index = entity % 0x100000
@@ -921,14 +907,6 @@ end
 function __debug_fns.validate_fragments(...)
     for i = 1, __lua_select('#', ...) do
         __debug_fns.validate_fragment(__lua_select(i, ...))
-    end
-end
-
----@param fragment_list evolved.fragment[]
----@param fragment_count integer
-function __debug_fns.validate_fragment_list(fragment_list, fragment_count)
-    for i = 1, fragment_count do
-        __debug_fns.validate_fragment(fragment_list[i])
     end
 end
 
@@ -2182,10 +2160,10 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
             releasing_fragment_count = releasing_fragment_count + 1
             releasing_fragment_list[releasing_fragment_count] = processing_fragment
 
-            local processing_fragment_destroy_policy = __evolved_get(processing_fragment, __DESTROY_POLICY)
-                or __DESTROY_POLICY_REMOVE_FRAGMENT
+            local processing_fragment_destruction_policy = __evolved_get(processing_fragment, __DESTRUCTION_POLICY)
+                or __DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
-            if processing_fragment_destroy_policy == __DESTROY_POLICY_DESTROY_ENTITY then
+            if processing_fragment_destruction_policy == __DESTRUCTION_POLICY_DESTROY_ENTITY then
                 destroy_entity_policy_fragment_count = destroy_entity_policy_fragment_count + 1
                 destroy_entity_policy_fragment_list[destroy_entity_policy_fragment_count] = processing_fragment
 
@@ -2205,12 +2183,12 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
 
                     processing_fragment_stack_size = processing_fragment_stack_size + minor_chunk_entity_count
                 end
-            elseif processing_fragment_destroy_policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
+            elseif processing_fragment_destruction_policy == __DESTRUCTION_POLICY_REMOVE_FRAGMENT then
                 remove_fragment_policy_fragment_count = remove_fragment_policy_fragment_count + 1
                 remove_fragment_policy_fragment_list[remove_fragment_policy_fragment_count] = processing_fragment
             else
-                __error_fmt('unknown DESTROY_POLICY policy (%s) on (%s)',
-                    __id_name(processing_fragment_destroy_policy), __id_name(processing_fragment))
+                __error_fmt('unknown DESTRUCTION_POLICY (%s) on (%s)',
+                    __id_name(processing_fragment_destruction_policy), __id_name(processing_fragment))
             end
         end
     end
@@ -5192,10 +5170,10 @@ function __builder_mt:epilogue(epilogue)
     return self:set(__EPILOGUE, epilogue)
 end
 
----@param destroy_policy evolved.id
+---@param destruction_policy evolved.id
 ---@return evolved.builder builder
-function __builder_mt:destroy_policy(destroy_policy)
-    return self:set(__DESTROY_POLICY, destroy_policy)
+function __builder_mt:destruction_policy(destruction_policy)
+    return self:set(__DESTRUCTION_POLICY, destruction_policy)
 end
 
 ---
@@ -5269,9 +5247,9 @@ __evolved_set(__EXECUTE, __NAME, 'EXECUTE')
 __evolved_set(__PROLOGUE, __NAME, 'PROLOGUE')
 __evolved_set(__EPILOGUE, __NAME, 'EPILOGUE')
 
-__evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY')
-__evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY')
-__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT')
+__evolved_set(__DESTRUCTION_POLICY, __NAME, 'DESTRUCTION_POLICY')
+__evolved_set(__DESTRUCTION_POLICY_DESTROY_ENTITY, __NAME, 'DESTRUCTION_POLICY_DESTROY_ENTITY')
+__evolved_set(__DESTRUCTION_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTRUCTION_POLICY_REMOVE_FRAGMENT')
 
 ---
 ---
@@ -5450,9 +5428,9 @@ evolved.EXECUTE = __EXECUTE
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
 
-evolved.DESTROY_POLICY = __DESTROY_POLICY
-evolved.DESTROY_POLICY_DESTROY_ENTITY = __DESTROY_POLICY_DESTROY_ENTITY
-evolved.DESTROY_POLICY_REMOVE_FRAGMENT = __DESTROY_POLICY_REMOVE_FRAGMENT
+evolved.DESTRUCTION_POLICY = __DESTRUCTION_POLICY
+evolved.DESTRUCTION_POLICY_DESTROY_ENTITY = __DESTRUCTION_POLICY_DESTROY_ENTITY
+evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT = __DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
 evolved.id = __evolved_id
 
