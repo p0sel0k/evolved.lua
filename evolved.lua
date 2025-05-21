@@ -726,12 +726,6 @@ local __DESTRUCTION_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 
 local __safe_tbls = {
-    ---@type evolved.entity[]
-    __EMPTY_ENTITY_LIST = __lua_setmetatable({}, {
-        __tostring = function() return 'empty entity list' end,
-        __newindex = function() __error_fmt 'attempt to modify empty entity list' end
-    }),
-
     ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment set' end,
@@ -872,14 +866,6 @@ end
 
 local __debug_fns = {}
 
----@param chunk evolved.chunk
-function __debug_fns.validate_chunk(chunk)
-    if chunk.__unreachable_or_collected then
-        __error_fmt('the chunk (%s) is unreachable or collected and cannot be used',
-            chunk)
-    end
-end
-
 ---@param entity evolved.entity
 function __debug_fns.validate_entity(entity)
     local entity_index = entity % 0x100000
@@ -921,14 +907,6 @@ end
 function __debug_fns.validate_fragments(...)
     for i = 1, __lua_select('#', ...) do
         __debug_fns.validate_fragment(__lua_select(i, ...))
-    end
-end
-
----@param fragment_list evolved.fragment[]
----@param fragment_count integer
-function __debug_fns.validate_fragment_list(fragment_list, fragment_count)
-    for i = 1, fragment_count do
-        __debug_fns.validate_fragment(fragment_list[i])
     end
 end
 
