@@ -40,14 +40,35 @@ local evolved = {
 ---@alias evolved.default evolved.component
 ---@alias evolved.duplicate fun(component: evolved.component): evolved.component
 
----@alias evolved.execute fun(chunk: evolved.chunk, entity_list: evolved.entity[], entity_count: integer)
+---@alias evolved.execute fun(
+---  chunk: evolved.chunk,
+---  entity_list: evolved.entity[],
+---  entity_count: integer)
+
 ---@alias evolved.prologue fun()
 ---@alias evolved.epilogue fun()
 
----@alias evolved.set_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component?: evolved.component)
----@alias evolved.assign_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component, old_component: evolved.component)
----@alias evolved.insert_hook fun(entity: evolved.entity, fragment: evolved.fragment, new_component: evolved.component)
----@alias evolved.remove_hook fun(entity: evolved.entity, fragment: evolved.fragment, component: evolved.component)
+---@alias evolved.set_hook fun(
+---  entity: evolved.entity,
+---  fragment: evolved.fragment,
+---  new_component: evolved.component,
+---  old_component?: evolved.component)
+
+---@alias evolved.assign_hook fun(
+---  entity: evolved.entity,
+---  fragment: evolved.fragment,
+---  new_component: evolved.component,
+---  old_component: evolved.component)
+
+---@alias evolved.insert_hook fun(
+---  entity: evolved.entity,
+---  fragment: evolved.fragment,
+---  new_component: evolved.component)
+
+---@alias evolved.remove_hook fun(
+---  entity: evolved.entity,
+---  fragment: evolved.fragment,
+---  component: evolved.component)
 
 ---@class (exact) evolved.each_state
 ---@field package [1] integer structural_changes
@@ -61,8 +82,13 @@ local evolved = {
 ---@field package [3] integer chunk_stack_size
 ---@field package [4] table<evolved.fragment, integer>? exclude_set
 
----@alias evolved.each_iterator fun(state: evolved.each_state?): evolved.fragment?, evolved.component?
----@alias evolved.execute_iterator fun(state: evolved.execute_state?): evolved.chunk?, evolved.entity[]?, integer?
+---@alias evolved.each_iterator fun(
+---  state: evolved.each_state?):
+---    evolved.fragment?, evolved.component?
+
+---@alias evolved.execute_iterator fun(
+---  state: evolved.execute_state?):
+---    evolved.chunk?, evolved.entity[]?, integer?
 
 ---
 ---
