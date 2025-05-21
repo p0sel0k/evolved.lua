@@ -1,9 +1,9 @@
 rockspec_format = "3.0"
 package = "evolved.lua"
-version = "scm-0"
+version = "1.0.0-0"
 source = {
    url = "git://github.com/BlackMATov/evolved.lua",
-   branch = "main",
+   tag = "v1.0.0",
 }
 description = {
    homepage = "https://github.com/BlackMATov/evolved.lua",
