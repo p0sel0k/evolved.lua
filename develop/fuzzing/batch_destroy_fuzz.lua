@@ -33,11 +33,11 @@ for _, entity in ipairs(all_entity_list) do
     end
 
     if math.random(1, 5) == 1 then
-        evo.set(entity, evo.DESTROY_POLICY, evo.DESTROY_POLICY_DESTROY_ENTITY)
+        evo.set(entity, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
     end
 
     if math.random(1, 5) == 1 then
-        evo.set(entity, evo.DESTROY_POLICY, evo.DESTROY_POLICY_REMOVE_FRAGMENT)
+        evo.set(entity, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT)
     end
 end
 
@@ -52,10 +52,10 @@ local should_be_destroyed_entity_list = {} ---@type evolved.entity[]
 local should_be_destroyed_entity_count = 0 ---@type integer
 
 local function collect_destroyed_entities_with(entity)
-    local entity_destroy_policy = evo.get(entity, evo.DESTROY_POLICY)
-        or evo.DESTROY_POLICY_REMOVE_FRAGMENT
+    local entity_destruction_policy = evo.get(entity, evo.DESTRUCTION_POLICY)
+        or evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
-    if entity_destroy_policy == evo.DESTROY_POLICY_DESTROY_ENTITY then
+    if entity_destruction_policy == evo.DESTRUCTION_POLICY_DESTROY_ENTITY then
         for _, other_entity in ipairs(all_entity_list) do
             if evo.has(other_entity, entity) and not should_be_destroyed_entity_set[other_entity] then
                 should_be_destroyed_entity_count = should_be_destroyed_entity_count + 1

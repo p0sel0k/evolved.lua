@@ -715,9 +715,9 @@ local __EXECUTE = __acquire_id()
 local __PROLOGUE = __acquire_id()
 local __EPILOGUE = __acquire_id()
 
-local __DESTROY_POLICY = __acquire_id()
-local __DESTROY_POLICY_DESTROY_ENTITY = __acquire_id()
-local __DESTROY_POLICY_REMOVE_FRAGMENT = __acquire_id()
+local __DESTRUCTION_POLICY = __acquire_id()
+local __DESTRUCTION_POLICY_DESTROY_ENTITY = __acquire_id()
+local __DESTRUCTION_POLICY_REMOVE_FRAGMENT = __acquire_id()
 
 ---
 ---
@@ -2182,10 +2182,10 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
             releasing_fragment_count = releasing_fragment_count + 1
             releasing_fragment_list[releasing_fragment_count] = processing_fragment
 
-            local processing_fragment_destroy_policy = __evolved_get(processing_fragment, __DESTROY_POLICY)
-                or __DESTROY_POLICY_REMOVE_FRAGMENT
+            local processing_fragment_destruction_policy = __evolved_get(processing_fragment, __DESTRUCTION_POLICY)
+                or __DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
-            if processing_fragment_destroy_policy == __DESTROY_POLICY_DESTROY_ENTITY then
+            if processing_fragment_destruction_policy == __DESTRUCTION_POLICY_DESTROY_ENTITY then
                 destroy_entity_policy_fragment_count = destroy_entity_policy_fragment_count + 1
                 destroy_entity_policy_fragment_list[destroy_entity_policy_fragment_count] = processing_fragment
 
@@ -2205,12 +2205,12 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
 
                     processing_fragment_stack_size = processing_fragment_stack_size + minor_chunk_entity_count
                 end
-            elseif processing_fragment_destroy_policy == __DESTROY_POLICY_REMOVE_FRAGMENT then
+            elseif processing_fragment_destruction_policy == __DESTRUCTION_POLICY_REMOVE_FRAGMENT then
                 remove_fragment_policy_fragment_count = remove_fragment_policy_fragment_count + 1
                 remove_fragment_policy_fragment_list[remove_fragment_policy_fragment_count] = processing_fragment
             else
-                __error_fmt('unknown DESTROY_POLICY policy (%s) on (%s)',
-                    __id_name(processing_fragment_destroy_policy), __id_name(processing_fragment))
+                __error_fmt('unknown DESTRUCTION_POLICY (%s) on (%s)',
+                    __id_name(processing_fragment_destruction_policy), __id_name(processing_fragment))
             end
         end
     end
@@ -5192,10 +5192,10 @@ function __builder_mt:epilogue(epilogue)
     return self:set(__EPILOGUE, epilogue)
 end
 
----@param destroy_policy evolved.id
+---@param destruction_policy evolved.id
 ---@return evolved.builder builder
-function __builder_mt:destroy_policy(destroy_policy)
-    return self:set(__DESTROY_POLICY, destroy_policy)
+function __builder_mt:destruction_policy(destruction_policy)
+    return self:set(__DESTRUCTION_POLICY, destruction_policy)
 end
 
 ---
@@ -5269,9 +5269,9 @@ __evolved_set(__EXECUTE, __NAME, 'EXECUTE')
 __evolved_set(__PROLOGUE, __NAME, 'PROLOGUE')
 __evolved_set(__EPILOGUE, __NAME, 'EPILOGUE')
 
-__evolved_set(__DESTROY_POLICY, __NAME, 'DESTROY_POLICY')
-__evolved_set(__DESTROY_POLICY_DESTROY_ENTITY, __NAME, 'DESTROY_POLICY_DESTROY_ENTITY')
-__evolved_set(__DESTROY_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTROY_POLICY_REMOVE_FRAGMENT')
+__evolved_set(__DESTRUCTION_POLICY, __NAME, 'DESTRUCTION_POLICY')
+__evolved_set(__DESTRUCTION_POLICY_DESTROY_ENTITY, __NAME, 'DESTRUCTION_POLICY_DESTROY_ENTITY')
+__evolved_set(__DESTRUCTION_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTRUCTION_POLICY_REMOVE_FRAGMENT')
 
 ---
 ---
@@ -5450,9 +5450,9 @@ evolved.EXECUTE = __EXECUTE
 evolved.PROLOGUE = __PROLOGUE
 evolved.EPILOGUE = __EPILOGUE
 
-evolved.DESTROY_POLICY = __DESTROY_POLICY
-evolved.DESTROY_POLICY_DESTROY_ENTITY = __DESTROY_POLICY_DESTROY_ENTITY
-evolved.DESTROY_POLICY_REMOVE_FRAGMENT = __DESTROY_POLICY_REMOVE_FRAGMENT
+evolved.DESTRUCTION_POLICY = __DESTRUCTION_POLICY
+evolved.DESTRUCTION_POLICY_DESTROY_ENTITY = __DESTRUCTION_POLICY_DESTROY_ENTITY
+evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT = __DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
 evolved.id = __evolved_id
 
