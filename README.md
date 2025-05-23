@@ -1123,6 +1123,12 @@ builder_mt:destruction_policy :: id -> builder
 
 `evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
 
+# Changelog
+
+## v1.0.0
+
+- Initial release
+
 # API Reference
 
 ## Predefs
