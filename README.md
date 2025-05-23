@@ -1,4 +1,4 @@
-# evolved.lua (work in progress)
+# evolved.lua
 
 > Evolved ECS (Entity-Component-System) for Lua
 
@@ -18,6 +18,44 @@
 [license]: https://en.wikipedia.org/wiki/MIT_License
 
 [evolved]: https://github.com/BlackMATov/evolved.lua
+
+- [Introduction](#introduction)
+  - [Performance](#performance)
+  - [Simplicity](#simplicity)
+  - [Flexibility](#flexibility)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Overview](#overview)
+  - [Identifiers](#identifiers)
+  - [Entities, Fragments, and Components](#entities-fragments-and-components)
+    - [Traits](#traits)
+    - [Singletons](#singletons)
+  - [Chunks](#chunks)
+  - [Structural Changes](#structural-changes)
+    - [Spawning Entities](#spawning-entities)
+    - [Entity Builders](#entity-builders)
+  - [Access Operations](#access-operations)
+  - [Modifying Operations](#modifying-operations)
+  - [Debug Mode](#debug-mode)
+  - [Queries](#queries)
+    - [Deferred Operations](#deferred-operations)
+    - [Batch Operations](#batch-operations)
+  - [Systems](#systems)
+  - [Advanced Topics](#advanced-topics)
+    - [Fragment Tags](#fragment-tags)
+    - [Fragment Hooks](#fragment-hooks)
+    - [Unique Fragments](#unique-fragments)
+    - [Explicit Fragments](#explicit-fragments)
+    - [Shared Components](#shared-components)
+    - [Destruction Policies](#destruction-policies)
+- [Cheat Sheet](#cheat-sheet)
+  - [Aliases](#aliases)
+  - [Predefs](#predefs)
+  - [Functions](#functions)
+  - [Classes](#classes)
+    - [Chunk](#chunk)
+    - [Builder](#builder)
+- [License](#license)
 
 ## Introduction
 
@@ -41,211 +79,21 @@ And yes, the library has some unusual concepts at its core, but once you get the
 
 On the other hand, `evolved.lua` tries to be minimalistic and does not provide features that can be implemented outside the library. I'm trying to find a balance between minimalism and the number of possibilities, which forces me to make flexible decisions in the library's design. I hope you will find this balance acceptable.
 
-## Requirements
-
-- [lua](https://www.lua.org/) **>= 5.1**
-- [luajit](https://luajit.org/) **>= 2.0**
-
 ## Installation
 
-You can install `evolved.lua` using [luarocks](https://luarocks.org/) with the following command:
+`evolved.lua` is a single-file pure Lua library and does not require any external dependencies. It is designed to work with [Lua 5.1](https://www.lua.org/) and later, [LuaJIT](https://luajit.org/), and [Luau](https://luau.org/) (Roblox).
+
+All you need to start using the library is the [evolved.lua](./evolved.lua) source file. You can download it from the [releases](https://github.com/BlackMATov/evolved.lua/releases) page or clone the [repository](https://github.com/BlackMATov/evolved.lua) and copy the file to your project.
+
+If you are using [LuaRocks](https://luarocks.org/), you can install the library using the following command:
 
 ```bash
 luarocks install evolved.lua
 ```
 
-Or just clone the [repository](https://github.com/BlackMATov/evolved.lua) and copy the [evolved.lua](evolved.lua) file to your project.
-
 ## Quick Start
 
-To start using `evolved.lua`, read the [Overview](#overview) section first. It will give you a basic understanding of how the library works and how to use it. After that, check the full-featured [Example](develop/example.lua), which demonstrates complex usage of the library. Finally, refer to the [Cheat Sheet](#cheat-sheet) for a quick reference of all the functions and classes provided by the library.
-
-Enjoy! :suspect:
-
-## Cheat Sheet
-
-### Aliases
-
-```
-id :: implementation-specific
-
-entity :: id
-fragment :: id
-query :: id
-system :: id
-
-component :: any
-storage :: component[]
-
-default :: component
-duplicate :: {component -> component}
-
-execute :: {chunk, entity[], integer}
-prologue :: {}
-epilogue :: {}
-
-set_hook :: {entity, fragment, component, component?}
-assign_hook :: {entity, fragment, component, component}
-insert_hook :: {entity, fragment, component}
-remove_hook :: {entity, fragment, component}
-
-each_state :: implementation-specific
-execute_state :: implementation-specific
-
-each_iterator :: {each_state? -> fragment?, component?}
-execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
-```
-
-### Predefs
-
-```
-TAG :: fragment
-NAME :: fragment
-
-UNIQUE :: fragment
-EXPLICIT :: fragment
-
-DEFAULT :: fragment
-DUPLICATE :: fragment
-
-PREFAB :: fragment
-DISABLED :: fragment
-
-INCLUDES :: fragment
-EXCLUDES :: fragment
-
-ON_SET :: fragment
-ON_ASSIGN :: fragment
-ON_INSERT :: fragment
-ON_REMOVE :: fragment
-
-GROUP :: fragment
-
-QUERY :: fragment
-EXECUTE :: fragment
-
-PROLOGUE :: fragment
-EPILOGUE :: fragment
-
-DESTRUCTION_POLICY :: fragment
-DESTRUCTION_POLICY_DESTROY_ENTITY :: id
-DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
-```
-
-### Functions
-
-```
-id :: integer? -> id...
-
-pack :: integer, integer -> id
-unpack :: id -> integer, integer
-
-defer :: boolean
-commit :: boolean
-
-spawn :: <fragment, component>? -> entity
-clone :: entity -> <fragment, component>? -> entity
-
-alive :: entity -> boolean
-alive_all :: entity... -> boolean
-alive_any :: entity... -> boolean
-
-empty :: entity -> boolean
-empty_all :: entity... -> boolean
-empty_any :: entity... -> boolean
-
-has :: entity, fragment -> boolean
-has_all :: entity, fragment... -> boolean
-has_any :: entity, fragment... -> boolean
-
-get :: entity, fragment...  -> component...
-
-set :: entity, fragment, component -> ()
-remove :: entity, fragment... -> ()
-clear :: entity... -> ()
-destroy :: entity... -> ()
-
-batch_set :: query, fragment, component -> ()
-batch_remove :: query, fragment... -> ()
-batch_clear :: query... -> ()
-batch_destroy :: query... -> ()
-
-each :: entity -> {each_state? -> fragment?, component?}, each_state?
-execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
-
-process :: system... -> ()
-
-debug_mode :: boolean -> ()
-collect_garbage :: ()
-```
-
-### Classes
-
-#### Chunk
-
-```
-chunk :: fragment, fragment... -> chunk, entity[], integer
-
-chunk_mt:alive :: boolean
-chunk_mt:empty :: boolean
-
-chunk_mt:has :: fragment -> boolean
-chunk_mt:has_all :: fragment... -> boolean
-chunk_mt:has_any :: fragment... -> boolean
-
-chunk_mt:entities :: entity[], integer
-chunk_mt:fragments :: fragment[], integer
-chunk_mt:components :: fragment... -> storage...
-```
-
-#### Builder
-
-```
-builder :: builder
-
-builder_mt:spawn :: entity
-builder_mt:clone :: entity -> entity
-
-builder_mt:has :: fragment -> boolean
-builder_mt:has_all :: fragment... -> boolean
-builder_mt:has_any :: fragment... -> boolean
-
-builder_mt:get :: fragment... -> component...
-
-builder_mt:set :: fragment, component -> builder
-builder_mt:remove :: fragment... -> builder
-builder_mt:clear :: builder
-
-builder_mt:tag :: builder
-builder_mt:name :: string -> builder
-
-builder_mt:unique :: builder
-builder_mt:explicit :: builder
-
-builder_mt:default :: component -> builder
-builder_mt:duplicate :: {component -> component} -> builder
-
-builder_mt:prefab :: builder
-builder_mt:disabled :: builder
-
-builder_mt:include :: fragment... -> builder
-builder_mt:exclude :: fragment... -> builder
-
-builder_mt:on_set :: {entity, fragment, component, component?} -> builder
-builder_mt:on_assign :: {entity, fragment, component, component} -> builder
-builder_mt:on_insert :: {entity, fragment, component} -> builder
-builder_mt:on_remove :: {entity, fragment} -> builder
-
-builder_mt:group :: system -> builder
-
-builder_mt:query :: query -> builder
-builder_mt:execute :: {chunk, entity[], integer} -> builder
-
-builder_mt:prologue :: {} -> builder
-builder_mt:epilogue :: {} -> builder
-
-builder_mt:destruction_policy :: id -> builder
-```
+To get started with `evolved.lua`, read the [Overview](#overview) section to understand the basic concepts and how to use the library. After that, check the [Example](develop/example.lua), which demonstrates complex usage of the library. Finally, refer to the [Cheat Sheet](#cheat-sheet) for a quick reference of all the functions and classes provided by the library.
 
 ## Overview
 
@@ -1086,6 +934,195 @@ evolved.destroy(world)
 assert(not evolved.alive(entity))
 ```
 
+## Cheat Sheet
+
+### Aliases
+
+```
+id :: implementation-specific
+
+entity :: id
+fragment :: id
+query :: id
+system :: id
+
+component :: any
+storage :: component[]
+
+default :: component
+duplicate :: {component -> component}
+
+execute :: {chunk, entity[], integer}
+prologue :: {}
+epilogue :: {}
+
+set_hook :: {entity, fragment, component, component?}
+assign_hook :: {entity, fragment, component, component}
+insert_hook :: {entity, fragment, component}
+remove_hook :: {entity, fragment, component}
+
+each_state :: implementation-specific
+execute_state :: implementation-specific
+
+each_iterator :: {each_state? -> fragment?, component?}
+execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
+```
+
+### Predefs
+
+```
+TAG :: fragment
+NAME :: fragment
+
+UNIQUE :: fragment
+EXPLICIT :: fragment
+
+DEFAULT :: fragment
+DUPLICATE :: fragment
+
+PREFAB :: fragment
+DISABLED :: fragment
+
+INCLUDES :: fragment
+EXCLUDES :: fragment
+
+ON_SET :: fragment
+ON_ASSIGN :: fragment
+ON_INSERT :: fragment
+ON_REMOVE :: fragment
+
+GROUP :: fragment
+
+QUERY :: fragment
+EXECUTE :: fragment
+
+PROLOGUE :: fragment
+EPILOGUE :: fragment
+
+DESTRUCTION_POLICY :: fragment
+DESTRUCTION_POLICY_DESTROY_ENTITY :: id
+DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
+```
+
+### Functions
+
+```
+id :: integer? -> id...
+
+pack :: integer, integer -> id
+unpack :: id -> integer, integer
+
+defer :: boolean
+commit :: boolean
+
+spawn :: <fragment, component>? -> entity
+clone :: entity -> <fragment, component>? -> entity
+
+alive :: entity -> boolean
+alive_all :: entity... -> boolean
+alive_any :: entity... -> boolean
+
+empty :: entity -> boolean
+empty_all :: entity... -> boolean
+empty_any :: entity... -> boolean
+
+has :: entity, fragment -> boolean
+has_all :: entity, fragment... -> boolean
+has_any :: entity, fragment... -> boolean
+
+get :: entity, fragment...  -> component...
+
+set :: entity, fragment, component -> ()
+remove :: entity, fragment... -> ()
+clear :: entity... -> ()
+destroy :: entity... -> ()
+
+batch_set :: query, fragment, component -> ()
+batch_remove :: query, fragment... -> ()
+batch_clear :: query... -> ()
+batch_destroy :: query... -> ()
+
+each :: entity -> {each_state? -> fragment?, component?}, each_state?
+execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
+
+process :: system... -> ()
+
+debug_mode :: boolean -> ()
+collect_garbage :: ()
+```
+
+### Classes
+
+#### Chunk
+
+```
+chunk :: fragment, fragment... -> chunk, entity[], integer
+
+chunk_mt:alive :: boolean
+chunk_mt:empty :: boolean
+
+chunk_mt:has :: fragment -> boolean
+chunk_mt:has_all :: fragment... -> boolean
+chunk_mt:has_any :: fragment... -> boolean
+
+chunk_mt:entities :: entity[], integer
+chunk_mt:fragments :: fragment[], integer
+chunk_mt:components :: fragment... -> storage...
+```
+
+#### Builder
+
+```
+builder :: builder
+
+builder_mt:spawn :: entity
+builder_mt:clone :: entity -> entity
+
+builder_mt:has :: fragment -> boolean
+builder_mt:has_all :: fragment... -> boolean
+builder_mt:has_any :: fragment... -> boolean
+
+builder_mt:get :: fragment... -> component...
+
+builder_mt:set :: fragment, component -> builder
+builder_mt:remove :: fragment... -> builder
+builder_mt:clear :: builder
+
+builder_mt:tag :: builder
+builder_mt:name :: string -> builder
+
+builder_mt:unique :: builder
+builder_mt:explicit :: builder
+
+builder_mt:default :: component -> builder
+builder_mt:duplicate :: {component -> component} -> builder
+
+builder_mt:prefab :: builder
+builder_mt:disabled :: builder
+
+builder_mt:include :: fragment... -> builder
+builder_mt:exclude :: fragment... -> builder
+
+builder_mt:on_set :: {entity, fragment, component, component?} -> builder
+builder_mt:on_assign :: {entity, fragment, component, component} -> builder
+builder_mt:on_insert :: {entity, fragment, component} -> builder
+builder_mt:on_remove :: {entity, fragment} -> builder
+
+builder_mt:group :: system -> builder
+
+builder_mt:query :: query -> builder
+builder_mt:execute :: {chunk, entity[], integer} -> builder
+
+builder_mt:prologue :: {} -> builder
+builder_mt:epilogue :: {} -> builder
+
+builder_mt:destruction_policy :: id -> builder
+```
+
+## License
+
+`evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
+
 # API Reference
 
 ## Predefs
@@ -1717,5 +1754,3 @@ function evolved.builder_mt:epilogue(epilogue) end
 ---@return evolved.builder builder
 function evolved.builder_mt:destruction_policy(destruction_policy) end
 ```
-
-## [License (MIT)](./LICENSE.md)
