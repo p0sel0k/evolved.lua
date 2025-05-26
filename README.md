@@ -671,6 +671,29 @@ The [`evolved.process`](#evolvedprocess) function is used to process systems. It
 function evolved.process(...) end
 ```
 
+If you don't specify a query for the system, the system itself will be treated as a query. This means the system can contain `evolved.INCLUDES` and `evolved.EXCLUDES` fragments, and it will be processed according to them. This is useful for creating systems with unique queries that don't need to be reused in other systems.
+
+```lua
+local evolved = require 'evolved'
+
+local health = evolved.id()
+
+local system = evolved.builder()
+    :include(health)
+    :execute(function(chunk, entity_list, entity_count)
+        local health_components = chunk:components(health)
+
+        for i = 1, entity_count do
+            print(i)
+            health_components[i] = math.max(
+                health_components[i] - 1,
+                0)
+        end
+    end):spawn()
+
+evolved.process(system)
+```
+
 To group systems together, you can use the [`evolved.GROUP`](#evolvedgroup) fragment. Systems with a specified group will be processed when you call the [`evolved.process`](#evolvedprocess) function with this group. For example, you can group all physics systems together and process them in one [`evolved.process`](#evolvedprocess) call.
 
 ```lua
@@ -1124,6 +1147,10 @@ builder_mt:destruction_policy :: id -> builder
 `evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
 
 # Changelog
+
+## vX.X.X-dev
+
+- Systems can be queries themselves
 
 ## v1.0.0
 

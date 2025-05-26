@@ -2727,6 +2727,7 @@ end
 
 ---@param system evolved.system
 local function __system_process(system)
+    ---@type evolved.query?, evolved.execute?, evolved.prologue?, evolved.epilogue?
     local query, execute, prologue, epilogue = __evolved_get(system,
         __QUERY, __EXECUTE, __PROLOGUE, __EPILOGUE)
 
@@ -2738,16 +2739,14 @@ local function __system_process(system)
         end
     end
 
-    if query and execute then
+    if execute then
         __evolved_defer()
-        do
-            for chunk, entity_list, entity_count in __evolved_execute(query) do
-                local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
+        for chunk, entity_list, entity_count in __evolved_execute(query or system) do
+            local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
 
-                if not success then
-                    __evolved_commit()
-                    __error_fmt('system execution failed: %s', result)
-                end
+            if not success then
+                __evolved_commit()
+                __error_fmt('system execution failed: %s', result)
             end
         end
         __evolved_commit()

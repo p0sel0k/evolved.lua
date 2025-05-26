@@ -1,6 +1,9 @@
 require 'develop.example'
-require 'develop.unbench'
 require 'develop.untests'
+
+require 'develop.testing.system_as_query_tests'
+
+require 'develop.unbench'
 require 'develop.usbench'
 
 local basics = require 'develop.basics'
