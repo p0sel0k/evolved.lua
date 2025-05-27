@@ -1008,6 +1008,7 @@ DISABLED :: fragment
 
 INCLUDES :: fragment
 EXCLUDES :: fragment
+REQUIRES :: fragment
 
 ON_SET :: fragment
 ON_ASSIGN :: fragment
@@ -1125,6 +1126,7 @@ builder_mt:disabled :: builder
 
 builder_mt:include :: fragment... -> builder
 builder_mt:exclude :: fragment... -> builder
+builder_mt:require :: fragment... -> builder
 
 builder_mt:on_set :: {entity, fragment, component, component?} -> builder
 builder_mt:on_assign :: {entity, fragment, component, component} -> builder
@@ -1179,6 +1181,8 @@ builder_mt:destruction_policy :: id -> builder
 ### `evolved.INCLUDES`
 
 ### `evolved.EXCLUDES`
+
+### `evolved.REQUIRES`
 
 ### `evolved.ON_SET`
 
@@ -1706,6 +1710,14 @@ function evolved.builder_mt:include(...) end
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
 function evolved.builder_mt:exclude(...) end
+```
+
+### `evolved.builder_mt:require`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function evolved.builder_mt:require(...) end
 ```
 
 #### `evolved.builder_mt:on_set`

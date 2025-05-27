@@ -117,10 +117,11 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
+local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
-local __query_sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 
 ---
 ---
@@ -701,6 +702,7 @@ local __DISABLED = __acquire_id()
 
 local __INCLUDES = __acquire_id()
 local __EXCLUDES = __acquire_id()
+local __REQUIRES = __acquire_id()
 
 local __ON_SET = __acquire_id()
 local __ON_ASSIGN = __acquire_id()
@@ -4437,12 +4439,12 @@ function __evolved_execute(query)
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
 
-    local query_includes = __query_sorted_includes[query]
+    local query_includes = __sorted_includes[query]
     local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
     local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
 
-    local query_excludes = __query_sorted_excludes[query]
+    local query_excludes = __sorted_excludes[query]
     local query_exclude_set = query_excludes and query_excludes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_exclude_list = query_excludes and query_excludes.__item_list --[=[@as evolved.fragment[]]=]
     local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
@@ -5115,6 +5117,31 @@ function __builder_mt:exclude(...)
     return self:set(__EXCLUDES, exclude_list)
 end
 
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __builder_mt:require(...)
+    local argument_count = __lua_select('#', ...)
+
+    if argument_count == 0 then
+        return self
+    end
+
+    local require_list = self:get(__REQUIRES)
+    local require_count = require_list and #require_list or 0
+
+    if require_count == 0 then
+        require_list = __lua_table_new(argument_count, 0)
+    end
+
+    for i = 1, argument_count do
+        ---@type evolved.fragment
+        local fragment = __lua_select(i, ...)
+        require_list[require_count + i] = fragment
+    end
+
+    return self:set(__REQUIRES, require_list)
+end
+
 ---@param on_set evolved.set_hook
 ---@return evolved.builder builder
 function __builder_mt:on_set(on_set)
@@ -5232,6 +5259,7 @@ __evolved_set(__DISABLED, __NAME, 'DISABLED')
 
 __evolved_set(__INCLUDES, __NAME, 'INCLUDES')
 __evolved_set(__EXCLUDES, __NAME, 'EXCLUDES')
+__evolved_set(__REQUIRES, __NAME, 'REQUIRES')
 
 __evolved_set(__ON_SET, __NAME, 'ON_SET')
 __evolved_set(__ON_ASSIGN, __NAME, 'ON_ASSIGN')
@@ -5276,6 +5304,9 @@ __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
 __evolved_set(__EXCLUDES, __DEFAULT, {})
 __evolved_set(__EXCLUDES, __DUPLICATE, __list_copy)
 
+__evolved_set(__REQUIRES, __DEFAULT, {})
+__evolved_set(__REQUIRES, __DUPLICATE, __list_copy)
+
 __evolved_set(__ON_SET, __UNIQUE)
 __evolved_set(__ON_ASSIGN, __UNIQUE)
 __evolved_set(__ON_INSERT, __UNIQUE)
@@ -5293,7 +5324,7 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_count = #include_list
 
     if include_count == 0 then
-        __query_sorted_includes[query] = nil
+        __sorted_includes[query] = nil
         return
     end
 
@@ -5305,11 +5336,11 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     end
 
     __assoc_list_sort(sorted_includes)
-    __query_sorted_includes[query] = sorted_includes
+    __sorted_includes[query] = sorted_includes
 end)
 
 __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
-    __query_sorted_includes[query] = nil
+    __sorted_includes[query] = nil
 end)
 
 ---
@@ -5324,7 +5355,7 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_count = #exclude_list
 
     if exclude_count == 0 then
-        __query_sorted_excludes[query] = nil
+        __sorted_excludes[query] = nil
         return
     end
 
@@ -5336,11 +5367,42 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     end
 
     __assoc_list_sort(sorted_excludes)
-    __query_sorted_excludes[query] = sorted_excludes
+    __sorted_excludes[query] = sorted_excludes
 end)
 
 __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
-    __query_sorted_excludes[query] = nil
+    __sorted_excludes[query] = nil
+end)
+
+---
+---
+---
+---
+---
+
+---@param fragment evolved.fragment
+---@param require_list evolved.fragment[]
+__evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
+    local require_count = #require_list
+
+    if require_count == 0 then
+        __sorted_requires[fragment] = nil
+        return
+    end
+
+    local sorted_requires = __assoc_list_new(require_count)
+
+    for require_index = 1, require_count do
+        local require = require_list[require_index]
+        __assoc_list_insert(sorted_requires, require)
+    end
+
+    __assoc_list_sort(sorted_requires)
+    __sorted_requires[fragment] = sorted_requires
+end)
+
+__evolved_set(__REQUIRES, __ON_REMOVE, function(fragment)
+    __sorted_requires[fragment] = nil
 end)
 
 ---
@@ -5411,6 +5473,7 @@ evolved.DUPLICATE = __DUPLICATE
 evolved.PREFAB = __PREFAB
 evolved.DISABLED = __DISABLED
 
+evolved.REQUIRES = __REQUIRES
 evolved.INCLUDES = __INCLUDES
 evolved.EXCLUDES = __EXCLUDES
 
