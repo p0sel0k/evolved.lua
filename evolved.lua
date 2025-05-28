@@ -157,6 +157,7 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __has_explicit_major boolean
 ---@field package __has_explicit_minors boolean
 ---@field package __has_explicit_fragments boolean
+---@field package __has_required_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
@@ -1021,6 +1022,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __has_explicit_major = false,
         __has_explicit_minors = false,
         __has_explicit_fragments = false,
+        __has_required_fragments = false,
     }, __chunk_mt)
 
     if chunk_parent then
@@ -1158,6 +1160,9 @@ function __update_chunk_flags(chunk)
     local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
     local has_explicit_fragments = has_explicit_major or has_explicit_minors
 
+    local has_required_fragments = (chunk_parent ~= nil and chunk_parent.__has_required_fragments)
+        or __evolved_has(chunk_fragment, __REQUIRES)
+
     chunk.__has_setup_hooks = has_setup_hooks
     chunk.__has_assign_hooks = has_assign_hooks
     chunk.__has_insert_hooks = has_insert_hooks
@@ -1170,6 +1175,8 @@ function __update_chunk_flags(chunk)
     chunk.__has_explicit_major = has_explicit_major
     chunk.__has_explicit_minors = has_explicit_minors
     chunk.__has_explicit_fragments = has_explicit_fragments
+
+    chunk.__has_required_fragments = has_required_fragments
 end
 
 ---@param major evolved.fragment
@@ -5239,6 +5246,9 @@ __evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks_hook)
 __evolved_set(__DUPLICATE, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__DUPLICATE, __ON_REMOVE, __update_major_chunks_hook)
 
+__evolved_set(__REQUIRES, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__REQUIRES, __ON_REMOVE, __update_major_chunks_hook)
+
 ---
 ---
 ---
@@ -5473,9 +5483,9 @@ evolved.DUPLICATE = __DUPLICATE
 evolved.PREFAB = __PREFAB
 evolved.DISABLED = __DISABLED
 
-evolved.REQUIRES = __REQUIRES
 evolved.INCLUDES = __INCLUDES
 evolved.EXCLUDES = __EXCLUDES
+evolved.REQUIRES = __REQUIRES
 
 evolved.ON_SET = __ON_SET
 evolved.ON_ASSIGN = __ON_ASSIGN
