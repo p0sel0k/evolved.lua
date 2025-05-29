@@ -1376,63 +1376,6 @@ local function __chunk_without_unique_fragments(chunk)
     return new_chunk
 end
 
----@param chunk evolved.chunk
----@param req_fragment_set table<evolved.fragment, integer>
----@param req_fragment_list evolved.fragment[]
----@param req_fragment_count integer
----@return integer
----@nodiscard
-local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
-    if not chunk.__has_required_fragments then
-        return req_fragment_count
-    end
-
-    ---@type evolved.fragment[]
-    local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
-    local fragment_stack_size = 0
-
-    do
-        local chunk_fragment_list = chunk.__fragment_list
-        local chunk_fragment_count = chunk.__fragment_count
-
-        __lua_table_move(
-            chunk_fragment_list, 1, chunk_fragment_count,
-            1, fragment_stack)
-
-        fragment_stack_size = fragment_stack_size + chunk_fragment_count
-    end
-
-    while fragment_stack_size > 0 do
-        local fragment = fragment_stack[fragment_stack_size]
-
-        fragment_stack[fragment_stack_size] = nil
-        fragment_stack_size = fragment_stack_size - 1
-
-        local fragment_requires = __sorted_requires[fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
-
-        for fragment_require_index = 1, fragment_require_count do
-            ---@cast fragment_require_list -?
-            local fragment_require = fragment_require_list[fragment_require_index]
-
-            if req_fragment_set[fragment_require] then
-                -- this fragment has already been gathered
-            else
-                req_fragment_count = req_fragment_count + 1
-                req_fragment_set[fragment_require] = req_fragment_count
-                req_fragment_list[req_fragment_count] = fragment_require
-
-                fragment_stack_size = fragment_stack_size + 1
-                fragment_stack[fragment_stack_size] = fragment_require
-            end
-        end
-    end
-
-    __release_table(__table_pool_tag.fragment_list, fragment_stack, true)
-    return req_fragment_count
-end
-
 ---
 ---
 ---
@@ -1667,6 +1610,112 @@ local function __chunk_get_components(chunk, place, ...)
             i4 and storages[i4][place],
             __chunk_get_components(chunk, place, __lua_select(5, ...))
     end
+end
+
+---
+---
+---
+---
+---
+
+---@param chunk evolved.chunk
+---@param req_fragment_set table<evolved.fragment, integer>
+---@param req_fragment_list evolved.fragment[]
+---@param req_fragment_count integer
+---@return integer
+---@nodiscard
+local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
+    ---@type evolved.fragment[]
+    local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
+    local fragment_stack_size = 0
+
+    do
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        __lua_table_move(
+            chunk_fragment_list, 1, chunk_fragment_count,
+            1, fragment_stack)
+
+        fragment_stack_size = fragment_stack_size + chunk_fragment_count
+    end
+
+    while fragment_stack_size > 0 do
+        local stack_fragment = fragment_stack[fragment_stack_size]
+
+        fragment_stack[fragment_stack_size] = nil
+        fragment_stack_size = fragment_stack_size - 1
+
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+
+        for fragment_require_index = 1, fragment_require_count do
+            ---@cast fragment_require_list -?
+            local required_fragment = fragment_require_list[fragment_require_index]
+
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
+            end
+        end
+    end
+
+    __release_table(__table_pool_tag.fragment_list, fragment_stack, true)
+    return req_fragment_count
+end
+
+---@param fragment evolved.fragment
+---@param req_fragment_set table<evolved.fragment, integer>
+---@param req_fragment_list evolved.fragment[]
+---@param req_fragment_count integer
+---@return integer
+---@nodiscard
+local function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_list, req_fragment_count)
+    ---@type evolved.fragment[]
+    local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
+    local fragment_stack_size = 0
+
+    do
+        fragment_stack_size = fragment_stack_size + 1
+        fragment_stack[fragment_stack_size] = fragment
+    end
+
+    while fragment_stack_size > 0 do
+        local stack_fragment = fragment_stack[fragment_stack_size]
+
+        fragment_stack[fragment_stack_size] = nil
+        fragment_stack_size = fragment_stack_size - 1
+
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+
+        for fragment_require_index = 1, fragment_require_count do
+            ---@cast fragment_require_list -?
+            local required_fragment = fragment_require_list[fragment_require_index]
+
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
+            end
+        end
+    end
+
+    __release_table(__table_pool_tag.fragment_list, fragment_stack, true)
+    return req_fragment_count
 end
 
 ---
@@ -1969,8 +2018,12 @@ local function __clone_entity(entity, prefab, components)
         ---@type evolved.fragment[]
         req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-        req_fragment_count = __chunk_required_fragments(ini_chunk,
-            req_fragment_set, req_fragment_list, req_fragment_count)
+        for fragment in __lua_next, components do
+            if not prefab_chunk or not prefab_chunk.__fragment_set[fragment] then
+                req_fragment_count = __fragment_required_fragments(fragment,
+                    req_fragment_set, req_fragment_list, req_fragment_count)
+            end
+        end
 
         for i = 1, req_fragment_count do
             local req_fragment = req_fragment_list[i]
@@ -2610,7 +2663,7 @@ function __chunk_set(old_chunk, fragment, component)
             ---@type evolved.fragment[]
             req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-            req_fragment_count = __chunk_required_fragments(ini_new_chunk,
+            req_fragment_count = __fragment_required_fragments(fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
             for i = 1, req_fragment_count do
@@ -4239,7 +4292,7 @@ function __evolved_set(entity, fragment, component)
             ---@type evolved.fragment[]
             req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-            req_fragment_count = __chunk_required_fragments(ini_new_chunk,
+            req_fragment_count = __fragment_required_fragments(fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
             for i = 1, req_fragment_count do

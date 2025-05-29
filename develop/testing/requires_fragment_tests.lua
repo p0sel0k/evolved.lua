@@ -24,8 +24,9 @@ do
 end
 
 do
-    local f1, f2 = evo.id(2)
+    local f1, f2, f3 = evo.id(3)
     evo.set(f1, evo.REQUIRES, { f2 })
+    evo.set(f3, evo.REQUIRES, { f1, f2 })
 
     do
         local e = evo.id()
@@ -49,8 +50,11 @@ do
         assert(not evo.has(e, f2))
 
         local e2 = evo.clone(e)
-        assert(evo.has(e2, f2))
-        assert(evo.get(e2, f2) == true)
+        assert(not evo.has(e2, f2))
+
+        local e3 = evo.clone(e, { [f3] = true })
+        assert(evo.has(e3, f2))
+        assert(evo.get(e3, f2) == true)
     end
 
     do
@@ -70,9 +74,10 @@ do
 end
 
 do
-    local f1, f2 = evo.id(2)
+    local f1, f2, f3 = evo.id(3)
     evo.set(f1, evo.REQUIRES, { f2 })
     evo.set(f2, evo.DEFAULT, 42)
+    evo.set(f3, evo.REQUIRES, { f1, f2 })
 
     do
         local e = evo.id()
@@ -96,8 +101,11 @@ do
         assert(not evo.has(e, f2))
 
         local e2 = evo.clone(e)
-        assert(evo.has(e2, f2))
-        assert(evo.get(e2, f2) == 42)
+        assert(not evo.has(e2, f2))
+
+        local e3 = evo.clone(e, { [f3] = true })
+        assert(evo.has(e3, f2))
+        assert(evo.get(e3, f2) == 42)
     end
 
     do
@@ -121,6 +129,7 @@ do
     evo.set(f1, evo.REQUIRES, { f2 })
     evo.set(f2, evo.REQUIRES, { f3 })
     evo.set(f3, evo.DEFAULT, 42)
+    evo.set(f3, evo.REQUIRES, { f1, f2 })
 
     do
         local e = evo.id()
@@ -150,11 +159,15 @@ do
         assert(not evo.has(e, f2))
         assert(not evo.has(e, f3))
 
-        local e2 = evo.clone(e)
-        assert(evo.has(e2, f2))
-        assert(evo.get(e2, f2) == true)
-        assert(evo.has(e2, f3))
-        assert(evo.get(e2, f3) == 42)
+        local e2 = evo.clone(e, { [f1] = 21 })
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 21)
+        assert(not evo.has(e2, f2))
+        assert(not evo.has(e2, f3))
+
+        local e3 = evo.clone(e, { [f3] = 21 })
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == true)
+        assert(evo.has(e3, f2) and evo.get(e3, f2) == true)
+        assert(evo.has(e3, f3) and evo.get(e3, f3) == 21)
     end
 end
 
@@ -189,9 +202,14 @@ do
         assert(not evo.has(e, f2))
         assert(not evo.has(e, f3))
 
-        local e2 = evo.clone(e)
-        assert(evo.has(e2, f1) and evo.get(e2, f1) == 42)
-        assert(evo.has(e2, f2) and evo.get(e2, f2) == true)
-        assert(evo.has(e2, f3) and evo.get(e2, f3) == true)
+        local e2 = evo.clone(e, { [f1] = 21 })
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == 21)
+        assert(not evo.has(e2, f2))
+        assert(not evo.has(e2, f3))
+
+        local e3 = evo.clone(e, { [f3] = 21 })
+        assert(evo.has(e3, f1) and evo.get(e3, f1) == 42)
+        assert(evo.has(e3, f2) and evo.get(e3, f2) == true)
+        assert(evo.has(e3, f3) and evo.get(e3, f3) == 21)
     end
 end
