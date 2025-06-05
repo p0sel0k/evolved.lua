@@ -213,3 +213,31 @@ do
         assert(evo.has(e3, f3) and evo.get(e3, f3) == 21)
     end
 end
+
+do
+    local f1, f2, f3, f4 = evo.id(4)
+
+    do
+        evo.set(f1, evo.REQUIRES, { f2 })
+        do
+            local e = evo.id()
+            evo.set(e, f1)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+        end
+        evo.set(f1, evo.REQUIRES, { f2, f3 })
+        do
+            local e = evo.id()
+            evo.set(e, f1)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+            assert(evo.has(e, f3) and evo.get(e, f3) == true)
+        end
+        evo.set(f3, evo.REQUIRES, { f4 })
+        do
+            local e = evo.id()
+            evo.set(e, f1)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+            assert(evo.has(e, f3) and evo.get(e, f3) == true)
+            assert(evo.has(e, f4) and evo.get(e, f4) == true)
+        end
+    end
+end
