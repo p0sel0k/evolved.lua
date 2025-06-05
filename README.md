@@ -685,7 +685,6 @@ local system = evolved.builder()
         local health_components = chunk:components(health)
 
         for i = 1, entity_count do
-            print(i)
             health_components[i] = math.max(
                 health_components[i] - 1,
                 0)
