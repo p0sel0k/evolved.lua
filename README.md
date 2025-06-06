@@ -1179,9 +1179,10 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
-## vX.X.X-dev
+## v1.1.0
 
-- Systems can be queries themselves
+- [`Systems`](#systems) can be queries themselves now
+- Added the new [`evolved.REQUIRES`](#evolvedrequires) fragment trait
 
 ## v1.0.0
 
