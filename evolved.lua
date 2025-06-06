@@ -1635,7 +1635,7 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
 
         __lua_table_move(
             chunk_fragment_list, 1, chunk_fragment_count,
-            1, fragment_stack)
+            fragment_stack_size + 1, fragment_stack)
 
         fragment_stack_size = fragment_stack_size + chunk_fragment_count
     end
@@ -2018,12 +2018,8 @@ local function __clone_entity(entity, prefab, components)
         ---@type evolved.fragment[]
         req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-        for fragment in __lua_next, components do
-            if not prefab_chunk or not prefab_chunk.__fragment_set[fragment] then
-                req_fragment_count = __fragment_required_fragments(fragment,
-                    req_fragment_set, req_fragment_list, req_fragment_count)
-            end
-        end
+        req_fragment_count = __chunk_required_fragments(ini_chunk,
+            req_fragment_set, req_fragment_list, req_fragment_count)
 
         for i = 1, req_fragment_count do
             local req_fragment = req_fragment_list[i]
