@@ -1,7 +1,7 @@
 local evolved = {
     __HOMEPAGE = 'https://github.com/BlackMATov/evolved.lua',
     __DESCRIPTION = 'Evolved ECS (Entity-Component-System) for Lua',
-    __VERSION = '1.0.0',
+    __VERSION = '1.1.0',
     __LICENSE = [[
         MIT License
 
@@ -117,10 +117,11 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
+local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
-local __query_sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
+local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 
 ---
 ---
@@ -156,6 +157,7 @@ local __query_sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_l
 ---@field package __has_explicit_major boolean
 ---@field package __has_explicit_minors boolean
 ---@field package __has_explicit_fragments boolean
+---@field package __has_required_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
@@ -701,6 +703,7 @@ local __DISABLED = __acquire_id()
 
 local __INCLUDES = __acquire_id()
 local __EXCLUDES = __acquire_id()
+local __REQUIRES = __acquire_id()
 
 local __ON_SET = __acquire_id()
 local __ON_ASSIGN = __acquire_id()
@@ -1019,6 +1022,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __has_explicit_major = false,
         __has_explicit_minors = false,
         __has_explicit_fragments = false,
+        __has_required_fragments = false,
     }, __chunk_mt)
 
     if chunk_parent then
@@ -1156,6 +1160,9 @@ function __update_chunk_flags(chunk)
     local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
     local has_explicit_fragments = has_explicit_major or has_explicit_minors
 
+    local has_required_fragments = (chunk_parent ~= nil and chunk_parent.__has_required_fragments)
+        or __evolved_has(chunk_fragment, __REQUIRES)
+
     chunk.__has_setup_hooks = has_setup_hooks
     chunk.__has_assign_hooks = has_assign_hooks
     chunk.__has_insert_hooks = has_insert_hooks
@@ -1168,6 +1175,8 @@ function __update_chunk_flags(chunk)
     chunk.__has_explicit_major = has_explicit_major
     chunk.__has_explicit_minors = has_explicit_minors
     chunk.__has_explicit_fragments = has_explicit_fragments
+
+    chunk.__has_required_fragments = has_required_fragments
 end
 
 ---@param major evolved.fragment
@@ -1609,6 +1618,112 @@ end
 ---
 ---
 
+---@param chunk evolved.chunk
+---@param req_fragment_set table<evolved.fragment, integer>
+---@param req_fragment_list evolved.fragment[]
+---@param req_fragment_count integer
+---@return integer
+---@nodiscard
+local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
+    ---@type evolved.fragment[]
+    local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
+    local fragment_stack_size = 0
+
+    do
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        __lua_table_move(
+            chunk_fragment_list, 1, chunk_fragment_count,
+            fragment_stack_size + 1, fragment_stack)
+
+        fragment_stack_size = fragment_stack_size + chunk_fragment_count
+    end
+
+    while fragment_stack_size > 0 do
+        local stack_fragment = fragment_stack[fragment_stack_size]
+
+        fragment_stack[fragment_stack_size] = nil
+        fragment_stack_size = fragment_stack_size - 1
+
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+
+        for fragment_require_index = 1, fragment_require_count do
+            ---@cast fragment_require_list -?
+            local required_fragment = fragment_require_list[fragment_require_index]
+
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
+            end
+        end
+    end
+
+    __release_table(__table_pool_tag.fragment_list, fragment_stack, true)
+    return req_fragment_count
+end
+
+---@param fragment evolved.fragment
+---@param req_fragment_set table<evolved.fragment, integer>
+---@param req_fragment_list evolved.fragment[]
+---@param req_fragment_count integer
+---@return integer
+---@nodiscard
+local function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_list, req_fragment_count)
+    ---@type evolved.fragment[]
+    local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
+    local fragment_stack_size = 0
+
+    do
+        fragment_stack_size = fragment_stack_size + 1
+        fragment_stack[fragment_stack_size] = fragment
+    end
+
+    while fragment_stack_size > 0 do
+        local stack_fragment = fragment_stack[fragment_stack_size]
+
+        fragment_stack[fragment_stack_size] = nil
+        fragment_stack_size = fragment_stack_size - 1
+
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+
+        for fragment_require_index = 1, fragment_require_count do
+            ---@cast fragment_require_list -?
+            local required_fragment = fragment_require_list[fragment_require_index]
+
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
+            end
+        end
+    end
+
+    __release_table(__table_pool_tag.fragment_list, fragment_stack, true)
+    return req_fragment_count
+end
+
+---
+---
+---
+---
+---
+
 local __defer_set
 local __defer_remove
 local __defer_clear
@@ -1694,6 +1809,29 @@ local function __spawn_entity(entity, components)
         return
     end
 
+    local req_fragment_set
+    local req_fragment_list
+    local req_fragment_count = 0
+
+    local ini_chunk = chunk
+    local ini_fragment_set = ini_chunk.__fragment_set
+
+    if chunk.__has_required_fragments then
+        ---@type table<evolved.fragment, integer>
+        req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+        ---@type evolved.fragment[]
+        req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+        req_fragment_count = __chunk_required_fragments(ini_chunk,
+            req_fragment_set, req_fragment_list, req_fragment_count)
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+            chunk = __chunk_with_fragment(chunk, req_fragment)
+        end
+    end
+
     local chunk_entity_list = chunk.__entity_list
     local chunk_entity_count = chunk.__entity_count
 
@@ -1738,6 +1876,36 @@ local function __spawn_entity(entity, components)
                 component_storage[place] = new_component
             end
         end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    ---@type evolved.default?, evolved.duplicate?
+                    local req_fragment_default, req_fragment_duplicate =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
+
+                    local req_component = req_fragment_default
+
+                    if req_component ~= nil and req_fragment_duplicate then
+                        req_component = req_fragment_duplicate(req_component)
+                    end
+
+                    if req_component == nil then
+                        req_component = true
+                    end
+
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    req_component_storage[place] = req_component
+                end
+            end
+        end
     else
         for fragment, component in __lua_next, components do
             local component_index = chunk_component_indices[fragment]
@@ -1748,6 +1916,24 @@ local function __spawn_entity(entity, components)
                 local component_storage = chunk_component_storages[component_index]
 
                 component_storage[place] = new_component
+            end
+        end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component = true
+
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    req_component_storage[place] = req_component
+                end
             end
         end
     end
@@ -1788,6 +1974,14 @@ local function __spawn_entity(entity, components)
             end
         end
     end
+
+    if req_fragment_set then
+        __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+    end
+
+    if req_fragment_list then
+        __release_table(__table_pool_tag.fragment_list, req_fragment_list)
+    end
 end
 
 ---@param entity evolved.entity
@@ -1808,6 +2002,29 @@ local function __clone_entity(entity, prefab, components)
 
     if not chunk then
         return
+    end
+
+    local req_fragment_set
+    local req_fragment_list
+    local req_fragment_count = 0
+
+    local ini_chunk = chunk
+    local ini_fragment_set = ini_chunk.__fragment_set
+
+    if chunk.__has_required_fragments then
+        ---@type table<evolved.fragment, integer>
+        req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+        ---@type evolved.fragment[]
+        req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+        req_fragment_count = __chunk_required_fragments(ini_chunk,
+            req_fragment_set, req_fragment_list, req_fragment_count)
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+            chunk = __chunk_with_fragment(chunk, req_fragment)
+        end
     end
 
     local chunk_entity_list = chunk.__entity_list
@@ -1910,6 +2127,36 @@ local function __clone_entity(entity, prefab, components)
                 component_storage[place] = new_component
             end
         end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    ---@type evolved.default?, evolved.duplicate?
+                    local req_fragment_default, req_fragment_duplicate =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
+
+                    local req_component = req_fragment_default
+
+                    if req_component ~= nil and req_fragment_duplicate then
+                        req_component = req_fragment_duplicate(req_component)
+                    end
+
+                    if req_component == nil then
+                        req_component = true
+                    end
+
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    req_component_storage[place] = req_component
+                end
+            end
+        end
     else
         for fragment, component in __lua_next, components do
             local component_index = chunk_component_indices[fragment]
@@ -1920,6 +2167,24 @@ local function __clone_entity(entity, prefab, components)
                 local component_storage = chunk_component_storages[component_index]
 
                 component_storage[place] = new_component
+            end
+        end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component = true
+
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    req_component_storage[place] = req_component
+                end
             end
         end
     end
@@ -1959,6 +2224,14 @@ local function __clone_entity(entity, prefab, components)
                 end
             end
         end
+    end
+
+    if req_fragment_set then
+        __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+    end
+
+    if req_fragment_list then
+        __release_table(__table_pool_tag.fragment_list, req_fragment_list)
     end
 end
 
@@ -2372,6 +2645,29 @@ function __chunk_set(old_chunk, fragment, component)
             end
         end
     else
+        local req_fragment_set
+        local req_fragment_list
+        local req_fragment_count = 0
+
+        local ini_new_chunk = new_chunk
+        local ini_fragment_set = ini_new_chunk.__fragment_set
+
+        if new_chunk.__has_required_fragments then
+            ---@type table<evolved.fragment, integer>
+            req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+            ---@type evolved.fragment[]
+            req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+            req_fragment_count = __fragment_required_fragments(fragment,
+                req_fragment_set, req_fragment_list, req_fragment_count)
+
+            for i = 1, req_fragment_count do
+                local req_fragment = req_fragment_list[i]
+                new_chunk = __chunk_with_fragment(new_chunk, req_fragment)
+            end
+        end
+
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
 
@@ -2516,6 +2812,110 @@ function __chunk_set(old_chunk, fragment, component)
             else
                 -- nothing
             end
+        end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                ---@type evolved.default?, evolved.duplicate?, evolved.set_hook?, evolved.insert_hook?
+                local req_fragment_default, req_fragment_duplicate, req_fragment_on_set, req_fragment_on_insert
+
+                if new_chunk_has_setup_hooks or new_chunk_has_insert_hooks then
+                    req_fragment_default, req_fragment_duplicate, req_fragment_on_set, req_fragment_on_insert =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
+                end
+
+                if req_fragment_on_set or req_fragment_on_insert then
+                    local req_component_index = new_component_indices[req_fragment]
+
+                    if req_component_index then
+                        local req_component_storage = new_component_storages[req_component_index]
+
+                        if req_fragment_duplicate then
+                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                                local entity = new_entity_list[new_place]
+
+                                local req_component = req_fragment_default
+                                if req_component ~= nil then req_component = req_fragment_duplicate(req_component) end
+                                if req_component == nil then req_component = true end
+
+                                req_component_storage[new_place] = req_component
+
+                                if req_fragment_on_set then
+                                    __defer_call_hook(req_fragment_on_set, entity, req_fragment, req_component)
+                                end
+
+                                if req_fragment_on_insert then
+                                    __defer_call_hook(req_fragment_on_insert, entity, req_fragment, req_component)
+                                end
+                            end
+                        else
+                            local req_component = req_fragment_default
+                            if req_component == nil then req_component = true end
+
+                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                                local entity = new_entity_list[new_place]
+
+                                req_component_storage[new_place] = req_component
+
+                                if req_fragment_on_set then
+                                    __defer_call_hook(req_fragment_on_set, entity, req_fragment, req_component)
+                                end
+
+                                if req_fragment_on_insert then
+                                    __defer_call_hook(req_fragment_on_insert, entity, req_fragment, req_component)
+                                end
+                            end
+                        end
+                    else
+                        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                            local entity = new_entity_list[new_place]
+
+                            if req_fragment_on_set then
+                                __defer_call_hook(req_fragment_on_set, entity, req_fragment)
+                            end
+
+                            if req_fragment_on_insert then
+                                __defer_call_hook(req_fragment_on_insert, entity, req_fragment)
+                            end
+                        end
+                    end
+                else
+                    local req_component_index = new_component_indices[req_fragment]
+
+                    if req_component_index then
+                        local req_component_storage = new_component_storages[req_component_index]
+
+                        if req_fragment_duplicate then
+                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                                local req_component = req_fragment_default
+                                if req_component ~= nil then req_component = req_fragment_duplicate(req_component) end
+                                if req_component == nil then req_component = true end
+                                req_component_storage[new_place] = req_component
+                            end
+                        else
+                            local req_component = req_fragment_default
+                            if req_component == nil then req_component = true end
+                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                                req_component_storage[new_place] = req_component
+                            end
+                        end
+                    else
+                        -- nothing
+                    end
+                end
+            end
+        end
+
+        if req_fragment_set then
+            __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+        end
+
+        if req_fragment_list then
+            __release_table(__table_pool_tag.fragment_list, req_fragment_list)
         end
 
         __structural_changes = __structural_changes + 1
@@ -2727,6 +3127,7 @@ end
 
 ---@param system evolved.system
 local function __system_process(system)
+    ---@type evolved.query?, evolved.execute?, evolved.prologue?, evolved.epilogue?
     local query, execute, prologue, epilogue = __evolved_get(system,
         __QUERY, __EXECUTE, __PROLOGUE, __EPILOGUE)
 
@@ -2738,16 +3139,14 @@ local function __system_process(system)
         end
     end
 
-    if query and execute then
+    if execute then
         __evolved_defer()
-        do
-            for chunk, entity_list, entity_count in __evolved_execute(query) do
-                local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
+        for chunk, entity_list, entity_count in __evolved_execute(query or system) do
+            local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
 
-                if not success then
-                    __evolved_commit()
-                    __error_fmt('system execution failed: %s', result)
-                end
+            if not success then
+                __evolved_commit()
+                __error_fmt('system execution failed: %s', result)
             end
         end
         __evolved_commit()
@@ -3875,6 +4274,29 @@ function __evolved_set(entity, fragment, component)
             end
         end
     else
+        local req_fragment_set
+        local req_fragment_list
+        local req_fragment_count = 0
+
+        local ini_new_chunk = new_chunk
+        local ini_fragment_set = ini_new_chunk.__fragment_set
+
+        if new_chunk.__has_required_fragments then
+            ---@type table<evolved.fragment, integer>
+            req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+            ---@type evolved.fragment[]
+            req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+            req_fragment_count = __fragment_required_fragments(fragment,
+                req_fragment_set, req_fragment_list, req_fragment_count)
+
+            for i = 1, req_fragment_count do
+                local req_fragment = req_fragment_list[i]
+                new_chunk = __chunk_with_fragment(new_chunk, req_fragment)
+            end
+        end
+
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
 
@@ -3949,6 +4371,64 @@ function __evolved_set(entity, fragment, component)
                     __defer_call_hook(fragment_on_insert, entity, fragment)
                 end
             end
+        end
+
+        for i = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[i]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                ---@type evolved.default?, evolved.duplicate?, evolved.set_hook?, evolved.insert_hook?
+                local req_fragment_default, req_fragment_duplicate, req_fragment_on_set, req_fragment_on_insert
+
+                if new_chunk_has_setup_hooks or new_chunk_has_insert_hooks then
+                    req_fragment_default, req_fragment_duplicate, req_fragment_on_set, req_fragment_on_insert =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
+                end
+
+                local req_component_index = new_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component_storage = new_component_storages[req_component_index]
+
+                    local req_component = req_fragment_default
+
+                    if req_component ~= nil and req_fragment_duplicate then
+                        req_component = req_fragment_duplicate(req_component)
+                    end
+
+                    if req_component == nil then
+                        req_component = true
+                    end
+
+                    req_component_storage[new_place] = req_component
+
+                    if req_fragment_on_set then
+                        __defer_call_hook(req_fragment_on_set, entity, req_fragment, req_component)
+                    end
+
+                    if req_fragment_on_insert then
+                        __defer_call_hook(req_fragment_on_insert, entity, req_fragment, req_component)
+                    end
+                else
+                    if req_fragment_on_set then
+                        __defer_call_hook(req_fragment_on_set, entity, req_fragment)
+                    end
+
+                    if req_fragment_on_insert then
+                        __defer_call_hook(req_fragment_on_insert, entity, req_fragment)
+                    end
+                end
+            end
+        end
+
+        if req_fragment_set then
+            __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+        end
+
+        if req_fragment_list then
+            __release_table(__table_pool_tag.fragment_list, req_fragment_list)
         end
     end
 
@@ -4438,12 +4918,12 @@ function __evolved_execute(query)
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
 
-    local query_includes = __query_sorted_includes[query]
+    local query_includes = __sorted_includes[query]
     local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
     local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
 
-    local query_excludes = __query_sorted_excludes[query]
+    local query_excludes = __sorted_excludes[query]
     local query_exclude_set = query_excludes and query_excludes.__item_set --[[@as table<evolved.fragment, integer>]]
     local query_exclude_list = query_excludes and query_excludes.__item_list --[=[@as evolved.fragment[]]=]
     local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
@@ -5116,6 +5596,31 @@ function __builder_mt:exclude(...)
     return self:set(__EXCLUDES, exclude_list)
 end
 
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function __builder_mt:require(...)
+    local argument_count = __lua_select('#', ...)
+
+    if argument_count == 0 then
+        return self
+    end
+
+    local require_list = self:get(__REQUIRES)
+    local require_count = require_list and #require_list or 0
+
+    if require_count == 0 then
+        require_list = __lua_table_new(argument_count, 0)
+    end
+
+    for i = 1, argument_count do
+        ---@type evolved.fragment
+        local fragment = __lua_select(i, ...)
+        require_list[require_count + i] = fragment
+    end
+
+    return self:set(__REQUIRES, require_list)
+end
+
 ---@param on_set evolved.set_hook
 ---@return evolved.builder builder
 function __builder_mt:on_set(on_set)
@@ -5213,6 +5718,9 @@ __evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks_hook)
 __evolved_set(__DUPLICATE, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__DUPLICATE, __ON_REMOVE, __update_major_chunks_hook)
 
+__evolved_set(__REQUIRES, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__REQUIRES, __ON_REMOVE, __update_major_chunks_hook)
+
 ---
 ---
 ---
@@ -5233,6 +5741,7 @@ __evolved_set(__DISABLED, __NAME, 'DISABLED')
 
 __evolved_set(__INCLUDES, __NAME, 'INCLUDES')
 __evolved_set(__EXCLUDES, __NAME, 'EXCLUDES')
+__evolved_set(__REQUIRES, __NAME, 'REQUIRES')
 
 __evolved_set(__ON_SET, __NAME, 'ON_SET')
 __evolved_set(__ON_ASSIGN, __NAME, 'ON_ASSIGN')
@@ -5277,6 +5786,9 @@ __evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
 __evolved_set(__EXCLUDES, __DEFAULT, {})
 __evolved_set(__EXCLUDES, __DUPLICATE, __list_copy)
 
+__evolved_set(__REQUIRES, __DEFAULT, {})
+__evolved_set(__REQUIRES, __DUPLICATE, __list_copy)
+
 __evolved_set(__ON_SET, __UNIQUE)
 __evolved_set(__ON_ASSIGN, __UNIQUE)
 __evolved_set(__ON_INSERT, __UNIQUE)
@@ -5294,7 +5806,7 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     local include_count = #include_list
 
     if include_count == 0 then
-        __query_sorted_includes[query] = nil
+        __sorted_includes[query] = nil
         return
     end
 
@@ -5306,11 +5818,11 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
     end
 
     __assoc_list_sort(sorted_includes)
-    __query_sorted_includes[query] = sorted_includes
+    __sorted_includes[query] = sorted_includes
 end)
 
 __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
-    __query_sorted_includes[query] = nil
+    __sorted_includes[query] = nil
 end)
 
 ---
@@ -5325,7 +5837,7 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     local exclude_count = #exclude_list
 
     if exclude_count == 0 then
-        __query_sorted_excludes[query] = nil
+        __sorted_excludes[query] = nil
         return
     end
 
@@ -5337,11 +5849,42 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
     end
 
     __assoc_list_sort(sorted_excludes)
-    __query_sorted_excludes[query] = sorted_excludes
+    __sorted_excludes[query] = sorted_excludes
 end)
 
 __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
-    __query_sorted_excludes[query] = nil
+    __sorted_excludes[query] = nil
+end)
+
+---
+---
+---
+---
+---
+
+---@param fragment evolved.fragment
+---@param require_list evolved.fragment[]
+__evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
+    local require_count = #require_list
+
+    if require_count == 0 then
+        __sorted_requires[fragment] = nil
+        return
+    end
+
+    local sorted_requires = __assoc_list_new(require_count)
+
+    for require_index = 1, require_count do
+        local require = require_list[require_index]
+        __assoc_list_insert(sorted_requires, require)
+    end
+
+    __assoc_list_sort(sorted_requires)
+    __sorted_requires[fragment] = sorted_requires
+end)
+
+__evolved_set(__REQUIRES, __ON_REMOVE, function(fragment)
+    __sorted_requires[fragment] = nil
 end)
 
 ---
@@ -5414,6 +5957,7 @@ evolved.DISABLED = __DISABLED
 
 evolved.INCLUDES = __INCLUDES
 evolved.EXCLUDES = __EXCLUDES
+evolved.REQUIRES = __REQUIRES
 
 evolved.ON_SET = __ON_SET
 evolved.ON_ASSIGN = __ON_ASSIGN

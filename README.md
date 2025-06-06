@@ -41,12 +41,13 @@
     - [Deferred Operations](#deferred-operations)
     - [Batch Operations](#batch-operations)
   - [Systems](#systems)
-  - [Advanced Topics](#advanced-topics)
+  - [Predefined Traits](#predefined-traits)
     - [Fragment Tags](#fragment-tags)
     - [Fragment Hooks](#fragment-hooks)
     - [Unique Fragments](#unique-fragments)
     - [Explicit Fragments](#explicit-fragments)
     - [Shared Components](#shared-components)
+    - [Fragment Requirements](#fragment-requirements)
     - [Destruction Policies](#destruction-policies)
 - [Cheat Sheet](#cheat-sheet)
   - [Aliases](#aliases)
@@ -671,6 +672,28 @@ The [`evolved.process`](#evolvedprocess) function is used to process systems. It
 function evolved.process(...) end
 ```
 
+If you don't specify a query for the system, the system itself will be treated as a query. This means the system can contain `evolved.INCLUDES` and `evolved.EXCLUDES` fragments, and it will be processed according to them. This is useful for creating systems with unique queries that don't need to be reused in other systems.
+
+```lua
+local evolved = require 'evolved'
+
+local health = evolved.id()
+
+local system = evolved.builder()
+    :include(health)
+    :execute(function(chunk, entity_list, entity_count)
+        local health_components = chunk:components(health)
+
+        for i = 1, entity_count do
+            health_components[i] = math.max(
+                health_components[i] - 1,
+                0)
+        end
+    end):spawn()
+
+evolved.process(system)
+```
+
 To group systems together, you can use the [`evolved.GROUP`](#evolvedgroup) fragment. Systems with a specified group will be processed when you call the [`evolved.process`](#evolvedprocess) function with this group. For example, you can group all physics systems together and process them in one [`evolved.process`](#evolvedprocess) call.
 
 ```lua
@@ -743,7 +766,7 @@ The prologue and epilogue fragments do not require an explicit query. They will 
 > [!NOTE]
 > And one more thing about systems. Execution callbacks are called in the [deferred scope](#deferred-operations), which means that all modifying operations inside the callback will be queued and applied after the system has processed all chunks. But prologue and epilogue callbacks are not called in the deferred scope, so all modifying operations inside them will be applied immediately. This is done to avoid confusion and to make it clear that prologue and epilogue callbacks are not part of the chunk processing.
 
-### Advanced Topics
+### Predefined Traits
 
 #### Fragment Tags
 
@@ -887,6 +910,35 @@ local enemy2 = evolved.builder()
 assert(evolved.get(enemy1, position) ~= evolved.get(enemy2, position))
 ```
 
+#### Fragment Requirements
+
+Sometimes you want to add additional fragments to an entity when it receives a specific fragment. For example, you might want to add `position` and `velocity` fragments when an entity is given a `physical` fragment. This can be done using the [`evolved.REQUIRES`](#evolvedrequires) fragment trait. This trait expects a list of fragments that will be added to the entity when the fragment is inserted.
+
+```lua
+local evolved = require 'evolved'
+
+local position = evolved.builder()
+    :default(vector2(0, 0))
+    :duplicate(vector2_duplicate)
+    :spawn()
+
+local velocity = evolved.builder()
+    :default(vector2(0, 0))
+    :duplicate(vector2_duplicate)
+    :spawn()
+
+local physical = evolved.builder()
+    :tag()
+    :require(position, velocity)
+    :spawn()
+
+local enemy = evolved.builder()
+    :set(physical)
+    :spawn()
+
+assert(evolved.has_all(enemy, position, velocity))
+```
+
 #### Destruction Policies
 
 Typically, fragments remain alive for the entire lifetime of the program. However, in some cases, you might want to destroy fragments when they are no longer needed. For example, you can use some runtime entities as fragments for other entities. In this case, you might want to destroy such fragments even while they are still attached to other entities. Since entities cannot have destroyed fragments, a destruction policy must be applied to resolve this. By default, the library will remove the destroyed fragment from all entities that have it.
@@ -985,6 +1037,7 @@ DISABLED :: fragment
 
 INCLUDES :: fragment
 EXCLUDES :: fragment
+REQUIRES :: fragment
 
 ON_SET :: fragment
 ON_ASSIGN :: fragment
@@ -1102,6 +1155,7 @@ builder_mt:disabled :: builder
 
 builder_mt:include :: fragment... -> builder
 builder_mt:exclude :: fragment... -> builder
+builder_mt:require :: fragment... -> builder
 
 builder_mt:on_set :: {entity, fragment, component, component?} -> builder
 builder_mt:on_assign :: {entity, fragment, component, component} -> builder
@@ -1122,6 +1176,17 @@ builder_mt:destruction_policy :: id -> builder
 ## License
 
 `evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
+
+# Changelog
+
+## v1.1.0
+
+- [`Systems`](#systems) can be queries themselves now
+- Added the new [`evolved.REQUIRES`](#evolvedrequires) fragment trait
+
+## v1.0.0
+
+- Initial release
 
 # API Reference
 
@@ -1146,6 +1211,8 @@ builder_mt:destruction_policy :: id -> builder
 ### `evolved.INCLUDES`
 
 ### `evolved.EXCLUDES`
+
+### `evolved.REQUIRES`
 
 ### `evolved.ON_SET`
 
@@ -1673,6 +1740,14 @@ function evolved.builder_mt:include(...) end
 ---@param ... evolved.fragment fragments
 ---@return evolved.builder builder
 function evolved.builder_mt:exclude(...) end
+```
+
+### `evolved.builder_mt:require`
+
+```lua
+---@param ... evolved.fragment fragments
+---@return evolved.builder builder
+function evolved.builder_mt:require(...) end
 ```
 
 #### `evolved.builder_mt:on_set`
