@@ -405,7 +405,7 @@ evolved.set(enemy1, stamina, 42)
 
 #### Entity Builders
 
-Another way to avoid structural changes when spawning entities is to use the [`evolved.builder`](#evolvedbuilder) fluid interface. The [`evolved.builder`](#evolvedbuilder) function returns a builder object that allows you to spawn entities with a specific set of fragments and components without the necessity of setting them one by one with structural changes for each change.
+Another way to avoid structural changes when spawning entities is to use the [`evolved.builder`](#evolvedbuilder) fluent interface. The [`evolved.builder`](#evolvedbuilder) function returns a builder object that allows you to spawn entities with a specific set of fragments and components without the necessity of setting them one by one with structural changes for each change.
 
 ```lua
 local evolved = require 'evolved'
