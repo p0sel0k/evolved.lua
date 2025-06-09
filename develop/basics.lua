@@ -25,6 +25,9 @@ end
 function basics.describe_fuzz(modname)
     print(string.format('| %s ... |', modname))
 
+    collectgarbage('collect')
+    collectgarbage('stop')
+
     do
         local iters = 0
 
@@ -52,6 +55,9 @@ function basics.describe_fuzz(modname)
             print('|-- FUZZ FAIL: ' .. result)
         end
     end
+
+    collectgarbage('restart')
+    collectgarbage('collect')
 end
 
 ---@param name string
