@@ -4050,8 +4050,15 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_alive(entity)
-    local entity_index = entity % 0x100000
-    return __freelist_ids[entity_index] == entity
+    if entity > 0 then
+        local entity_index = entity % 0x100000
+        return __freelist_ids[entity_index] == entity
+    else
+        local primary_index = (0 - entity) % 0x100000
+        local secondary_index = (0 - entity - primary_index) / 0x100000
+        local primary, secondary = __freelist_ids[primary_index], __freelist_ids[secondary_index]
+        return primary % 0x100000 == primary_index and secondary % 0x100000 == secondary_index
+    end
 end
 
 ---@param ... evolved.entity entities
@@ -4069,9 +4076,18 @@ function __evolved_alive_all(...)
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        local entity_index = entity % 0x100000
-        if freelist_ids[entity_index] ~= entity then
-            return false
+        if entity > 0 then
+            local entity_index = entity % 0x100000
+            if freelist_ids[entity_index] ~= entity then
+                return false
+            end
+        else
+            local primary_index = (0 - entity) % 0x100000
+            local secondary_index = (0 - entity - primary_index) / 0x100000
+            local primary, secondary = freelist_ids[primary_index], freelist_ids[secondary_index]
+            if primary % 0x100000 ~= primary_index or secondary % 0x100000 ~= secondary_index then
+                return false
+            end
         end
     end
 
@@ -4093,9 +4109,18 @@ function __evolved_alive_any(...)
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        local entity_index = entity % 0x100000
-        if freelist_ids[entity_index] == entity then
-            return true
+        if entity > 0 then
+            local entity_index = entity % 0x100000
+            if freelist_ids[entity_index] == entity then
+                return true
+            end
+        else
+            local primary_index = (0 - entity) % 0x100000
+            local secondary_index = (0 - entity - primary_index) / 0x100000
+            local primary, secondary = freelist_ids[primary_index], freelist_ids[secondary_index]
+            if primary % 0x100000 == primary_index and secondary % 0x100000 == secondary_index then
+                return true
+            end
         end
     end
 
