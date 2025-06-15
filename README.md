@@ -1023,6 +1023,8 @@ execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
 ### Predefs
 
 ```
+ANY :: fragment
+
 TAG :: fragment
 NAME :: fragment
 
@@ -1194,6 +1196,8 @@ builder_mt:destruction_policy :: id -> builder
 # API Reference
 
 ## Predefs
+
+### `evolved.ANY`
 
 ### `evolved.TAG`
 

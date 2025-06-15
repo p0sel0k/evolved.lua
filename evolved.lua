@@ -689,6 +689,8 @@ end
 ---
 ---
 
+local __ANY = __acquire_id()
+
 local __TAG = __acquire_id()
 local __NAME = __acquire_id()
 
@@ -5775,6 +5777,8 @@ __evolved_set(__REQUIRES, __ON_REMOVE, __update_major_chunks_hook)
 ---
 ---
 
+__evolved_set(__ANY, __NAME, 'ANY')
+
 __evolved_set(__TAG, __NAME, 'TAG')
 __evolved_set(__NAME, __NAME, 'NAME')
 
@@ -5813,6 +5817,8 @@ __evolved_set(__DESTRUCTION_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTRUCTION_POLICY_
 ---
 ---
 ---
+
+__evolved_set(__ANY, __TAG)
 
 __evolved_set(__TAG, __TAG)
 
@@ -5990,6 +5996,8 @@ end)
 ---
 ---
 ---
+
+evolved.ANY = __ANY
 
 evolved.TAG = __TAG
 evolved.NAME = __NAME
