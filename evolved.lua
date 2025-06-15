@@ -144,6 +144,12 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __component_indices table<evolved.fragment, integer>
 ---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
+---@field package __primary_fragment_set table<evolved.fragment, integer>
+---@field package __primary_fragment_list evolved.fragment[]
+---@field package __primary_fragment_count integer
+---@field package __secondary_fragment_set table<evolved.fragment, integer>
+---@field package __secondary_fragment_list evolved.fragment[]
+---@field package __secondary_fragment_count integer
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __unreachable_or_collected boolean
@@ -960,14 +966,17 @@ local __update_major_chunks_trace
 ---@return evolved.chunk
 ---@nodiscard
 function __new_chunk(chunk_parent, chunk_fragment)
-    ---@type table<evolved.fragment, integer>
-    local chunk_fragment_set = {}
+    local chunk_fragment_set = {} ---@type table<evolved.fragment, integer>
+    local chunk_fragment_list = {} ---@type evolved.fragment[]
+    local chunk_fragment_count = 0 ---@type integer
 
-    ---@type evolved.fragment[]
-    local chunk_fragment_list = {}
+    local chunk_primary_fragment_set = {} ---@type table<evolved.fragment, integer>
+    local chunk_primary_fragment_list = {} ---@type evolved.fragment[]
+    local chunk_primary_fragment_count = 0 ---@type integer
 
-    ---@type integer
-    local chunk_fragment_count = 0
+    local chunk_secondary_fragment_set = {} ---@type table<evolved.fragment, integer>
+    local chunk_secondary_fragment_list = {} ---@type evolved.fragment[]
+    local chunk_secondary_fragment_count = 0 ---@type integer
 
     if chunk_parent then
         local parent_fragment_list = chunk_parent.__fragment_list
@@ -980,12 +989,46 @@ function __new_chunk(chunk_parent, chunk_fragment)
                 chunk_fragment_set, chunk_fragment_list, chunk_fragment_count,
                 parent_fragment)
         end
+
+        local parent_primary_fragment_list = chunk_parent.__primary_fragment_list
+        local parent_primary_fragment_count = chunk_parent.__primary_fragment_count
+
+        for parent_primary_fragment_index = 1, parent_primary_fragment_count do
+            local parent_primary_fragment = parent_primary_fragment_list[parent_primary_fragment_index]
+
+            chunk_primary_fragment_count = __assoc_list_insert_ex(
+                chunk_primary_fragment_set, chunk_primary_fragment_list, chunk_primary_fragment_count,
+                parent_primary_fragment)
+        end
+
+        local parent_secondary_fragment_list = chunk_parent.__secondary_fragment_list
+        local parent_secondary_fragment_count = chunk_parent.__secondary_fragment_count
+
+        for parent_secondary_fragment_index = 1, parent_secondary_fragment_count do
+            local parent_secondary_fragment = parent_secondary_fragment_list[parent_secondary_fragment_index]
+
+            chunk_secondary_fragment_count = __assoc_list_insert_ex(
+                chunk_secondary_fragment_set, chunk_secondary_fragment_list, chunk_secondary_fragment_count,
+                parent_secondary_fragment)
+        end
     end
 
     do
         chunk_fragment_count = chunk_fragment_count + 1
         chunk_fragment_set[chunk_fragment] = chunk_fragment_count
         chunk_fragment_list[chunk_fragment_count] = chunk_fragment
+    end
+
+    if chunk_fragment < 0 then
+        local chunk_primary_fragment, chunk_secondary_fragment = __evolved_unpair(chunk_fragment)
+
+        chunk_primary_fragment_count = __assoc_list_insert_ex(
+            chunk_primary_fragment_set, chunk_primary_fragment_list, chunk_primary_fragment_count,
+            chunk_primary_fragment)
+
+        chunk_secondary_fragment_count = __assoc_list_insert_ex(
+            chunk_secondary_fragment_set, chunk_secondary_fragment_list, chunk_secondary_fragment_count,
+            chunk_secondary_fragment)
     end
 
     ---@type evolved.chunk
@@ -1004,6 +1047,12 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __component_indices = {},
         __component_storages = {},
         __component_fragments = {},
+        __primary_fragment_set = chunk_primary_fragment_set,
+        __primary_fragment_list = chunk_primary_fragment_list,
+        __primary_fragment_count = chunk_primary_fragment_count,
+        __secondary_fragment_set = chunk_secondary_fragment_set,
+        __secondary_fragment_list = chunk_secondary_fragment_list,
+        __secondary_fragment_count = chunk_secondary_fragment_count,
         __with_fragment_edges = {},
         __without_fragment_edges = {},
         __unreachable_or_collected = false,
@@ -1427,7 +1476,25 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_fragment(chunk, fragment)
-    return chunk.__fragment_set[fragment] ~= nil
+    if fragment > 0 then
+        return chunk.__fragment_set[fragment] ~= nil
+    end
+
+    local primary_fragment_index = (0 - fragment) % 0x100000
+    local secondary_fragment_index = (0 - fragment - primary_fragment_index) / 0x100000
+
+    local primary = __freelist_ids[primary_fragment_index] --[[@as evolved.id]]
+    local secondary = __freelist_ids[secondary_fragment_index] --[[@as evolved.id]]
+
+    if primary == __ANY and secondary == __ANY then
+        return chunk.__primary_fragment_count > 0 or chunk.__secondary_fragment_count > 0
+    elseif primary == __ANY then
+        return chunk.__secondary_fragment_set[secondary] ~= nil
+    elseif secondary == __ANY then
+        return chunk.__primary_fragment_set[primary] ~= nil
+    else
+        return chunk.__fragment_set[fragment] ~= nil
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -1441,31 +1508,46 @@ local function __chunk_has_all_fragments(chunk, ...)
         return true
     end
 
-    local fs = chunk.__fragment_set
+    local chunk_fragment_set = chunk.__fragment_set
+    local chunk_has_fragment = __chunk_has_fragment
 
     if fragment_count == 1 then
         local f1 = ...
-        return fs[f1] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1)))
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return fs[f1] ~= nil and fs[f2] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) and
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2)))
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) and
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) and
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3)))
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) and
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) and
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3))) and
+            (chunk_fragment_set[f4] ~= nil or (f4 < 0 and chunk_has_fragment(chunk, f4)))
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil and
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) and
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) and
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3))) and
+            (chunk_fragment_set[f4] ~= nil or (f4 < 0 and chunk_has_fragment(chunk, f4))) and
             __chunk_has_all_fragments(chunk, __lua_select(5, ...))
     end
 end
@@ -1476,11 +1558,11 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
-    local fragment_set = chunk.__fragment_set
+    local chunk_has_fragment = __chunk_has_fragment
 
     for i = 1, fragment_count do
         local fragment = fragment_list[i]
-        if not fragment_set[fragment] then
+        if not chunk_has_fragment(chunk, fragment) then
             return false
         end
     end
@@ -1499,31 +1581,46 @@ local function __chunk_has_any_fragments(chunk, ...)
         return false
     end
 
-    local fs = chunk.__fragment_set
+    local chunk_fragment_set = chunk.__fragment_set
+    local chunk_has_fragment = __chunk_has_fragment
 
     if fragment_count == 1 then
         local f1 = ...
-        return fs[f1] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1)))
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return fs[f1] ~= nil or fs[f2] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) or
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2)))
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) or
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) or
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3)))
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) or
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) or
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3))) or
+            (chunk_fragment_set[f4] ~= nil or (f4 < 0 and chunk_has_fragment(chunk, f4)))
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil or
+        return
+            (chunk_fragment_set[f1] ~= nil or (f1 < 0 and chunk_has_fragment(chunk, f1))) or
+            (chunk_fragment_set[f2] ~= nil or (f2 < 0 and chunk_has_fragment(chunk, f2))) or
+            (chunk_fragment_set[f3] ~= nil or (f3 < 0 and chunk_has_fragment(chunk, f3))) or
+            (chunk_fragment_set[f4] ~= nil or (f4 < 0 and chunk_has_fragment(chunk, f4))) or
             __chunk_has_any_fragments(chunk, __lua_select(5, ...))
     end
 end
@@ -1534,11 +1631,11 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
-    local fragment_set = chunk.__fragment_set
+    local chunk_has_fragment = __chunk_has_fragment
 
     for i = 1, fragment_count do
         local fragment = fragment_list[i]
-        if fragment_set[fragment] then
+        if chunk_has_fragment(chunk, fragment) then
             return true
         end
     end
