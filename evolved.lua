@@ -876,9 +876,7 @@ local __debug_fns = {}
 
 ---@param entity evolved.entity
 function __debug_fns.validate_entity(entity)
-    local entity_index = entity % 0x100000
-
-    if __freelist_ids[entity_index] ~= entity then
+    if not __evolved_alive(entity) then
         __error_fmt('the entity (%s) is not alive and cannot be used',
             __id_name(entity))
     end
@@ -886,9 +884,7 @@ end
 
 ---@param prefab evolved.entity
 function __debug_fns.validate_prefab(prefab)
-    local prefab_index = prefab % 0x100000
-
-    if __freelist_ids[prefab_index] ~= prefab then
+    if not __evolved_alive(prefab) then
         __error_fmt('the prefab (%s) is not alive and cannot be used',
             __id_name(prefab))
     end
@@ -903,9 +899,7 @@ end
 
 ---@param fragment evolved.fragment
 function __debug_fns.validate_fragment(fragment)
-    local fragment_index = fragment % 0x100000
-
-    if __freelist_ids[fragment_index] ~= fragment then
+    if not __evolved_alive(fragment) then
         __error_fmt('the fragment (%s) is not alive and cannot be used',
             __id_name(fragment))
     end
@@ -927,9 +921,7 @@ end
 
 ---@param query evolved.query
 function __debug_fns.validate_query(query)
-    local query_index = query % 0x100000
-
-    if __freelist_ids[query_index] ~= query then
+    if not __evolved_alive(query) then
         __error_fmt('the query (%s) is not alive and cannot be used',
             __id_name(query))
     end
@@ -937,9 +929,7 @@ end
 
 ---@param system evolved.system
 function __debug_fns.validate_system(system)
-    local system_index = system % 0x100000
-
-    if __freelist_ids[system_index] ~= system then
+    if not __evolved_alive(system) then
         __error_fmt('the system (%s) is not alive and cannot be used',
             __id_name(system))
     end
