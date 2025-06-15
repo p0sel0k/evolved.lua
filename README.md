@@ -1065,6 +1065,9 @@ id :: integer? -> id...
 pack :: integer, integer -> id
 unpack :: id -> integer, integer
 
+pair :: id, id -> id
+unpair :: id -> id, id
+
 defer :: boolean
 commit :: boolean
 
@@ -1267,6 +1270,25 @@ function evolved.pack(index, version) end
 ---@return integer version
 ---@nodiscard
 function evolved.unpack(id) end
+```
+
+### `evolved.pair`
+
+```lua
+---@param primary evolved.id
+---@param secondary evolved.id
+---@return evolved.id pair
+---@nodiscard
+function evolved.pair(primary, secondary) end
+```
+
+### `evolved.unpair`
+
+```lua
+---@param pair evolved.id
+---@return evolved.id primary
+---@return evolved.id secondary
+function evolved.unpair(pair) end
 ```
 
 ### `evolved.defer`

@@ -771,6 +771,9 @@ local __evolved_id
 local __evolved_pack
 local __evolved_unpack
 
+local __evolved_pair
+local __evolved_unpair
+
 local __evolved_defer
 local __evolved_commit
 
@@ -3914,6 +3917,51 @@ function __evolved_unpack(id)
     return index, version
 end
 
+---@param primary evolved.id
+---@param secondary evolved.id
+---@return evolved.id pair
+---@nodiscard
+function __evolved_pair(primary, secondary)
+    local primary_index = primary % 0x100000
+    local secondary_index = secondary % 0x100000
+
+    if __freelist_ids[primary_index] ~= primary then
+        __error_fmt('the primary id (%s) is not alive and cannot be used',
+            __id_name(primary))
+    end
+
+    if __freelist_ids[secondary_index] ~= secondary then
+        __error_fmt('the secondary id (%s) is not alive and cannot be used',
+            __id_name(secondary))
+    end
+
+    local shifted_secondary = secondary_index * 0x100000
+    return 0 - primary_index - shifted_secondary --[[@as evolved.id]]
+end
+
+---@param pair evolved.id
+---@return evolved.id primary
+---@return evolved.id secondary
+function __evolved_unpair(pair)
+    local primary_index = (0 - pair) % 0x100000
+    local secondary_index = (0 - pair - primary_index) / 0x100000
+
+    local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
+    local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
+
+    if primary % 0x100000 ~= primary_index then
+        __error_fmt('the primary id (%s) is not alive and cannot be used',
+            __id_name(primary))
+    end
+
+    if secondary % 0x100000 ~= secondary_index then
+        __error_fmt('the secondary id (%s) is not alive and cannot be used',
+            __id_name(secondary))
+    end
+
+    return primary, secondary
+end
+
 ---@return boolean started
 function __evolved_defer()
     __defer_depth = __defer_depth + 1
@@ -5980,6 +6028,9 @@ evolved.id = __evolved_id
 
 evolved.pack = __evolved_pack
 evolved.unpack = __evolved_unpack
+
+evolved.pair = __evolved_pair
+evolved.unpair = __evolved_unpair
 
 evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
