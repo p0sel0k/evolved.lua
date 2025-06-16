@@ -72,3 +72,18 @@ do
     assert(evo.has_all(e12, evo.pair(p1, evo.ANY), evo.pair(p2, evo.ANY)))
     assert(evo.has_any(e12, evo.pair(p1, evo.ANY), evo.pair(p2, evo.ANY)))
 end
+
+do
+    local p1, s1, p2, s2 = evo.id(4)
+    evo.set(p1, s1)
+    evo.set(s1, p1)
+    evo.set(p2, s2)
+    assert(evo.empty(evo.pair(p1, s1)))
+    assert(evo.empty(evo.pair(p2, s2)))
+    assert(evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2)))
+    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2)))
+    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), p1))
+    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), p1))
+    assert(evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
+    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), s2))
+end

@@ -4228,8 +4228,13 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    local entity_index = entity % 0x100000
-    return __freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index]
+    if entity > 0 then
+        local entity_index = entity % 0x100000
+        return __freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index]
+    else
+        -- pairs are always empty
+        return true
+    end
 end
 
 ---@param ... evolved.entity entities
@@ -4242,13 +4247,10 @@ function __evolved_empty_all(...)
         return true
     end
 
-    local freelist_ids = __freelist_ids
-
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        local entity_index = entity % 0x100000
-        if freelist_ids[entity_index] == entity and __entity_chunks[entity_index] then
+        if not __evolved_empty(entity) then
             return false
         end
     end
@@ -4266,13 +4268,10 @@ function __evolved_empty_any(...)
         return false
     end
 
-    local freelist_ids = __freelist_ids
-
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        local entity_index = entity % 0x100000
-        if freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index] then
+        if __evolved_empty(entity) then
             return true
         end
     end
