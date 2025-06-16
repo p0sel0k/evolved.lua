@@ -4389,6 +4389,11 @@ function __evolved_set(entity, fragment, component)
         __debug_fns.validate_fragment(fragment)
     end
 
+    if entity < 0 then
+        __error_fmt('the pair (%s) cannot have any fragments',
+            __id_name(entity))
+    end
+
     if __defer_depth > 0 then
         __defer_set(entity, fragment, component)
         return
@@ -4625,6 +4630,11 @@ function __evolved_remove(entity, ...)
         return
     end
 
+    if entity < 0 then
+        -- pairs cannot have fragments, nothing to remove
+        return
+    end
+
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
@@ -4743,7 +4753,9 @@ function __evolved_clear(...)
             local entity = __lua_select(argument_index, ...)
             local entity_index = entity % 0x100000
 
-            if __freelist_ids[entity_index] ~= entity then
+            if entity < 0 then
+                -- pairs cannot have fragments, nothing to clear
+            elseif __freelist_ids[entity_index] ~= entity then
                 -- this entity is not alive, nothing to clear
             else
                 local chunk = entity_chunks[entity_index]
@@ -4817,7 +4829,9 @@ function __evolved_destroy(...)
             local entity = __lua_select(argument_index, ...)
             local entity_index = entity % 0x100000
 
-            if __freelist_ids[entity_index] ~= entity then
+            if entity < 0 then
+                -- pairs cannot be destroyed, nothing to do
+            elseif __freelist_ids[entity_index] ~= entity then
                 -- this entity is not alive, nothing to destroy
             else
                 if not __minor_chunks[entity] then
