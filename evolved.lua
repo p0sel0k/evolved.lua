@@ -4284,6 +4284,11 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
+    if entity < 0 then
+        -- pairs are always empty
+        return false
+    end
+
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
@@ -4304,6 +4309,11 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_all(entity, ...)
+    if entity < 0 then
+        -- pairs are always empty
+        return __lua_select('#', ...) == 0
+    end
+
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
@@ -4324,6 +4334,11 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_any(entity, ...)
+    if entity < 0 then
+        -- pairs are always empty
+        return false
+    end
+
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
@@ -4344,6 +4359,11 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
+    if entity < 0 then
+        -- pairs are always empty
+        return
+    end
+
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then

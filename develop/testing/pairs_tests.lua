@@ -87,3 +87,15 @@ do
     assert(evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
     assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), s2))
 end
+
+do
+    local p1, s1 = evo.id(2)
+    evo.set(p1, s1)
+    evo.set(s1, p1)
+    assert(not evo.has(evo.pair(p1, s1), p1))
+    assert(not evo.has(evo.pair(p1, s1), s1))
+    assert(not evo.has_all(evo.pair(p1, s1), p1, s1))
+    assert(not evo.has_any(evo.pair(p1, s1), p1, s1))
+    assert(evo.get(evo.pair(p1, s1), p1) == nil)
+    assert(evo.get(evo.pair(p1, s1), s1) == nil)
+end
