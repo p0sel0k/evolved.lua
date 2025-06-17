@@ -1385,10 +1385,6 @@ local function __chunk_without_fragment(chunk, fragment)
         return nil
     end
 
-    if not chunk.__fragment_set[fragment] then
-        return chunk
-    end
-
     if fragment == chunk.__fragment then
         return chunk.__parent
     end
@@ -1396,6 +1392,111 @@ local function __chunk_without_fragment(chunk, fragment)
     do
         local without_fragment_edge = chunk.__without_fragment_edges[fragment]
         if without_fragment_edge then return without_fragment_edge end
+    end
+
+    if fragment < 0 and chunk.__has_pairs then
+        local primary_index = (0 - fragment) % 0x100000
+        local secondary_index = (0 - fragment - primary_index) / 0x100000
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
+
+        if primary == __ANY and secondary == __ANY then
+            local sib_chunk = chunk.__parent
+
+            while sib_chunk and sib_chunk.__has_pairs do
+                sib_chunk = sib_chunk.__parent
+            end
+
+            local ini_fragment_list = chunk.__fragment_list
+            local ini_fragment_count = chunk.__fragment_count
+
+            for ini_fragment_index = 1, ini_fragment_count do
+                local ini_fragment = ini_fragment_list[ini_fragment_index]
+                if ini_fragment > 0 then
+                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+                end
+            end
+
+            if sib_chunk then
+                chunk.__without_fragment_edges[fragment] = sib_chunk
+                sib_chunk.__with_fragment_edges[fragment] = chunk
+            end
+
+            return sib_chunk
+        elseif primary == __ANY then
+            local sec_pairs = chunk.__secondary_pairs[secondary]
+
+            if not sec_pairs then
+                return chunk
+            end
+
+            local sib_chunk = chunk.__parent
+
+            while sib_chunk and sib_chunk.__has_pairs and sib_chunk.__secondary_pairs[secondary] do
+                sib_chunk = sib_chunk.__parent
+            end
+
+            local ini_fragment_list = chunk.__fragment_list
+            local ini_fragment_count = chunk.__fragment_count
+
+            for ini_fragment_index = 1, ini_fragment_count do
+                local ini_fragment = ini_fragment_list[ini_fragment_index]
+                if ini_fragment > 0 then
+                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+                else
+                    local _, ini_secondary = __evolved_unpair(ini_fragment)
+                    if secondary ~= ini_secondary then
+                        sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+                    end
+                end
+            end
+
+            if sib_chunk then
+                chunk.__without_fragment_edges[fragment] = sib_chunk
+                sib_chunk.__with_fragment_edges[fragment] = chunk
+            end
+
+            return sib_chunk
+        elseif secondary == __ANY then
+            local pri_pairs = chunk.__primary_pairs[primary]
+
+            if not pri_pairs then
+                return chunk
+            end
+
+            local sib_chunk = chunk.__parent
+
+            while sib_chunk and sib_chunk.__has_pairs and sib_chunk.__primary_pairs[primary] do
+                sib_chunk = sib_chunk.__parent
+            end
+
+            local ini_fragment_list = chunk.__fragment_list
+            local ini_fragment_count = chunk.__fragment_count
+
+            for ini_fragment_index = 1, ini_fragment_count do
+                local ini_fragment = ini_fragment_list[ini_fragment_index]
+                if ini_fragment > 0 then
+                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+                else
+                    local ini_primary, _ = __evolved_unpair(ini_fragment)
+                    if primary ~= ini_primary then
+                        sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+                    end
+                end
+            end
+
+            if sib_chunk then
+                chunk.__without_fragment_edges[fragment] = sib_chunk
+                sib_chunk.__with_fragment_edges[fragment] = chunk
+            end
+
+            return sib_chunk
+        end
+    end
+
+    if not chunk.__fragment_set[fragment] then
+        return chunk
     end
 
     if fragment < chunk.__fragment then
