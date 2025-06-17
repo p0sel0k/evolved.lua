@@ -493,6 +493,9 @@ end
 ---@field package __item_count integer
 
 local __assoc_list_new
+local __assoc_list_dup
+local __assoc_list_move
+local __assoc_list_move_ex
 local __assoc_list_sort
 local __assoc_list_sort_ex
 local __assoc_list_insert
@@ -510,6 +513,69 @@ function __assoc_list_new(reserve)
         __item_list = __lua_table_new(reserve or 0, 0),
         __item_count = 0,
     }
+end
+
+---@generic K
+---@param al evolved.assoc_list<K>
+---@return evolved.assoc_list<K>
+---@nodiscard
+function __assoc_list_dup(al)
+    local al_item_list = al.__item_list
+    local al_item_count = al.__item_count
+
+    local dup_item_set = __lua_table_new(0, al_item_count)
+    local dup_item_list = __lua_table_new(al_item_count, 0)
+
+    for al_item_index = 1, al_item_count do
+        local al_item = al_item_list[al_item_index]
+        dup_item_set[al_item] = al_item_index
+        dup_item_list[al_item_index] = al_item
+    end
+
+    ---@type evolved.assoc_list
+    return {
+        __item_set = dup_item_set,
+        __item_list = dup_item_list,
+        __item_count = al_item_count,
+    }
+end
+
+---@generic K
+---@param src_item_list K[]
+---@param src_item_first integer
+---@param src_item_last integer
+---@param dst_al evolved.assoc_list<K>
+function __assoc_list_move(src_item_list, src_item_first, src_item_last, dst_al)
+    dst_al.__item_count = __assoc_list_move_ex(
+        src_item_list, src_item_first, src_item_last,
+        dst_al.__item_set, dst_al.__item_list, dst_al.__item_count)
+end
+
+---@generic K
+---@param src_item_list K[]
+---@param src_item_first integer
+---@param src_item_last integer
+---@param dst_item_set table<K, integer>
+---@param dst_item_list K[]
+---@param dst_item_count integer
+---@return integer new_dst_item_count
+---@nodiscard
+function __assoc_list_move_ex(src_item_list, src_item_first, src_item_last,
+                              dst_item_set, dst_item_list, dst_item_count)
+    if src_item_last < src_item_first then
+        return dst_item_count
+    end
+
+    for src_item_index = src_item_first, src_item_last do
+        local src_item = src_item_list[src_item_index]
+        if not dst_item_set[src_item] then
+            dst_item_count = dst_item_count + 1
+            dst_item_set[src_item] = dst_item_count
+            dst_item_list[dst_item_count] = src_item
+        end
+    end
+
+    return dst_item_count
 end
 
 ---@generic K
@@ -845,23 +911,23 @@ local function __id_name(id)
 end
 
 ---@generic K
----@param old_list K[]
+---@param list K[]
 ---@return K[]
 ---@nodiscard
-local function __list_copy(old_list)
-    local old_list_size = #old_list
+local function __list_dup(list)
+    local list_size = #list
 
-    if old_list_size == 0 then
+    if list_size == 0 then
         return {}
     end
 
-    local new_list = __lua_table_new(old_list_size, 0)
+    local dup_list = __lua_table_new(list_size, 0)
 
     __lua_table_move(
-        old_list, 1, old_list_size,
-        1, new_list)
+        list, 1, list_size,
+        1, dup_list)
 
-    return new_list
+    return dup_list
 end
 
 ---@param fragment evolved.fragment
@@ -5980,13 +6046,13 @@ __evolved_set(__DISABLED, __UNIQUE)
 __evolved_set(__DISABLED, __EXPLICIT)
 
 __evolved_set(__INCLUDES, __DEFAULT, {})
-__evolved_set(__INCLUDES, __DUPLICATE, __list_copy)
+__evolved_set(__INCLUDES, __DUPLICATE, __list_dup)
 
 __evolved_set(__EXCLUDES, __DEFAULT, {})
-__evolved_set(__EXCLUDES, __DUPLICATE, __list_copy)
+__evolved_set(__EXCLUDES, __DUPLICATE, __list_dup)
 
 __evolved_set(__REQUIRES, __DEFAULT, {})
-__evolved_set(__REQUIRES, __DUPLICATE, __list_copy)
+__evolved_set(__REQUIRES, __DUPLICATE, __list_dup)
 
 __evolved_set(__ON_SET, __UNIQUE)
 __evolved_set(__ON_ASSIGN, __UNIQUE)
@@ -6011,12 +6077,9 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
 
     local sorted_includes = __assoc_list_new(include_count)
 
-    for include_index = 1, include_count do
-        local include = include_list[include_index]
-        __assoc_list_insert(sorted_includes, include)
-    end
-
+    __assoc_list_move(include_list, 1, include_count, sorted_includes)
     __assoc_list_sort(sorted_includes)
+
     __sorted_includes[query] = sorted_includes
 end)
 
@@ -6042,12 +6105,9 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
 
     local sorted_excludes = __assoc_list_new(exclude_count)
 
-    for exclude_index = 1, exclude_count do
-        local exclude = exclude_list[exclude_index]
-        __assoc_list_insert(sorted_excludes, exclude)
-    end
-
+    __assoc_list_move(exclude_list, 1, exclude_count, sorted_excludes)
     __assoc_list_sort(sorted_excludes)
+
     __sorted_excludes[query] = sorted_excludes
 end)
 
@@ -6073,12 +6133,9 @@ __evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
 
     local sorted_requires = __assoc_list_new(require_count)
 
-    for require_index = 1, require_count do
-        local require = require_list[require_index]
-        __assoc_list_insert(sorted_requires, require)
-    end
-
+    __assoc_list_move(require_list, 1, require_count, sorted_requires)
     __assoc_list_sort(sorted_requires)
+
     __sorted_requires[fragment] = sorted_requires
 end)
 
