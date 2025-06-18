@@ -4343,23 +4343,11 @@ function __evolved_alive_all(...)
         return true
     end
 
-    local freelist_ids = __freelist_ids
-
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        if entity > 0 then
-            local entity_index = entity % 0x100000
-            if freelist_ids[entity_index] ~= entity then
-                return false
-            end
-        else
-            local primary_index = (0 - entity) % 0x100000
-            local secondary_index = (0 - entity - primary_index) / 0x100000
-            local primary, secondary = freelist_ids[primary_index], freelist_ids[secondary_index]
-            if primary % 0x100000 ~= primary_index or secondary % 0x100000 ~= secondary_index then
-                return false
-            end
+        if not __evolved_alive(entity) then
+            return false
         end
     end
 
@@ -4376,23 +4364,11 @@ function __evolved_alive_any(...)
         return false
     end
 
-    local freelist_ids = __freelist_ids
-
     for argument_index = 1, argument_count do
         ---@type evolved.entity
         local entity = __lua_select(argument_index, ...)
-        if entity > 0 then
-            local entity_index = entity % 0x100000
-            if freelist_ids[entity_index] == entity then
-                return true
-            end
-        else
-            local primary_index = (0 - entity) % 0x100000
-            local secondary_index = (0 - entity - primary_index) / 0x100000
-            local primary, secondary = freelist_ids[primary_index], freelist_ids[secondary_index]
-            if primary % 0x100000 == primary_index and secondary % 0x100000 == secondary_index then
-                return true
-            end
+        if __evolved_alive(entity) then
+            return true
         end
     end
 
