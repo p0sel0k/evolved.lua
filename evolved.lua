@@ -4159,12 +4159,14 @@ end
 ---@return evolved.id id
 ---@nodiscard
 function __evolved_pack(index, version)
-    if index < 1 or index > 0xFFFFF then
-        __error_fmt('id index out of range [1;0xFFFFF]')
-    end
+    if __debug_mode then
+        if index < 1 or index > 0xFFFFF then
+            __error_fmt('id index out of range [1;0xFFFFF]')
+        end
 
-    if version < 1 or version > 0xFFFFF then
-        __error_fmt('id version out of range [1;0xFFFFF]')
+        if version < 1 or version > 0xFFFFF then
+            __error_fmt('id version out of range [1;0xFFFFF]')
+        end
     end
 
     local shifted_version = version * 0x100000
@@ -4189,14 +4191,26 @@ function __evolved_pair(primary, secondary)
     local primary_index = primary % 0x100000
     local secondary_index = secondary % 0x100000
 
-    if __freelist_ids[primary_index] ~= primary then
-        __error_fmt('the primary id (%s) is not alive and cannot be used',
-            __id_name(primary))
-    end
+    if __debug_mode then
+        if primary < 0 then
+            __error_fmt('the primary id (%s) is a pair and cannot be used',
+                __id_name(primary))
+        end
 
-    if __freelist_ids[secondary_index] ~= secondary then
-        __error_fmt('the secondary id (%s) is not alive and cannot be used',
-            __id_name(secondary))
+        if secondary < 0 then
+            __error_fmt('the secondary id (%s) is a pair and cannot be used',
+                __id_name(secondary))
+        end
+
+        if __freelist_ids[primary_index] ~= primary then
+            __error_fmt('the primary id (%s) is not alive and cannot be used',
+                __id_name(primary))
+        end
+
+        if __freelist_ids[secondary_index] ~= secondary then
+            __error_fmt('the secondary id (%s) is not alive and cannot be used',
+                __id_name(secondary))
+        end
     end
 
     local shifted_secondary = secondary_index * 0x100000
@@ -4213,14 +4227,16 @@ function __evolved_unpair(pair)
     local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
     local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
 
-    if primary % 0x100000 ~= primary_index then
-        __error_fmt('the primary id (%s) is not alive and cannot be used',
-            __id_name(primary))
-    end
+    if __debug_mode then
+        if primary % 0x100000 ~= primary_index then
+            __error_fmt('the primary id (%s) is not alive and cannot be used',
+                __id_name(primary))
+        end
 
-    if secondary % 0x100000 ~= secondary_index then
-        __error_fmt('the secondary id (%s) is not alive and cannot be used',
-            __id_name(secondary))
+        if secondary % 0x100000 ~= secondary_index then
+            __error_fmt('the secondary id (%s) is not alive and cannot be used',
+                __id_name(secondary))
+        end
     end
 
     return primary, secondary
