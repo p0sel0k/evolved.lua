@@ -4179,33 +4179,28 @@ function __evolved_id(count)
     end
 end
 
----@param index integer
----@param version integer
+---@param primary integer
+---@param secondary integer
+---@param options? integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(index, version)
-    if __debug_mode then
-        if index < 1 or index > 0xFFFFF then
-            __error_fmt('id index out of range [1;0xFFFFF]')
-        end
-
-        if version < 1 or version > 0xFFFFF then
-            __error_fmt('id version out of range [1;0xFFFFF]')
-        end
-    end
-
-    local shifted_version = version * 0x100000
-    return index + shifted_version --[[@as evolved.id]]
+function __evolved_pack(primary, secondary, options)
+    return
+        primary % 2 ^ 20 +
+        secondary % 2 ^ 20 * 2 ^ 20 +
+        (options or 0) % 2 ^ 12 * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
----@return integer index
----@return integer version
+---@return integer primary
+---@return integer secondary
+---@return integer options
 ---@nodiscard
 function __evolved_unpack(id)
-    local index = id % 0x100000
-    local version = (id - index) / 0x100000
-    return index, version
+    return
+        id % 2 ^ 20,
+        (id - id % 2 ^ 20) / 2 ^ 20 % 2 ^ 20,
+        (id - id % 2 ^ 40) / 2 ^ 40 % 2 ^ 12
 end
 
 ---@param primary evolved.id
