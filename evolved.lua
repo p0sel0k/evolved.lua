@@ -484,6 +484,42 @@ end
 ---
 ---
 
+local __list_new
+local __list_dup
+
+---@param reserve? integer
+---@return any[]
+---@nodiscard
+function __list_new(reserve)
+    return __lua_table_new(reserve or 0, 0)
+end
+
+---@generic V
+---@param list V[]
+---@return V[]
+---@nodiscard
+function __list_dup(list)
+    local list_size = #list
+
+    if list_size == 0 then
+        return {}
+    end
+
+    local dup_list = __lua_table_new(list_size, 0)
+
+    __lua_table_move(
+        list, 1, list_size,
+        1, dup_list)
+
+    return dup_list
+end
+
+---
+---
+---
+---
+---
+
 ---@class (exact) evolved.assoc_list
 ---@field package __item_set table<any, integer>
 ---@field package __item_list any[]
@@ -838,6 +874,7 @@ local __safe_tbls = {
 ---
 
 local __evolved_id
+local __evolved_name
 
 local __evolved_pack
 local __evolved_unpack
@@ -892,10 +929,17 @@ local __evolved_builder
 ---
 ---
 
+local __id_name
+
+local __is_pair
+local __is_wildcard
+
+local __component_storage
+
 ---@param id evolved.id
 ---@return string
 ---@nodiscard
-local function __id_name(id)
+function __id_name(id)
     ---@type string?
     local id_name = __evolved_get(id, __NAME)
 
@@ -903,35 +947,50 @@ local function __id_name(id)
         return id_name
     end
 
-    local id_index, id_version = __evolved_unpack(id)
-    return __lua_string_format('$%d#%d:%d', id, id_index, id_version)
-end
+    if __is_pair(id) then
+        local id_primary_index, id_secondary_index = __evolved_unpack(id)
 
----@generic K
----@param list K[]
----@return K[]
----@nodiscard
-local function __list_dup(list)
-    local list_size = #list
+        local id_primary = __freelist_ids[id_primary_index] --[[@as evolved.id?]]
+        local id_secondary = __freelist_ids[id_secondary_index] --[[@as evolved.id?]]
 
-    if list_size == 0 then
-        return {}
+        local id_primary_name, id_secondary_name
+
+        if id_primary and id_primary % 2 ^ 20 == id_primary_index then
+            id_primary_name = __id_name(id_primary)
+        end
+
+        if id_secondary and id_secondary % 2 ^ 20 == id_secondary_index then
+            id_secondary_name = __id_name(id_secondary)
+        end
+
+        if id_primary_name and id_secondary_name then
+            return __lua_string_format('${%s,%s}', id_primary_name, id_secondary_name)
+        end
     end
 
-    local dup_list = __lua_table_new(list_size, 0)
+    local id_primary, id_secondary, id_options = __evolved_unpack(id)
+    return __lua_string_format('$%d#%d:%d:%d', id, id_primary, id_secondary, id_options)
+end
 
-    __lua_table_move(
-        list, 1, list_size,
-        1, dup_list)
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function __is_pair(id)
+    return id % 2 ^ 41 >= 2 ^ 40
+end
 
-    return dup_list
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function __is_wildcard(id)
+    return id % 2 ^ 43 >= 2 ^ 41
 end
 
 ---@param fragment evolved.fragment
 ---@return evolved.storage
 ---@nodiscard
 ---@diagnostic disable-next-line: unused-local
-local function __component_storage(fragment)
+function __component_storage(fragment)
     return {}
 end
 
@@ -4179,6 +4238,43 @@ function __evolved_id(count)
     end
 end
 
+---@param ... evolved.id ids
+---@return string ... names
+---@nodiscard
+function __evolved_name(...)
+    local id_count = __lua_select('#', ...)
+
+    if id_count == 0 then
+        return
+    end
+
+    if id_count == 1 then
+        local id1 = ...
+        return __id_name(id1)
+    end
+
+    if id_count == 2 then
+        local id1, id2 = ...
+        return __id_name(id1), __id_name(id2)
+    end
+
+    if id_count == 3 then
+        local id1, id2, id3 = ...
+        return __id_name(id1), __id_name(id2), __id_name(id3)
+    end
+
+    if id_count == 4 then
+        local id1, id2, id3, id4 = ...
+        return __id_name(id1), __id_name(id2), __id_name(id3), __id_name(id4)
+    end
+
+    do
+        local id1, id2, id3, id4 = ...
+        return __id_name(id1), __id_name(id2), __id_name(id3), __id_name(id4),
+            __evolved_name(__lua_select(5, ...))
+    end
+end
+
 ---@param primary integer
 ---@param secondary integer
 ---@param options? integer
@@ -6166,13 +6262,13 @@ __evolved_set(__DISABLED, __TAG)
 __evolved_set(__DISABLED, __UNIQUE)
 __evolved_set(__DISABLED, __EXPLICIT)
 
-__evolved_set(__INCLUDES, __DEFAULT, {})
+__evolved_set(__INCLUDES, __DEFAULT, __list_new())
 __evolved_set(__INCLUDES, __DUPLICATE, __list_dup)
 
-__evolved_set(__EXCLUDES, __DEFAULT, {})
+__evolved_set(__EXCLUDES, __DEFAULT, __list_new())
 __evolved_set(__EXCLUDES, __DUPLICATE, __list_dup)
 
-__evolved_set(__REQUIRES, __DEFAULT, {})
+__evolved_set(__REQUIRES, __DEFAULT, __list_new())
 __evolved_set(__REQUIRES, __DUPLICATE, __list_dup)
 
 __evolved_set(__ON_SET, __UNIQUE)
@@ -6356,6 +6452,7 @@ evolved.DESTRUCTION_POLICY_DESTROY_ENTITY = __DESTRUCTION_POLICY_DESTROY_ENTITY
 evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT = __DESTRUCTION_POLICY_REMOVE_FRAGMENT
 
 evolved.id = __evolved_id
+evolved.name = __evolved_name
 
 evolved.pack = __evolved_pack
 evolved.unpack = __evolved_unpack

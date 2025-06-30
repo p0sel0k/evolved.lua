@@ -1067,6 +1067,7 @@ DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
 
 ```
 id :: integer? -> id...
+name :: id... -> string...
 
 pack :: integer, integer, integer? -> id
 unpack :: id -> integer, integer, integer
@@ -1258,6 +1259,15 @@ builder_mt:destruction_policy :: id -> builder
 ---@return evolved.id ... ids
 ---@nodiscard
 function evolved.id(count) end
+```
+
+### `evolved.name`
+
+```lua
+---@param ... evolved.id ids
+---@return string... names
+---@nodiscard
+function evolved.name(...) end
 ```
 
 ### `evolved.pack`

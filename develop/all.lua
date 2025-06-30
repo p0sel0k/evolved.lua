@@ -1,6 +1,7 @@
 require 'develop.example'
 require 'develop.untests'
 
+require 'develop.testing.name_tests'
 require 'develop.testing.pairs_tests'
 require 'develop.testing.requires_fragment_tests'
 require 'develop.testing.system_as_query_tests'

@@ -406,6 +406,40 @@ do
     end
 end
 
+do
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.NAME, 'p')
+        evo.set(s, evo.NAME, 's')
+        local ps_chunk = evo.chunk(evo.pair(p, s))
+        assert(tostring(ps_chunk) == '<${p,s}>')
+    end
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.NAME, 'p')
+        evo.set(s, evo.NAME, 's')
+        evo.destroy(p)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
+        assert(tostring(ps_chunk) ~= '<${p,s}>')
+    end
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.NAME, 'p')
+        evo.set(s, evo.NAME, 's')
+        evo.destroy(s)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
+        assert(tostring(ps_chunk) ~= '<${p,s}>')
+    end
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.NAME, 'p')
+        evo.set(s, evo.NAME, 's')
+        evo.destroy(p, s)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
+        assert(tostring(ps_chunk) ~= '<${p,s}>')
+    end
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?
