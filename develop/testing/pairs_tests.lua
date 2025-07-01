@@ -416,26 +416,26 @@ do
     end
     do
         local p, s = evo.id(2)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
         evo.set(p, evo.NAME, 'p')
         evo.set(s, evo.NAME, 's')
         evo.destroy(p)
-        local ps_chunk = evo.chunk(evo.pair(p, s))
         assert(tostring(ps_chunk) ~= '<${p,s}>')
     end
     do
         local p, s = evo.id(2)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
         evo.set(p, evo.NAME, 'p')
         evo.set(s, evo.NAME, 's')
         evo.destroy(s)
-        local ps_chunk = evo.chunk(evo.pair(p, s))
         assert(tostring(ps_chunk) ~= '<${p,s}>')
     end
     do
         local p, s = evo.id(2)
+        local ps_chunk = evo.chunk(evo.pair(p, s))
         evo.set(p, evo.NAME, 'p')
         evo.set(s, evo.NAME, 's')
         evo.destroy(p, s)
-        local ps_chunk = evo.chunk(evo.pair(p, s))
         assert(tostring(ps_chunk) ~= '<${p,s}>')
     end
 end
@@ -444,4 +444,3 @@ end
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?
 -- Prevent setting wildcard pairs to entities!
--- Should paired fragments be greater than common fragments?

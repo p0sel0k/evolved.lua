@@ -96,6 +96,25 @@ local evolved = {
 ---
 ---
 
+--[=[------------------------------------------------------------------\
+  |              |-------- OPTIONS --------|- SECONDARY -|-- PRIMARY --|
+  | IDENTIFIER'S |         12 bits         |             |             |
+  |    ANATOMY   |--------|--------|-------|   20 bits   |   20 bits   |
+  |              | 9 bits | 2 bits | 1 bit |             |             |
+  |--------------|--------|--------|-------|-------------|-------------|
+  |           ID |  RSVD  |   00   |   0   |   version   |    index    |
+  |         PAIR |  RSVD  |   00   |   1   |  SEC index  |  PRI index  |
+  | PRI WILDCARD |  RSVD  |   01   |   1   |  SEC index  |  ANY index  |
+  | SEC WILDCARD |  RSVD  |   10   |   1   |  ANY index  |  PRI index  |
+  | ANY WILDCARD |  RSVD  |   11   |   1   |  ANY index  |  ANY index  |
+  \------------------------------------------------------------------]=]
+
+---
+---
+---
+---
+---
+
 local __debug_mode = false ---@type boolean
 
 local __freelist_ids = {} ---@type integer[]
@@ -4281,10 +4300,9 @@ end
 ---@return evolved.id id
 ---@nodiscard
 function __evolved_pack(primary, secondary, options)
-    return
-        primary % 2 ^ 20 +
-        secondary % 2 ^ 20 * 2 ^ 20 +
-        (options or 0) % 2 ^ 12 * 2 ^ 40 --[[@as evolved.id]]
+    return primary % 2 ^ 20
+        + secondary % 2 ^ 20 * 2 ^ 20
+        + (options or 0) % 2 ^ 12 * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
@@ -4293,8 +4311,7 @@ end
 ---@return integer options
 ---@nodiscard
 function __evolved_unpack(id)
-    return
-        id % 2 ^ 20,
+    return id % 2 ^ 20,
         (id - id % 2 ^ 20) / 2 ^ 20 % 2 ^ 20,
         (id - id % 2 ^ 40) / 2 ^ 40 % 2 ^ 12
 end
@@ -4304,55 +4321,38 @@ end
 ---@return evolved.id pair
 ---@nodiscard
 function __evolved_pair(primary, secondary)
-    local primary_index = primary % 0x100000
-    local secondary_index = secondary % 0x100000
+    local options = 1 -- 0b001
 
-    if __debug_mode then
-        if primary < 0 then
-            __error_fmt('the primary id (%s) is a pair and cannot be used',
-                __id_name(primary))
-        end
-
-        if secondary < 0 then
-            __error_fmt('the secondary id (%s) is a pair and cannot be used',
-                __id_name(secondary))
-        end
-
-        if __freelist_ids[primary_index] ~= primary then
-            __error_fmt('the primary id (%s) is not alive and cannot be used',
-                __id_name(primary))
-        end
-
-        if __freelist_ids[secondary_index] ~= secondary then
-            __error_fmt('the secondary id (%s) is not alive and cannot be used',
-                __id_name(secondary))
-        end
+    if primary == __ANY and secondary == __ANY then
+        options = 7 -- 0b111
+    elseif primary == __ANY then
+        options = 3 -- 0b011
+    elseif secondary == __ANY then
+        options = 5 -- 0b101
     end
 
-    local shifted_secondary = secondary_index * 0x100000
-    return 0 - primary_index - shifted_secondary --[[@as evolved.id]]
+    return primary % 2 ^ 20
+        + secondary % 2 ^ 20 * 2 ^ 20
+        + options * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param pair evolved.id
 ---@return evolved.id primary
 ---@return evolved.id secondary
 function __evolved_unpair(pair)
-    local primary_index = (0 - pair) % 0x100000
-    local secondary_index = (0 - pair - primary_index) / 0x100000
+    local primary_index = pair % 2 ^ 20
+    local secondary_index = (pair - primary_index) / 2 ^ 20 % 2 ^ 20
 
     local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
+    if not primary or primary % 2 ^ 20 ~= primary_index then
+        __error_fmt('the pair (%s) is not alive and cannot be unpaired',
+            __id_name(pair))
+    end
+
     local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
-
-    if __debug_mode then
-        if primary % 0x100000 ~= primary_index then
-            __error_fmt('the primary id (%s) is not alive and cannot be used',
-                __id_name(primary))
-        end
-
-        if secondary % 0x100000 ~= secondary_index then
-            __error_fmt('the secondary id (%s) is not alive and cannot be used',
-                __id_name(secondary))
-        end
+    if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+        __error_fmt('the pair (%s) is not alive and cannot be unpaired',
+            __id_name(pair))
     end
 
     return primary, secondary
