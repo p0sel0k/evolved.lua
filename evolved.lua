@@ -163,16 +163,18 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __component_indices table<evolved.fragment, integer>
 ---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
----@field package __primary_pairs table<evolved.fragment, evolved.assoc_list>
----@field package __secondary_pairs table<evolved.fragment, evolved.assoc_list>
+---@field package __primaries table<evolved.fragment, evolved.assoc_list>
+---@field package __secondaries table<evolved.fragment, evolved.assoc_list>
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __unreachable_or_collected boolean
----@field package __has_pairs boolean
 ---@field package __has_setup_hooks boolean
 ---@field package __has_assign_hooks boolean
 ---@field package __has_insert_hooks boolean
 ---@field package __has_remove_hooks boolean
+---@field package __has_pair_major boolean
+---@field package __has_pair_minors boolean
+---@field package __has_pair_fragments boolean
 ---@field package __has_unique_major boolean
 ---@field package __has_unique_minors boolean
 ---@field package __has_unique_fragments boolean
@@ -1107,24 +1109,28 @@ local __update_major_chunks_trace
 ---@return evolved.chunk
 ---@nodiscard
 function __new_chunk(chunk_parent, chunk_fragment)
+    if __is_wildcard(chunk_fragment) then
+        __error_fmt('chunk cannot contain wildcard fragments')
+    end
+
     local chunk_fragment_set = {} ---@type table<evolved.fragment, integer>
     local chunk_fragment_list = {} ---@type evolved.fragment[]
     local chunk_fragment_count = 0 ---@type integer
 
-    local chunk_primary_pairs = {} ---@type table<evolved.fragment, evolved.assoc_list>
-    local chunk_secondary_pairs = {} ---@type table<evolved.fragment, evolved.assoc_list>
+    local chunk_primaries = {} ---@type table<evolved.fragment, evolved.assoc_list>
+    local chunk_secondaries = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
     if chunk_parent then
         chunk_fragment_count = __assoc_list_move_ex(
             chunk_parent.__fragment_list, 1, chunk_parent.__fragment_count,
             chunk_fragment_set, chunk_fragment_list, chunk_fragment_count)
 
-        for parent_pri, parent_pri_pairs in __lua_next, chunk_parent.__primary_pairs do
-            chunk_primary_pairs[parent_pri] = __assoc_list_dup(parent_pri_pairs)
+        for parent_primary, parent_primary_fragments in __lua_next, chunk_parent.__primaries do
+            chunk_primaries[parent_primary] = __assoc_list_dup(parent_primary_fragments)
         end
 
-        for parent_sec, parent_sec_pairs in __lua_next, chunk_parent.__secondary_pairs do
-            chunk_secondary_pairs[parent_sec] = __assoc_list_dup(parent_sec_pairs)
+        for parent_secondary, parent_secondary_fragments in __lua_next, chunk_parent.__secondaries do
+            chunk_secondaries[parent_secondary] = __assoc_list_dup(parent_secondary_fragments)
         end
     end
 
@@ -1134,24 +1140,25 @@ function __new_chunk(chunk_parent, chunk_fragment)
         chunk_fragment_list[chunk_fragment_count] = chunk_fragment
     end
 
-    if chunk_fragment < 0 then
-        local chunk_pri, chunk_sec = __evolved_unpair(chunk_fragment)
+    if __is_pair(chunk_fragment) then
+        local chunk_primary_fragment, chunk_secondary_fragment =
+            __evolved_unpair(chunk_fragment)
 
-        local chunk_pri_pairs = chunk_primary_pairs[chunk_pri]
-        local chunk_sec_pairs = chunk_secondary_pairs[chunk_sec]
+        local chunk_primary_fragments = chunk_primaries[chunk_primary_fragment]
+        local chunk_secondary_fragments = chunk_secondaries[chunk_secondary_fragment]
 
-        if not chunk_pri_pairs then
-            chunk_pri_pairs = __assoc_list_new(1)
-            chunk_primary_pairs[chunk_pri] = chunk_pri_pairs
+        if not chunk_primary_fragments then
+            chunk_primary_fragments = __assoc_list_new(1)
+            chunk_primaries[chunk_primary_fragment] = chunk_primary_fragments
         end
 
-        if not chunk_sec_pairs then
-            chunk_sec_pairs = __assoc_list_new(1)
-            chunk_secondary_pairs[chunk_sec] = chunk_sec_pairs
+        if not chunk_secondary_fragments then
+            chunk_secondary_fragments = __assoc_list_new(1)
+            chunk_secondaries[chunk_secondary_fragment] = chunk_secondary_fragments
         end
 
-        __assoc_list_insert(chunk_pri_pairs, chunk_fragment)
-        __assoc_list_insert(chunk_sec_pairs, chunk_fragment)
+        __assoc_list_insert(chunk_primary_fragments, chunk_fragment)
+        __assoc_list_insert(chunk_secondary_fragments, chunk_fragment)
     end
 
     ---@type evolved.chunk
@@ -1170,16 +1177,18 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __component_indices = {},
         __component_storages = {},
         __component_fragments = {},
-        __primary_pairs = chunk_primary_pairs,
-        __secondary_pairs = chunk_secondary_pairs,
+        __primaries = chunk_primaries,
+        __secondaries = chunk_secondaries,
         __with_fragment_edges = {},
         __without_fragment_edges = {},
         __unreachable_or_collected = false,
-        __has_pairs = false,
         __has_setup_hooks = false,
         __has_assign_hooks = false,
         __has_insert_hooks = false,
         __has_remove_hooks = false,
+        __has_pair_major = false,
+        __has_pair_minors = false,
+        __has_pair_fragments = false,
         __has_unique_major = false,
         __has_unique_minors = false,
         __has_unique_fragments = false,
@@ -1304,9 +1313,6 @@ function __update_chunk_flags(chunk)
     local chunk_parent = chunk.__parent
     local chunk_fragment = chunk.__fragment
 
-    local has_pairs = (chunk_parent ~= nil and chunk_parent.__has_pairs)
-        or chunk_fragment < 0
-
     local has_setup_hooks = (chunk_parent ~= nil and chunk_parent.__has_setup_hooks)
         or __evolved_has_any(chunk_fragment, __DEFAULT, __DUPLICATE)
 
@@ -1318,6 +1324,10 @@ function __update_chunk_flags(chunk)
 
     local has_remove_hooks = (chunk_parent ~= nil and chunk_parent.__has_remove_hooks)
         or __evolved_has(chunk_fragment, __ON_REMOVE)
+
+    local has_pair_major = __is_pair(chunk_fragment)
+    local has_pair_minors = chunk_parent ~= nil and chunk_parent.__has_pair_fragments
+    local has_pair_fragments = has_pair_major or has_pair_minors
 
     local has_unique_major = __evolved_has(chunk_fragment, __UNIQUE)
     local has_unique_minors = chunk_parent ~= nil and chunk_parent.__has_unique_fragments
@@ -1335,6 +1345,10 @@ function __update_chunk_flags(chunk)
     chunk.__has_insert_hooks = has_insert_hooks
     chunk.__has_remove_hooks = has_remove_hooks
 
+    chunk.__has_pair_major = has_pair_major
+    chunk.__has_pair_minors = has_pair_minors
+    chunk.__has_pair_fragments = has_pair_fragments
+
     chunk.__has_unique_major = has_unique_major
     chunk.__has_unique_minors = has_unique_minors
     chunk.__has_unique_fragments = has_unique_fragments
@@ -1343,7 +1357,6 @@ function __update_chunk_flags(chunk)
     chunk.__has_explicit_minors = has_explicit_minors
     chunk.__has_explicit_fragments = has_explicit_fragments
 
-    chunk.__has_pairs = has_pairs
     chunk.__has_required_fragments = has_required_fragments
 end
 
@@ -1429,14 +1442,28 @@ local function __chunk_with_fragment(chunk, fragment)
     end
 
     if fragment < chunk.__fragment then
-        local sibling_chunk = __chunk_with_fragment(
-            __chunk_with_fragment(chunk.__parent, fragment),
-            chunk.__fragment)
+        local sib_chunk = chunk.__parent
 
-        chunk.__with_fragment_edges[fragment] = sibling_chunk
-        sibling_chunk.__without_fragment_edges[fragment] = chunk
+        while sib_chunk and fragment < sib_chunk.__fragment do
+            sib_chunk = sib_chunk.__parent
+        end
 
-        return sibling_chunk
+        sib_chunk = __chunk_with_fragment(sib_chunk, fragment)
+
+        local ini_fragment_list = chunk.__fragment_list
+        local ini_fragment_count = chunk.__fragment_count
+
+        local lst_fragment_index = sib_chunk and sib_chunk.__fragment_count or 1
+
+        for ini_fragment_index = lst_fragment_index, ini_fragment_count do
+            local ini_fragment = ini_fragment_list[ini_fragment_index]
+            sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
+        end
+
+        chunk.__with_fragment_edges[fragment] = sib_chunk
+        sib_chunk.__without_fragment_edges[fragment] = chunk
+
+        return sib_chunk
     end
 
     return __new_chunk(chunk, fragment)
@@ -1467,38 +1494,28 @@ local function __chunk_without_fragment(chunk, fragment)
         return chunk.__parent
     end
 
-    if fragment < 0 and not chunk.__has_pairs then
-        return chunk
-    end
-
     do
         local without_fragment_edge = chunk.__without_fragment_edges[fragment]
         if without_fragment_edge then return without_fragment_edge end
     end
 
-    if fragment < 0 then
-        local primary_index = (0 - fragment) % 0x100000
-        local secondary_index = (0 - fragment - primary_index) / 0x100000
+    if __is_wildcard(fragment) then
+        local any_index = __ANY % 2 ^ 20
 
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
+        local primary_index, secondary_index = __evolved_unpack(fragment)
 
-        if primary % 0x100000 ~= primary_index or secondary % 0x100000 ~= secondary_index then
-            return chunk
-        end
-
-        if primary == __ANY and secondary == __ANY then
-            while chunk and chunk.__fragment < 0 do
+        if primary_index == any_index and secondary_index == any_index then
+            while chunk and chunk.__has_pair_major do
                 chunk = chunk.__parent
             end
 
-            if not chunk or not chunk.__has_pairs then
+            if not chunk or not chunk.__has_pair_fragments then
                 return chunk
             end
 
             local sib_chunk = chunk.__parent
 
-            while sib_chunk and sib_chunk.__has_pairs do
+            while sib_chunk and sib_chunk.__has_pair_fragments do
                 sib_chunk = sib_chunk.__parent
             end
 
@@ -1509,7 +1526,7 @@ local function __chunk_without_fragment(chunk, fragment)
 
             for ini_fragment_index = lst_fragment_index, ini_fragment_count do
                 local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if ini_fragment > 0 then
+                if not __is_pair(ini_fragment) then
                     sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
                 end
             end
@@ -1520,10 +1537,17 @@ local function __chunk_without_fragment(chunk, fragment)
             end
 
             return sib_chunk
-        elseif primary == __ANY then
+        elseif primary_index == any_index then
+            local secondary = __freelist_ids[secondary_index]
+
+            if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+                -- the secondary fragment is not alive and should be ignored
+                return chunk
+            end
+
             local sib_chunk = chunk
 
-            while sib_chunk and sib_chunk.__has_pairs and sib_chunk.__secondary_pairs[secondary] do
+            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__secondaries[secondary] do
                 sib_chunk = sib_chunk.__parent
             end
 
@@ -1534,7 +1558,7 @@ local function __chunk_without_fragment(chunk, fragment)
 
             for ini_fragment_index = lst_fragment_index, ini_fragment_count do
                 local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if ini_fragment > 0 then
+                if not __is_pair(ini_fragment) then
                     sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
                 else
                     local _, ini_secondary = __evolved_unpair(ini_fragment)
@@ -1550,10 +1574,17 @@ local function __chunk_without_fragment(chunk, fragment)
             end
 
             return sib_chunk
-        elseif secondary == __ANY then
+        elseif secondary_index == any_index then
+            local primary = __freelist_ids[primary_index]
+
+            if not primary or primary % 2 ^ 20 ~= primary_index then
+                -- the primary fragment is not alive and should be ignored
+                return chunk
+            end
+
             local sib_chunk = chunk
 
-            while sib_chunk and sib_chunk.__has_pairs and sib_chunk.__primary_pairs[primary] do
+            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__primaries[primary] do
                 sib_chunk = sib_chunk.__parent
             end
 
@@ -1564,7 +1595,7 @@ local function __chunk_without_fragment(chunk, fragment)
 
             for ini_fragment_index = lst_fragment_index, ini_fragment_count do
                 local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if ini_fragment > 0 then
+                if not __is_pair(ini_fragment) then
                     sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
                 else
                     local ini_primary, _ = __evolved_unpair(ini_fragment)
@@ -1682,7 +1713,7 @@ end
 ---@nodiscard
 local function __chunk_fragments(head_fragment, ...)
     local chunk = __root_chunks[head_fragment]
-        or __chunk_with_fragment(nil, head_fragment)
+        or __new_chunk(nil, head_fragment)
 
     for i = 1, __lua_select('#', ...) do
         ---@type evolved.fragment
@@ -1698,16 +1729,16 @@ end
 ---@return evolved.chunk?
 ---@nodiscard
 local function __chunk_components(components)
-    local root_fragment = __lua_next(components)
+    local head_fragment = __lua_next(components)
 
-    if not root_fragment then
+    if not head_fragment then
         return
     end
 
-    local chunk = __root_chunks[root_fragment]
-        or __chunk_with_fragment(nil, root_fragment)
+    local chunk = __root_chunks[head_fragment]
+        or __new_chunk(nil, head_fragment)
 
-    for tail_fragment in __lua_next, components, root_fragment do
+    for tail_fragment in __lua_next, components, head_fragment do
         chunk = chunk.__with_fragment_edges[tail_fragment]
             or __chunk_with_fragment(chunk, tail_fragment)
     end
@@ -4339,6 +4370,7 @@ end
 ---@param pair evolved.id
 ---@return evolved.id primary
 ---@return evolved.id secondary
+---@nodiscard
 function __evolved_unpair(pair)
     local primary_index = pair % 2 ^ 20
     local secondary_index = (pair - primary_index) / 2 ^ 20 % 2 ^ 20

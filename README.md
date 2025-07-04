@@ -1308,6 +1308,7 @@ function evolved.pair(primary, secondary) end
 ---@param pair evolved.id
 ---@return evolved.id primary
 ---@return evolved.id secondary
+---@nodiscard
 function evolved.unpair(pair) end
 ```
 
