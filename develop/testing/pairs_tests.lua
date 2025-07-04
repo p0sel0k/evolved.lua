@@ -440,6 +440,81 @@ do
     end
 end
 
+do
+    do
+        local p, s = evo.id(2)
+        local ps = evo.pair(evo.ANY, s)
+        local e = evo.id()
+        evo.set(e, p, 42)
+        evo.destroy(s)
+        evo.remove(e, ps)
+    end
+
+    do
+        local p, s = evo.id(2)
+        local ps = evo.pair(p, evo.ANY)
+        local e = evo.id()
+        evo.set(e, s, 42)
+        evo.destroy(p)
+        evo.remove(e, ps)
+    end
+end
+
+do
+    local p, s = evo.id(2)
+
+    local e = evo.id()
+    assert(not evo.has(e, evo.pair(p, s)))
+    assert(not evo.has(e, evo.pair(p, evo.ANY)))
+    assert(not evo.has(e, evo.pair(evo.ANY, s)))
+    assert(not evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+
+    evo.set(e, p)
+    assert(not evo.has(e, evo.pair(p, s)))
+    assert(not evo.has(e, evo.pair(p, evo.ANY)))
+    assert(not evo.has(e, evo.pair(evo.ANY, s)))
+    assert(not evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+
+    evo.set(e, s)
+    assert(not evo.has(e, evo.pair(p, s)))
+    assert(not evo.has(e, evo.pair(p, evo.ANY)))
+    assert(not evo.has(e, evo.pair(evo.ANY, s)))
+    assert(not evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+
+    evo.set(e, evo.pair(p, s))
+    assert(evo.has(e, evo.pair(p, s)))
+    assert(evo.has(e, evo.pair(p, evo.ANY)))
+    assert(evo.has(e, evo.pair(evo.ANY, s)))
+    assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+end
+
+do
+    local p1, s1, p2, s2 = evo.id(4)
+
+    local e = evo.builder():set(evo.pair(p1, s1)):spawn()
+    assert(evo.has(e, evo.pair(p1, s1)))
+    assert(evo.has(e, evo.pair(p1, evo.ANY)))
+    assert(evo.has(e, evo.pair(evo.ANY, s1)))
+    assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+    assert(not evo.has(e, evo.pair(p1, s2)))
+    assert(not evo.has(e, evo.pair(p2, s1)))
+    assert(not evo.has(e, evo.pair(p2, s2)))
+    assert(not evo.has(e, evo.pair(p2, evo.ANY)))
+    assert(not evo.has(e, evo.pair(evo.ANY, s2)))
+
+    evo.set(e, evo.pair(p2, s2))
+
+    assert(evo.has(e, evo.pair(p1, s1)))
+    assert(evo.has(e, evo.pair(p1, evo.ANY)))
+    assert(evo.has(e, evo.pair(evo.ANY, s1)))
+    assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+    assert(not evo.has(e, evo.pair(p1, s2)))
+    assert(not evo.has(e, evo.pair(p2, s1)))
+    assert(evo.has(e, evo.pair(p2, s2)))
+    assert(evo.has(e, evo.pair(p2, evo.ANY)))
+    assert(evo.has(e, evo.pair(evo.ANY, s2)))
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?

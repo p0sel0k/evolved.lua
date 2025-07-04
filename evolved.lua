@@ -1499,7 +1499,7 @@ local function __chunk_without_fragment(chunk, fragment)
         if without_fragment_edge then return without_fragment_edge end
     end
 
-    if __is_wildcard(fragment) then
+    if chunk.__has_pair_fragments and __is_wildcard(fragment) then
         local any_index = __ANY % 2 ^ 20
 
         local primary_index, secondary_index = __evolved_unpack(fragment)
@@ -1761,19 +1761,31 @@ local function __chunk_has_fragment(chunk, fragment)
         return true
     end
 
-    if fragment < 0 and chunk.__has_pairs then
-        local primary_index = (0 - fragment) % 0x100000
-        local secondary_index = (0 - fragment - primary_index) / 0x100000
+    if chunk.__has_pair_fragments and __is_wildcard(fragment) then
+        local any_index = __ANY % 2 ^ 20
 
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
+        local primary_index, secondary_index = __evolved_unpack(fragment)
 
-        if primary == __ANY and secondary == __ANY then
+        if primary_index == any_index and secondary_index == any_index then
             return true
-        elseif primary == __ANY and chunk.__secondary_pairs[secondary] then
-            return true
-        elseif secondary == __ANY and chunk.__primary_pairs[primary] then
-            return true
+        elseif primary_index == any_index then
+            local secondary = __freelist_ids[secondary_index]
+
+            if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+                -- the secondary fragment is not alive and should be ignored
+                return false
+            end
+
+            return chunk.__secondaries[secondary] ~= nil
+        elseif secondary_index == any_index then
+            local primary = __freelist_ids[primary_index]
+
+            if not primary or primary % 2 ^ 20 ~= primary_index then
+                -- the primary fragment is not alive and should be ignored
+                return false
+            end
+
+            return chunk.__primaries[primary] ~= nil
         end
     end
 
@@ -1793,47 +1805,41 @@ local function __chunk_has_all_fragments(chunk, ...)
 
     local fs = chunk.__fragment_set
 
-    local has_p = chunk.__has_pairs
     local has_f = __chunk_has_fragment
+    local has_fs = __chunk_has_all_fragments
+
+    local has_p = chunk.__has_pair_fragments
 
     if fragment_count == 1 then
         local f1 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1)))
+        return (has_p and has_f(chunk, f1))
+            or (not has_p and fs[f1] ~= nil)
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) and
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2)))
+        return (has_p and has_f(chunk, f1) and has_f(chunk, f2))
+            or (not has_p and fs[f1] ~= nil and fs[f2] ~= nil)
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) and
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) and
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3)))
+        return (has_p and has_f(chunk, f1) and has_f(chunk, f2) and has_f(chunk, f3))
+            or (not has_p and fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil)
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) and
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) and
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3))) and
-            (fs[f4] ~= nil or (f4 < 0 and has_p and has_f(chunk, f4)))
+        return (has_p and has_f(chunk, f1) and has_f(chunk, f2) and has_f(chunk, f3) and has_f(chunk, f4))
+            or (not has_p and fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil)
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) and
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) and
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3))) and
-            (fs[f4] ~= nil or (f4 < 0 and has_p and has_f(chunk, f4))) and
-            __chunk_has_all_fragments(chunk, __lua_select(5, ...))
+        return (has_p and has_f(chunk, f1) and has_f(chunk, f2) and has_f(chunk, f3) and has_f(chunk, f4)
+                and has_fs(chunk, __lua_select(5, ...)))
+            or (not has_p and fs[f1] ~= nil and fs[f2] ~= nil and fs[f3] ~= nil and fs[f4] ~= nil
+                and has_fs(chunk, __lua_select(5, ...)))
     end
 end
 
@@ -1845,13 +1851,22 @@ end
 local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
     local fs = chunk.__fragment_set
 
-    local has_p = chunk.__has_pairs
     local has_f = __chunk_has_fragment
+    local has_p = chunk.__has_pair_fragments
 
-    for i = 1, fragment_count do
-        local f = fragment_list[i]
-        if fs[f] == nil and (f > 0 or not has_p or not has_f(chunk, f)) then
-            return false
+    if has_p then
+        for i = 1, fragment_count do
+            local f = fragment_list[i]
+            if not has_f(chunk, f) then
+                return false
+            end
+        end
+    else
+        for i = 1, fragment_count do
+            local f = fragment_list[i]
+            if fs[f] == nil then
+                return false
+            end
         end
     end
 
@@ -1871,47 +1886,41 @@ local function __chunk_has_any_fragments(chunk, ...)
 
     local fs = chunk.__fragment_set
 
-    local has_p = chunk.__has_pairs
     local has_f = __chunk_has_fragment
+    local has_fs = __chunk_has_any_fragments
+
+    local has_p = chunk.__has_pair_fragments
 
     if fragment_count == 1 then
         local f1 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1)))
+        return (has_p and has_f(chunk, f1))
+            or (not has_p and fs[f1] ~= nil)
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) or
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2)))
+        return (has_p and (has_f(chunk, f1) or has_f(chunk, f2)))
+            or (not has_p and (fs[f1] ~= nil or fs[f2] ~= nil))
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) or
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) or
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3)))
+        return (has_p and (has_f(chunk, f1) or has_f(chunk, f2) or has_f(chunk, f3)))
+            or (not has_p and (fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil))
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) or
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) or
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3))) or
-            (fs[f4] ~= nil or (f4 < 0 and has_p and has_f(chunk, f4)))
+        return (has_p and (has_f(chunk, f1) or has_f(chunk, f2) or has_f(chunk, f3) or has_f(chunk, f4)))
+            or (not has_p and (fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil))
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return
-            (fs[f1] ~= nil or (f1 < 0 and has_p and has_f(chunk, f1))) or
-            (fs[f2] ~= nil or (f2 < 0 and has_p and has_f(chunk, f2))) or
-            (fs[f3] ~= nil or (f3 < 0 and has_p and has_f(chunk, f3))) or
-            (fs[f4] ~= nil or (f4 < 0 and has_p and has_f(chunk, f4))) or
-            __chunk_has_any_fragments(chunk, __lua_select(5, ...))
+        return (has_p and (has_f(chunk, f1) or has_f(chunk, f2) or has_f(chunk, f3) or has_f(chunk, f4)
+                or has_fs(chunk, __lua_select(5, ...))))
+            or (not has_p and (fs[f1] ~= nil or fs[f2] ~= nil or fs[f3] ~= nil or fs[f4] ~= nil
+                or has_fs(chunk, __lua_select(5, ...))))
     end
 end
 
@@ -1923,13 +1932,22 @@ end
 local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
     local fs = chunk.__fragment_set
 
-    local has_p = chunk.__has_pairs
     local has_f = __chunk_has_fragment
+    local has_p = chunk.__has_pair_fragments
 
-    for i = 1, fragment_count do
-        local f = fragment_list[i]
-        if fs[f] ~= nil or (f < 0 and has_p and has_f(chunk, f)) then
-            return true
+    if has_p then
+        for i = 1, fragment_count do
+            local f = fragment_list[i]
+            if has_f(chunk, f) then
+                return true
+            end
+        end
+    else
+        for i = 1, fragment_count do
+            local f = fragment_list[i]
+            if fs[f] ~= nil then
+                return true
+            end
         end
     end
 
