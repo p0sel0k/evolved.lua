@@ -515,6 +515,126 @@ do
     assert(evo.has(e, evo.pair(evo.ANY, s2)))
 end
 
+--[[ wildcard getting
+do
+    local p, s1, s2 = evo.id(3)
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 42)
+            :spawn()
+
+        assert(evo.has(e, evo.pair(p, s1)))
+        assert(evo.get(e, evo.pair(p, s1)) == 42)
+
+        assert(not evo.has(e, evo.pair(p, s2)))
+        assert(evo.get(e, evo.pair(p, s2)) == nil)
+
+        assert(evo.has(e, evo.pair(p, evo.ANY)))
+        assert(evo.get(e, evo.pair(p, evo.ANY)) == 42)
+
+        assert(evo.has(e, evo.pair(evo.ANY, s1)))
+        assert(evo.get(e, evo.pair(evo.ANY, s1)) == 42)
+
+        assert(not evo.has(e, evo.pair(evo.ANY, s2)))
+        assert(evo.get(e, evo.pair(evo.ANY, s2)) == nil)
+
+        assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+        assert(evo.get(e, evo.pair(evo.ANY, evo.ANY)) == 42)
+    end
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 42)
+            :set(evo.pair(p, s2), 84)
+            :spawn()
+
+        assert(evo.has(e, evo.pair(p, s1)))
+        assert(evo.get(e, evo.pair(p, s1)) == 42)
+
+        assert(evo.has(e, evo.pair(p, s2)))
+        assert(evo.get(e, evo.pair(p, s2)) == 84)
+
+        assert(evo.has(e, evo.pair(p, evo.ANY)))
+        assert(evo.get(e, evo.pair(p, evo.ANY)) == 42)
+
+        assert(evo.has(e, evo.pair(evo.ANY, s1)))
+        assert(evo.get(e, evo.pair(evo.ANY, s1)) == 42)
+
+        assert(evo.has(e, evo.pair(evo.ANY, s2)))
+        assert(evo.get(e, evo.pair(evo.ANY, s2)) == 84)
+
+        assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
+        assert(evo.get(e, evo.pair(evo.ANY, evo.ANY)) == 42)
+    end
+end]]
+
+--[[ wildcard setting
+do
+    local p1, p2, s1, s2 = evo.id(4)
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p1, s1), 42)
+            :spawn()
+
+        evo.set(e, evo.pair(p1, s1), 84)
+        assert(evo.get(e, evo.pair(p1, s1)) == 84)
+        assert(evo.get(e, evo.pair(p1, s2)) == nil)
+
+        evo.set(e, evo.pair(p1, s2), 42)
+        assert(evo.get(e, evo.pair(p1, s1)) == 84)
+        assert(evo.get(e, evo.pair(p1, s2)) == 42)
+
+        evo.set(e, evo.pair(p1, evo.ANY), 21)
+        assert(evo.get(e, evo.pair(p1, s1)) == 21)
+        assert(evo.get(e, evo.pair(p1, s2)) == 21)
+    end
+end
+]]
+
+do
+    local p1, s1, p2, s2 = evo.id(4)
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        evo.remove(e, evo.pair(p1, evo.ANY))
+        assert(not evo.has(e, evo.pair(p1, s1)))
+        assert(evo.get(e, evo.pair(p1, s1)) == nil)
+        assert(not evo.has(e, evo.pair(p1, s2)))
+        assert(evo.get(e, evo.pair(p1, s2)) == nil)
+        assert(evo.has(e, evo.pair(p2, s1)))
+        assert(evo.get(e, evo.pair(p2, s1)) == 21)
+        assert(evo.has(e, evo.pair(p2, s2)))
+        assert(evo.get(e, evo.pair(p2, s2)) == 63)
+    end
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        evo.remove(e, evo.pair(evo.ANY, s2))
+        assert(evo.has(e, evo.pair(p1, s1)))
+        assert(evo.get(e, evo.pair(p1, s1)) == 42)
+        assert(not evo.has(e, evo.pair(p1, s2)))
+        assert(evo.get(e, evo.pair(p1, s2)) == nil)
+        assert(evo.has(e, evo.pair(p2, s1)))
+        assert(evo.get(e, evo.pair(p2, s1)) == 21)
+        assert(not evo.has(e, evo.pair(p2, s2)))
+        assert(evo.get(e, evo.pair(p2, s2)) == nil)
+    end
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?

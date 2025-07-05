@@ -2049,7 +2049,7 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
         fragment_stack[fragment_stack_size] = nil
         fragment_stack_size = fragment_stack_size - 1
 
-        if stack_fragment < 0 then
+        if __is_pair(stack_fragment) then
             -- this is a pair fragment, just skip it
         else
             local fragment_requires = __sorted_requires[stack_fragment]
@@ -2067,7 +2067,7 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
                     req_fragment_set[required_fragment] = req_fragment_count
                     req_fragment_list[req_fragment_count] = required_fragment
 
-                    if required_fragment < 0 then
+                    if __is_pair(required_fragment) then
                         -- this is a pair fragment, just skip it
                     else
                         fragment_stack_size = fragment_stack_size + 1
@@ -2104,7 +2104,7 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
         fragment_stack[fragment_stack_size] = nil
         fragment_stack_size = fragment_stack_size - 1
 
-        if stack_fragment < 0 then
+        if __is_pair(stack_fragment) then
             -- this is a pair fragment, just skip it
         else
             local fragment_requires = __sorted_requires[stack_fragment]
@@ -2122,7 +2122,7 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
                     req_fragment_set[required_fragment] = req_fragment_count
                     req_fragment_list[req_fragment_count] = required_fragment
 
-                    if required_fragment < 0 then
+                    if __is_pair(required_fragment) then
                         -- this is a pair fragment, just skip it
                     else
                         fragment_stack_size = fragment_stack_size + 1
@@ -4504,15 +4504,24 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_alive(entity)
-    if entity > 0 then
-        local entity_index = entity % 0x100000
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
         return __freelist_ids[entity_index] == entity
-    else
-        local primary_index = (0 - entity) % 0x100000
-        local secondary_index = (0 - entity - primary_index) / 0x100000
-        local primary, secondary = __freelist_ids[primary_index], __freelist_ids[secondary_index]
-        return primary % 0x100000 == primary_index and secondary % 0x100000 == secondary_index
     end
+
+    local primary_index, secondary_index = __evolved_unpack(entity)
+
+    local primary = __freelist_ids[primary_index]
+    if not primary or primary % 2 ^ 20 ~= primary_index then
+        return false
+    end
+
+    local secondary = __freelist_ids[secondary_index]
+    if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+        return false
+    end
+
+    return true
 end
 
 ---@param ... evolved.entity entities
@@ -4561,13 +4570,18 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    if entity > 0 then
-        local entity_index = entity % 0x100000
-        return __freelist_ids[entity_index] ~= entity or not __entity_chunks[entity_index]
-    else
+    if __is_pair(entity) then
         -- pairs are always empty
         return true
     end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return true
+    end
+
+    return not __entity_chunks[entity_index]
 end
 
 ---@param ... evolved.entity entities
@@ -4617,7 +4631,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
-    if entity < 0 then
+    if __is_pair(entity) then
         -- pairs are always empty
         return false
     end
@@ -4642,7 +4656,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_all(entity, ...)
-    if entity < 0 then
+    if __is_pair(entity) then
         -- pairs are always empty
         return __lua_select('#', ...) == 0
     end
@@ -4667,7 +4681,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_any(entity, ...)
-    if entity < 0 then
+    if __is_pair(entity) then
         -- pairs are always empty
         return false
     end
@@ -4692,7 +4706,7 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
-    if entity < 0 then
+    if __is_pair(entity) then
         -- pairs are always empty
         return
     end
@@ -4722,7 +4736,7 @@ function __evolved_set(entity, fragment, component)
         __debug_fns.validate_fragment(fragment)
     end
 
-    if entity < 0 then
+    if __is_pair(entity) then
         __error_fmt('the pair (%s) cannot have any fragments',
             __id_name(entity))
     end
@@ -4963,7 +4977,7 @@ function __evolved_remove(entity, ...)
         return
     end
 
-    if entity < 0 then
+    if __is_pair(entity) then
         -- pairs cannot have fragments, nothing to remove
         return
     end
@@ -5086,7 +5100,7 @@ function __evolved_clear(...)
             local entity = __lua_select(argument_index, ...)
             local entity_index = entity % 0x100000
 
-            if entity < 0 then
+            if __is_pair(entity) then
                 -- pairs cannot have fragments, nothing to clear
             elseif __freelist_ids[entity_index] ~= entity then
                 -- this entity is not alive, nothing to clear
@@ -5162,7 +5176,7 @@ function __evolved_destroy(...)
             local entity = __lua_select(argument_index, ...)
             local entity_index = entity % 0x100000
 
-            if entity < 0 then
+            if __is_pair(entity) then
                 -- pairs cannot be destroyed, nothing to do
             elseif __freelist_ids[entity_index] ~= entity then
                 -- this entity is not alive, nothing to destroy
