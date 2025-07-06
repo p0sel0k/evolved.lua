@@ -635,6 +635,210 @@ do
     end
 end
 
+do
+    local p1, p2, s1, s2 = evo.id(4)
+
+    ---@param o evolved.entity
+    ---@param s evolved.fragment
+    ---@return evolved.fragment[], evolved.component[], number
+    local function collect_primaries(o, s)
+        local fragments, components, count = {}, {}, 0
+
+        for f, c in evo.primaries(o, s) do
+            count = count + 1
+
+            fragments[count] = f
+            components[count] = c
+
+            do
+                local ff, cc = evo.primary(o, s, count)
+                assert(ff == f and cc == c)
+            end
+        end
+
+        assert(evo.primary_count(o, s) == count)
+        return fragments, components, count
+    end
+
+    ---@param o evolved.entity
+    ---@param p evolved.fragment
+    ---@return evolved.fragment[], evolved.component[], number
+    local function collect_secondaries(o, p)
+        local fragments, components, count = {}, {}, 0
+
+        for f, c in evo.secondaries(o, p) do
+            count = count + 1
+            fragments[count] = f
+            components[count] = c
+        end
+
+        return fragments, components, count
+    end
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p1, s1), 42)
+            :spawn()
+
+        assert(evo.primary(e, s1) == p1)
+        assert(evo.primary(e, s2) == nil)
+
+        assert(evo.secondary(e, p1) == s1)
+        assert(evo.secondary(e, p2) == nil)
+
+        assert(evo.primary_count(e, s1) == 1)
+        assert(evo.primary_count(e, s2) == 0)
+        assert(evo.secondary_count(e, p1) == 1)
+        assert(evo.secondary_count(e, p2) == 0)
+
+        do
+            local p_list, c_list, count = collect_primaries(e, s1)
+            assert(#p_list == 1 and #c_list == 1 and count == 1)
+            assert(p_list[1] == p1 and c_list[1] == 42)
+        end
+
+        do
+            local p_list, c_list, count = collect_primaries(e, s2)
+            assert(#p_list == 0 and #c_list == 0 and count == 0)
+        end
+
+        do
+            local s_list, c_list, count = collect_secondaries(e, p1)
+            assert(#s_list == 1 and #c_list == 1 and count == 1)
+            assert(s_list[1] == s1 and c_list[1] == 42)
+        end
+
+        do
+            local s_list, c_list, count = collect_secondaries(e, p2)
+            assert(#s_list == 0 and #c_list == 0 and count == 0)
+        end
+    end
+
+    do
+        local e = evo.builder()
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        do
+            assert(evo.primary_count(e, s1) == 2)
+            assert(evo.primary_count(e, s2) == 2)
+            assert(evo.secondary_count(e, p1) == 2)
+            assert(evo.secondary_count(e, p2) == 2)
+        end
+
+        do
+            local pp, cc = evo.primary(e, s1)
+            assert(pp == p1 and cc == 42)
+
+            pp, cc = evo.primary(e, s1, 1)
+            assert(pp == p1 and cc == 42)
+
+            pp, cc = evo.primary(e, s1, 2)
+            assert(pp == p2 and cc == 21)
+
+            pp, cc = evo.primary(e, s1, 3)
+            assert(pp == nil and cc == nil)
+        end
+
+        do
+            local pp, cc = evo.primary(e, s2)
+            assert(pp == p1 and cc == 84)
+
+            pp, cc = evo.primary(e, s2, 1)
+            assert(pp == p1 and cc == 84)
+
+            pp, cc = evo.primary(e, s2, 2)
+            assert(pp == p2 and cc == 63)
+
+            pp, cc = evo.primary(e, s2, 3)
+            assert(pp == nil and cc == nil)
+        end
+
+        do
+            local pp, cc = evo.secondary(e, p1)
+            assert(pp == s1 and cc == 42)
+
+            pp, cc = evo.secondary(e, p1, 1)
+            assert(pp == s1 and cc == 42)
+
+            pp, cc = evo.secondary(e, p1, 2)
+            assert(pp == s2 and cc == 84)
+
+            pp, cc = evo.secondary(e, p1, 3)
+            assert(pp == nil and cc == nil)
+        end
+
+        do
+            local pp, cc = evo.secondary(e, p2)
+            assert(pp == s1 and cc == 21)
+
+            pp, cc = evo.secondary(e, p2, 1)
+            assert(pp == s1 and cc == 21)
+
+            pp, cc = evo.secondary(e, p2, 2)
+            assert(pp == s2 and cc == 63)
+
+            pp, cc = evo.secondary(e, p2, 3)
+            assert(pp == nil and cc == nil)
+        end
+
+        do
+            local p_list, c_list, count = collect_primaries(e, s1)
+            assert(#p_list == 2 and #c_list == 2 and count == 2)
+            assert(p_list[1] == p1 and c_list[1] == 42)
+            assert(p_list[2] == p2 and c_list[2] == 21)
+        end
+
+        do
+            local p_list, c_list, count = collect_primaries(e, s2)
+            assert(#p_list == 2 and #c_list == 2 and count == 2)
+            assert(p_list[1] == p1 and c_list[1] == 84)
+            assert(p_list[2] == p2 and c_list[2] == 63)
+        end
+
+        do
+            local s_list, c_list, count = collect_secondaries(e, p1)
+            assert(#s_list == 2 and #c_list == 2 and count == 2)
+            assert(s_list[1] == s1 and c_list[1] == 42)
+            assert(s_list[2] == s2 and c_list[2] == 84)
+        end
+
+        do
+            local s_list, c_list, count = collect_secondaries(e, p2)
+            assert(#s_list == 2 and #c_list == 2 and count == 2)
+            assert(s_list[1] == s1 and c_list[1] == 21)
+            assert(s_list[2] == s2 and c_list[2] == 63)
+        end
+    end
+end
+
+do
+    local p, s = evo.id(2)
+
+    local e = evo.id()
+
+    assert(not evo.primary(e, s))
+    assert(not evo.primary(e, s, 1))
+    assert(not evo.primary(e, s, 2))
+    assert(not evo.primary(e, s, -1))
+    assert(not evo.primary(e, s, -2))
+
+    assert(not evo.secondary(e, p))
+    assert(not evo.secondary(e, p, 1))
+    assert(not evo.secondary(e, p, 2))
+    assert(not evo.secondary(e, p, -1))
+    assert(not evo.secondary(e, p, -2))
+
+    assert(evo.primary_count(e, s) == 0)
+    assert(evo.secondary_count(e, p) == 0)
+
+    assert(evo.primaries(e, s)() == nil)
+    assert(evo.secondaries(e, p)() == nil)
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?

@@ -82,6 +82,20 @@ local evolved = {
 ---@field package [3] integer chunk_stack_size
 ---@field package [4] table<evolved.fragment, integer>? exclude_set
 
+---@class (exact) evolved.primaries_state
+---@field package [1] integer structural_changes
+---@field package [2] evolved.chunk entity_chunk
+---@field package [3] integer entity_place
+---@field package [4] evolved.fragment secondary_fragment
+---@field package [5] integer secondary_pair_index
+
+---@class (exact) evolved.secondaries_state
+---@field package [1] integer structural_changes
+---@field package [2] evolved.chunk entity_chunk
+---@field package [3] integer entity_place
+---@field package [4] evolved.fragment primary_fragment
+---@field package [5] integer primary_pair_index
+
 ---@alias evolved.each_iterator fun(
 ---  state: evolved.each_state?):
 ---    evolved.fragment?, evolved.component?
@@ -89,6 +103,14 @@ local evolved = {
 ---@alias evolved.execute_iterator fun(
 ---  state: evolved.execute_state?):
 ---    evolved.chunk?, evolved.entity[]?, integer?
+
+---@alias evolved.primaries_iterator fun(
+---  state: evolved.primaries_state?):
+---    evolved.fragment?, evolved.component?
+
+---@alias evolved.secondaries_iterator fun(
+---  state: evolved.secondaries_state?):
+---    evolved.fragment?, evolved.component?
 
 ---
 ---
@@ -433,13 +455,15 @@ local __table_pool_tag = {
     system_list = 3,
     each_state = 4,
     execute_state = 5,
-    entity_set = 6,
-    entity_list = 7,
-    fragment_set = 8,
-    fragment_list = 9,
-    component_map = 10,
-    component_list = 11,
-    __count = 11,
+    primaries_state = 6,
+    secondaries_state = 7,
+    entity_set = 8,
+    entity_list = 9,
+    fragment_set = 10,
+    fragment_list = 11,
+    component_map = 12,
+    component_list = 13,
+    __count = 13,
 }
 
 ---@class (exact) evolved.table_pool
@@ -731,90 +755,6 @@ end
 ---
 ---
 
----@type evolved.each_iterator
-local function __each_iterator(each_state)
-    if not each_state then return end
-
-    local structural_changes = each_state[1]
-    local entity_chunk = each_state[2]
-    local entity_place = each_state[3]
-    local chunk_fragment_index = each_state[4]
-
-    if structural_changes ~= __structural_changes then
-        __error_fmt('structural changes are prohibited during iteration')
-    end
-
-    local chunk_fragment_list = entity_chunk.__fragment_list
-    local chunk_fragment_count = entity_chunk.__fragment_count
-    local chunk_component_indices = entity_chunk.__component_indices
-    local chunk_component_storages = entity_chunk.__component_storages
-
-    if chunk_fragment_index <= chunk_fragment_count then
-        each_state[4] = chunk_fragment_index + 1
-        local fragment = chunk_fragment_list[chunk_fragment_index]
-        local component_index = chunk_component_indices[fragment]
-        local component_storage = chunk_component_storages[component_index]
-        return fragment, component_storage and component_storage[entity_place]
-    end
-
-    __release_table(__table_pool_tag.each_state, each_state, true)
-end
-
----@type evolved.execute_iterator
-local function __execute_iterator(execute_state)
-    if not execute_state then return end
-
-    local structural_changes = execute_state[1]
-    local chunk_stack = execute_state[2]
-    local chunk_stack_size = execute_state[3]
-    local exclude_set = execute_state[4]
-
-    if structural_changes ~= __structural_changes then
-        __error_fmt('structural changes are prohibited during iteration')
-    end
-
-    while chunk_stack_size > 0 do
-        local chunk = chunk_stack[chunk_stack_size]
-
-        chunk_stack[chunk_stack_size] = nil
-        chunk_stack_size = chunk_stack_size - 1
-
-        local chunk_child_list = chunk.__child_list
-        local chunk_child_count = chunk.__child_count
-
-        for i = 1, chunk_child_count do
-            local chunk_child = chunk_child_list[i]
-            local chunk_child_fragment = chunk_child.__fragment
-
-            local is_chunk_child_matched =
-                (not chunk_child.__has_explicit_major) and
-                (not exclude_set or not exclude_set[chunk_child_fragment])
-
-            if is_chunk_child_matched then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = chunk_child
-            end
-        end
-
-        local chunk_entity_list = chunk.__entity_list
-        local chunk_entity_count = chunk.__entity_count
-
-        if chunk_entity_count > 0 then
-            execute_state[3] = chunk_stack_size
-            return chunk, chunk_entity_list, chunk_entity_count
-        end
-    end
-
-    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
-    __release_table(__table_pool_tag.execute_state, execute_state, true)
-end
-
----
----
----
----
----
-
 local __ANY = __acquire_id()
 
 local __TAG = __acquire_id()
@@ -940,6 +880,15 @@ local __evolved_process
 
 local __evolved_debug_mode
 local __evolved_collect_garbage
+
+local __evolved_primary
+local __evolved_secondary
+
+local __evolved_primaries
+local __evolved_secondaries
+
+local __evolved_primary_count
+local __evolved_secondary_count
 
 local __evolved_chunk
 local __evolved_builder
@@ -1089,6 +1038,158 @@ function __debug_fns.validate_systems(...)
     for i = 1, __lua_select('#', ...) do
         __debug_fns.validate_system(__lua_select(i, ...))
     end
+end
+
+---
+---
+---
+---
+---
+
+local __iterator_fns = {}
+
+---@type evolved.each_iterator
+function __iterator_fns.__each_iterator(each_state)
+    if not each_state then return end
+
+    local structural_changes = each_state[1]
+    local entity_chunk = each_state[2]
+    local entity_place = each_state[3]
+    local chunk_fragment_index = each_state[4]
+
+    if structural_changes ~= __structural_changes then
+        __error_fmt('structural changes are prohibited during iteration')
+    end
+
+    local chunk_fragment_list = entity_chunk.__fragment_list
+    local chunk_fragment_count = entity_chunk.__fragment_count
+    local chunk_component_indices = entity_chunk.__component_indices
+    local chunk_component_storages = entity_chunk.__component_storages
+
+    if chunk_fragment_index <= chunk_fragment_count then
+        each_state[4] = chunk_fragment_index + 1
+        local fragment = chunk_fragment_list[chunk_fragment_index]
+        local component_index = chunk_component_indices[fragment]
+        local component_storage = chunk_component_storages[component_index]
+        return fragment, component_storage and component_storage[entity_place]
+    end
+
+    __release_table(__table_pool_tag.each_state, each_state, true)
+end
+
+---@type evolved.execute_iterator
+function __iterator_fns.__execute_iterator(execute_state)
+    if not execute_state then return end
+
+    local structural_changes = execute_state[1]
+    local chunk_stack = execute_state[2]
+    local chunk_stack_size = execute_state[3]
+    local exclude_set = execute_state[4]
+
+    if structural_changes ~= __structural_changes then
+        __error_fmt('structural changes are prohibited during iteration')
+    end
+
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
+
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
+
+        local chunk_child_list = chunk.__child_list
+        local chunk_child_count = chunk.__child_count
+
+        for i = 1, chunk_child_count do
+            local chunk_child = chunk_child_list[i]
+            local chunk_child_fragment = chunk_child.__fragment
+
+            local is_chunk_child_matched =
+                (not chunk_child.__has_explicit_major) and
+                (not exclude_set or not exclude_set[chunk_child_fragment])
+
+            if is_chunk_child_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = chunk_child
+            end
+        end
+
+        local chunk_entity_list = chunk.__entity_list
+        local chunk_entity_count = chunk.__entity_count
+
+        if chunk_entity_count > 0 then
+            execute_state[3] = chunk_stack_size
+            return chunk, chunk_entity_list, chunk_entity_count
+        end
+    end
+
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
+    __release_table(__table_pool_tag.execute_state, execute_state, true)
+end
+
+---@type evolved.primaries_iterator
+function __iterator_fns.__primaries_iterator(primaries_state)
+    if not primaries_state then return end
+
+    local structural_changes = primaries_state[1]
+    local entity_chunk = primaries_state[2]
+    local entity_place = primaries_state[3]
+    local secondary_fragment = primaries_state[4]
+    local secondary_pair_index = primaries_state[5]
+
+    if structural_changes ~= __structural_changes then
+        __error_fmt('structural changes are prohibited during iteration')
+    end
+
+    local secondary_pairs = entity_chunk.__secondaries[secondary_fragment]
+    local secondary_pair_list = secondary_pairs and secondary_pairs.__item_list
+    local secondary_pair_count = secondary_pairs and secondary_pairs.__item_count or 0
+
+    if secondary_pair_index <= secondary_pair_count then
+        primaries_state[5] = secondary_pair_index + 1
+        local secondary_pair = secondary_pair_list[secondary_pair_index]
+
+        local primary, _ = __evolved_unpair(secondary_pair)
+
+        local component_index = entity_chunk.__component_indices[secondary_pair]
+        local component_storage = entity_chunk.__component_storages[component_index]
+
+        return primary, component_storage and component_storage[entity_place]
+    end
+
+    __release_table(__table_pool_tag.primaries_state, primaries_state, true)
+end
+
+---@type evolved.secondaries_iterator
+function __iterator_fns.__secondaries_iterator(secondaries_state)
+    if not secondaries_state then return end
+
+    local structural_changes = secondaries_state[1]
+    local entity_chunk = secondaries_state[2]
+    local entity_place = secondaries_state[3]
+    local primary_fragment = secondaries_state[4]
+    local primary_pair_index = secondaries_state[5]
+
+    if structural_changes ~= __structural_changes then
+        __error_fmt('structural changes are prohibited during iteration')
+    end
+
+    local primary_pairs = entity_chunk.__primaries[primary_fragment]
+    local primary_pair_list = primary_pairs and primary_pairs.__item_list
+    local primary_pair_count = primary_pairs and primary_pairs.__item_count or 0
+
+    if primary_pair_index <= primary_pair_count then
+        secondaries_state[5] = primary_pair_index + 1
+        local primary_pair = primary_pair_list[primary_pair_index]
+
+        local _, secondary = __evolved_unpair(primary_pair)
+
+        local component_index = entity_chunk.__component_indices[primary_pair]
+        local component_storage = entity_chunk.__component_storages[component_index]
+
+        return secondary, component_storage and component_storage[entity_place]
+    end
+
+    __release_table(__table_pool_tag.secondaries_state, secondaries_state, true)
 end
 
 ---
@@ -1776,7 +1877,9 @@ local function __chunk_has_fragment(chunk, fragment)
                 return false
             end
 
-            return chunk.__secondaries[secondary] ~= nil
+            local secondaries = chunk.__secondaries[secondary]
+
+            return secondaries and secondaries.__item_count > 0
         elseif secondary_index == any_index then
             local primary = __freelist_ids[primary_index]
 
@@ -1785,7 +1888,9 @@ local function __chunk_has_fragment(chunk, fragment)
                 return false
             end
 
-            return chunk.__primaries[primary] ~= nil
+            local primaries = chunk.__primaries[primary]
+
+            return primaries and primaries.__item_count > 0
         end
     end
 
@@ -5421,7 +5526,7 @@ function __evolved_each(entity)
     local entity_index = entity % 0x100000
 
     if __freelist_ids[entity_index] ~= entity then
-        return __each_iterator
+        return __iterator_fns.__each_iterator
     end
 
     local entity_chunks = __entity_chunks
@@ -5431,7 +5536,7 @@ function __evolved_each(entity)
     local place = entity_places[entity_index]
 
     if not chunk then
-        return __each_iterator
+        return __iterator_fns.__each_iterator
     end
 
     ---@type evolved.each_state
@@ -5442,7 +5547,7 @@ function __evolved_each(entity)
     each_state[3] = place
     each_state[4] = 1
 
-    return __each_iterator, each_state
+    return __iterator_fns.__each_iterator, each_state
 end
 
 ---@param query evolved.query
@@ -5453,7 +5558,7 @@ function __evolved_execute(query)
     local query_index = query % 0x100000
 
     if __freelist_ids[query_index] ~= query then
-        return __execute_iterator
+        return __iterator_fns.__execute_iterator
     end
 
     ---@type evolved.chunk[]
@@ -5536,7 +5641,7 @@ function __evolved_execute(query)
     execute_state[3] = chunk_stack_size
     execute_state[4] = query_exclude_set
 
-    return __execute_iterator, execute_state
+    return __iterator_fns.__execute_iterator, execute_state
 end
 
 ---@param ... evolved.system systems
@@ -5623,6 +5728,212 @@ function __evolved_collect_garbage()
     end
 
     __evolved_commit()
+end
+
+---
+---
+---
+---
+---
+
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@param index? integer
+---@return evolved.fragment? primary
+---@return evolved.component? component
+---@nodiscard
+function __evolved_primary(entity, secondary, index)
+    index = index or 1
+
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return
+    end
+
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
+
+    local secondary_pairs = chunk and chunk.__secondaries[secondary]
+    local secondary_pair_list = secondary_pairs and secondary_pairs.__item_list
+    local secondary_pair_count = secondary_pairs and secondary_pairs.__item_count or 0
+
+    if index < 1 or index > secondary_pair_count then
+        return
+    end
+
+    local secondary_pair = secondary_pair_list[index]
+    local primary, _ = __evolved_unpair(secondary_pair)
+
+    local component_index = chunk.__component_indices[secondary_pair]
+    local component_storage = chunk.__component_storages[component_index]
+
+    return primary, component_storage and component_storage[place]
+end
+
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@param index? integer
+---@return evolved.fragment? secondary
+---@return evolved.component? component
+---@nodiscard
+function __evolved_secondary(entity, primary, index)
+    index = index or 1
+
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return
+    end
+
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
+
+    local primary_pairs = chunk and chunk.__primaries[primary]
+    local primary_pair_list = primary_pairs and primary_pairs.__item_list
+    local primary_pair_count = primary_pairs and primary_pairs.__item_count or 0
+
+    if index < 1 or index > primary_pair_count then
+        return
+    end
+
+    local primary_pair = primary_pair_list[index]
+    local _, secondary = __evolved_unpair(primary_pair)
+
+    local component_index = chunk.__component_indices[primary_pair]
+    local component_storage = chunk.__component_storages[component_index]
+
+    return secondary, component_storage and component_storage[place]
+end
+
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@return evolved.primaries_iterator iterator
+---@return evolved.primaries_state? iterator_state
+---@nodiscard
+function __evolved_primaries(entity, secondary)
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return __iterator_fns.__primaries_iterator
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return __iterator_fns.__primaries_iterator
+    end
+
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
+
+    local secondaries = chunk and chunk.__secondaries[secondary]
+
+    if not secondaries then
+        return __iterator_fns.__primaries_iterator
+    end
+
+    ---@type evolved.primaries_state
+    local primaries_state = __acquire_table(__table_pool_tag.primaries_state)
+
+    primaries_state[1] = __structural_changes
+    primaries_state[2] = chunk
+    primaries_state[3] = place
+    primaries_state[4] = secondary
+    primaries_state[5] = 1
+
+    return __iterator_fns.__primaries_iterator, primaries_state
+end
+
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@return evolved.secondaries_iterator iterator
+---@return evolved.secondaries_state? iterator_state
+---@nodiscard
+function __evolved_secondaries(entity, primary)
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return __iterator_fns.__secondaries_iterator
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return __iterator_fns.__secondaries_iterator
+    end
+
+    local chunk = __entity_chunks[entity_index]
+    local place = __entity_places[entity_index]
+
+    local primaries = chunk and chunk.__primaries[primary]
+
+    if not primaries then
+        return __iterator_fns.__secondaries_iterator
+    end
+
+    ---@type evolved.secondaries_state
+    local secondaries_state = __acquire_table(__table_pool_tag.secondaries_state)
+
+    secondaries_state[1] = __structural_changes
+    secondaries_state[2] = chunk
+    secondaries_state[3] = place
+    secondaries_state[4] = primary
+    secondaries_state[5] = 1
+
+    return __iterator_fns.__secondaries_iterator, secondaries_state
+end
+
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@return integer
+---@nodiscard
+function __evolved_primary_count(entity, secondary)
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return 0
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return 0
+    end
+
+    local chunk = __entity_chunks[entity_index]
+
+    local secondary_pairs = chunk and chunk.__secondaries[secondary]
+    return secondary_pairs and secondary_pairs.__item_count or 0
+end
+
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@return integer
+---@nodiscard
+function __evolved_secondary_count(entity, primary)
+    if __is_pair(entity) then
+        -- pairs are always empty
+        return 0
+    end
+
+    local entity_index = entity % 2 ^ 20
+
+    if __freelist_ids[entity_index] ~= entity then
+        return 0
+    end
+
+    local chunk = __entity_chunks[entity_index]
+
+    local primary_pairs = chunk and chunk.__primaries[primary]
+    return primary_pairs and primary_pairs.__item_count or 0
 end
 
 ---
@@ -6556,6 +6867,15 @@ evolved.batch_destroy = __evolved_batch_destroy
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute
+
+evolved.primary = __evolved_primary
+evolved.secondary = __evolved_secondary
+
+evolved.primaries = __evolved_primaries
+evolved.secondaries = __evolved_secondaries
+
+evolved.primary_count = __evolved_primary_count
+evolved.secondary_count = __evolved_secondary_count
 
 evolved.process = __evolved_process
 

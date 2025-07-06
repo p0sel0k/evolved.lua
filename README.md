@@ -53,6 +53,7 @@
   - [Aliases](#aliases)
   - [Predefs](#predefs)
   - [Functions](#functions)
+  - [Relations](#relations)
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
@@ -1113,6 +1114,17 @@ process :: system... -> ()
 debug_mode :: boolean -> ()
 collect_garbage :: ()
 ```
+
+### Relations
+
+primary :: entity, fragment, integer? -> fragment?, component?
+secondary :: entity, fragment, integer? -> fragment?, component?
+
+primaries :: entity, fragment -> {primaries_state? -> fragment?, component?}, primaries_state?
+secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}, secondaries_state?
+
+primary_count :: entity, fragment -> integer
+secondary_count :: entity, fragment -> integer
 
 ### Classes
 
