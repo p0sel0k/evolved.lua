@@ -515,60 +515,6 @@ do
     assert(evo.has(e, evo.pair(evo.ANY, s2)))
 end
 
---[[ wildcard getting
-do
-    local p, s1, s2 = evo.id(3)
-
-    do
-        local e = evo.builder()
-            :set(evo.pair(p, s1), 42)
-            :spawn()
-
-        assert(evo.has(e, evo.pair(p, s1)))
-        assert(evo.get(e, evo.pair(p, s1)) == 42)
-
-        assert(not evo.has(e, evo.pair(p, s2)))
-        assert(evo.get(e, evo.pair(p, s2)) == nil)
-
-        assert(evo.has(e, evo.pair(p, evo.ANY)))
-        assert(evo.get(e, evo.pair(p, evo.ANY)) == 42)
-
-        assert(evo.has(e, evo.pair(evo.ANY, s1)))
-        assert(evo.get(e, evo.pair(evo.ANY, s1)) == 42)
-
-        assert(not evo.has(e, evo.pair(evo.ANY, s2)))
-        assert(evo.get(e, evo.pair(evo.ANY, s2)) == nil)
-
-        assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
-        assert(evo.get(e, evo.pair(evo.ANY, evo.ANY)) == 42)
-    end
-
-    do
-        local e = evo.builder()
-            :set(evo.pair(p, s1), 42)
-            :set(evo.pair(p, s2), 84)
-            :spawn()
-
-        assert(evo.has(e, evo.pair(p, s1)))
-        assert(evo.get(e, evo.pair(p, s1)) == 42)
-
-        assert(evo.has(e, evo.pair(p, s2)))
-        assert(evo.get(e, evo.pair(p, s2)) == 84)
-
-        assert(evo.has(e, evo.pair(p, evo.ANY)))
-        assert(evo.get(e, evo.pair(p, evo.ANY)) == 42)
-
-        assert(evo.has(e, evo.pair(evo.ANY, s1)))
-        assert(evo.get(e, evo.pair(evo.ANY, s1)) == 42)
-
-        assert(evo.has(e, evo.pair(evo.ANY, s2)))
-        assert(evo.get(e, evo.pair(evo.ANY, s2)) == 84)
-
-        assert(evo.has(e, evo.pair(evo.ANY, evo.ANY)))
-        assert(evo.get(e, evo.pair(evo.ANY, evo.ANY)) == 42)
-    end
-end]]
-
 do
     local p1, s1, s2 = evo.id(3)
 
