@@ -1020,9 +1020,13 @@ remove_hook :: {entity, fragment, component}
 
 each_state :: implementation-specific
 execute_state :: implementation-specific
+primaries_state :: implementation-specific
+secondaries_state :: implementation-specific
 
 each_iterator :: {each_state? -> fragment?, component?}
 execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
+primaries_iterator :: {primaries_state? -> fragment?, component?}
+secondaries_iterator :: {secondaries_state? -> fragment?, component?}
 ```
 
 ### Predefs
@@ -1117,6 +1121,7 @@ collect_garbage :: ()
 
 ### Relations
 
+```
 primary :: entity, fragment, integer? -> fragment?, component?
 secondary :: entity, fragment, integer? -> fragment?, component?
 
@@ -1125,6 +1130,7 @@ secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}
 
 primary_count :: entity, fragment -> integer
 secondary_count :: entity, fragment -> integer
+```
 
 ### Classes
 
@@ -1549,6 +1555,74 @@ function evolved.debug_mode(yesno) end
 
 ```lua
 function evolved.collect_garbage() end
+```
+
+## Relations
+
+### `evolved.primary`
+
+```lua
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@param index? integer
+---@return evolved.fragment? primary
+---@return evolved.component? component
+---@nodiscard
+function evolved.primary(entity, secondary, index) end
+```
+
+### `evolved.secondary`
+
+```lua
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@param index? integer
+---@return evolved.fragment? secondary
+---@return evolved.component? component
+---@nodiscard
+function evolved.secondary(entity, primary, index) end
+```
+
+### `evolved.primaries`
+
+```lua
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@return evolved.primaries_iterator iterator
+---@return evolved.primaries_state? iterator_state
+---@nodiscard
+function evolved.primaries(entity, secondary) end
+```
+
+### `evolved.secondaries`
+
+```lua
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@return evolved.secondaries_iterator iterator
+---@return evolved.secondaries_state? iterator_state
+---@nodiscard
+function evolved.secondaries(entity, primary) end
+```
+
+### `evolved.primary_count`
+
+```lua
+---@param entity evolved.entity
+---@param secondary evolved.fragment
+---@return integer
+---@nodiscard
+function evolved.primary_count(entity, secondary) end
+```
+
+### `evolved.secondary_count`
+
+```lua
+---@param entity evolved.entity
+---@param primary evolved.fragment
+---@return integer
+---@nodiscard
+function evolved.secondary_count(entity, primary) end
 ```
 
 ## Classes
