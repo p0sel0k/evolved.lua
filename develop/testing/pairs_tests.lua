@@ -569,9 +569,8 @@ do
     end
 end]]
 
---[[ wildcard setting
 do
-    local p1, p2, s1, s2 = evo.id(4)
+    local p1, s1, s2 = evo.id(3)
 
     do
         local e = evo.builder()
@@ -591,7 +590,6 @@ do
         assert(evo.get(e, evo.pair(p1, s2)) == 21)
     end
 end
-]]
 
 do
     local p1, s1, p2, s2 = evo.id(4)
@@ -864,6 +862,106 @@ do
 
     assert(evo.primary_count(e, evo.ANY) == 0)
     assert(evo.secondary_count(e, evo.ANY) == 0)
+end
+
+do
+    local f, p1, p2, s1, s2 = evo.id(5)
+
+    do
+        local e = evo.builder()
+            :set(f)
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        local ef = evo.builder()
+            :set(f)
+            :spawn()
+
+        evo.set(e, evo.pair(p1, evo.ANY), 99)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 99)
+        assert(evo.get(e, evo.pair(p1, s2)) == 99)
+        assert(evo.get(e, evo.pair(p2, s1)) == 21)
+        assert(evo.get(e, evo.pair(p2, s2)) == 63)
+
+        local q = evo.builder():include(f):spawn()
+        evo.batch_set(q, evo.pair(p1, evo.ANY), 42)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 42)
+        assert(evo.get(e, evo.pair(p1, s2)) == 42)
+        assert(evo.get(e, evo.pair(p2, s1)) == 21)
+        assert(evo.get(e, evo.pair(p2, s2)) == 63)
+
+        assert(evo.has(ef, f))
+        assert(not evo.has(ef, evo.pair(evo.ANY, evo.ANY)))
+    end
+
+    do
+        local e = evo.builder()
+            :set(f)
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        local ef = evo.builder()
+            :set(f)
+            :spawn()
+
+        evo.set(e, evo.pair(evo.ANY, s1), 99)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 99)
+        assert(evo.get(e, evo.pair(p1, s2)) == 84)
+        assert(evo.get(e, evo.pair(p2, s1)) == 99)
+        assert(evo.get(e, evo.pair(p2, s2)) == 63)
+
+        local q = evo.builder():include(f):spawn()
+        evo.batch_set(q, evo.pair(evo.ANY, s1), 42)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 42)
+        assert(evo.get(e, evo.pair(p1, s2)) == 84)
+        assert(evo.get(e, evo.pair(p2, s1)) == 42)
+        assert(evo.get(e, evo.pair(p2, s2)) == 63)
+
+        assert(evo.has(ef, f))
+        assert(not evo.has(ef, evo.pair(evo.ANY, evo.ANY)))
+    end
+
+    do
+        local e = evo.builder()
+            :set(f)
+            :set(evo.pair(p1, s1), 42)
+            :set(evo.pair(p1, s2), 84)
+            :set(evo.pair(p2, s1), 21)
+            :set(evo.pair(p2, s2), 63)
+            :spawn()
+
+        local ef = evo.builder()
+            :set(f)
+            :spawn()
+
+        evo.set(e, evo.pair(evo.ANY, evo.ANY), 99)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 99)
+        assert(evo.get(e, evo.pair(p1, s2)) == 99)
+        assert(evo.get(e, evo.pair(p2, s1)) == 99)
+        assert(evo.get(e, evo.pair(p2, s2)) == 99)
+
+        local q = evo.builder():include(f):spawn()
+        evo.batch_set(q, evo.pair(evo.ANY, evo.ANY), 42)
+
+        assert(evo.get(e, evo.pair(p1, s1)) == 42)
+        assert(evo.get(e, evo.pair(p1, s2)) == 42)
+        assert(evo.get(e, evo.pair(p2, s1)) == 42)
+        assert(evo.get(e, evo.pair(p2, s2)) == 42)
+
+        assert(evo.has(ef, f))
+        assert(not evo.has(ef, evo.pair(evo.ANY, evo.ANY)))
+    end
 end
 
 -- TODO:

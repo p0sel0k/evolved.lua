@@ -185,8 +185,10 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __component_indices table<evolved.fragment, integer>
 ---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
----@field package __primaries table<evolved.fragment, evolved.assoc_list>
----@field package __secondaries table<evolved.fragment, evolved.assoc_list>
+---@field package __pair_list evolved.fragment[]
+---@field package __pair_count integer
+---@field package __primary_pairs table<evolved.fragment, evolved.assoc_list>
+---@field package __secondary_pairs table<evolved.fragment, evolved.assoc_list>
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __unreachable_or_collected boolean
@@ -1140,7 +1142,7 @@ function __iterator_fns.__primaries_iterator(primaries_state)
         __error_fmt('structural changes are prohibited during iteration')
     end
 
-    local pairs = entity_chunk.__secondaries[secondary_fragment]
+    local pairs = entity_chunk.__secondary_pairs[secondary_fragment]
     local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
     local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
@@ -1173,7 +1175,7 @@ function __iterator_fns.__secondaries_iterator(secondaries_state)
         __error_fmt('structural changes are prohibited during iteration')
     end
 
-    local pairs = entity_chunk.__primaries[primary_fragment]
+    local pairs = entity_chunk.__primary_pairs[primary_fragment]
     local pair_list = pairs and pairs.__item_list
     local pair_count = pairs and pairs.__item_count or 0
 
@@ -1218,20 +1220,39 @@ function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_fragment_list = {} ---@type evolved.fragment[]
     local chunk_fragment_count = 0 ---@type integer
 
-    local chunk_primaries = {} ---@type table<evolved.fragment, evolved.assoc_list>
-    local chunk_secondaries = {} ---@type table<evolved.fragment, evolved.assoc_list>
+    local chunk_pair_list = {} ---@type evolved.fragment[]
+    local chunk_pair_count = 0 ---@type integer
+
+    local chunk_primary_pairs = {} ---@type table<evolved.fragment, evolved.assoc_list>
+    local chunk_secondary_pairs = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
     if chunk_parent then
-        chunk_fragment_count = __assoc_list_move_ex(
-            chunk_parent.__fragment_list, 1, chunk_parent.__fragment_count,
-            chunk_fragment_set, chunk_fragment_list, chunk_fragment_count)
+        do
+            local chunk_parent_fragment_list = chunk_parent.__fragment_list
+            local chunk_parent_fragment_count = chunk_parent.__fragment_count
 
-        for parent_primary, parent_primary_fragments in __lua_next, chunk_parent.__primaries do
-            chunk_primaries[parent_primary] = __assoc_list_dup(parent_primary_fragments)
+            chunk_fragment_count = __assoc_list_move_ex(
+                chunk_parent_fragment_list, 1, chunk_parent_fragment_count,
+                chunk_fragment_set, chunk_fragment_list, chunk_fragment_count)
         end
 
-        for parent_secondary, parent_secondary_fragments in __lua_next, chunk_parent.__secondaries do
-            chunk_secondaries[parent_secondary] = __assoc_list_dup(parent_secondary_fragments)
+        do
+            local chunk_parent_pair_list = chunk_parent.__pair_list
+            local chunk_parent_pair_count = chunk_parent.__pair_count
+
+            __lua_table_move(
+                chunk_parent_pair_list, 1, chunk_parent_pair_count,
+                chunk_pair_count + 1, chunk_pair_list)
+
+            chunk_pair_count = chunk_pair_count + chunk_parent_pair_count
+        end
+
+        for parent_primary, parent_primary_fragments in __lua_next, chunk_parent.__primary_pairs do
+            chunk_primary_pairs[parent_primary] = __assoc_list_dup(parent_primary_fragments)
+        end
+
+        for parent_secondary, parent_secondary_fragments in __lua_next, chunk_parent.__secondary_pairs do
+            chunk_secondary_pairs[parent_secondary] = __assoc_list_dup(parent_secondary_fragments)
         end
     end
 
@@ -1242,20 +1263,23 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     if __is_pair(chunk_fragment) then
+        chunk_pair_count = chunk_pair_count + 1
+        chunk_pair_list[chunk_pair_count] = chunk_fragment
+
         local chunk_primary_fragment, chunk_secondary_fragment =
             __evolved_unpair(chunk_fragment)
 
-        local chunk_primary_fragments = chunk_primaries[chunk_primary_fragment]
-        local chunk_secondary_fragments = chunk_secondaries[chunk_secondary_fragment]
+        local chunk_primary_fragments = chunk_primary_pairs[chunk_primary_fragment]
+        local chunk_secondary_fragments = chunk_secondary_pairs[chunk_secondary_fragment]
 
         if not chunk_primary_fragments then
             chunk_primary_fragments = __assoc_list_new(1)
-            chunk_primaries[chunk_primary_fragment] = chunk_primary_fragments
+            chunk_primary_pairs[chunk_primary_fragment] = chunk_primary_fragments
         end
 
         if not chunk_secondary_fragments then
             chunk_secondary_fragments = __assoc_list_new(1)
-            chunk_secondaries[chunk_secondary_fragment] = chunk_secondary_fragments
+            chunk_secondary_pairs[chunk_secondary_fragment] = chunk_secondary_fragments
         end
 
         __assoc_list_insert(chunk_primary_fragments, chunk_fragment)
@@ -1278,8 +1302,10 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __component_indices = {},
         __component_storages = {},
         __component_fragments = {},
-        __primaries = chunk_primaries,
-        __secondaries = chunk_secondaries,
+        __pair_list = chunk_pair_list,
+        __pair_count = chunk_pair_count,
+        __primary_pairs = chunk_primary_pairs,
+        __secondary_pairs = chunk_secondary_pairs,
         __with_fragment_edges = {},
         __without_fragment_edges = {},
         __unreachable_or_collected = false,
@@ -1648,7 +1674,7 @@ local function __chunk_without_fragment(chunk, fragment)
 
             local sib_chunk = chunk
 
-            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__secondaries[secondary] do
+            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__secondary_pairs[secondary] do
                 sib_chunk = sib_chunk.__parent
             end
 
@@ -1685,7 +1711,7 @@ local function __chunk_without_fragment(chunk, fragment)
 
             local sib_chunk = chunk
 
-            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__primaries[primary] do
+            while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__primary_pairs[primary] do
                 sib_chunk = sib_chunk.__parent
             end
 
@@ -1877,9 +1903,9 @@ local function __chunk_has_fragment(chunk, fragment)
                 return false
             end
 
-            local secondaries = chunk.__secondaries[secondary]
+            local pairs = chunk.__secondary_pairs[secondary]
 
-            return secondaries and secondaries.__item_count > 0
+            return pairs and pairs.__item_count > 0
         elseif secondary_index == any_index then
             local primary = __freelist_ids[primary_index]
 
@@ -1888,9 +1914,9 @@ local function __chunk_has_fragment(chunk, fragment)
                 return false
             end
 
-            local primaries = chunk.__primaries[primary]
+            local pairs = chunk.__primary_pairs[primary]
 
-            return primaries and primaries.__item_count > 0
+            return pairs and pairs.__item_count > 0
         end
     end
 
@@ -3053,12 +3079,6 @@ function __chunk_set(old_chunk, fragment, component)
         __error_fmt('batched chunk operations should be deferred')
     end
 
-    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
-
-    if not new_chunk then
-        return
-    end
-
     local old_entity_list = old_chunk.__entity_list
     local old_entity_count = old_chunk.__entity_count
 
@@ -3070,6 +3090,49 @@ function __chunk_set(old_chunk, fragment, component)
     local old_component_indices = old_chunk.__component_indices
     local old_component_storages = old_chunk.__component_storages
     local old_component_fragments = old_chunk.__component_fragments
+
+    if __is_wildcard(fragment) then
+        local primary, secondary = __evolved_unpair(fragment)
+
+        local new_component = component
+        if new_component == nil then new_component = true end
+
+        ---@type evolved.id[]?, integer
+        local pair_list, pair_count = nil, 0
+
+        if primary == __ANY and secondary == __ANY then
+            pair_list = old_chunk.__pair_list
+            pair_count = old_chunk.__pair_count
+        elseif primary == __ANY then
+            local pairs = old_chunk.__secondary_pairs[secondary]
+            pair_list = pairs and pairs.__item_list
+            pair_count = pairs and pairs.__item_count or 0
+        elseif secondary == __ANY then
+            local pairs = old_chunk.__primary_pairs[primary]
+            pair_list = pairs and pairs.__item_list
+            pair_count = pairs and pairs.__item_count or 0
+        end
+
+        for pair_index = 1, pair_count do
+            ---@cast pair_list -?
+            local pair = pair_list[pair_index]
+
+            local component_index = old_component_indices[pair]
+            local component_storage = old_component_storages[component_index]
+
+            for old_place = 1, old_entity_count do
+                component_storage[old_place] = new_component
+            end
+        end
+
+        return
+    end
+
+    local new_chunk = __chunk_with_fragment(old_chunk, fragment)
+
+    if not new_chunk then
+        return
+    end
 
     if old_chunk == new_chunk then
         local old_chunk_has_setup_hooks = old_chunk.__has_setup_hooks
@@ -4859,6 +4922,41 @@ function __evolved_set(entity, fragment, component)
     local old_chunk = entity_chunks[entity_index]
     local old_place = entity_places[entity_index]
 
+    if __is_wildcard(fragment) then
+        local primary, secondary = __evolved_unpair(fragment)
+
+        local new_component = component
+        if new_component == nil then new_component = true end
+
+        ---@type evolved.id[]?, integer
+        local pair_list, pair_count = nil, 0
+
+        if primary == __ANY and secondary == __ANY then
+            pair_list = old_chunk.__pair_list
+            pair_count = old_chunk.__pair_count
+        elseif primary == __ANY then
+            local pairs = old_chunk.__secondary_pairs[secondary]
+            pair_list = pairs and pairs.__item_list
+            pair_count = pairs and pairs.__item_count or 0
+        elseif secondary == __ANY then
+            local pairs = old_chunk.__primary_pairs[primary]
+            pair_list = pairs and pairs.__item_list
+            pair_count = pairs and pairs.__item_count or 0
+        end
+
+        for pair_index = 1, pair_count do
+            ---@cast pair_list -?
+            local pair = pair_list[pair_index]
+
+            local component_index = old_chunk.__component_indices[pair]
+            local component_storage = old_chunk.__component_storages[component_index]
+
+            component_storage[old_place] = new_component
+        end
+
+        return
+    end
+
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if not new_chunk then
@@ -5760,7 +5858,7 @@ function __evolved_primary(entity, secondary, index)
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local pairs = chunk and chunk.__secondaries[secondary]
+    local pairs = chunk and chunk.__secondary_pairs[secondary]
     local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
     local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
@@ -5801,7 +5899,7 @@ function __evolved_secondary(entity, primary, index)
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local pairs = chunk and chunk.__primaries[primary]
+    local pairs = chunk and chunk.__primary_pairs[primary]
     local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
     local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
@@ -5839,7 +5937,7 @@ function __evolved_primaries(entity, secondary)
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local pairs = chunk and chunk.__secondaries[secondary]
+    local pairs = chunk and chunk.__secondary_pairs[secondary]
 
     if not pairs or pairs.__item_count == 0 then
         -- no primaries for this secondary
@@ -5879,7 +5977,7 @@ function __evolved_secondaries(entity, primary)
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local pairs = chunk and chunk.__primaries[primary]
+    local pairs = chunk and chunk.__primary_pairs[primary]
 
     if not pairs or pairs.__item_count == 0 then
         -- no secondaries for this primary
@@ -5917,7 +6015,7 @@ function __evolved_primary_count(entity, secondary)
 
     local chunk = __entity_chunks[entity_index]
 
-    local pairs = chunk and chunk.__secondaries[secondary]
+    local pairs = chunk and chunk.__secondary_pairs[secondary]
     local pair_count = pairs and pairs.__item_count or 0
 
     return pair_count
@@ -5942,7 +6040,7 @@ function __evolved_secondary_count(entity, primary)
 
     local chunk = __entity_chunks[entity_index]
 
-    local pairs = chunk and chunk.__primaries[primary]
+    local pairs = chunk and chunk.__primary_pairs[primary]
     local pair_count = pairs and pairs.__item_count or 0
 
     return pair_count
