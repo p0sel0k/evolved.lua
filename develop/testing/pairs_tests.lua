@@ -823,12 +823,14 @@ do
     assert(not evo.primary(e, s))
     assert(not evo.primary(e, s, 1))
     assert(not evo.primary(e, s, 2))
+    assert(not evo.primary(e, s, 0))
     assert(not evo.primary(e, s, -1))
     assert(not evo.primary(e, s, -2))
 
     assert(not evo.secondary(e, p))
     assert(not evo.secondary(e, p, 1))
     assert(not evo.secondary(e, p, 2))
+    assert(not evo.secondary(e, p, 0))
     assert(not evo.secondary(e, p, -1))
     assert(not evo.secondary(e, p, -2))
 
@@ -837,6 +839,31 @@ do
 
     assert(evo.primaries(e, s)() == nil)
     assert(evo.secondaries(e, p)() == nil)
+end
+
+do
+    local p1, p2, s1, s2 = evo.id(4)
+
+    local e = evo.builder()
+        :set(evo.pair(p1, s1), 42)
+        :set(evo.pair(p1, s2), 84)
+        :set(evo.pair(p2, s1), 21)
+        :set(evo.pair(p2, s2), 63)
+        :spawn()
+
+    assert(evo.primary(e, evo.ANY) == nil)
+    assert(evo.primary(e, evo.ANY, 1) == nil)
+    assert(evo.primary(e, evo.ANY, 2) == nil)
+
+    assert(evo.secondary(e, evo.ANY) == nil)
+    assert(evo.secondary(e, evo.ANY, 1) == nil)
+    assert(evo.secondary(e, evo.ANY, 2) == nil)
+
+    assert(evo.primaries(e, evo.ANY)() == nil)
+    assert(evo.secondaries(e, evo.ANY)() == nil)
+
+    assert(evo.primary_count(e, evo.ANY) == 0)
+    assert(evo.secondary_count(e, evo.ANY) == 0)
 end
 
 -- TODO:

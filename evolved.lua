@@ -1140,17 +1140,17 @@ function __iterator_fns.__primaries_iterator(primaries_state)
         __error_fmt('structural changes are prohibited during iteration')
     end
 
-    local secondary_pairs = entity_chunk.__secondaries[secondary_fragment]
-    local secondary_pair_list = secondary_pairs and secondary_pairs.__item_list
-    local secondary_pair_count = secondary_pairs and secondary_pairs.__item_count or 0
+    local pairs = entity_chunk.__secondaries[secondary_fragment]
+    local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
+    local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
-    if secondary_pair_index <= secondary_pair_count then
+    if secondary_pair_index >= 1 and secondary_pair_index <= pair_count then
         primaries_state[5] = secondary_pair_index + 1
-        local secondary_pair = secondary_pair_list[secondary_pair_index]
 
-        local primary, _ = __evolved_unpair(secondary_pair)
+        local pair = pair_list[secondary_pair_index]
+        local primary, _ = __evolved_unpair(pair)
 
-        local component_index = entity_chunk.__component_indices[secondary_pair]
+        local component_index = entity_chunk.__component_indices[pair]
         local component_storage = entity_chunk.__component_storages[component_index]
 
         return primary, component_storage and component_storage[entity_place]
@@ -1173,17 +1173,17 @@ function __iterator_fns.__secondaries_iterator(secondaries_state)
         __error_fmt('structural changes are prohibited during iteration')
     end
 
-    local primary_pairs = entity_chunk.__primaries[primary_fragment]
-    local primary_pair_list = primary_pairs and primary_pairs.__item_list
-    local primary_pair_count = primary_pairs and primary_pairs.__item_count or 0
+    local pairs = entity_chunk.__primaries[primary_fragment]
+    local pair_list = pairs and pairs.__item_list
+    local pair_count = pairs and pairs.__item_count or 0
 
-    if primary_pair_index <= primary_pair_count then
+    if primary_pair_index >= 1 and primary_pair_index <= pair_count then
         secondaries_state[5] = primary_pair_index + 1
-        local primary_pair = primary_pair_list[primary_pair_index]
 
-        local _, secondary = __evolved_unpair(primary_pair)
+        local pair = pair_list[primary_pair_index]
+        local _, secondary = __evolved_unpair(pair)
 
-        local component_index = entity_chunk.__component_indices[primary_pair]
+        local component_index = entity_chunk.__component_indices[pair]
         local component_storage = entity_chunk.__component_storages[component_index]
 
         return secondary, component_storage and component_storage[entity_place]
@@ -5753,24 +5753,25 @@ function __evolved_primary(entity, secondary, index)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return
     end
 
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local secondary_pairs = chunk and chunk.__secondaries[secondary]
-    local secondary_pair_list = secondary_pairs and secondary_pairs.__item_list
-    local secondary_pair_count = secondary_pairs and secondary_pairs.__item_count or 0
+    local pairs = chunk and chunk.__secondaries[secondary]
+    local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
+    local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
-    if index < 1 or index > secondary_pair_count then
+    if index < 1 or index > pair_count then
         return
     end
 
-    local secondary_pair = secondary_pair_list[index]
-    local primary, _ = __evolved_unpair(secondary_pair)
+    local pair = pair_list[index]
+    local primary, _ = __evolved_unpair(pair)
 
-    local component_index = chunk.__component_indices[secondary_pair]
+    local component_index = chunk.__component_indices[pair]
     local component_storage = chunk.__component_storages[component_index]
 
     return primary, component_storage and component_storage[place]
@@ -5793,24 +5794,25 @@ function __evolved_secondary(entity, primary, index)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return
     end
 
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local primary_pairs = chunk and chunk.__primaries[primary]
-    local primary_pair_list = primary_pairs and primary_pairs.__item_list
-    local primary_pair_count = primary_pairs and primary_pairs.__item_count or 0
+    local pairs = chunk and chunk.__primaries[primary]
+    local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
+    local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
-    if index < 1 or index > primary_pair_count then
+    if index < 1 or index > pair_count then
         return
     end
 
-    local primary_pair = primary_pair_list[index]
-    local _, secondary = __evolved_unpair(primary_pair)
+    local pair = pair_list[index]
+    local _, secondary = __evolved_unpair(pair)
 
-    local component_index = chunk.__component_indices[primary_pair]
+    local component_index = chunk.__component_indices[pair]
     local component_storage = chunk.__component_storages[component_index]
 
     return secondary, component_storage and component_storage[place]
@@ -5830,15 +5832,17 @@ function __evolved_primaries(entity, secondary)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return __iterator_fns.__primaries_iterator
     end
 
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local secondaries = chunk and chunk.__secondaries[secondary]
+    local pairs = chunk and chunk.__secondaries[secondary]
 
-    if not secondaries then
+    if not pairs or pairs.__item_count == 0 then
+        -- no primaries for this secondary
         return __iterator_fns.__primaries_iterator
     end
 
@@ -5868,15 +5872,17 @@ function __evolved_secondaries(entity, primary)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return __iterator_fns.__secondaries_iterator
     end
 
     local chunk = __entity_chunks[entity_index]
     local place = __entity_places[entity_index]
 
-    local primaries = chunk and chunk.__primaries[primary]
+    local pairs = chunk and chunk.__primaries[primary]
 
-    if not primaries then
+    if not pairs or pairs.__item_count == 0 then
+        -- no secondaries for this primary
         return __iterator_fns.__secondaries_iterator
     end
 
@@ -5905,13 +5911,16 @@ function __evolved_primary_count(entity, secondary)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return 0
     end
 
     local chunk = __entity_chunks[entity_index]
 
-    local secondary_pairs = chunk and chunk.__secondaries[secondary]
-    return secondary_pairs and secondary_pairs.__item_count or 0
+    local pairs = chunk and chunk.__secondaries[secondary]
+    local pair_count = pairs and pairs.__item_count or 0
+
+    return pair_count
 end
 
 ---@param entity evolved.entity
@@ -5927,13 +5936,16 @@ function __evolved_secondary_count(entity, primary)
     local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- non-alive entities do not have any fragments
         return 0
     end
 
     local chunk = __entity_chunks[entity_index]
 
-    local primary_pairs = chunk and chunk.__primaries[primary]
-    return primary_pairs and primary_pairs.__item_count or 0
+    local pairs = chunk and chunk.__primaries[primary]
+    local pair_count = pairs and pairs.__item_count or 0
+
+    return pair_count
 end
 
 ---
