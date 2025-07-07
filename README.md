@@ -35,6 +35,7 @@
     - [Spawning Entities](#spawning-entities)
     - [Entity Builders](#entity-builders)
   - [Access Operations](#access-operations)
+  - [Iterating Over Fragments](#iterating-over-fragments)
   - [Modifying Operations](#modifying-operations)
   - [Debug Mode](#debug-mode)
   - [Queries](#queries)
@@ -451,6 +452,35 @@ function evolved.get(entity, ...) end
 The [`evolved.alive`](#evolvedalive) function checks whether an entity is alive. The [`evolved.empty`](#evolvedempty) function checks whether an entity is empty (has no fragments). The [`evolved.has`](#evolvedhas) function checks whether an entity has a specific fragment. The [`evolved.get`](#evolvedget) function retrieves the components of an entity for the specified fragments. If the entity doesn't have some of the fragments or if the fragments are marked with the [`evolved.TAG`](#evolvedtag), the function will return `nil` for them.
 
 All of these functions can be safely called on non-alive entities and non-alive fragments. Also, they do not cause any structural changes, because they do not modify anything.
+
+### Iterating Over Fragments
+
+Sometimes, you may need to iterate over all fragments attached to an entity. You can use the [`evolved.each`](#evolvedeach) function for this purpose.
+
+```lua
+local evolved = require 'evolved'
+
+local health = evolved.builder()
+    :name('health')
+    :spawn()
+
+local stamina = evolved.builder()
+    :name('stamina')
+    :spawn()
+
+local player = evolved.builder()
+    :set(health, 100)
+    :set(stamina, 50)
+    :spawn()
+
+for fragment, component in evolved.each(player) do
+    print(string.format('Fragment (%s) has value %d',
+        evolved.name(fragment), component))
+end
+```
+
+> [!NOTE]
+> [Structural changes](#structural-changes) are not allowed during iteration. If you want to spawn new entities or insert/remove fragments while iterating, defer these operations until the iteration is complete. See the [Deferred Operations](#deferred-operations) section for more details.
 
 ### Modifying Operations
 
