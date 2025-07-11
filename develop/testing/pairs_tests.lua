@@ -910,7 +910,202 @@ do
     end
 end
 
+do
+    do
+        local p, s = evo.id(2)
+
+        local e = evo.builder()
+            :set(s)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(p)
+        assert(evo.alive(e))
+        assert(evo.has(e, s))
+        assert(not evo.has(e, evo.pair(p, s)))
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local p, s = evo.id(2)
+
+        local e = evo.builder()
+            :set(p)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(s)
+        assert(evo.alive(e))
+        assert(evo.has(e, p))
+        assert(not evo.has(e, evo.pair(p, s)))
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(p)
+        assert(not evo.alive(e))
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.set(s, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(s)
+        assert(not evo.alive(e))
+    end
+end
+
+do
+    local p1, s1 = evo.id(2)
+
+    local e0 = evo.builder()
+        :destruction_policy(evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+        :spawn()
+
+    local e1 = evo.builder()
+        :set(evo.pair(p1, e0), 11)
+        :destruction_policy(evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+        :spawn()
+
+    local e2 = evo.builder()
+        :set(evo.pair(e1, s1), 22)
+        :destruction_policy(evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+        :spawn()
+
+    local e3 = evo.builder()
+        :set(evo.pair(e2, e2), 33)
+        :spawn()
+
+    evo.destroy(e0)
+    assert(not evo.alive(e1))
+    assert(not evo.alive(e2))
+    assert(not evo.alive(e3))
+end
+
+do
+    do
+        local f, p, s = evo.id(3)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(f)
+        assert(evo.get(e, f) == nil)
+        assert(evo.get(e, evo.pair(p, s)) == 42)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(p)
+        assert(evo.get(e, f) == 21)
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(s)
+        assert(evo.get(e, f) == 21)
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(p, s)
+        assert(evo.get(e, f) == 21)
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(f, p, s)
+        assert(evo.alive(e) and evo.empty(e))
+    end
+end
+
+do
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(p)
+        assert(not evo.alive(e))
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(s, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(p)
+        assert(evo.get(e, f) == 21)
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(s)
+        assert(evo.get(e, f) == 21)
+        assert(evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(s, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+        evo.destroy(s)
+        assert(not evo.alive(e))
+    end
+end
+
+do
+    local f, p, s = evo.id(3)
+
+    local e = evo.builder():set(f, 21):set(evo.pair(p, s), 42):spawn()
+
+    evo.destroy(evo.pair(p, s))
+    evo.destroy(evo.pair(evo.ANY, s))
+    evo.destroy(evo.pair(p, evo.ANY))
+    evo.destroy(evo.pair(evo.ANY, evo.ANY))
+
+    assert(evo.get(e, f) == 21)
+    assert(evo.get(e, evo.pair(p, s)) == 42)
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?
 -- Prevent setting wildcard pairs to entities!
+-- Should we have destruction policies analog for pairs?
+-- Do not forget to purge chunks with pairs!
+-- Should we call hooks for pairs?

@@ -150,6 +150,8 @@ local __defer_bytecode = {} ---@type any[]
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __primary_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __secondary_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
 local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
 
@@ -1204,6 +1206,7 @@ local __new_chunk
 local __update_chunk_tags
 local __update_chunk_flags
 local __trace_major_chunks
+local __trace_minor_chunks
 local __update_major_chunks_hook
 local __update_major_chunks_trace
 
@@ -1365,6 +1368,27 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __assoc_list_insert(minor_chunks, chunk)
     end
 
+    for i = 1, chunk_pair_count do
+        local pair = chunk_pair_list[i]
+        local primary, secondary = __evolved_unpair(pair)
+
+        local primary_chunks = __primary_chunks[primary]
+        local secondary_chunks = __secondary_chunks[secondary]
+
+        if not primary_chunks then
+            primary_chunks = __assoc_list_new(4)
+            __primary_chunks[primary] = primary_chunks
+        end
+
+        if not secondary_chunks then
+            secondary_chunks = __assoc_list_new(4)
+            __secondary_chunks[secondary] = secondary_chunks
+        end
+
+        __assoc_list_insert(primary_chunks, chunk)
+        __assoc_list_insert(secondary_chunks, chunk)
+    end
+
     __update_chunk_tags(chunk)
     __update_chunk_flags(chunk)
 
@@ -1488,7 +1512,7 @@ function __update_chunk_flags(chunk)
 end
 
 ---@param major evolved.fragment
----@param trace fun(chunk: evolved.chunk, ...: any): boolean
+---@param trace fun(chunk: evolved.chunk, ...: any)
 ---@param ... any additional trace arguments
 function __trace_major_chunks(major, trace, ...)
     ---@type evolved.chunk[]
@@ -1512,19 +1536,81 @@ function __trace_major_chunks(major, trace, ...)
     while chunk_stack_size > 0 do
         local chunk = chunk_stack[chunk_stack_size]
 
+        trace(chunk, ...)
+
         chunk_stack[chunk_stack_size] = nil
         chunk_stack_size = chunk_stack_size - 1
 
-        if trace(chunk, ...) then
-            local chunk_child_list = chunk.__child_list
-            local chunk_child_count = chunk.__child_count
+        local chunk_child_list = chunk.__child_list
+        local chunk_child_count = chunk.__child_count
 
+        __lua_table_move(
+            chunk_child_list, 1, chunk_child_count,
+            chunk_stack_size + 1, chunk_stack)
+
+        chunk_stack_size = chunk_stack_size + chunk_child_count
+    end
+
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
+end
+
+---@param minor evolved.fragment
+---@param trace fun(chunk: evolved.chunk, ...: any)
+---@param ... any additional trace arguments
+function __trace_minor_chunks(minor, trace, ...)
+    ---@type evolved.chunk[]
+    local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
+    local chunk_stack_size = 0
+
+    do
+        local minor_chunks = __minor_chunks[minor]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+
+        if minor_chunk_count > 0 then
             __lua_table_move(
-                chunk_child_list, 1, chunk_child_count,
+                minor_chunk_list, 1, minor_chunk_count,
                 chunk_stack_size + 1, chunk_stack)
 
-            chunk_stack_size = chunk_stack_size + chunk_child_count
+            chunk_stack_size = chunk_stack_size + minor_chunk_count
         end
+    end
+
+    do
+        local primary_chunks = __primary_chunks[minor]
+        local primary_chunk_list = primary_chunks and primary_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local primary_chunk_count = primary_chunks and primary_chunks.__item_count or 0 --[[@as integer]]
+
+        if primary_chunk_count > 0 then
+            __lua_table_move(
+                primary_chunk_list, 1, primary_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + primary_chunk_count
+        end
+    end
+
+    do
+        local secondary_chunks = __secondary_chunks[minor]
+        local secondary_chunk_list = secondary_chunks and secondary_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local secondary_chunk_count = secondary_chunks and secondary_chunks.__item_count or 0 --[[@as integer]]
+
+        if secondary_chunk_count > 0 then
+            __lua_table_move(
+                secondary_chunk_list, 1, secondary_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + secondary_chunk_count
+        end
+    end
+
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
+
+        trace(chunk, ...)
+
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
     end
 
     __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
@@ -1536,11 +1622,9 @@ function __update_major_chunks_hook(major)
 end
 
 ---@param chunk evolved.chunk
----@return boolean
 function __update_major_chunks_trace(chunk)
     __update_chunk_tags(chunk)
     __update_chunk_flags(chunk)
-    return true
 end
 
 ---
@@ -1646,18 +1730,6 @@ local function __chunk_without_fragment(chunk, fragment)
                 sib_chunk = sib_chunk.__parent
             end
 
-            local ini_fragment_list = chunk.__fragment_list
-            local ini_fragment_count = chunk.__fragment_count
-
-            local lst_fragment_index = sib_chunk and sib_chunk.__fragment_count + 2 or 2
-
-            for ini_fragment_index = lst_fragment_index, ini_fragment_count do
-                local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if not __is_pair(ini_fragment) then
-                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
-                end
-            end
-
             if sib_chunk then
                 chunk.__without_fragment_edges[fragment] = sib_chunk
                 sib_chunk.__with_fragment_edges[fragment] = chunk
@@ -1678,20 +1750,16 @@ local function __chunk_without_fragment(chunk, fragment)
                 sib_chunk = sib_chunk.__parent
             end
 
-            local ini_fragment_list = chunk.__fragment_list
-            local ini_fragment_count = chunk.__fragment_count
+            local ini_pair_list = chunk.__pair_list
+            local ini_pair_count = chunk.__pair_count
 
-            local lst_fragment_index = sib_chunk and sib_chunk.__fragment_count + 2 or 2
+            local lst_pair_index = sib_chunk and sib_chunk.__pair_count + 2 or 2
 
-            for ini_fragment_index = lst_fragment_index, ini_fragment_count do
-                local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if not __is_pair(ini_fragment) then
-                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
-                else
-                    local _, ini_secondary = __evolved_unpair(ini_fragment)
-                    if secondary ~= ini_secondary then
-                        sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
-                    end
+            for ini_pair_index = lst_pair_index, ini_pair_count do
+                local ini_pair = ini_pair_list[ini_pair_index]
+                local _, ini_secondary_index = __evolved_unpack(ini_pair)
+                if ini_secondary_index ~= secondary_index then
+                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_pair)
                 end
             end
 
@@ -1715,20 +1783,16 @@ local function __chunk_without_fragment(chunk, fragment)
                 sib_chunk = sib_chunk.__parent
             end
 
-            local ini_fragment_list = chunk.__fragment_list
-            local ini_fragment_count = chunk.__fragment_count
+            local ini_pair_list = chunk.__pair_list
+            local ini_pair_count = chunk.__pair_count
 
-            local lst_fragment_index = sib_chunk and sib_chunk.__fragment_count + 2 or 2
+            local lst_pair_index = sib_chunk and sib_chunk.__pair_count + 2 or 2
 
-            for ini_fragment_index = lst_fragment_index, ini_fragment_count do
-                local ini_fragment = ini_fragment_list[ini_fragment_index]
-                if not __is_pair(ini_fragment) then
-                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
-                else
-                    local ini_primary, _ = __evolved_unpair(ini_fragment)
-                    if primary ~= ini_primary then
-                        sib_chunk = __chunk_with_fragment(sib_chunk, ini_fragment)
-                    end
+            for ini_pair_index = lst_pair_index, ini_pair_count do
+                local ini_pair = ini_pair_list[ini_pair_index]
+                local ini_primary_index, _ = __evolved_unpack(ini_pair)
+                if ini_primary_index ~= primary_index then
+                    sib_chunk = __chunk_with_fragment(sib_chunk, ini_pair)
                 end
             end
 
@@ -2889,7 +2953,7 @@ local function __destroy_entity_list(entity_list, entity_count)
 
     for i = 1, entity_count do
         local entity = entity_list[i]
-        local entity_index = entity % 0x100000
+        local entity_index = entity % 2 ^ 20
 
         if __freelist_ids[entity_index] ~= entity then
             -- this entity is not alive, nothing to purge
@@ -2990,22 +3054,16 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
                 destroy_entity_policy_fragment_count = destroy_entity_policy_fragment_count + 1
                 destroy_entity_policy_fragment_list[destroy_entity_policy_fragment_count] = processing_fragment
 
-                local minor_chunks = __minor_chunks[processing_fragment]
-                local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-                local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
-
-                for minor_chunk_index = 1, minor_chunk_count do
-                    local minor_chunk = minor_chunk_list[minor_chunk_index]
-
-                    local minor_chunk_entity_list = minor_chunk.__entity_list
-                    local minor_chunk_entity_count = minor_chunk.__entity_count
+                __trace_minor_chunks(processing_fragment, function(chunk)
+                    local chunk_entity_list = chunk.__entity_list
+                    local chunk_entity_count = chunk.__entity_count
 
                     __lua_table_move(
-                        minor_chunk_entity_list, 1, minor_chunk_entity_count,
+                        chunk_entity_list, 1, chunk_entity_count,
                         processing_fragment_stack_size + 1, processing_fragment_stack)
 
-                    processing_fragment_stack_size = processing_fragment_stack_size + minor_chunk_entity_count
-                end
+                    processing_fragment_stack_size = processing_fragment_stack_size + chunk_entity_count
+                end)
             elseif processing_fragment_destruction_policy == __DESTRUCTION_POLICY_REMOVE_FRAGMENT then
                 remove_fragment_policy_fragment_count = remove_fragment_policy_fragment_count + 1
                 remove_fragment_policy_fragment_list[remove_fragment_policy_fragment_count] = processing_fragment
@@ -3023,14 +3081,7 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
         for i = 1, destroy_entity_policy_fragment_count do
             local fragment = destroy_entity_policy_fragment_list[i]
 
-            local minor_chunks = __minor_chunks[fragment]
-            local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-            local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
-
-            for minor_chunk_index = 1, minor_chunk_count do
-                local minor_chunk = minor_chunk_list[minor_chunk_index]
-                __chunk_clear(minor_chunk)
-            end
+            __trace_minor_chunks(fragment, __chunk_clear)
         end
 
         __release_table(__table_pool_tag.fragment_list, destroy_entity_policy_fragment_list)
@@ -3042,14 +3093,10 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
         for i = 1, remove_fragment_policy_fragment_count do
             local fragment = remove_fragment_policy_fragment_list[i]
 
-            local minor_chunks = __minor_chunks[fragment]
-            local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-            local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
-
-            for minor_chunk_index = 1, minor_chunk_count do
-                local minor_chunk = minor_chunk_list[minor_chunk_index]
-                __chunk_remove(minor_chunk, fragment)
-            end
+            __trace_minor_chunks(fragment, __chunk_remove,
+                fragment,
+                __evolved_pair(fragment, __ANY),
+                __evolved_pair(__ANY, fragment))
         end
 
         __release_table(__table_pool_tag.fragment_list, remove_fragment_policy_fragment_list)
@@ -5368,6 +5415,10 @@ function __evolved_destroy(...)
     __evolved_defer()
 
     do
+        local minor_chunks = __minor_chunks
+        local primary_chunks = __primary_chunks
+        local secondary_chunks = __secondary_chunks
+
         local purging_entity_list = __acquire_table(__table_pool_tag.entity_list)
         local purging_entity_count = 0
 
@@ -5377,14 +5428,19 @@ function __evolved_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 0x100000
+            local entity_index = entity % 2 ^ 20
 
             if __is_pair(entity) then
                 -- pairs cannot be destroyed, nothing to do
             elseif __freelist_ids[entity_index] ~= entity then
                 -- this entity is not alive, nothing to destroy
             else
-                if not __minor_chunks[entity] then
+                local is_fragment =
+                    minor_chunks[entity] or
+                    primary_chunks[entity] or
+                    secondary_chunks[entity]
+
+                if not is_fragment then
                     purging_entity_count = purging_entity_count + 1
                     purging_entity_list[purging_entity_count] = entity
                 else
@@ -5555,6 +5611,10 @@ function __evolved_batch_destroy(...)
     __evolved_defer()
 
     do
+        local minor_chunks = __minor_chunks
+        local primary_chunks = __primary_chunks
+        local secondary_chunks = __secondary_chunks
+
         local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local clearing_chunk_count = 0
 
@@ -5567,9 +5627,11 @@ function __evolved_batch_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
-            local query_index = query % 0x100000
+            local query_index = query % 2 ^ 20
 
-            if __freelist_ids[query_index] ~= query then
+            if __is_pair(query) then
+                -- pairs cannot be used as queries
+            elseif __freelist_ids[query_index] ~= query then
                 -- this query is not alive, nothing to destroy
             else
                 for chunk, entity_list, entity_count in __evolved_execute(query) do
@@ -5579,7 +5641,12 @@ function __evolved_batch_destroy(...)
                     for i = 1, entity_count do
                         local entity = entity_list[i]
 
-                        if not __minor_chunks[entity] then
+                        local is_fragment =
+                            minor_chunks[entity] or
+                            primary_chunks[entity] or
+                            secondary_chunks[entity]
+
+                        if not is_fragment then
                             purging_entity_count = purging_entity_count + 1
                             purging_entity_list[purging_entity_count] = entity
                         else
