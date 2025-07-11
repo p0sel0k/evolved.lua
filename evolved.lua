@@ -207,6 +207,9 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __has_explicit_major boolean
 ---@field package __has_explicit_minors boolean
 ---@field package __has_explicit_fragments boolean
+---@field package __has_internal_major boolean
+---@field package __has_internal_minors boolean
+---@field package __has_internal_fragments boolean
 ---@field package __has_required_fragments boolean
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
@@ -778,6 +781,7 @@ local __NAME = __acquire_id()
 
 local __UNIQUE = __acquire_id()
 local __EXPLICIT = __acquire_id()
+local __INTERNAL = __acquire_id()
 
 local __DEFAULT = __acquire_id()
 local __DUPLICATE = __acquire_id()
@@ -1337,6 +1341,9 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __has_explicit_major = false,
         __has_explicit_minors = false,
         __has_explicit_fragments = false,
+        __has_internal_major = false,
+        __has_internal_minors = false,
+        __has_internal_fragments = false,
         __has_required_fragments = false,
     }, __chunk_mt)
 
@@ -1500,6 +1507,10 @@ function __update_chunk_flags(chunk)
     local has_explicit_minors = chunk_parent ~= nil and chunk_parent.__has_explicit_fragments
     local has_explicit_fragments = has_explicit_major or has_explicit_minors
 
+    local has_internal_major = __evolved_has(chunk_fragment, __INTERNAL)
+    local has_internal_minors = chunk_parent ~= nil and chunk_parent.__has_internal_fragments
+    local has_internal_fragments = has_internal_major or has_internal_minors
+
     local has_required_fragments = (chunk_parent ~= nil and chunk_parent.__has_required_fragments)
         or __evolved_has(chunk_fragment, __REQUIRES)
 
@@ -1519,6 +1530,10 @@ function __update_chunk_flags(chunk)
     chunk.__has_explicit_major = has_explicit_major
     chunk.__has_explicit_minors = has_explicit_minors
     chunk.__has_explicit_fragments = has_explicit_fragments
+
+    chunk.__has_internal_major = has_internal_major
+    chunk.__has_internal_minors = has_internal_minors
+    chunk.__has_internal_fragments = has_internal_fragments
 
     chunk.__has_required_fragments = has_required_fragments
 end
@@ -6594,6 +6609,11 @@ function __builder_mt:explicit()
     return self:set(__EXPLICIT)
 end
 
+---@return evolved.builder builder
+function __builder_mt:internal()
+    return self:set(__INTERNAL)
+end
+
 ---@param default evolved.component
 ---@return evolved.builder builder
 function __builder_mt:default(default)
@@ -6782,6 +6802,9 @@ __evolved_set(__UNIQUE, __ON_REMOVE, __update_major_chunks_hook)
 __evolved_set(__EXPLICIT, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__EXPLICIT, __ON_REMOVE, __update_major_chunks_hook)
 
+__evolved_set(__INTERNAL, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__INTERNAL, __ON_REMOVE, __update_major_chunks_hook)
+
 __evolved_set(__DEFAULT, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks_hook)
 
@@ -6804,6 +6827,7 @@ __evolved_set(__NAME, __NAME, 'NAME')
 
 __evolved_set(__UNIQUE, __NAME, 'UNIQUE')
 __evolved_set(__EXPLICIT, __NAME, 'EXPLICIT')
+__evolved_set(__INTERNAL, __NAME, 'INTERNAL')
 
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
@@ -6838,6 +6862,48 @@ __evolved_set(__DESTRUCTION_POLICY_REMOVE_FRAGMENT, __NAME, 'DESTRUCTION_POLICY_
 ---
 ---
 
+__evolved_set(__ANY, __INTERNAL)
+
+__evolved_set(__TAG, __INTERNAL)
+__evolved_set(__NAME, __INTERNAL)
+
+__evolved_set(__UNIQUE, __INTERNAL)
+__evolved_set(__EXPLICIT, __INTERNAL)
+__evolved_set(__INTERNAL, __INTERNAL)
+
+__evolved_set(__DEFAULT, __INTERNAL)
+__evolved_set(__DUPLICATE, __INTERNAL)
+
+__evolved_set(__PREFAB, __INTERNAL)
+__evolved_set(__DISABLED, __INTERNAL)
+
+__evolved_set(__INCLUDES, __INTERNAL)
+__evolved_set(__EXCLUDES, __INTERNAL)
+__evolved_set(__REQUIRES, __INTERNAL)
+
+__evolved_set(__ON_SET, __INTERNAL)
+__evolved_set(__ON_ASSIGN, __INTERNAL)
+__evolved_set(__ON_INSERT, __INTERNAL)
+__evolved_set(__ON_REMOVE, __INTERNAL)
+
+__evolved_set(__GROUP, __INTERNAL)
+
+__evolved_set(__QUERY, __INTERNAL)
+__evolved_set(__EXECUTE, __INTERNAL)
+
+__evolved_set(__PROLOGUE, __INTERNAL)
+__evolved_set(__EPILOGUE, __INTERNAL)
+
+__evolved_set(__DESTRUCTION_POLICY, __INTERNAL)
+__evolved_set(__DESTRUCTION_POLICY_DESTROY_ENTITY, __INTERNAL)
+__evolved_set(__DESTRUCTION_POLICY_REMOVE_FRAGMENT, __INTERNAL)
+
+---
+---
+---
+---
+---
+
 __evolved_set(__ANY, __TAG)
 
 __evolved_set(__TAG, __TAG)
@@ -6845,6 +6911,8 @@ __evolved_set(__TAG, __TAG)
 __evolved_set(__UNIQUE, __TAG)
 
 __evolved_set(__EXPLICIT, __TAG)
+
+__evolved_set(__INTERNAL, __TAG)
 
 __evolved_set(__PREFAB, __TAG)
 __evolved_set(__PREFAB, __UNIQUE)
@@ -7007,6 +7075,7 @@ evolved.NAME = __NAME
 
 evolved.UNIQUE = __UNIQUE
 evolved.EXPLICIT = __EXPLICIT
+evolved.INTERNAL = __INTERNAL
 
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE

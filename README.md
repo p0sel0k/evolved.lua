@@ -1069,6 +1069,7 @@ NAME :: fragment
 
 UNIQUE :: fragment
 EXPLICIT :: fragment
+INTERNAL :: fragment
 
 DEFAULT :: fragment
 DUPLICATE :: fragment
@@ -1204,6 +1205,7 @@ builder_mt:name :: string -> builder
 
 builder_mt:unique :: builder
 builder_mt:explicit :: builder
+builder_mt:internal :: builder
 
 builder_mt:default :: component -> builder
 builder_mt:duplicate :: {component -> component} -> builder
@@ -1259,6 +1261,8 @@ builder_mt:destruction_policy :: id -> builder
 ### `evolved.UNIQUE`
 
 ### `evolved.EXPLICIT`
+
+### `evolved.INTERNAL`
 
 ### `evolved.DEFAULT`
 
@@ -1853,6 +1857,13 @@ function evolved.builder_mt:unique() end
 ```lua
 ---@return evolved.builder builder
 function evolved.builder_mt:explicit() end
+```
+
+#### `evolved.builder_mt:internal`
+
+```lua
+---@return evolved.builder builder
+function evolved.builder_mt:internal() end
 ```
 
 #### `evolved.builder_mt:default`
