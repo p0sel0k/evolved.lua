@@ -1102,10 +1102,77 @@ do
     assert(evo.get(e, evo.pair(p, s)) == 42)
 end
 
+do
+    evo.collect_garbage()
+
+    local f, p1, s1, p2, s2 = evo.id(5)
+
+    local e1 = evo.builder()
+        :set(f, 21)
+        :set(evo.pair(p1, s1), 42)
+        :set(evo.pair(p2, s2), 84)
+        :spawn()
+
+    local e2 = evo.builder()
+        :set(f, 21)
+        :set(evo.pair(p1, s1), 42)
+        :set(evo.pair(p2, s2), 84)
+        :spawn()
+
+    local f_chunk = evo.chunk(f)
+    local f_p2s2_chunk = evo.chunk(f, evo.pair(p2, s2))
+    local f_p1s1_p2s2_chunk = evo.chunk(f, evo.pair(p1, s1), evo.pair(p2, s2))
+
+    assert(f_p1s1_p2s2_chunk:entities()[1] == e1)
+    assert(f_p1s1_p2s2_chunk:entities()[2] == e2)
+
+    evo.remove(e1, evo.pair(p1, evo.ANY))
+
+    assert(f_p2s2_chunk:entities()[1] == e1)
+    assert(f_p1s1_p2s2_chunk:entities()[1] == e2)
+
+    evo.remove(e1, evo.pair(p2, evo.ANY))
+
+    assert(f_chunk:entities()[1] == e1)
+    assert(f_p1s1_p2s2_chunk:entities()[1] == e2)
+
+    evo.collect_garbage()
+
+    assert(f_chunk:alive())
+    assert(not f_p2s2_chunk:alive())
+    assert(f_p1s1_p2s2_chunk:alive())
+
+    evo.remove(e2, evo.pair(p1, evo.ANY))
+
+    local new_f_p2s2_chunk = evo.chunk(f, evo.pair(p2, s2))
+    assert(new_f_p2s2_chunk:entities()[1] == e2)
+end
+
+do
+    evo.collect_garbage()
+
+    local f, p1, p2, s1, s2 = evo.id(5)
+
+    local e1 = evo.builder()
+        :set(f, 21)
+        :set(evo.pair(p1, s1), 42)
+        :set(evo.pair(p2, s2), 84)
+        :spawn()
+
+    local f_p1s1_p2s2_chunk = evo.chunk(f, evo.pair(p1, s1), evo.pair(p2, s2))
+    assert(f_p1s1_p2s2_chunk:entities()[1] == e1)
+
+    evo.destroy(p2, s2)
+
+    evo.collect_garbage()
+
+    local f_p1s1_chunk = evo.chunk(f, evo.pair(p1, s1))
+    assert(f_p1s1_chunk:entities()[1] == e1)
+end
+
 -- TODO:
 -- How should required fragments work with pairs?
 -- How can we set defaults for paired fragments?
 -- Prevent setting wildcard pairs to entities!
 -- Should we have destruction policies analog for pairs?
--- Do not forget to purge chunks with pairs!
 -- Should we call hooks for pairs?

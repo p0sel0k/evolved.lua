@@ -627,10 +627,14 @@ end
 ---@param src_item_first integer
 ---@param src_item_last integer
 ---@param dst_al evolved.assoc_list<K>
+---@return integer new_dst_item_count
 function __assoc_list_move(src_item_list, src_item_first, src_item_last, dst_al)
-    dst_al.__item_count = __assoc_list_move_ex(
+    local new_dst_item_count = __assoc_list_move_ex(
         src_item_list, src_item_first, src_item_last,
         dst_al.__item_set, dst_al.__item_list, dst_al.__item_count)
+
+    dst_al.__item_count = new_dst_item_count
+    return new_dst_item_count
 end
 
 ---@generic K
@@ -690,10 +694,14 @@ end
 ---@generic K
 ---@param al evolved.assoc_list<K>
 ---@param item K
+---@return integer new_al_count
 function __assoc_list_insert(al, item)
-    al.__item_count = __assoc_list_insert_ex(
+    local new_al_count = __assoc_list_insert_ex(
         al.__item_set, al.__item_list, al.__item_count,
         item)
+
+    al.__item_count = new_al_count
+    return new_al_count
 end
 
 ---@generic K
@@ -720,10 +728,14 @@ end
 ---@generic K
 ---@param al evolved.assoc_list<K>
 ---@param item K
+---@return integer new_al_count
 function __assoc_list_remove(al, item)
-    al.__item_count = __assoc_list_remove_ex(
+    local new_al_count = __assoc_list_remove_ex(
         al.__item_set, al.__item_list, al.__item_count,
         item)
+
+    al.__item_count = new_al_count
+    return new_al_count
 end
 
 ---@generic K
@@ -1744,7 +1756,12 @@ local function __chunk_without_fragment(chunk, fragment)
                 return chunk
             end
 
-            local sib_chunk = chunk
+            if not chunk.__secondary_pairs[secondary] then
+                -- the chunk does not have such pairs
+                return chunk
+            end
+
+            local sib_chunk = chunk.__parent
 
             while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__secondary_pairs[secondary] do
                 sib_chunk = sib_chunk.__parent
@@ -1777,7 +1794,12 @@ local function __chunk_without_fragment(chunk, fragment)
                 return chunk
             end
 
-            local sib_chunk = chunk
+            if not chunk.__primary_pairs[primary] then
+                -- the chunk does not have such pairs
+                return chunk
+            end
+
+            local sib_chunk = chunk.__parent
 
             while sib_chunk and sib_chunk.__has_pair_fragments and sib_chunk.__primary_pairs[primary] do
                 sib_chunk = sib_chunk.__parent
@@ -2878,8 +2900,8 @@ local function __purge_chunk(chunk)
     local chunk_parent = chunk.__parent
     local chunk_fragment = chunk.__fragment
 
-    local major_chunks = __major_chunks[chunk_fragment]
-    local minor_chunks = __minor_chunks[chunk_fragment]
+    local chunk_fragment_list = chunk.__fragment_list
+    local chunk_fragment_count = chunk.__fragment_count
 
     local with_fragment_edges = chunk.__with_fragment_edges
     local without_fragment_edges = chunk.__without_fragment_edges
@@ -2888,19 +2910,37 @@ local function __purge_chunk(chunk)
         __root_chunks[chunk_fragment] = nil
     end
 
-    if major_chunks then
-        __assoc_list_remove(major_chunks, chunk)
+    do
+        local major_fragment = chunk_fragment
+        local major_chunks = __major_chunks[major_fragment]
 
-        if major_chunks.__item_count == 0 then
-            __major_chunks[chunk_fragment] = nil
+        if major_chunks and __assoc_list_remove(major_chunks, chunk) == 0 then
+            __major_chunks[major_fragment] = nil
         end
     end
 
-    if minor_chunks then
-        __assoc_list_remove(minor_chunks, chunk)
+    for i = 1, chunk_fragment_count do
+        local minor_fragment = chunk_fragment_list[i]
+        local minor_chunks = __minor_chunks[minor_fragment]
 
-        if minor_chunks.__item_count == 0 then
-            __minor_chunks[chunk_fragment] = nil
+        if minor_chunks and __assoc_list_remove(minor_chunks, chunk) == 0 then
+            __minor_chunks[minor_fragment] = nil
+        end
+    end
+
+    for primary_fragment in __lua_next, chunk.__primary_pairs do
+        local primary_chunks = __primary_chunks[primary_fragment]
+
+        if primary_chunks and __assoc_list_remove(primary_chunks, chunk) == 0 then
+            __primary_chunks[primary_fragment] = nil
+        end
+    end
+
+    for secondary_fragment in __lua_next, chunk.__secondary_pairs do
+        local secondary_chunks = __secondary_chunks[secondary_fragment]
+
+        if secondary_chunks and __assoc_list_remove(secondary_chunks, chunk) == 0 then
+            __secondary_chunks[secondary_fragment] = nil
         end
     end
 
@@ -3129,14 +3169,14 @@ function __chunk_set(old_chunk, fragment, component)
     local old_entity_list = old_chunk.__entity_list
     local old_entity_count = old_chunk.__entity_count
 
-    if old_entity_count == 0 then
-        return
-    end
-
     local old_component_count = old_chunk.__component_count
     local old_component_indices = old_chunk.__component_indices
     local old_component_storages = old_chunk.__component_storages
     local old_component_fragments = old_chunk.__component_fragments
+
+    if old_entity_count == 0 then
+        return
+    end
 
     if __is_wildcard(fragment) then
         local primary, secondary = __evolved_unpair(fragment)
@@ -3569,23 +3609,23 @@ function __chunk_remove(old_chunk, ...)
         return
     end
 
-    local new_chunk = __chunk_without_fragments(old_chunk, ...)
-
-    if old_chunk == new_chunk then
-        return
-    end
-
     local old_entity_list = old_chunk.__entity_list
     local old_entity_count = old_chunk.__entity_count
-
-    if old_entity_count == 0 then
-        return
-    end
 
     local old_fragment_list = old_chunk.__fragment_list
     local old_fragment_count = old_chunk.__fragment_count
     local old_component_indices = old_chunk.__component_indices
     local old_component_storages = old_chunk.__component_storages
+
+    if old_entity_count == 0 then
+        return
+    end
+
+    local new_chunk = __chunk_without_fragments(old_chunk, ...)
+
+    if old_chunk == new_chunk then
+        return
+    end
 
     if old_chunk.__has_remove_hooks then
         ---@type table<evolved.fragment, integer>
@@ -6929,12 +6969,8 @@ __evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
     if old_group then
         local old_group_systems = __group_subsystems[old_group]
 
-        if old_group_systems then
-            __assoc_list_remove(old_group_systems, system)
-
-            if old_group_systems.__item_count == 0 then
-                __group_subsystems[old_group] = nil
-            end
+        if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
+            __group_subsystems[old_group] = nil
         end
     end
 
@@ -6953,12 +6989,8 @@ end)
 __evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
     local old_group_systems = __group_subsystems[old_group]
 
-    if old_group_systems then
-        __assoc_list_remove(old_group_systems, system)
-
-        if old_group_systems.__item_count == 0 then
-            __group_subsystems[old_group] = nil
-        end
+    if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
+        __group_subsystems[old_group] = nil
     end
 end)
 

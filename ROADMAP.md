@@ -9,6 +9,7 @@
 - Add multi-spawn to the builder to spawn multiple entities at once.
 - Add a function to shrink storages to free unused memory.
 - Should we cache the result of without_unique_fragments to clone faster?
+- Mark all internal fragments with a some special tag
 - observers and events
 - add INDEX fragment trait
 - use compact prefix-tree for chunks
