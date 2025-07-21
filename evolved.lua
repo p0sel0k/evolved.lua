@@ -3193,43 +3193,6 @@ function __chunk_set(old_chunk, fragment, component)
         return
     end
 
-    if __is_wildcard(fragment) then
-        local primary, secondary = __evolved_unpair(fragment)
-
-        local new_component = component
-        if new_component == nil then new_component = true end
-
-        ---@type evolved.id[]?, integer
-        local pair_list, pair_count = nil, 0
-
-        if primary == __ANY and secondary == __ANY then
-            pair_list = old_chunk.__pair_list
-            pair_count = old_chunk.__pair_count
-        elseif primary == __ANY then
-            local pairs = old_chunk.__secondary_pairs[secondary]
-            pair_list = pairs and pairs.__item_list
-            pair_count = pairs and pairs.__item_count or 0
-        elseif secondary == __ANY then
-            local pairs = old_chunk.__primary_pairs[primary]
-            pair_list = pairs and pairs.__item_list
-            pair_count = pairs and pairs.__item_count or 0
-        end
-
-        for pair_index = 1, pair_count do
-            ---@cast pair_list -?
-            local pair = pair_list[pair_index]
-
-            local component_index = old_component_indices[pair]
-            local component_storage = old_component_storages[component_index]
-
-            for old_place = 1, old_entity_count do
-                component_storage[old_place] = new_component
-            end
-        end
-
-        return
-    end
-
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
     if not new_chunk then
@@ -5011,53 +4974,23 @@ function __evolved_set(entity, fragment, component)
             __id_name(entity))
     end
 
+    if __is_wildcard(fragment) then
+        __error_fmt('the wildcard fragment (%s) cannot be set',
+            __id_name(fragment))
+    end
+
     if __defer_depth > 0 then
         __defer_set(entity, fragment, component)
         return
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
 
     local old_chunk = entity_chunks[entity_index]
     local old_place = entity_places[entity_index]
-
-    if __is_wildcard(fragment) then
-        local primary, secondary = __evolved_unpair(fragment)
-
-        local new_component = component
-        if new_component == nil then new_component = true end
-
-        ---@type evolved.id[]?, integer
-        local pair_list, pair_count = nil, 0
-
-        if primary == __ANY and secondary == __ANY then
-            pair_list = old_chunk.__pair_list
-            pair_count = old_chunk.__pair_count
-        elseif primary == __ANY then
-            local pairs = old_chunk.__secondary_pairs[secondary]
-            pair_list = pairs and pairs.__item_list
-            pair_count = pairs and pairs.__item_count or 0
-        elseif secondary == __ANY then
-            local pairs = old_chunk.__primary_pairs[primary]
-            pair_list = pairs and pairs.__item_list
-            pair_count = pairs and pairs.__item_count or 0
-        end
-
-        for pair_index = 1, pair_count do
-            ---@cast pair_list -?
-            local pair = pair_list[pair_index]
-
-            local component_index = old_chunk.__component_indices[pair]
-            local component_storage = old_chunk.__component_storages[component_index]
-
-            component_storage[old_place] = new_component
-        end
-
-        return
-    end
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
