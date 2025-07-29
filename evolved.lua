@@ -2414,7 +2414,7 @@ local function __detach_entity(chunk, place)
         end
     else
         local last_entity = entity_list[entity_count]
-        local last_entity_index = last_entity % 0x100000
+        local last_entity_index = last_entity % 2 ^ 20
         __entity_places[last_entity_index] = place
 
         entity_list[place] = last_entity
@@ -3374,7 +3374,7 @@ function __chunk_set(old_chunk, fragment, component)
 
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entity_list[new_place]
-                local entity_index = entity % 0x100000
+                local entity_index = entity % 2 ^ 20
                 entity_chunks[entity_index] = new_chunk
                 entity_places[entity_index] = new_place
             end
@@ -3684,7 +3684,7 @@ function __chunk_remove(old_chunk, ...)
 
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entity_list[new_place]
-                local entity_index = entity % 0x100000
+                local entity_index = entity % 2 ^ 20
                 entity_chunks[entity_index] = new_chunk
                 entity_places[entity_index] = new_place
             end
@@ -3697,7 +3697,7 @@ function __chunk_remove(old_chunk, ...)
 
         for old_place = 1, old_entity_count do
             local entity = old_entity_list[old_place]
-            local entity_index = entity % 0x100000
+            local entity_index = entity % 2 ^ 20
             entity_chunks[entity_index] = nil
             entity_places[entity_index] = nil
         end
@@ -3760,7 +3760,7 @@ function __chunk_clear(chunk)
 
         for place = 1, chunk_entity_count do
             local entity = chunk_entity_list[place]
-            local entity_index = entity % 0x100000
+            local entity_index = entity % 2 ^ 20
             entity_chunks[entity_index] = nil
             entity_places[entity_index] = nil
         end
@@ -4869,7 +4869,7 @@ function __evolved_has(entity, fragment)
         return false
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
         return false
@@ -4894,7 +4894,7 @@ function __evolved_has_all(entity, ...)
         return __lua_select('#', ...) == 0
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
         return __lua_select('#', ...) == 0
@@ -4919,7 +4919,7 @@ function __evolved_has_any(entity, ...)
         return false
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
         return false
@@ -4944,7 +4944,7 @@ function __evolved_get(entity, ...)
         return
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
         return
@@ -4965,18 +4965,21 @@ end
 ---@param component evolved.component
 function __evolved_set(entity, fragment, component)
     if __debug_mode then
-        __debug_fns.validate_entity(entity)
-        __debug_fns.validate_fragment(fragment)
-    end
+        if __is_pair(entity) then
+            __error_fmt('the pair (%s) cannot be used as an entity', __id_name(entity))
+        end
 
-    if __is_pair(entity) then
-        __error_fmt('the pair (%s) cannot have any fragments',
-            __id_name(entity))
-    end
+        if __is_wildcard(fragment) then
+            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
+        end
 
-    if __is_wildcard(fragment) then
-        __error_fmt('the wildcard fragment (%s) cannot be set',
-            __id_name(fragment))
+        if not __evolved_alive(entity) then
+            __error_fmt('the entity (%s) is not alive and cannot be used', __id_name(entity))
+        end
+
+        if not __evolved_alive(fragment) then
+            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+        end
     end
 
     if __defer_depth > 0 then
@@ -5220,7 +5223,7 @@ function __evolved_remove(entity, ...)
         return
     end
 
-    local entity_index = entity % 0x100000
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
         -- this entity is not alive, nothing to remove
@@ -5336,7 +5339,7 @@ function __evolved_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 0x100000
+            local entity_index = entity % 2 ^ 20
 
             if __is_pair(entity) then
                 -- pairs cannot have fragments, nothing to clear
@@ -5461,8 +5464,21 @@ end
 ---@param component evolved.component
 function __evolved_batch_set(query, fragment, component)
     if __debug_mode then
-        __debug_fns.validate_query(query)
-        __debug_fns.validate_fragment(fragment)
+        if __is_pair(query) then
+            __error_fmt('the pair (%s) cannot be used as a query', __id_name(query))
+        end
+
+        if __is_wildcard(fragment) then
+            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
+        end
+
+        if not __evolved_alive(query) then
+            __error_fmt('the query (%s) is not alive and cannot be used', __id_name(query))
+        end
+
+        if not __evolved_alive(fragment) then
+            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+        end
     end
 
     if __defer_depth > 0 then
@@ -5499,13 +5515,6 @@ function __evolved_batch_remove(query, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
-        return
-    end
-
-    local query_index = query % 0x100000
-
-    if __freelist_ids[query_index] ~= query then
-        -- this query is not alive, nothing to remove
         return
     end
 
@@ -5560,15 +5569,10 @@ function __evolved_batch_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
-            local query_index = query % 0x100000
 
-            if __freelist_ids[query_index] ~= query then
-                -- this query is not alive, nothing to remove
-            else
-                for chunk in __evolved_execute(query) do
-                    chunk_count = chunk_count + 1
-                    chunk_list[chunk_count] = chunk
-                end
+            for chunk in __evolved_execute(query) do
+                chunk_count = chunk_count + 1
+                chunk_list[chunk_count] = chunk
             end
         end
 
@@ -5615,32 +5619,25 @@ function __evolved_batch_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
-            local query_index = query % 2 ^ 20
 
-            if __is_pair(query) then
-                -- pairs cannot be used as queries
-            elseif __freelist_ids[query_index] ~= query then
-                -- this query is not alive, nothing to destroy
-            else
-                for chunk, entity_list, entity_count in __evolved_execute(query) do
-                    clearing_chunk_count = clearing_chunk_count + 1
-                    clearing_chunk_list[clearing_chunk_count] = chunk
+            for chunk, entity_list, entity_count in __evolved_execute(query) do
+                clearing_chunk_count = clearing_chunk_count + 1
+                clearing_chunk_list[clearing_chunk_count] = chunk
 
-                    for i = 1, entity_count do
-                        local entity = entity_list[i]
+                for i = 1, entity_count do
+                    local entity = entity_list[i]
 
-                        local is_fragment =
-                            minor_chunks[entity] or
-                            primary_chunks[entity] or
-                            secondary_chunks[entity]
+                    local is_fragment =
+                        minor_chunks[entity] or
+                        primary_chunks[entity] or
+                        secondary_chunks[entity]
 
-                        if not is_fragment then
-                            purging_entity_count = purging_entity_count + 1
-                            purging_entity_list[purging_entity_count] = entity
-                        else
-                            purging_fragment_count = purging_fragment_count + 1
-                            purging_fragment_list[purging_fragment_count] = entity
-                        end
+                    if not is_fragment then
+                        purging_entity_count = purging_entity_count + 1
+                        purging_entity_list[purging_entity_count] = entity
+                    else
+                        purging_fragment_count = purging_fragment_count + 1
+                        purging_fragment_list[purging_fragment_count] = entity
                     end
                 end
             end
@@ -5676,9 +5673,15 @@ end
 ---@return evolved.each_state? iterator_state
 ---@nodiscard
 function __evolved_each(entity)
-    local entity_index = entity % 0x100000
+    if __is_pair(entity) then
+        -- pairs cannot be used as entities, nothing to iterate
+        return __iterator_fns.__each_iterator
+    end
+
+    local entity_index = entity % 2 ^ 20
 
     if __freelist_ids[entity_index] ~= entity then
+        -- this entity is not alive, nothing to iterate
         return __iterator_fns.__each_iterator
     end
 
@@ -5708,9 +5711,15 @@ end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function __evolved_execute(query)
-    local query_index = query % 0x100000
+    if __is_pair(query) then
+        -- pairs cannot be used as queries, nothing to execute
+        return __iterator_fns.__execute_iterator
+    end
+
+    local query_index = query % 2 ^ 20
 
     if __freelist_ids[query_index] ~= query then
+        -- this query is not alive, nothing to execute
         return __iterator_fns.__execute_iterator
     end
 
@@ -5799,14 +5808,23 @@ end
 
 ---@param ... evolved.system systems
 function __evolved_process(...)
-    if __debug_mode then
-        __debug_fns.validate_systems(...)
+    local argument_count = __lua_select('#', ...)
+
+    if argument_count == 0 then
+        return
     end
 
-    for i = 1, __lua_select('#', ...) do
+    for argument_index = 1, argument_count do
         ---@type evolved.system
-        local system = __lua_select(i, ...)
-        if not __evolved_has(system, __DISABLED) then
+        local system = __lua_select(argument_index, ...)
+
+        if __is_pair(system) then
+            -- pairs cannot be used as systems, nothing to process
+        elseif not __evolved_alive(system) then
+            -- this system is not alive, nothing to process
+        elseif __evolved_has(system, __DISABLED) then
+            -- this system is disabled, nothing to process
+        else
             __system_process(system)
         end
     end
@@ -6585,10 +6603,10 @@ function __builder_mt:include(...)
         include_list = __lua_table_new(argument_count, 0)
     end
 
-    for i = 1, argument_count do
+    for argument_index = 1, argument_count do
         ---@type evolved.fragment
-        local fragment = __lua_select(i, ...)
-        include_list[include_count + i] = fragment
+        local fragment = __lua_select(argument_index, ...)
+        include_list[include_count + argument_index] = fragment
     end
 
     return self:set(__INCLUDES, include_list)
@@ -6610,10 +6628,10 @@ function __builder_mt:exclude(...)
         exclude_list = __lua_table_new(argument_count, 0)
     end
 
-    for i = 1, argument_count do
+    for argument_index = 1, argument_count do
         ---@type evolved.fragment
-        local fragment = __lua_select(i, ...)
-        exclude_list[exclude_count + i] = fragment
+        local fragment = __lua_select(argument_index, ...)
+        exclude_list[exclude_count + argument_index] = fragment
     end
 
     return self:set(__EXCLUDES, exclude_list)
@@ -6635,10 +6653,10 @@ function __builder_mt:require(...)
         require_list = __lua_table_new(argument_count, 0)
     end
 
-    for i = 1, argument_count do
+    for argument_index = 1, argument_count do
         ---@type evolved.fragment
-        local fragment = __lua_select(i, ...)
-        require_list[require_count + i] = fragment
+        local fragment = __lua_select(argument_index, ...)
+        require_list[require_count + argument_index] = fragment
     end
 
     return self:set(__REQUIRES, require_list)
