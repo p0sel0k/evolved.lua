@@ -78,13 +78,13 @@ do
     evo.set(p1, s1)
     evo.set(s1, p1)
     evo.set(p2, s2)
-    assert(evo.empty(evo.pair(p1, s1)))
-    assert(evo.empty(evo.pair(p2, s2)))
-    assert(evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2)))
-    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2)))
+    assert(not evo.empty(evo.pair(p1, s1)))
+    assert(not evo.empty(evo.pair(p2, s2)))
+    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2)))
+    assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2)))
     assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), p1))
-    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), p1))
-    assert(evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
+    assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), p1))
+    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
     assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), s2))
 end
 
@@ -93,11 +93,11 @@ do
     evo.set(p1, s1)
     evo.set(s1, p1)
     assert(not evo.has(evo.pair(p1, s1), p1))
-    assert(not evo.has(evo.pair(p1, s1), s1))
+    assert(evo.has(evo.pair(p1, s1), s1))
     assert(not evo.has_all(evo.pair(p1, s1), p1, s1))
-    assert(not evo.has_any(evo.pair(p1, s1), p1, s1))
+    assert(evo.has_any(evo.pair(p1, s1), p1, s1))
     assert(evo.get(evo.pair(p1, s1), p1) == nil)
-    assert(evo.get(evo.pair(p1, s1), s1) == nil)
+    assert(evo.get(evo.pair(p1, s1), s1) == true)
 end
 
 do
@@ -1064,6 +1064,135 @@ do
 
     local f_p1s1_chunk = evo.chunk(f, evo.pair(p1, s1))
     assert(f_p1s1_chunk:entities()[1] == e1)
+end
+
+do
+    local f, p, s = evo.id(3)
+    evo.set(p, evo.DEFAULT, 42)
+
+    do
+        local e = evo.id()
+        evo.set(e, f)
+        evo.set(e, evo.pair(p, s))
+        assert(evo.has(e, f) and evo.get(e, f) == true)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+    end
+
+    do
+        local e = evo.builder():set(f):set(evo.pair(p, s)):spawn()
+        assert(evo.has(e, f) and evo.get(e, f) == true)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+    end
+
+    do
+        local e = evo.builder():set(f, 84):set(evo.pair(p, s), 21):spawn()
+        evo.set(e, f)
+        evo.set(e, evo.pair(p, s))
+        assert(evo.has(e, f) and evo.get(e, f) == true)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+    end
+end
+
+do
+    do
+        local f, p, s = evo.id(3)
+        assert(evo.empty(evo.pair(p, s)))
+
+        evo.set(p, f)
+        assert(not evo.empty(evo.pair(p, s)))
+
+        evo.destroy(p)
+        assert(evo.empty(evo.pair(p, s)))
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        assert(evo.empty(evo.pair(p, s)))
+
+        evo.set(p, f)
+        assert(not evo.empty(evo.pair(p, s)))
+
+        evo.destroy(s)
+        assert(evo.empty(evo.pair(p, s)))
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        assert(not evo.has(p, f))
+        assert(not evo.has(evo.pair(p, s), f))
+
+        evo.set(p, f, 42)
+        assert(evo.has(p, f))
+        assert(evo.has(evo.pair(p, s), f))
+        assert(not evo.has(evo.pair(s, p), f))
+        assert(evo.get(p, f) == 42)
+        assert(evo.get(evo.pair(p, s), f) == 42)
+        assert(evo.get(evo.pair(s, p), f) == nil)
+    end
+end
+
+do
+    local p, s = evo.id(3)
+
+    local set_count = 0
+    local insert_count = 0
+    local remove_count = 0
+
+    evo.set(p, evo.ON_SET, function(e, f, nc, oc)
+        set_count = set_count + 1
+        assert(f == p or f == evo.pair(p, s))
+        assert(nc == 21 or nc == 42)
+        assert(oc == nil or oc == 21)
+        assert(evo.has(e, f))
+        assert(evo.get(e, f) == nc)
+    end)
+
+    evo.set(p, evo.ON_INSERT, function(e, f, nc)
+        insert_count = insert_count + 1
+        assert(f == p or f == evo.pair(p, s))
+        assert(nc == 21 or nc == 42)
+        assert(evo.has(e, f))
+        assert(evo.get(e, f) == nc)
+    end)
+
+    evo.set(p, evo.ON_REMOVE, function(e, f, oc)
+        remove_count = remove_count + 1
+        assert(f == p or f == evo.pair(p, s))
+        assert(oc == 21 or oc == 42)
+        assert(not evo.has(e, f))
+    end)
+
+    do
+        set_count, insert_count, remove_count = 0, 0, 0
+        local e = evo.id()
+        evo.set(e, p, 21)
+        evo.set(e, evo.pair(p, s), 42)
+        assert(set_count == 2)
+        assert(insert_count == 2)
+        assert(remove_count == 0)
+        evo.remove(e, p)
+        assert(set_count == 2)
+        assert(insert_count == 2)
+        assert(remove_count == 1)
+        evo.remove(e, evo.pair(p, s))
+        assert(set_count == 2)
+        assert(insert_count == 2)
+        assert(remove_count == 2)
+    end
+
+    do
+        set_count, insert_count, remove_count = 0, 0, 0
+        local e = evo.id()
+        evo.set(e, p, 21)
+        evo.set(e, evo.pair(p, s), 42)
+        assert(set_count == 2)
+        assert(insert_count == 2)
+        assert(remove_count == 0)
+        evo.destroy(e)
+        assert(set_count == 2)
+        assert(insert_count == 2)
+        assert(remove_count == 2)
+    end
 end
 
 -- TODO:

@@ -930,14 +930,14 @@ local __component_storage
 ---@return string
 ---@nodiscard
 function __id_name(id)
-    ---@type string?
-    local id_name = __evolved_get(id, __NAME)
+    if not __is_pair(id) then
+        ---@type string?
+        local id_name = __evolved_get(id, __NAME)
 
-    if id_name then
-        return id_name
-    end
-
-    if __is_pair(id) then
+        if id_name then
+            return id_name
+        end
+    else
         local id_primary_index, id_secondary_index = __evolved_unpack(id)
 
         local id_primary = __freelist_ids[id_primary_index] --[[@as evolved.id?]]
@@ -4739,22 +4739,27 @@ end
 function __evolved_alive(entity)
     if not __is_pair(entity) then
         local entity_index = entity % 2 ^ 20
-        return __freelist_ids[entity_index] == entity
+
+        if __freelist_ids[entity_index] ~= entity then
+            return false
+        end
+
+        return true
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return false
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return false
+        end
+
+        return true
     end
-
-    local primary_index, secondary_index = __evolved_unpack(entity)
-
-    local primary = __freelist_ids[primary_index]
-    if not primary or primary % 2 ^ 20 ~= primary_index then
-        return false
-    end
-
-    local secondary = __freelist_ids[secondary_index]
-    if not secondary or secondary % 2 ^ 20 ~= secondary_index then
-        return false
-    end
-
-    return true
 end
 
 ---@param ... evolved.entity entities
@@ -4803,18 +4808,29 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    if __is_pair(entity) then
-        -- pairs are always empty
-        return true
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
+
+        if __freelist_ids[entity_index] ~= entity then
+            return true
+        end
+
+        return not __entity_chunks[entity_index]
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return true
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return true
+        end
+
+        return not __entity_chunks[primary_index]
     end
-
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        return true
-    end
-
-    return not __entity_chunks[entity_index]
 end
 
 ---@param ... evolved.entity entities
@@ -4864,24 +4880,41 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
-    if __is_pair(entity) then
-        -- pairs are always empty
-        return false
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
+
+        if __freelist_ids[entity_index] ~= entity then
+            return false
+        end
+
+        local entity_chunk = __entity_chunks[entity_index]
+
+        if not entity_chunk then
+            return false
+        end
+
+        return __chunk_has_fragment(entity_chunk, fragment)
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return false
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return false
+        end
+
+        local primary_chunk = __entity_chunks[primary_index]
+
+        if not primary_chunk then
+            return false
+        end
+
+        return __chunk_has_fragment(primary_chunk, fragment)
     end
-
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return false
-    end
-
-    return __chunk_has_fragment(chunk, fragment)
 end
 
 ---@param entity evolved.entity
@@ -4889,24 +4922,41 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_all(entity, ...)
-    if __is_pair(entity) then
-        -- pairs are always empty
-        return __lua_select('#', ...) == 0
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
+
+        if __freelist_ids[entity_index] ~= entity then
+            return __lua_select('#', ...) == 0
+        end
+
+        local entity_chunk = __entity_chunks[entity_index]
+
+        if not entity_chunk then
+            return __lua_select('#', ...) == 0
+        end
+
+        return __chunk_has_all_fragments(entity_chunk, ...)
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return __lua_select('#', ...) == 0
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return __lua_select('#', ...) == 0
+        end
+
+        local primary_chunk = __entity_chunks[primary_index]
+
+        if not primary_chunk then
+            return __lua_select('#', ...) == 0
+        end
+
+        return __chunk_has_all_fragments(primary_chunk, ...)
     end
-
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        return __lua_select('#', ...) == 0
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return __lua_select('#', ...) == 0
-    end
-
-    return __chunk_has_all_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -4914,24 +4964,41 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_any(entity, ...)
-    if __is_pair(entity) then
-        -- pairs are always empty
-        return false
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
+
+        if __freelist_ids[entity_index] ~= entity then
+            return false
+        end
+
+        local entity_chunk = __entity_chunks[entity_index]
+
+        if not entity_chunk then
+            return false
+        end
+
+        return __chunk_has_any_fragments(entity_chunk, ...)
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return false
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return false
+        end
+
+        local primary_chunk = __entity_chunks[primary_index]
+
+        if not primary_chunk then
+            return false
+        end
+
+        return __chunk_has_any_fragments(primary_chunk, ...)
     end
-
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        return false
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return false
-    end
-
-    return __chunk_has_any_fragments(chunk, ...)
 end
 
 ---@param entity evolved.entity
@@ -4939,25 +5006,43 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
-    if __is_pair(entity) then
-        -- pairs are always empty
-        return
+    if not __is_pair(entity) then
+        local entity_index = entity % 2 ^ 20
+
+        if __freelist_ids[entity_index] ~= entity then
+            return
+        end
+
+        local entity_chunk = __entity_chunks[entity_index]
+
+        if not entity_chunk then
+            return
+        end
+
+        local entity_place = __entity_places[entity_index]
+        return __chunk_get_components(entity_chunk, entity_place, ...)
+    else
+        local primary_index, secondary_index = __evolved_unpack(entity)
+
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            return
+        end
+
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            return
+        end
+
+        local primary_chunk = __entity_chunks[primary_index]
+
+        if not primary_chunk then
+            return
+        end
+
+        local primary_place = __entity_places[primary_index]
+        return __chunk_get_components(primary_chunk, primary_place, ...)
     end
-
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        return
-    end
-
-    local chunk = __entity_chunks[entity_index]
-
-    if not chunk then
-        return
-    end
-
-    local place = __entity_places[entity_index]
-    return __chunk_get_components(chunk, place, ...)
 end
 
 ---@param entity evolved.entity
