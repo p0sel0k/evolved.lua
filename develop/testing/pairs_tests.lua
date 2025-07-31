@@ -303,8 +303,8 @@ do
     assert(evo.has(e, f2))
     assert(evo.get(e, f2) == 84)
 
-    assert(not evo.has(e, f3))
-    assert(evo.get(e, f3) == nil)
+    assert(evo.has(e, f3))
+    assert(evo.get(e, f3) == true)
 end
 
 do
@@ -1195,9 +1195,218 @@ do
     end
 end
 
+do
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(p)
+
+        assert(not evo.alive(e) and evo.empty(e))
+        assert(not evo.has(e, f) and evo.get(e, f) == nil)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(s)
+
+        assert(evo.alive(e) and not evo.empty(e))
+        assert(evo.has(e, f) and evo.get(e, f) == 21)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(p)
+
+        assert(evo.alive(e) and not evo.empty(e))
+        assert(evo.has(e, f) and evo.get(e, f) == 21)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(s)
+
+        assert(evo.alive(e) and not evo.empty(e))
+        assert(evo.has(e, f) and evo.get(e, f) == 21)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT)
+        evo.set(s, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(p)
+
+        assert(evo.alive(e) and not evo.empty(e))
+        assert(evo.has(e, f) and evo.get(e, f) == 21)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_REMOVE_FRAGMENT)
+        evo.set(s, evo.DESTRUCTION_POLICY, evo.DESTRUCTION_POLICY_DESTROY_ENTITY)
+
+        local e = evo.builder()
+            :set(f, 21)
+            :set(evo.pair(p, s), 42)
+            :spawn()
+
+        evo.destroy(s)
+
+        assert(not evo.alive(e) and evo.empty(e))
+        assert(not evo.has(e, f) and evo.get(e, f) == nil)
+        assert(not evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+end
+
+do
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.DEFAULT, 42)
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+        end
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.set(s, evo.DEFAULT, 21)
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.set(p, evo.DEFAULT, 42)
+        evo.set(s, evo.DEFAULT, 21)
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+        end
+    end
+end
+
+do
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.REQUIRES, { f })
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(evo.has(e, f) and evo.get(e, f) == true)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(evo.has(e, f) and evo.get(e, f) == true)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(s, evo.REQUIRES, { f })
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(not evo.has(e, f) and evo.get(e, f) == nil)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(not evo.has(e, f) and evo.get(e, f) == nil)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+        end
+    end
+
+    do
+        local f, p, s = evo.id(3)
+        evo.set(p, evo.REQUIRES, { f })
+        evo.set(f, evo.REQUIRES, { evo.pair(s, p) })
+        evo.set(s, evo.REQUIRES, { p })
+
+        do
+            local e = evo.id()
+            evo.set(e, evo.pair(p, s))
+            assert(evo.has(e, f) and evo.get(e, f) == true)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+            assert(evo.has(e, evo.pair(s, p)) and evo.get(e, evo.pair(s, p)) == true)
+            assert(evo.has(e, p) and evo.get(e, p) == true)
+        end
+
+        do
+            local e = evo.builder():set(evo.pair(p, s)):spawn()
+            assert(evo.has(e, f) and evo.get(e, f) == true)
+            assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == true)
+            assert(evo.has(e, evo.pair(s, p)) and evo.get(e, evo.pair(s, p)) == true)
+            assert(evo.has(e, p) and evo.get(e, p) == true)
+        end
+    end
+end
+
 -- TODO:
--- How should required fragments work with pairs?
--- How can we set defaults for paired fragments?
--- Prevent setting wildcard pairs to entities!
--- Should we have destruction policies analog for pairs?
--- Should we call hooks for pairs?
+-- Add errors on modifying pairs

@@ -1194,8 +1194,8 @@ function __iterator_fns.__secondaries_iterator(secondaries_state)
     end
 
     local pairs = entity_chunk.__primary_pairs[primary_fragment]
-    local pair_list = pairs and pairs.__item_list
-    local pair_count = pairs and pairs.__item_count or 0
+    local pair_list = pairs and pairs.__item_list --[=[@as evolved.id[]]=]
+    local pair_count = pairs and pairs.__item_count or 0 --[[@as integer]]
 
     if primary_pair_index >= 1 and primary_pair_index <= pair_count then
         secondaries_state[5] = primary_pair_index + 1
@@ -2282,30 +2282,25 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
         fragment_stack_size = fragment_stack_size - 1
 
         if __is_pair(stack_fragment) then
-            -- this is a pair fragment, just skip it
-        else
-            local fragment_requires = __sorted_requires[stack_fragment]
-            local fragment_require_list = fragment_requires and fragment_requires.__item_list
-            local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+            stack_fragment = __evolved_unpair(stack_fragment)
+        end
 
-            for fragment_require_index = 1, fragment_require_count do
-                ---@cast fragment_require_list -?
-                local required_fragment = fragment_require_list[fragment_require_index]
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
-                if req_fragment_set[required_fragment] then
-                    -- this fragment has already been gathered
-                else
-                    req_fragment_count = req_fragment_count + 1
-                    req_fragment_set[required_fragment] = req_fragment_count
-                    req_fragment_list[req_fragment_count] = required_fragment
+        for fragment_require_index = 1, fragment_require_count do
+            local required_fragment = fragment_require_list[fragment_require_index]
 
-                    if __is_pair(required_fragment) then
-                        -- this is a pair fragment, just skip it
-                    else
-                        fragment_stack_size = fragment_stack_size + 1
-                        fragment_stack[fragment_stack_size] = required_fragment
-                    end
-                end
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
             end
         end
     end
@@ -2337,30 +2332,25 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
         fragment_stack_size = fragment_stack_size - 1
 
         if __is_pair(stack_fragment) then
-            -- this is a pair fragment, just skip it
-        else
-            local fragment_requires = __sorted_requires[stack_fragment]
-            local fragment_require_list = fragment_requires and fragment_requires.__item_list
-            local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+            stack_fragment = __evolved_unpair(stack_fragment)
+        end
 
-            for fragment_require_index = 1, fragment_require_count do
-                ---@cast fragment_require_list -?
-                local required_fragment = fragment_require_list[fragment_require_index]
+        local fragment_requires = __sorted_requires[stack_fragment]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
-                if req_fragment_set[required_fragment] then
-                    -- this fragment has already been gathered
-                else
-                    req_fragment_count = req_fragment_count + 1
-                    req_fragment_set[required_fragment] = req_fragment_count
-                    req_fragment_list[req_fragment_count] = required_fragment
+        for fragment_require_index = 1, fragment_require_count do
+            local required_fragment = fragment_require_list[fragment_require_index]
 
-                    if __is_pair(required_fragment) then
-                        -- this is a pair fragment, just skip it
-                    else
-                        fragment_stack_size = fragment_stack_size + 1
-                        fragment_stack[fragment_stack_size] = required_fragment
-                    end
-                end
+            if req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                fragment_stack_size = fragment_stack_size + 1
+                fragment_stack[fragment_stack_size] = required_fragment
             end
         end
     end
