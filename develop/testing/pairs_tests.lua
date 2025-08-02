@@ -1408,5 +1408,36 @@ do
     end
 end
 
+do
+    do
+        local p, s = evo.id(2)
+
+        local e = evo.builder():set(p, 21):set(evo.pair(p, s), 42):spawn()
+        assert(evo.has(e, p) and evo.get(e, p) == 21)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+
+        evo.set(s, evo.TAG)
+        assert(evo.has(e, p) and evo.get(e, p) == 21)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+
+        evo.set(p, evo.TAG)
+        assert(evo.has(e, p) and evo.get(e, p) == nil)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+
+    do
+        local p, s = evo.id(2)
+
+        local e = evo.builder():set(evo.pair(p, s), 42):spawn()
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+
+        evo.set(s, evo.TAG)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 42)
+
+        evo.set(p, evo.TAG)
+        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
+    end
+end
+
 -- TODO:
 -- Add errors on modifying pairs

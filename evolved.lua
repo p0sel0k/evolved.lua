@@ -150,8 +150,10 @@ local __defer_bytecode = {} ---@type any[]
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __primary_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __secondary_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __primary_major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __secondary_major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __primary_minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __secondary_minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
 local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
 
@@ -234,6 +236,7 @@ local __lua_setmetatable = setmetatable
 local __lua_string_format = string.format
 local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
+local __lua_tostring = tostring
 
 ---@type fun(narray: integer, nhash: integer): table
 local __lua_table_new = (function()
@@ -1359,8 +1362,11 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     if not chunk_parent then
-        local root_fragment = chunk_fragment
-        __root_chunks[root_fragment] = chunk
+        if __root_chunks[chunk_fragment] ~= nil then
+            __error_fmt('unexpected root chunk %s',
+                __lua_tostring(__root_chunks[chunk_fragment]))
+        end
+        __root_chunks[chunk_fragment] = chunk
     end
 
     do
@@ -1387,25 +1393,48 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __assoc_list_insert(minor_chunks, chunk)
     end
 
+    if __is_pair(chunk_fragment) then
+        local major_fragment = chunk_fragment
+        local major_primary_fragment, major_secondary_fragment =
+            __evolved_unpair(major_fragment)
+
+        local primary_major_chunks = __primary_major_chunks[major_primary_fragment]
+        local secondary_major_chunks = __secondary_major_chunks[major_secondary_fragment]
+
+        if not primary_major_chunks then
+            primary_major_chunks = __assoc_list_new(4)
+            __primary_major_chunks[major_primary_fragment] = primary_major_chunks
+        end
+
+        if not secondary_major_chunks then
+            secondary_major_chunks = __assoc_list_new(4)
+            __secondary_major_chunks[major_secondary_fragment] = secondary_major_chunks
+        end
+
+        __assoc_list_insert(primary_major_chunks, chunk)
+        __assoc_list_insert(secondary_major_chunks, chunk)
+    end
+
     for i = 1, chunk_pair_count do
-        local pair = chunk_pair_list[i]
-        local primary, secondary = __evolved_unpair(pair)
+        local minor_fragment = chunk_pair_list[i]
+        local minor_primary_fragment, minor_secondary_fragment =
+            __evolved_unpair(minor_fragment)
 
-        local primary_chunks = __primary_chunks[primary]
-        local secondary_chunks = __secondary_chunks[secondary]
+        local primary_minor_chunks = __primary_minor_chunks[minor_primary_fragment]
+        local secondary_minor_chunks = __secondary_minor_chunks[minor_secondary_fragment]
 
-        if not primary_chunks then
-            primary_chunks = __assoc_list_new(4)
-            __primary_chunks[primary] = primary_chunks
+        if not primary_minor_chunks then
+            primary_minor_chunks = __assoc_list_new(4)
+            __primary_minor_chunks[minor_primary_fragment] = primary_minor_chunks
         end
 
-        if not secondary_chunks then
-            secondary_chunks = __assoc_list_new(4)
-            __secondary_chunks[secondary] = secondary_chunks
+        if not secondary_minor_chunks then
+            secondary_minor_chunks = __assoc_list_new(4)
+            __secondary_minor_chunks[minor_secondary_fragment] = secondary_minor_chunks
         end
 
-        __assoc_list_insert(primary_chunks, chunk)
-        __assoc_list_insert(secondary_chunks, chunk)
+        __assoc_list_insert(primary_minor_chunks, chunk)
+        __assoc_list_insert(secondary_minor_chunks, chunk)
     end
 
     __update_chunk_tags(chunk)
@@ -1560,6 +1589,34 @@ function __trace_major_chunks(major, trace, ...)
         end
     end
 
+    do
+        local major_chunks = __primary_major_chunks[major]
+        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+
+        if major_chunk_count > 0 then
+            __lua_table_move(
+                major_chunk_list, 1, major_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + major_chunk_count
+        end
+    end
+
+    do
+        local major_chunks = __secondary_major_chunks[major]
+        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+
+        if major_chunk_count > 0 then
+            __lua_table_move(
+                major_chunk_list, 1, major_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
+
+            chunk_stack_size = chunk_stack_size + major_chunk_count
+        end
+    end
+
     while chunk_stack_size > 0 do
         local chunk = chunk_stack[chunk_stack_size]
 
@@ -1568,14 +1625,16 @@ function __trace_major_chunks(major, trace, ...)
         chunk_stack[chunk_stack_size] = nil
         chunk_stack_size = chunk_stack_size - 1
 
-        local chunk_child_list = chunk.__child_list
-        local chunk_child_count = chunk.__child_count
+        do
+            local chunk_child_list = chunk.__child_list
+            local chunk_child_count = chunk.__child_count
 
-        __lua_table_move(
-            chunk_child_list, 1, chunk_child_count,
-            chunk_stack_size + 1, chunk_stack)
+            __lua_table_move(
+                chunk_child_list, 1, chunk_child_count,
+                chunk_stack_size + 1, chunk_stack)
 
-        chunk_stack_size = chunk_stack_size + chunk_child_count
+            chunk_stack_size = chunk_stack_size + chunk_child_count
+        end
     end
 
     __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
@@ -1604,30 +1663,30 @@ function __trace_minor_chunks(minor, trace, ...)
     end
 
     do
-        local primary_chunks = __primary_chunks[minor]
-        local primary_chunk_list = primary_chunks and primary_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local primary_chunk_count = primary_chunks and primary_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunks = __primary_minor_chunks[minor]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
-        if primary_chunk_count > 0 then
+        if minor_chunk_count > 0 then
             __lua_table_move(
-                primary_chunk_list, 1, primary_chunk_count,
+                minor_chunk_list, 1, minor_chunk_count,
                 chunk_stack_size + 1, chunk_stack)
 
-            chunk_stack_size = chunk_stack_size + primary_chunk_count
+            chunk_stack_size = chunk_stack_size + minor_chunk_count
         end
     end
 
     do
-        local secondary_chunks = __secondary_chunks[minor]
-        local secondary_chunk_list = secondary_chunks and secondary_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local secondary_chunk_count = secondary_chunks and secondary_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunks = __secondary_minor_chunks[minor]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
-        if secondary_chunk_count > 0 then
+        if minor_chunk_count > 0 then
             __lua_table_move(
-                secondary_chunk_list, 1, secondary_chunk_count,
+                minor_chunk_list, 1, minor_chunk_count,
                 chunk_stack_size + 1, chunk_stack)
 
-            chunk_stack_size = chunk_stack_size + secondary_chunk_count
+            chunk_stack_size = chunk_stack_size + minor_chunk_count
         end
     end
 
@@ -2286,8 +2345,8 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
         end
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -2336,8 +2395,8 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
         end
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -2911,7 +2970,11 @@ local function __purge_chunk(chunk)
     local with_fragment_edges = chunk.__with_fragment_edges
     local without_fragment_edges = chunk.__without_fragment_edges
 
-    if __root_chunks[chunk_fragment] == chunk then
+    if not chunk_parent then
+        if __root_chunks[chunk_fragment] ~= chunk then
+            __error_fmt('unexpected root chunk %s',
+                __lua_tostring(__root_chunks[chunk_fragment]))
+        end
         __root_chunks[chunk_fragment] = nil
     end
 
@@ -2934,18 +2997,28 @@ local function __purge_chunk(chunk)
     end
 
     for primary_fragment in __lua_next, chunk.__primary_pairs do
-        local primary_chunks = __primary_chunks[primary_fragment]
+        local primary_major_chunks = __primary_major_chunks[primary_fragment]
+        local primary_minor_chunks = __primary_minor_chunks[primary_fragment]
 
-        if primary_chunks and __assoc_list_remove(primary_chunks, chunk) == 0 then
-            __primary_chunks[primary_fragment] = nil
+        if primary_major_chunks and __assoc_list_remove(primary_major_chunks, chunk) == 0 then
+            __primary_major_chunks[primary_fragment] = nil
+        end
+
+        if primary_minor_chunks and __assoc_list_remove(primary_minor_chunks, chunk) == 0 then
+            __primary_minor_chunks[primary_fragment] = nil
         end
     end
 
     for secondary_fragment in __lua_next, chunk.__secondary_pairs do
-        local secondary_chunks = __secondary_chunks[secondary_fragment]
+        local secondary_major_chunks = __secondary_major_chunks[secondary_fragment]
+        local secondary_minor_chunks = __secondary_minor_chunks[secondary_fragment]
 
-        if secondary_chunks and __assoc_list_remove(secondary_chunks, chunk) == 0 then
-            __secondary_chunks[secondary_fragment] = nil
+        if secondary_major_chunks and __assoc_list_remove(secondary_major_chunks, chunk) == 0 then
+            __secondary_major_chunks[secondary_fragment] = nil
+        end
+
+        if secondary_minor_chunks and __assoc_list_remove(secondary_minor_chunks, chunk) == 0 then
+            __secondary_minor_chunks[secondary_fragment] = nil
         end
     end
 
@@ -5482,8 +5555,8 @@ function __evolved_destroy(...)
 
     do
         local minor_chunks = __minor_chunks
-        local primary_chunks = __primary_chunks
-        local secondary_chunks = __secondary_chunks
+        local primary_chunks = __primary_minor_chunks
+        local secondary_chunks = __secondary_minor_chunks
 
         local purging_entity_list = __acquire_table(__table_pool_tag.entity_list)
         local purging_entity_count = 0
@@ -5679,8 +5752,8 @@ function __evolved_batch_destroy(...)
 
     do
         local minor_chunks = __minor_chunks
-        local primary_chunks = __primary_chunks
-        local secondary_chunks = __secondary_chunks
+        local primary_chunks = __primary_minor_chunks
+        local secondary_chunks = __secondary_minor_chunks
 
         local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local clearing_chunk_count = 0
