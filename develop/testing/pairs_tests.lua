@@ -1441,3 +1441,4 @@ end
 
 -- TODO:
 -- Add errors on modifying pairs
+-- Add wildcard query tests

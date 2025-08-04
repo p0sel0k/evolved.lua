@@ -150,10 +150,6 @@ local __defer_bytecode = {} ---@type any[]
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __primary_major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __secondary_major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __primary_minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __secondary_minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
 
 local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
 
@@ -1398,21 +1394,29 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local major_primary_fragment, major_secondary_fragment =
             __evolved_unpair(major_fragment)
 
-        local primary_major_chunks = __primary_major_chunks[major_primary_fragment]
-        local secondary_major_chunks = __secondary_major_chunks[major_secondary_fragment]
+        if chunk_primary_pairs[major_primary_fragment].__item_count == 1 then
+            local major_primary_wildcard = __evolved_pair(major_primary_fragment, __ANY)
+            local major_primary_wildcard_chunks = __major_chunks[major_primary_wildcard]
 
-        if not primary_major_chunks then
-            primary_major_chunks = __assoc_list_new(4)
-            __primary_major_chunks[major_primary_fragment] = primary_major_chunks
+            if not major_primary_wildcard_chunks then
+                major_primary_wildcard_chunks = __assoc_list_new(4)
+                __major_chunks[major_primary_wildcard] = major_primary_wildcard_chunks
+            end
+
+            __assoc_list_insert(major_primary_wildcard_chunks, chunk)
         end
 
-        if not secondary_major_chunks then
-            secondary_major_chunks = __assoc_list_new(4)
-            __secondary_major_chunks[major_secondary_fragment] = secondary_major_chunks
-        end
+        if chunk_secondary_pairs[major_secondary_fragment].__item_count == 1 then
+            local major_secondary_wildcard = __evolved_pair(__ANY, major_secondary_fragment)
+            local major_secondary_wildcard_chunks = __major_chunks[major_secondary_wildcard]
 
-        __assoc_list_insert(primary_major_chunks, chunk)
-        __assoc_list_insert(secondary_major_chunks, chunk)
+            if not major_secondary_wildcard_chunks then
+                major_secondary_wildcard_chunks = __assoc_list_new(4)
+                __major_chunks[major_secondary_wildcard] = major_secondary_wildcard_chunks
+            end
+
+            __assoc_list_insert(major_secondary_wildcard_chunks, chunk)
+        end
     end
 
     for i = 1, chunk_pair_count do
@@ -1420,21 +1424,29 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local minor_primary_fragment, minor_secondary_fragment =
             __evolved_unpair(minor_fragment)
 
-        local primary_minor_chunks = __primary_minor_chunks[minor_primary_fragment]
-        local secondary_minor_chunks = __secondary_minor_chunks[minor_secondary_fragment]
+        do
+            local minor_primary_wildcard = __evolved_pair(minor_primary_fragment, __ANY)
+            local minor_primary_wildcard_chunks = __minor_chunks[minor_primary_wildcard]
 
-        if not primary_minor_chunks then
-            primary_minor_chunks = __assoc_list_new(4)
-            __primary_minor_chunks[minor_primary_fragment] = primary_minor_chunks
+            if not minor_primary_wildcard_chunks then
+                minor_primary_wildcard_chunks = __assoc_list_new(4)
+                __minor_chunks[minor_primary_wildcard] = minor_primary_wildcard_chunks
+            end
+
+            __assoc_list_insert(minor_primary_wildcard_chunks, chunk)
         end
 
-        if not secondary_minor_chunks then
-            secondary_minor_chunks = __assoc_list_new(4)
-            __secondary_minor_chunks[minor_secondary_fragment] = secondary_minor_chunks
-        end
+        do
+            local minor_secondary_wildcard = __evolved_pair(__ANY, minor_secondary_fragment)
+            local minor_secondary_wildcard_chunks = __minor_chunks[minor_secondary_wildcard]
 
-        __assoc_list_insert(primary_minor_chunks, chunk)
-        __assoc_list_insert(secondary_minor_chunks, chunk)
+            if not minor_secondary_wildcard_chunks then
+                minor_secondary_wildcard_chunks = __assoc_list_new(4)
+                __minor_chunks[minor_secondary_wildcard] = minor_secondary_wildcard_chunks
+            end
+
+            __assoc_list_insert(minor_secondary_wildcard_chunks, chunk)
+        end
     end
 
     __update_chunk_tags(chunk)
@@ -1571,6 +1583,10 @@ end
 ---@param trace fun(chunk: evolved.chunk, ...: any)
 ---@param ... any additional trace arguments
 function __trace_major_chunks(major, trace, ...)
+    if __is_pair(major) then
+        __error_fmt('trace operations on pair fragments are not supported')
+    end
+
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
@@ -1590,7 +1606,7 @@ function __trace_major_chunks(major, trace, ...)
     end
 
     do
-        local major_chunks = __primary_major_chunks[major]
+        local major_chunks = __major_chunks[__evolved_pair(major, __ANY)]
         local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1604,7 +1620,7 @@ function __trace_major_chunks(major, trace, ...)
     end
 
     do
-        local major_chunks = __secondary_major_chunks[major]
+        local major_chunks = __major_chunks[__evolved_pair(__ANY, major)]
         local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1644,6 +1660,10 @@ end
 ---@param trace fun(chunk: evolved.chunk, ...: any)
 ---@param ... any additional trace arguments
 function __trace_minor_chunks(minor, trace, ...)
+    if __is_pair(minor) then
+        __error_fmt('trace operations on pair fragments are not supported')
+    end
+
     ---@type evolved.chunk[]
     local chunk_stack = __acquire_table(__table_pool_tag.chunk_list)
     local chunk_stack_size = 0
@@ -1663,7 +1683,7 @@ function __trace_minor_chunks(minor, trace, ...)
     end
 
     do
-        local minor_chunks = __primary_minor_chunks[minor]
+        local minor_chunks = __minor_chunks[__evolved_pair(minor, __ANY)]
         local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1677,7 +1697,7 @@ function __trace_minor_chunks(minor, trace, ...)
     end
 
     do
-        local minor_chunks = __secondary_minor_chunks[minor]
+        local minor_chunks = __minor_chunks[__evolved_pair(__ANY, minor)]
         local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
@@ -2997,28 +3017,32 @@ local function __purge_chunk(chunk)
     end
 
     for primary_fragment in __lua_next, chunk.__primary_pairs do
-        local primary_major_chunks = __primary_major_chunks[primary_fragment]
-        local primary_minor_chunks = __primary_minor_chunks[primary_fragment]
+        local primary_wildcard = __evolved_pair(primary_fragment, __ANY)
 
-        if primary_major_chunks and __assoc_list_remove(primary_major_chunks, chunk) == 0 then
-            __primary_major_chunks[primary_fragment] = nil
+        local major_primary_wildcard_chunks = __major_chunks[primary_wildcard]
+        local minor_primary_wildcard_chunks = __minor_chunks[primary_wildcard]
+
+        if major_primary_wildcard_chunks and __assoc_list_remove(major_primary_wildcard_chunks, chunk) == 0 then
+            __major_chunks[primary_wildcard] = nil
         end
 
-        if primary_minor_chunks and __assoc_list_remove(primary_minor_chunks, chunk) == 0 then
-            __primary_minor_chunks[primary_fragment] = nil
+        if minor_primary_wildcard_chunks and __assoc_list_remove(minor_primary_wildcard_chunks, chunk) == 0 then
+            __minor_chunks[primary_wildcard] = nil
         end
     end
 
     for secondary_fragment in __lua_next, chunk.__secondary_pairs do
-        local secondary_major_chunks = __secondary_major_chunks[secondary_fragment]
-        local secondary_minor_chunks = __secondary_minor_chunks[secondary_fragment]
+        local secondary_wildcard = __evolved_pair(__ANY, secondary_fragment)
 
-        if secondary_major_chunks and __assoc_list_remove(secondary_major_chunks, chunk) == 0 then
-            __secondary_major_chunks[secondary_fragment] = nil
+        local major_secondary_wildcard_chunks = __major_chunks[secondary_wildcard]
+        local minor_secondary_wildcard_chunks = __minor_chunks[secondary_wildcard]
+
+        if major_secondary_wildcard_chunks and __assoc_list_remove(major_secondary_wildcard_chunks, chunk) == 0 then
+            __major_chunks[secondary_wildcard] = nil
         end
 
-        if secondary_minor_chunks and __assoc_list_remove(secondary_minor_chunks, chunk) == 0 then
-            __secondary_minor_chunks[secondary_fragment] = nil
+        if minor_secondary_wildcard_chunks and __assoc_list_remove(minor_secondary_wildcard_chunks, chunk) == 0 then
+            __minor_chunks[secondary_wildcard] = nil
         end
     end
 
@@ -5555,8 +5579,6 @@ function __evolved_destroy(...)
 
     do
         local minor_chunks = __minor_chunks
-        local primary_chunks = __primary_minor_chunks
-        local secondary_chunks = __secondary_minor_chunks
 
         local purging_entity_list = __acquire_table(__table_pool_tag.entity_list)
         local purging_entity_count = 0
@@ -5576,8 +5598,8 @@ function __evolved_destroy(...)
             else
                 local is_fragment =
                     minor_chunks[entity] or
-                    primary_chunks[entity] or
-                    secondary_chunks[entity]
+                    minor_chunks[__evolved_pair(entity, __ANY)] or
+                    minor_chunks[__evolved_pair(__ANY, entity)]
 
                 if not is_fragment then
                     purging_entity_count = purging_entity_count + 1
@@ -5752,8 +5774,6 @@ function __evolved_batch_destroy(...)
 
     do
         local minor_chunks = __minor_chunks
-        local primary_chunks = __primary_minor_chunks
-        local secondary_chunks = __secondary_minor_chunks
 
         local clearing_chunk_list = __acquire_table(__table_pool_tag.chunk_list)
         local clearing_chunk_count = 0
@@ -5777,8 +5797,8 @@ function __evolved_batch_destroy(...)
 
                     local is_fragment =
                         minor_chunks[entity] or
-                        primary_chunks[entity] or
-                        secondary_chunks[entity]
+                        minor_chunks[__evolved_pair(entity, __ANY)] or
+                        minor_chunks[__evolved_pair(__ANY, entity)]
 
                     if not is_fragment then
                         purging_entity_count = purging_entity_count + 1
