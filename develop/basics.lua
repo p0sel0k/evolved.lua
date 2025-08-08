@@ -31,6 +31,8 @@ end
 
 ---@param modname string
 function basics.describe_fuzz(modname)
+    basics.unload('evolved')
+
     print(string.format('| %s ... |', modname))
 
     collectgarbage('collect')
@@ -73,6 +75,8 @@ end
 ---@param init? fun(): ...
 ---@param fini? fun(...): ...
 function basics.describe_bench(name, loop, init, fini)
+    basics.unload('evolved')
+
     print(string.format('| %s ... |', name))
 
     local state = init and __table_pack(init()) or {}
