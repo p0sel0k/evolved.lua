@@ -123,5 +123,12 @@ end
 ---
 ---
 
+if math.random(1, 2) == 1 then
+    evo.collect_garbage()
+end
+
 evo.destroy(__table_unpack(all_entity_list))
-evo.collect_garbage()
+
+if math.random(1, 2) == 1 then
+    evo.collect_garbage()
+end
