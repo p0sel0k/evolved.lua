@@ -820,6 +820,12 @@ local __WILDCARD_OPTS = 7           -- 0b111
 local __PRIMARY_WILDCARD_OPTS = 3   -- 0b011
 local __SECONDARY_WILDCARD_OPTS = 5 -- 0b101
 
+local __ANY_INDEX = __ANY % 2 ^ 20 --[[@as integer]]
+
+local __WILDCARD_PAIR = __ANY_INDEX
+    + __ANY_INDEX * 2 ^ 20
+    + __WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+
 ---
 ---
 ---
@@ -989,18 +995,36 @@ function __is_wildcard(id)
     return id % 2 ^ 43 >= 2 ^ 41
 end
 
----@param secondary_index integer
----@return evolved.id
+---@param secondary evolved.id | integer id or index
+---@return evolved.id pair (*, secondary)
 ---@nodiscard
-function __primary_wildcard(secondary_index)
-    return __evolved_pack(__ANY --[[@as integer]], secondary_index, __PRIMARY_WILDCARD_OPTS)
+function __primary_wildcard(secondary)
+    local primary_index = __ANY_INDEX
+    local secondary_index = secondary % 2 ^ 20
+
+    if secondary_index == __ANY_INDEX then
+        return __WILDCARD_PAIR
+    end
+
+    return primary_index
+        + secondary_index * 2 ^ 20
+        + __PRIMARY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
 end
 
----@param primary_index integer
----@return evolved.id
+---@param primary evolved.id | integer id or index
+---@return evolved.id pair (primary, *)
 ---@nodiscard
-function __secondary_wildcard(primary_index)
-    return __evolved_pack(primary_index, __ANY --[[@as integer]], __SECONDARY_WILDCARD_OPTS)
+function __secondary_wildcard(primary)
+    local primary_index = primary % 2 ^ 20
+    local secondary_index = __ANY_INDEX
+
+    if primary_index == __ANY_INDEX then
+        return __WILDCARD_PAIR
+    end
+
+    return primary_index
+        + secondary_index * 2 ^ 20
+        + __SECONDARY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param fragment evolved.fragment
@@ -1423,6 +1447,18 @@ function __new_chunk(chunk_parent, chunk_fragment)
             __evolved_unpack(major_fragment)
 
         do
+            local major_wildcard = __WILDCARD_PAIR
+            local major_wildcard_chunks = __major_chunks[major_wildcard]
+
+            if not major_wildcard_chunks then
+                major_wildcard_chunks = __assoc_list_new(4)
+                __major_chunks[major_wildcard] = major_wildcard_chunks
+            end
+
+            __assoc_list_insert(major_wildcard_chunks, chunk)
+        end
+
+        do
             local major_wildcard = __secondary_wildcard(major_primary_index)
             local major_wildcard_chunks = __major_chunks[major_wildcard]
 
@@ -1445,6 +1481,18 @@ function __new_chunk(chunk_parent, chunk_fragment)
 
             __assoc_list_insert(major_wildcard_chunks, chunk)
         end
+    end
+
+    if chunk_pair_count > 0 then
+        local minor_wildcard = __WILDCARD_PAIR
+        local minor_wildcard_chunks = __minor_chunks[minor_wildcard]
+
+        if not minor_wildcard_chunks then
+            minor_wildcard_chunks = __assoc_list_new(4)
+            __minor_chunks[minor_wildcard] = minor_wildcard_chunks
+        end
+
+        __assoc_list_insert(minor_wildcard_chunks, chunk)
     end
 
     for i = 1, chunk_pair_count do
@@ -1845,7 +1893,8 @@ local function __chunk_without_fragment(chunk, fragment)
     end
 
     if chunk.__has_pair_fragments and __is_wildcard(fragment) then
-        local primary_index, secondary_index, fragment_opts = __evolved_unpack(fragment)
+        local primary_index, secondary_index, fragment_opts =
+            __evolved_unpack(fragment)
 
         if fragment_opts == __WILDCARD_OPTS then
             while chunk and chunk.__has_pair_major do
@@ -2081,7 +2130,8 @@ local function __chunk_has_fragment(chunk, fragment)
     end
 
     if chunk.__has_pair_fragments and __is_wildcard(fragment) then
-        local primary_index, secondary_index, fragment_opts = __evolved_unpack(fragment)
+        local primary_index, secondary_index, fragment_opts =
+            __evolved_unpack(fragment)
 
         if fragment_opts == __WILDCARD_OPTS then
             return true
@@ -3007,6 +3057,21 @@ local function __purge_chunk(chunk)
 
         if minor_chunks and __assoc_list_remove(minor_chunks, chunk) == 0 then
             __minor_chunks[minor_fragment] = nil
+        end
+    end
+
+    if chunk.__has_pair_fragments then
+        local wildcard = __WILDCARD_PAIR
+
+        local major_wildcard_chunks = __major_chunks[wildcard]
+        local minor_wildcard_chunks = __minor_chunks[wildcard]
+
+        if major_wildcard_chunks and __assoc_list_remove(major_wildcard_chunks, chunk) == 0 then
+            __major_chunks[wildcard] = nil
+        end
+
+        if minor_wildcard_chunks and __assoc_list_remove(minor_wildcard_chunks, chunk) == 0 then
+            __minor_chunks[wildcard] = nil
         end
     end
 
