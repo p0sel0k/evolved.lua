@@ -4892,15 +4892,10 @@ function __evolved_alive(entity)
 
         return true
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return false
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return false
         end
 
@@ -4963,15 +4958,10 @@ function __evolved_empty(entity)
 
         return not __entity_chunks[entity_index]
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return true
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return true
         end
 
@@ -5041,15 +5031,10 @@ function __evolved_has(entity, fragment)
 
         return __chunk_has_fragment(entity_chunk, fragment)
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return false
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return false
         end
 
@@ -5083,15 +5068,10 @@ function __evolved_has_all(entity, ...)
 
         return __chunk_has_all_fragments(entity_chunk, ...)
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return __lua_select('#', ...) == 0
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return __lua_select('#', ...) == 0
         end
 
@@ -5125,15 +5105,10 @@ function __evolved_has_any(entity, ...)
 
         return __chunk_has_any_fragments(entity_chunk, ...)
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return false
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return false
         end
 
@@ -5168,15 +5143,10 @@ function __evolved_get(entity, ...)
         local entity_place = __entity_places[entity_index]
         return __chunk_get_components(entity_chunk, entity_place, ...)
     else
-        local primary_index, secondary_index = __evolved_unpack(entity)
+        local primary_index = entity % 2 ^ 20
 
         local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
         if not primary or primary % 2 ^ 20 ~= primary_index then
-            return
-        end
-
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
             return
         end
 

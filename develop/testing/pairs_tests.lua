@@ -1113,6 +1113,9 @@ do
         assert(not evo.empty(evo.pair(p, s)))
 
         evo.destroy(s)
+        assert(not evo.empty(evo.pair(p, s)))
+
+        evo.destroy(p)
         assert(evo.empty(evo.pair(p, s)))
     end
 
