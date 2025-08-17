@@ -1443,6 +1443,4 @@ do
 end
 
 -- TODO:
--- Add errors on modifying pairs
--- add exclusive trait
 -- add is_pair/is_wildcard

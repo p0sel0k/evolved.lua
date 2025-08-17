@@ -54,7 +54,6 @@
   - [Aliases](#aliases)
   - [Predefs](#predefs)
   - [Functions](#functions)
-  - [Relations](#relations)
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
@@ -1144,15 +1143,6 @@ batch_destroy :: query... -> ()
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
-process :: system... -> ()
-
-debug_mode :: boolean -> ()
-collect_garbage :: ()
-```
-
-### Relations
-
-```
 primary :: entity, fragment, integer? -> fragment?, component?
 secondary :: entity, fragment, integer? -> fragment?, component?
 
@@ -1161,6 +1151,11 @@ secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}
 
 primary_count :: entity, fragment -> integer
 secondary_count :: entity, fragment -> integer
+
+process :: system... -> ()
+
+debug_mode :: boolean -> ()
+collect_garbage :: ()
 ```
 
 ### Classes

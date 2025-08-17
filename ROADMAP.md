@@ -13,3 +13,4 @@
 - add INDEX fragment trait
 - use compact prefix-tree for chunks
 - optional ffi component storages
+- add EXCLUSIVE fragment trait
