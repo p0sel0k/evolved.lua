@@ -1444,4 +1444,5 @@ end
 
 -- TODO:
 -- Add errors on modifying pairs
--- Add wildcard query tests
+-- add exclusive trait
+-- add is_pair/is_wildcard

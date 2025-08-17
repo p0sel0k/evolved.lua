@@ -1149,7 +1149,7 @@ function __iterator_fns.__each_iterator(each_state)
 end
 
 ---@type evolved.execute_iterator
-function __iterator_fns.__execute_iterator(execute_state)
+function __iterator_fns.__execute_major_iterator(execute_state)
     if not execute_state then return end
 
     local structural_changes = execute_state[1]
@@ -1178,11 +1178,52 @@ function __iterator_fns.__execute_iterator(execute_state)
                 (not chunk_child.__has_explicit_major) and
                 (not exclude_set or not exclude_set[chunk_child_fragment])
 
+            if is_chunk_child_matched and exclude_set and chunk_child.__has_pair_major then
+                local chunk_child_primary_index, chunk_child_secondary_index =
+                    __evolved_unpack(chunk_child_fragment)
+
+                is_chunk_child_matched =
+                    not exclude_set[__WILDCARD_PAIR] and
+                    not exclude_set[__primary_wildcard(chunk_child_secondary_index)] and
+                    not exclude_set[__secondary_wildcard(chunk_child_primary_index)]
+            end
+
             if is_chunk_child_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = chunk_child
             end
         end
+
+        local chunk_entity_list = chunk.__entity_list
+        local chunk_entity_count = chunk.__entity_count
+
+        if chunk_entity_count > 0 then
+            execute_state[3] = chunk_stack_size
+            return chunk, chunk_entity_list, chunk_entity_count
+        end
+    end
+
+    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
+    __release_table(__table_pool_tag.execute_state, execute_state, true)
+end
+
+---@type evolved.execute_iterator
+function __iterator_fns.__execute_minor_iterator(execute_state)
+    if not execute_state then return end
+
+    local structural_changes = execute_state[1]
+    local chunk_stack = execute_state[2]
+    local chunk_stack_size = execute_state[3]
+
+    if structural_changes ~= __structural_changes then
+        __error_fmt('structural changes are prohibited during iteration')
+    end
+
+    while chunk_stack_size > 0 do
+        local chunk = chunk_stack[chunk_stack_size]
+
+        chunk_stack[chunk_stack_size] = nil
+        chunk_stack_size = chunk_stack_size - 1
 
         local chunk_entity_list = chunk.__entity_list
         local chunk_entity_count = chunk.__entity_count
@@ -5910,14 +5951,14 @@ end
 function __evolved_execute(query)
     if __is_pair(query) then
         -- pairs cannot be used as queries, nothing to execute
-        return __iterator_fns.__execute_iterator
+        return __iterator_fns.__execute_major_iterator
     end
 
     local query_index = query % 2 ^ 20
 
     if __freelist_ids[query_index] ~= query then
         -- this query is not alive, nothing to execute
-        return __iterator_fns.__execute_iterator
+        return __iterator_fns.__execute_major_iterator
     end
 
     ---@type evolved.chunk[]
@@ -5935,72 +5976,148 @@ function __evolved_execute(query)
     local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
 
     if query_include_count > 0 then
-        local major_fragment = query_include_list[query_include_count]
+        local query_major_fragment = query_include_list[query_include_count]
 
-        local major_chunks = __major_chunks[major_fragment]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        if __is_wildcard(query_major_fragment) then
+            local minor_chunks = __minor_chunks[query_major_fragment]
+            local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
+            local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
-        for major_chunk_index = 1, major_chunk_count do
-            local major_chunk = major_chunk_list[major_chunk_index]
+            for minor_chunk_index = 1, minor_chunk_count do
+                local minor_chunk = minor_chunk_list[minor_chunk_index]
 
-            local is_major_chunk_matched =
-                (query_include_count == 1 or __chunk_has_all_fragment_list(
-                    major_chunk, query_include_list, query_include_count - 1)) and
-                (query_exclude_count == 0 or not __chunk_has_any_fragment_list(
-                    major_chunk, query_exclude_list, query_exclude_count))
+                local is_minor_chunk_matched = true
 
-            if is_major_chunk_matched and major_chunk.__has_explicit_minors then
-                local major_chunk_fragment_list = major_chunk.__fragment_list
-                local major_chunk_fragment_count = major_chunk.__fragment_count
+                if is_minor_chunk_matched and minor_chunk.__entity_count == 0 then
+                    is_minor_chunk_matched = false
+                end
 
-                for major_chunk_fragment_index = 1, major_chunk_fragment_count - 1 do
-                    local major_chunk_fragment = major_chunk_fragment_list[major_chunk_fragment_index]
+                if is_minor_chunk_matched and query_include_count > 1 then
+                    is_minor_chunk_matched = __chunk_has_all_fragment_list(
+                        minor_chunk, query_include_list, query_include_count - 1)
+                end
 
-                    if not query_include_set[major_chunk_fragment] and __evolved_has(major_chunk_fragment, __EXPLICIT) then
-                        is_major_chunk_matched = false
-                        break
+                if is_minor_chunk_matched and query_exclude_count > 0 then
+                    is_minor_chunk_matched = not __chunk_has_any_fragment_list(
+                        minor_chunk, query_exclude_list, query_exclude_count)
+                end
+
+                if is_minor_chunk_matched and minor_chunk.__has_explicit_fragments then
+                    local minor_chunk_fragment_list = minor_chunk.__fragment_list
+                    local minor_chunk_fragment_count = minor_chunk.__fragment_count
+
+                    for minor_chunk_fragment_index = 1, minor_chunk_fragment_count do
+                        local minor_chunk_fragment = minor_chunk_fragment_list[minor_chunk_fragment_index]
+
+                        local is_minor_chunk_fragment_included =
+                            query_include_set[minor_chunk_fragment] or
+                            query_include_set[__secondary_wildcard(__evolved_unpack(minor_chunk_fragment))]
+
+                        if not is_minor_chunk_fragment_included and __evolved_has(minor_chunk_fragment, __EXPLICIT) then
+                            is_minor_chunk_matched = false
+                            break
+                        end
                     end
+                end
+
+                if is_minor_chunk_matched then
+                    chunk_stack_size = chunk_stack_size + 1
+                    chunk_stack[chunk_stack_size] = minor_chunk
                 end
             end
 
-            if is_major_chunk_matched then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = major_chunk
-            end
-        end
-    elseif query_exclude_count > 0 then
-        for root_fragment, root_chunk in __lua_next, __root_chunks do
-            local is_root_chunk_matched =
-                not root_chunk.__has_explicit_major and
-                not query_exclude_set[root_fragment]
+            ---@type evolved.execute_state
+            local execute_state = __acquire_table(__table_pool_tag.execute_state)
 
-            if is_root_chunk_matched then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = root_chunk
+            execute_state[1] = __structural_changes
+            execute_state[2] = chunk_stack
+            execute_state[3] = chunk_stack_size
+            execute_state[4] = query_exclude_set
+
+            return __iterator_fns.__execute_minor_iterator, execute_state
+        else
+            local major_chunks = __major_chunks[query_major_fragment]
+            local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
+            local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+
+            for major_chunk_index = 1, major_chunk_count do
+                local major_chunk = major_chunk_list[major_chunk_index]
+
+                local is_major_chunk_matched = true
+
+                if is_major_chunk_matched and query_include_count > 1 then
+                    is_major_chunk_matched = __chunk_has_all_fragment_list(
+                        major_chunk, query_include_list, query_include_count - 1)
+                end
+
+                if is_major_chunk_matched and query_exclude_count > 0 then
+                    is_major_chunk_matched = not __chunk_has_any_fragment_list(
+                        major_chunk, query_exclude_list, query_exclude_count)
+                end
+
+                if is_major_chunk_matched and major_chunk.__has_explicit_minors then
+                    local major_chunk_minor_list = major_chunk.__fragment_list
+                    local major_chunk_minor_count = major_chunk.__fragment_count - 1
+
+                    for major_chunk_fragment_index = 1, major_chunk_minor_count do
+                        local major_chunk_minor = major_chunk_minor_list[major_chunk_fragment_index]
+
+                        local is_major_chunk_minor_included =
+                            query_include_set[major_chunk_minor] or
+                            query_include_set[__secondary_wildcard(__evolved_unpack(major_chunk_minor))]
+
+                        if not is_major_chunk_minor_included and __evolved_has(major_chunk_minor, __EXPLICIT) then
+                            is_major_chunk_matched = false
+                            break
+                        end
+                    end
+                end
+
+                if is_major_chunk_matched then
+                    chunk_stack_size = chunk_stack_size + 1
+                    chunk_stack[chunk_stack_size] = major_chunk
+                end
             end
+
+            ---@type evolved.execute_state
+            local execute_state = __acquire_table(__table_pool_tag.execute_state)
+
+            execute_state[1] = __structural_changes
+            execute_state[2] = chunk_stack
+            execute_state[3] = chunk_stack_size
+            execute_state[4] = query_exclude_set
+
+            return __iterator_fns.__execute_major_iterator, execute_state
         end
     else
         for _, root_chunk in __lua_next, __root_chunks do
-            local is_root_chunk_matched =
-                not root_chunk.__has_explicit_major
+            local is_root_chunk_matched = true
+
+            if is_root_chunk_matched and root_chunk.__has_explicit_fragments then
+                is_root_chunk_matched = false
+            end
+
+            if is_root_chunk_matched and query_exclude_count > 0 then
+                is_root_chunk_matched = not __chunk_has_any_fragment_list(
+                    root_chunk, query_exclude_list, query_exclude_count)
+            end
 
             if is_root_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = root_chunk
             end
         end
+
+        ---@type evolved.execute_state
+        local execute_state = __acquire_table(__table_pool_tag.execute_state)
+
+        execute_state[1] = __structural_changes
+        execute_state[2] = chunk_stack
+        execute_state[3] = chunk_stack_size
+        execute_state[4] = query_exclude_set
+
+        return __iterator_fns.__execute_major_iterator, execute_state
     end
-
-    ---@type evolved.execute_state
-    local execute_state = __acquire_table(__table_pool_tag.execute_state)
-
-    execute_state[1] = __structural_changes
-    execute_state[2] = chunk_stack
-    execute_state[3] = chunk_stack_size
-    execute_state[4] = query_exclude_set
-
-    return __iterator_fns.__execute_iterator, execute_state
 end
 
 ---@param ... evolved.system systems
