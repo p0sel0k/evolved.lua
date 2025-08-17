@@ -6325,3 +6325,36 @@ do
         assert(not chunk and not entity_list and not entity_count)
     end
 end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local v2_default = v2(1, 2)
+
+    do
+        local f = evo.builder():default(v2_default):spawn()
+
+        local b = evo.builder()
+
+        b:set(f)
+        evo.remove(f, evo.DEFAULT)
+
+        local e = b:spawn()
+        assert(evo.has(e, f) and evo.get(e, f).x == 1 and evo.get(e, f).y == 2)
+        assert(evo.get(e, f) == v2_default)
+    end
+
+    do
+        local f = evo.builder():default(v2_default):duplicate(v2_clone):spawn()
+
+        local b = evo.builder()
+
+        b:set(f)
+        evo.remove(f, evo.DEFAULT, evo.DUPLICATE)
+
+        local e = b:spawn()
+        assert(evo.has(e, f) and evo.get(e, f).x == 1 and evo.get(e, f).y == 2)
+        assert(evo.get(e, f) ~= v2_default)
+    end
+end

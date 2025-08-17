@@ -1041,82 +1041,6 @@ end
 ---
 ---
 
-local __debug_fns = {}
-
----@param entity evolved.entity
-function __debug_fns.validate_entity(entity)
-    if not __evolved_alive(entity) then
-        __error_fmt('the entity (%s) is not alive and cannot be used',
-            __id_name(entity))
-    end
-end
-
----@param prefab evolved.entity
-function __debug_fns.validate_prefab(prefab)
-    if not __evolved_alive(prefab) then
-        __error_fmt('the prefab (%s) is not alive and cannot be used',
-            __id_name(prefab))
-    end
-end
-
----@param ... evolved.entity entities
-function __debug_fns.validate_entities(...)
-    for i = 1, __lua_select('#', ...) do
-        __debug_fns.validate_entity(__lua_select(i, ...))
-    end
-end
-
----@param fragment evolved.fragment
-function __debug_fns.validate_fragment(fragment)
-    if not __evolved_alive(fragment) then
-        __error_fmt('the fragment (%s) is not alive and cannot be used',
-            __id_name(fragment))
-    end
-end
-
----@param ... evolved.fragment fragments
-function __debug_fns.validate_fragments(...)
-    for i = 1, __lua_select('#', ...) do
-        __debug_fns.validate_fragment(__lua_select(i, ...))
-    end
-end
-
----@param components table<evolved.fragment, evolved.component>
-function __debug_fns.validate_component_map(components)
-    for fragment in __lua_next, components do
-        __debug_fns.validate_fragment(fragment)
-    end
-end
-
----@param query evolved.query
-function __debug_fns.validate_query(query)
-    if not __evolved_alive(query) then
-        __error_fmt('the query (%s) is not alive and cannot be used',
-            __id_name(query))
-    end
-end
-
----@param system evolved.system
-function __debug_fns.validate_system(system)
-    if not __evolved_alive(system) then
-        __error_fmt('the system (%s) is not alive and cannot be used',
-            __id_name(system))
-    end
-end
-
----@param ... evolved.system systems
-function __debug_fns.validate_systems(...)
-    for i = 1, __lua_select('#', ...) do
-        __debug_fns.validate_system(__lua_select(i, ...))
-    end
-end
-
----
----
----
----
----
-
 local __iterator_fns = {}
 
 ---@type evolved.each_iterator
@@ -4557,11 +4481,6 @@ __defer_ops[__defer_op.spawn_entity] = function(bytes, index)
     local entity = bytes[index + 0]
     local component_map = bytes[index + 1]
 
-    if __debug_mode then
-        __debug_fns.validate_entity(entity)
-        __debug_fns.validate_component_map(component_map)
-    end
-
     __evolved_defer()
     do
         __spawn_entity(entity, component_map)
@@ -4598,12 +4517,6 @@ __defer_ops[__defer_op.clone_entity] = function(bytes, index)
     local entity = bytes[index + 0]
     local prefab = bytes[index + 1]
     local component_map = bytes[index + 2]
-
-    if __debug_mode then
-        __debug_fns.validate_entity(entity)
-        __debug_fns.validate_prefab(prefab)
-        __debug_fns.validate_component_map(component_map)
-    end
 
     __evolved_defer()
     do
@@ -4874,7 +4787,11 @@ function __evolved_spawn(components)
     end
 
     if __debug_mode then
-        __debug_fns.validate_component_map(components)
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+            end
+        end
     end
 
     local entity = __acquire_id()
@@ -4901,8 +4818,15 @@ function __evolved_clone(prefab, components)
     end
 
     if __debug_mode then
-        __debug_fns.validate_prefab(prefab)
-        __debug_fns.validate_component_map(components)
+        if not __evolved_alive(prefab) then
+            __error_fmt('the prefab (%s) is not alive and cannot be used', __id_name(prefab))
+        end
+
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+            end
+        end
     end
 
     local entity = __acquire_id()
@@ -6606,50 +6530,13 @@ end
 
 ---@return evolved.entity
 function __builder_mt:spawn()
-    local components = self.__components
-
-    if __debug_mode then
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_spawn_entity(entity, components)
-    else
-        __evolved_defer()
-        do
-            __spawn_entity(entity, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
+    return __evolved_spawn(self.__components)
 end
 
 ---@param prefab evolved.entity
 ---@return evolved.entity
 function __builder_mt:clone(prefab)
-    local components = self.__components
-
-    if __debug_mode then
-        __debug_fns.validate_prefab(prefab)
-        __debug_fns.validate_component_map(components)
-    end
-
-    local entity = __acquire_id()
-
-    if __defer_depth > 0 then
-        __defer_clone_entity(entity, prefab, components)
-    else
-        __evolved_defer()
-        do
-            __clone_entity(entity, prefab, components)
-        end
-        __evolved_commit()
-    end
-
-    return entity
+    return __evolved_clone(prefab, self.__components)
 end
 
 ---@param fragment evolved.fragment
@@ -6781,28 +6668,25 @@ end
 ---@return evolved.builder builder
 function __builder_mt:set(fragment, component)
     if __debug_mode then
-        __debug_fns.validate_fragment(fragment)
-    end
-
-    do
-        ---@type evolved.default?, evolved.duplicate?
-        local fragment_default, fragment_duplicate =
-            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
-
-        if component == nil then
-            component = fragment_default
+        if __is_wildcard(fragment) then
+            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
         end
 
-        if component ~= nil and fragment_duplicate then
-            component = fragment_duplicate(component)
-        end
-
-        if component == nil then
-            component = true
+        if not __evolved_alive(fragment) then
+            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
         end
     end
 
-    self.__components[fragment] = component
+    ---@type evolved.default?, evolved.duplicate?
+    local fragment_default, fragment_duplicate =
+        __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+
+    local new_component = component
+    if new_component == nil then new_component = fragment_default end
+    if new_component ~= nil and fragment_duplicate then new_component = fragment_duplicate(new_component) end
+    if new_component == nil then new_component = true end
+
+    self.__components[fragment] = new_component
 
     return self
 end
