@@ -1633,7 +1633,7 @@ function __trace_major_chunks(major, trace, ...)
     end
 
     do
-        local major_chunks = __major_chunks[__evolved_pair(major, __ANY)]
+        local major_chunks = __major_chunks[__primary_wildcard(major)]
         local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1647,7 +1647,7 @@ function __trace_major_chunks(major, trace, ...)
     end
 
     do
-        local major_chunks = __major_chunks[__evolved_pair(__ANY, major)]
+        local major_chunks = __major_chunks[__secondary_wildcard(major)]
         local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1710,7 +1710,7 @@ function __trace_minor_chunks(minor, trace, ...)
     end
 
     do
-        local minor_chunks = __minor_chunks[__evolved_pair(minor, __ANY)]
+        local minor_chunks = __minor_chunks[__primary_wildcard(minor)]
         local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
@@ -1724,7 +1724,7 @@ function __trace_minor_chunks(minor, trace, ...)
     end
 
     do
-        local minor_chunks = __minor_chunks[__evolved_pair(__ANY, minor)]
+        local minor_chunks = __minor_chunks[__secondary_wildcard(minor)]
         local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
         local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
 
@@ -3255,8 +3255,8 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
 
             __trace_minor_chunks(fragment, __chunk_remove,
                 fragment,
-                __evolved_pair(fragment, __ANY),
-                __evolved_pair(__ANY, fragment))
+                __primary_wildcard(fragment),
+                __secondary_wildcard(fragment))
         end
 
         __release_table(__table_pool_tag.fragment_list, remove_fragment_policy_fragment_list)
@@ -5543,8 +5543,8 @@ function __evolved_destroy(...)
             else
                 local is_fragment =
                     minor_chunks[entity] or
-                    minor_chunks[__evolved_pair(entity, __ANY)] or
-                    minor_chunks[__evolved_pair(__ANY, entity)]
+                    minor_chunks[__primary_wildcard(entity)] or
+                    minor_chunks[__secondary_wildcard(entity)]
 
                 if not is_fragment then
                     purging_entity_count = purging_entity_count + 1
@@ -5742,8 +5742,8 @@ function __evolved_batch_destroy(...)
 
                     local is_fragment =
                         minor_chunks[entity] or
-                        minor_chunks[__evolved_pair(entity, __ANY)] or
-                        minor_chunks[__evolved_pair(__ANY, entity)]
+                        minor_chunks[__primary_wildcard(entity)] or
+                        minor_chunks[__secondary_wildcard(entity)]
 
                     if not is_fragment then
                         purging_entity_count = purging_entity_count + 1
