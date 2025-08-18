@@ -7089,6 +7089,8 @@ __evolved_set(__UNIQUE, __TAG)
 __evolved_set(__EXPLICIT, __TAG)
 
 __evolved_set(__INTERNAL, __TAG)
+__evolved_set(__INTERNAL, __UNIQUE)
+__evolved_set(__INTERNAL, __EXPLICIT)
 
 __evolved_set(__PREFAB, __TAG)
 __evolved_set(__PREFAB, __UNIQUE)
