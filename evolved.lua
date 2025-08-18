@@ -1383,33 +1383,33 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     do
-        local major_fragment = chunk_fragment
-        local major_chunks = __major_chunks[major_fragment]
+        local major = chunk_fragment
+        local major_chunks = __major_chunks[major]
 
         if not major_chunks then
             major_chunks = __assoc_list_new(4)
-            __major_chunks[major_fragment] = major_chunks
+            __major_chunks[major] = major_chunks
         end
 
         __assoc_list_insert(major_chunks, chunk)
     end
 
     for i = 1, chunk_fragment_count do
-        local minor_fragment = chunk_fragment_list[i]
-        local minor_chunks = __minor_chunks[minor_fragment]
+        local minor = chunk_fragment_list[i]
+        local minor_chunks = __minor_chunks[minor]
 
         if not minor_chunks then
             minor_chunks = __assoc_list_new(4)
-            __minor_chunks[minor_fragment] = minor_chunks
+            __minor_chunks[minor] = minor_chunks
         end
 
         __assoc_list_insert(minor_chunks, chunk)
     end
 
     if __is_pair(chunk_fragment) then
-        local major_fragment = chunk_fragment
+        local major = chunk_fragment
         local major_primary_index, major_secondary_index =
-            __evolved_unpack(major_fragment)
+            __evolved_unpack(major)
 
         do
             local major_wildcard = __WILDCARD_PAIR
@@ -1461,9 +1461,9 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     for i = 1, chunk_pair_count do
-        local minor_fragment = chunk_pair_list[i]
+        local minor = chunk_pair_list[i]
         local minor_primary_index, minor_secondary_index =
-            __evolved_unpack(minor_fragment)
+            __evolved_unpack(minor)
 
         do
             local minor_wildcard = __secondary_wildcard(minor_primary_index)
@@ -2169,6 +2169,10 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
+    if fragment_count == 0 then
+        return true
+    end
+
     local fs = chunk.__fragment_set
 
     local has_f = __chunk_has_fragment
@@ -2250,6 +2254,10 @@ end
 ---@return boolean
 ---@nodiscard
 local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
+    if fragment_count == 0 then
+        return false
+    end
+
     local fs = chunk.__fragment_set
 
     local has_f = __chunk_has_fragment
@@ -3008,20 +3016,20 @@ local function __purge_chunk(chunk)
     end
 
     do
-        local major_fragment = chunk_fragment
-        local major_chunks = __major_chunks[major_fragment]
+        local major = chunk_fragment
+        local major_chunks = __major_chunks[major]
 
         if major_chunks and __assoc_list_remove(major_chunks, chunk) == 0 then
-            __major_chunks[major_fragment] = nil
+            __major_chunks[major] = nil
         end
     end
 
     for i = 1, chunk_fragment_count do
-        local minor_fragment = chunk_fragment_list[i]
-        local minor_chunks = __minor_chunks[minor_fragment]
+        local minor = chunk_fragment_list[i]
+        local minor_chunks = __minor_chunks[minor]
 
         if minor_chunks and __assoc_list_remove(minor_chunks, chunk) == 0 then
-            __minor_chunks[minor_fragment] = nil
+            __minor_chunks[minor] = nil
         end
     end
 
@@ -5900,12 +5908,29 @@ function __evolved_execute(query)
     local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
 
     if query_include_count > 0 then
-        local query_major_fragment = query_include_list[query_include_count]
+        local query_major = query_include_list[query_include_count]
 
-        if __is_wildcard(query_major_fragment) then
-            local minor_chunks = __minor_chunks[query_major_fragment]
+        if __is_wildcard(query_major) then
+            local minor_chunks = __minor_chunks[query_major]
             local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
             local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+
+            for query_include_index = 1, query_include_count - 1 do
+                local query_minor = query_include_list[query_include_index]
+
+                local query_chunks = __minor_chunks[query_minor]
+                local query_chunk_list = query_chunks and query_chunks.__item_list --[=[@as evolved.chunk[]]=]
+                local query_chunk_count = query_chunks and query_chunks.__item_count or 0 --[[@as integer]]
+
+                if query_chunk_count < minor_chunk_count then
+                    minor_chunks, minor_chunk_list, minor_chunk_count =
+                        query_chunks, query_chunk_list, query_chunk_count
+
+                    if query_chunk_count == 0 then
+                        break
+                    end
+                end
+            end
 
             for minor_chunk_index = 1, minor_chunk_count do
                 local minor_chunk = minor_chunk_list[minor_chunk_index]
@@ -5916,9 +5941,9 @@ function __evolved_execute(query)
                     is_minor_chunk_matched = false
                 end
 
-                if is_minor_chunk_matched and query_include_count > 1 then
+                if is_minor_chunk_matched then
                     is_minor_chunk_matched = __chunk_has_all_fragment_list(
-                        minor_chunk, query_include_list, query_include_count - 1)
+                        minor_chunk, query_include_list, query_include_count)
                 end
 
                 if is_minor_chunk_matched and query_exclude_count > 0 then
@@ -5960,7 +5985,7 @@ function __evolved_execute(query)
 
             return __iterator_fns.__execute_minor_iterator, execute_state
         else
-            local major_chunks = __major_chunks[query_major_fragment]
+            local major_chunks = __major_chunks[query_major]
             local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
             local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
 
