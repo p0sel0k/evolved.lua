@@ -54,6 +54,7 @@
   - [Aliases](#aliases)
   - [Predefs](#predefs)
   - [Functions](#functions)
+  - [Relations](#relations)
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
@@ -1107,9 +1108,6 @@ name :: id... -> string...
 pack :: integer, integer, integer? -> id
 unpack :: id -> integer, integer, integer
 
-pair :: id, id -> id
-unpair :: id -> id, id
-
 defer :: boolean
 commit :: boolean
 
@@ -1143,6 +1141,20 @@ batch_destroy :: query... -> ()
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
+process :: system... -> ()
+
+debug_mode :: boolean -> ()
+collect_garbage :: ()
+```
+
+### Relations
+
+pair :: id, id -> id
+unpair :: id -> id, id
+
+is_pair :: id -> boolean
+is_wildcard :: id -> boolean
+
 primary :: entity, fragment, integer? -> fragment?, component?
 secondary :: entity, fragment, integer? -> fragment?, component?
 
@@ -1151,12 +1163,6 @@ secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}
 
 primary_count :: entity, fragment -> integer
 secondary_count :: entity, fragment -> integer
-
-process :: system... -> ()
-
-debug_mode :: boolean -> ()
-collect_garbage :: ()
-```
 
 ### Classes
 
@@ -1297,7 +1303,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ### `evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT`
 
-## Functions
+## Core Functions
 
 ### `evolved.id`
 
@@ -1337,26 +1343,6 @@ function evolved.pack(primary, secondary, options) end
 ---@return integer options
 ---@nodiscard
 function evolved.unpack(id) end
-```
-
-### `evolved.pair`
-
-```lua
----@param primary evolved.id
----@param secondary evolved.id
----@return evolved.id pair
----@nodiscard
-function evolved.pair(primary, secondary) end
-```
-
-### `evolved.unpair`
-
-```lua
----@param pair evolved.id
----@return evolved.id primary
----@return evolved.id secondary
----@nodiscard
-function evolved.unpair(pair) end
 ```
 
 ### `evolved.defer`
@@ -1586,7 +1572,45 @@ function evolved.debug_mode(yesno) end
 function evolved.collect_garbage() end
 ```
 
-## Relations
+## Relation Functions
+
+### `evolved.pair`
+
+```lua
+---@param primary evolved.id
+---@param secondary evolved.id
+---@return evolved.id pair
+---@nodiscard
+function evolved.pair(primary, secondary) end
+```
+
+### `evolved.unpair`
+
+```lua
+---@param pair evolved.id
+---@return evolved.id primary
+---@return evolved.id secondary
+---@nodiscard
+function evolved.unpair(pair) end
+```
+
+### `evolved.is_pair`
+
+```lua
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function evolved.is_pair(id) end
+```
+
+### `evolved.is_wildcard`
+
+```lua
+---@param id evolved.id
+---@return boolean
+---@nodiscard
+function evolved.is_wildcard(id) end
+```
 
 ### `evolved.primary`
 
