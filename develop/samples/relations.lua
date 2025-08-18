@@ -5,17 +5,32 @@ local evo = require 'evolved'
 evo.debug_mode(true)
 
 local fragments = {
-    planet = evo.builder():name('planet'):tag():spawn(),
-    spaceship = evo.builder():name('spaceship'):tag():spawn(),
+    planet = evo.builder()
+        :name('planet')
+        :tag()
+        :spawn(),
+    spaceship = evo.builder()
+        :name('spaceship')
+        :tag()
+        :spawn(),
 }
 
 local relations = {
-    docked_to = evo.builder():name('docked_to'):tag():explicit():spawn(),
+    docked_to = evo.builder()
+        :name('docked_to')
+        :tag()
+        :spawn(),
 }
 
 local planets = {
-    mars = evo.builder():name('Mars'):set(fragments.planet):spawn(),
-    venus = evo.builder():name('Venus'):set(fragments.planet):spawn(),
+    mars = evo.builder()
+        :name('Mars')
+        :set(fragments.planet)
+        :spawn(),
+    venus = evo.builder()
+        :name('Venus')
+        :set(fragments.planet)
+        :spawn(),
 }
 
 local spaceships = {

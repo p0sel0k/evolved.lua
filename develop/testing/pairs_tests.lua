@@ -1441,3 +1441,6 @@ do
         assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == nil)
     end
 end
+
+-- TODO
+-- builder:has/has_all/has_any should work with wildcards / remove too?
