@@ -1149,6 +1149,7 @@ collect_garbage :: ()
 
 ### Relations
 
+```
 pair :: id, id -> id
 unpair :: id -> id, id
 
@@ -1163,6 +1164,7 @@ secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}
 
 primary_count :: entity, fragment -> integer
 secondary_count :: entity, fragment -> integer
+```
 
 ### Classes
 
