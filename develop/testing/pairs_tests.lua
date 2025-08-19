@@ -1444,3 +1444,5 @@ end
 
 -- TODO
 -- builder:has/has_all/has_any should work with wildcards / remove too?
+-- should we provide wildcard support for get operations?
+-- prevent setting pairs with dead secondary fragments
