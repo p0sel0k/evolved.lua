@@ -1442,6 +1442,164 @@ do
     end
 end
 
+do
+    local p1, p2, s1, s2 = evo.id(4)
+
+    do
+        local b = evo.builder()
+
+        b:set(evo.pair(p1, s1), 11)
+        b:set(evo.pair(p1, s2), 12)
+        b:set(evo.pair(p2, s1), 21)
+        b:set(evo.pair(p2, s2), 22)
+
+        b:remove(evo.pair(evo.ANY, evo.ANY))
+
+        assert(not b:has(evo.pair(p1, s1)))
+        assert(not b:has(evo.pair(p1, s2)))
+        assert(not b:has(evo.pair(p2, s1)))
+        assert(not b:has(evo.pair(p2, s2)))
+
+        assert(not b:has(evo.pair(p1, evo.ANY)))
+        assert(not b:has(evo.pair(p2, evo.ANY)))
+        assert(not b:has(evo.pair(evo.ANY, s1)))
+        assert(not b:has(evo.pair(evo.ANY, s2)))
+
+        assert(not b:has(evo.pair(evo.ANY, evo.ANY)))
+    end
+
+    do
+        local b = evo.builder()
+
+        b:set(evo.pair(p1, s1), 11)
+        b:set(evo.pair(p1, s2), 12)
+        b:set(evo.pair(p2, s1), 21)
+        b:set(evo.pair(p2, s2), 22)
+
+        b:remove(evo.pair(p2, evo.ANY))
+
+        assert(b:has(evo.pair(p1, s1)))
+        assert(b:has(evo.pair(p1, s2)))
+        assert(not b:has(evo.pair(p2, s1)))
+        assert(not b:has(evo.pair(p2, s2)))
+
+        assert(b:has(evo.pair(p1, evo.ANY)))
+        assert(not b:has(evo.pair(p2, evo.ANY)))
+        assert(b:has(evo.pair(evo.ANY, s1)))
+        assert(b:has(evo.pair(evo.ANY, s2)))
+
+        assert(b:has(evo.pair(evo.ANY, evo.ANY)))
+    end
+
+    do
+        local b = evo.builder()
+
+        b:set(evo.pair(p1, s1), 11)
+        b:set(evo.pair(p1, s2), 12)
+        b:set(evo.pair(p2, s1), 21)
+        b:set(evo.pair(p2, s2), 22)
+
+        b:remove(evo.pair(p2, evo.ANY))
+
+        assert(b:has_all(evo.pair(p1, s1)))
+        assert(b:has_all(evo.pair(p1, s1), evo.pair(p1, s2)))
+        assert(not b:has_all(evo.pair(p1, s1), evo.pair(p2, s1)))
+        assert(not b:has_all(evo.pair(p2, s1), evo.pair(p1, s2)))
+        assert(not b:has_all(evo.pair(p2, s1), evo.pair(p2, s2)))
+
+        assert(b:has_all(evo.pair(p1, evo.ANY)))
+        assert(b:has_all(evo.pair(p1, evo.ANY), evo.pair(evo.ANY, s1)))
+        assert(not b:has_all(evo.pair(p2, evo.ANY), evo.pair(evo.ANY, s1)))
+        assert(not b:has_all(evo.pair(p2, evo.ANY), evo.pair(evo.ANY, p1)))
+
+        assert(b:has_all(evo.pair(evo.ANY, evo.ANY)))
+
+        assert(b:has_all(
+            evo.pair(p1, s1),
+            evo.pair(p1, s2),
+            evo.pair(evo.ANY, s1),
+            evo.pair(p1, evo.ANY),
+            evo.pair(evo.ANY, evo.ANY)))
+
+        assert(not b:has_all(
+            evo.pair(p1, s1),
+            evo.pair(p1, s2),
+            evo.pair(evo.ANY, s1),
+            evo.pair(p1, evo.ANY),
+            evo.pair(evo.ANY, evo.ANY),
+            evo.pair(p2, evo.ANY)))
+    end
+
+    do
+        local b = evo.builder()
+
+        b:set(evo.pair(p1, s1), 11)
+        b:set(evo.pair(p1, s2), 12)
+        b:set(evo.pair(p2, s1), 21)
+        b:set(evo.pair(p2, s2), 22)
+
+        b:remove(evo.pair(p2, evo.ANY))
+
+        assert(b:has_any(evo.pair(p1, s1)))
+        assert(b:has_any(evo.pair(p1, s1), evo.pair(p1, s2)))
+        assert(b:has_any(evo.pair(p1, s1), evo.pair(p2, s1)))
+        assert(b:has_any(evo.pair(p2, s1), evo.pair(p1, s2)))
+        assert(not b:has_any(evo.pair(p2, s1), evo.pair(p2, s2)))
+
+        assert(b:has_any(evo.pair(p1, evo.ANY)))
+        assert(b:has_any(evo.pair(p1, evo.ANY), evo.pair(evo.ANY, s1)))
+        assert(b:has_any(evo.pair(p2, evo.ANY), evo.pair(evo.ANY, s1)))
+        assert(not b:has_any(evo.pair(p2, evo.ANY), evo.pair(evo.ANY, p1)))
+
+        assert(b:has_any(evo.pair(evo.ANY, evo.ANY)))
+
+        assert(b:has_any(
+            evo.pair(p1, s1),
+            evo.pair(p1, s2),
+            evo.pair(evo.ANY, s1),
+            evo.pair(p1, evo.ANY),
+            evo.pair(evo.ANY, evo.ANY)))
+
+        assert(not b:has_any(
+            evo.pair(p2, s1),
+            evo.pair(p2, s2),
+            evo.pair(p2, evo.ANY),
+            evo.pair(evo.ANY, p1),
+            evo.pair(evo.ANY, p2)))
+
+        assert(b:has_any(
+            evo.pair(p2, s1),
+            evo.pair(p2, s2),
+            evo.pair(p2, evo.ANY),
+            evo.pair(evo.ANY, p1),
+            evo.pair(evo.ANY, p2),
+            evo.pair(p1, evo.ANY)))
+    end
+
+    do
+        local b = evo.builder()
+
+        b:set(evo.pair(p1, s1), 11)
+        b:set(evo.pair(p1, s2), 12)
+        b:set(evo.pair(p2, s1), 21)
+        b:set(evo.pair(p2, s2), 22)
+
+        b:remove(evo.pair(p1, evo.ANY))
+        b:remove(evo.pair(p1, evo.ANY))
+
+        b:remove(evo.pair(p2, evo.ANY))
+        b:remove(evo.pair(p2, evo.ANY))
+
+        b:remove(evo.pair(evo.ANY, s1))
+        b:remove(evo.pair(evo.ANY, s1))
+
+        b:remove(evo.pair(evo.ANY, s2))
+        b:remove(evo.pair(evo.ANY, s2))
+
+        assert(not b:has(evo.pair(evo.ANY, evo.ANY)))
+    end
+end
+
 -- TODO
 -- builder:has/has_all/has_any should work with wildcards / remove too?
 -- should we provide wildcard support for get operations?

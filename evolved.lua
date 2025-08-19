@@ -214,6 +214,8 @@ __chunk_mt.__index = __chunk_mt
 
 ---@class evolved.builder
 ---@field package __components table<evolved.fragment, evolved.component>
+---@field package __primary_pairs? table<integer, evolved.assoc_list>
+---@field package __secondary_pairs? table<integer, evolved.assoc_list>
 local __builder_mt = {}
 __builder_mt.__index = __builder_mt
 
@@ -6562,7 +6564,35 @@ end
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has(fragment)
-    return self.__components[fragment] ~= nil
+    if self.__components[fragment] then
+        return true
+    end
+
+    local primary_pairs = self.__primary_pairs
+    local secondary_pairs = self.__secondary_pairs
+
+    local maybe_has_pairs = primary_pairs and secondary_pairs
+
+    if maybe_has_pairs and __evolved_is_wildcard(fragment) then
+        ---@cast primary_pairs -?
+        ---@cast secondary_pairs -?
+
+        local fragment_primary_index, fragment_secondary_index, fragment_opts =
+            __evolved_unpack(fragment)
+
+        if fragment_opts == __WILDCARD_OPTS then
+            return __lua_next(primary_pairs) ~= nil
+                and __lua_next(secondary_pairs) ~= nil
+        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+            local secondary_fragments = secondary_pairs[fragment_secondary_index]
+            return secondary_fragments ~= nil and secondary_fragments.__item_count > 0
+        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+            local primary_fragments = primary_pairs[fragment_primary_index]
+            return primary_fragments ~= nil and primary_fragments.__item_count > 0
+        end
+    end
+
+    return false
 end
 
 ---@param ... evolved.fragment fragments
@@ -6577,30 +6607,41 @@ function __builder_mt:has_all(...)
 
     local cs = self.__components
 
+    local has_f = self.has
+    local has_fs = self.has_all
+
+    local m_has_p = self.__primary_pairs and self.__secondary_pairs
+
     if fragment_count == 1 then
         local f1 = ...
-        return cs[f1] ~= nil
+        return (m_has_p and has_f(self, f1))
+            or (not m_has_p and cs[f1] ~= nil)
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil
+        return (m_has_p and has_f(self, f1) and has_f(self, f2))
+            or (not m_has_p and cs[f1] ~= nil and cs[f2] ~= nil)
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil
+        return (m_has_p and has_f(self, f1) and has_f(self, f2) and has_f(self, f3))
+            or (not m_has_p and cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil)
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil
+        return (m_has_p and has_f(self, f1) and has_f(self, f2) and has_f(self, f3) and has_f(self, f4))
+            or (not m_has_p and cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil)
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil and
-            self:has_all(__lua_select(5, ...))
+        return (m_has_p and has_f(self, f1) and has_f(self, f2) and has_f(self, f3) and has_f(self, f4)
+                and has_fs(self, __lua_select(5, ...)))
+            or (not m_has_p and cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil
+                and has_fs(self, __lua_select(5, ...)))
     end
 end
 
@@ -6616,30 +6657,41 @@ function __builder_mt:has_any(...)
 
     local cs = self.__components
 
+    local has_f = self.has
+    local has_fs = self.has_any
+
+    local m_has_p = self.__primary_pairs and self.__secondary_pairs
+
     if fragment_count == 1 then
         local f1 = ...
-        return cs[f1] ~= nil
+        return (m_has_p and has_f(self, f1))
+            or (not m_has_p and cs[f1] ~= nil)
     end
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil
+        return (m_has_p and (has_f(self, f1) or has_f(self, f2)))
+            or (not m_has_p and (cs[f1] ~= nil or cs[f2] ~= nil))
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil
+        return (m_has_p and (has_f(self, f1) or has_f(self, f2) or has_f(self, f3)))
+            or (not m_has_p and (cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil))
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil
+        return (m_has_p and (has_f(self, f1) or has_f(self, f2) or has_f(self, f3) or has_f(self, f4)))
+            or (not m_has_p and (cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil))
     end
 
     do
         local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil or
-            self:has_any(__lua_select(5, ...))
+        return (m_has_p and (has_f(self, f1) or has_f(self, f2) or has_f(self, f3) or has_f(self, f4)
+                or has_fs(self, __lua_select(5, ...))))
+            or (not m_has_p and (cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil
+                or has_fs(self, __lua_select(5, ...))))
     end
 end
 
@@ -6687,25 +6739,61 @@ end
 ---@return evolved.builder builder
 function __builder_mt:set(fragment, component)
     if __debug_mode then
-        if __evolved_is_wildcard(fragment) then
-            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
-        end
-
         if not __evolved_alive(fragment) then
             __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
         end
+
+        if __evolved_is_wildcard(fragment) then
+            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
+        end
     end
 
-    ---@type evolved.default?, evolved.duplicate?
-    local fragment_default, fragment_duplicate =
-        __evolved_get(fragment, __DEFAULT, __DUPLICATE)
+    do
+        ---@type evolved.default?, evolved.duplicate?
+        local fragment_default, fragment_duplicate =
+            __evolved_get(fragment, __DEFAULT, __DUPLICATE)
 
-    local new_component = component
-    if new_component == nil then new_component = fragment_default end
-    if new_component ~= nil and fragment_duplicate then new_component = fragment_duplicate(new_component) end
-    if new_component == nil then new_component = true end
+        local new_component = component
+        if new_component == nil then new_component = fragment_default end
+        if new_component ~= nil and fragment_duplicate then new_component = fragment_duplicate(new_component) end
+        if new_component == nil then new_component = true end
 
-    self.__components[fragment] = new_component
+        self.__components[fragment] = new_component
+    end
+
+    if __evolved_is_pair(fragment) then
+        local fragment_primary_index, fragment_secondary_index =
+            __evolved_unpack(fragment)
+
+        local primary_pairs = self.__primary_pairs
+        local secondary_pairs = self.__secondary_pairs
+
+        if not primary_pairs then
+            primary_pairs = {}
+            self.__primary_pairs = primary_pairs
+        end
+
+        if not secondary_pairs then
+            secondary_pairs = {}
+            self.__secondary_pairs = secondary_pairs
+        end
+
+        local primary_fragments = primary_pairs[fragment_primary_index]
+        local secondary_fragments = secondary_pairs[fragment_secondary_index]
+
+        if not primary_fragments then
+            primary_fragments = __assoc_list_new(4)
+            primary_pairs[fragment_primary_index] = primary_fragments
+        end
+
+        if not secondary_fragments then
+            secondary_fragments = __assoc_list_new(4)
+            secondary_pairs[fragment_secondary_index] = secondary_fragments
+        end
+
+        __assoc_list_insert(primary_fragments, fragment)
+        __assoc_list_insert(secondary_fragments, fragment)
+    end
 
     return self
 end
@@ -6719,42 +6807,100 @@ function __builder_mt:remove(...)
         return self
     end
 
-    local cs = self.__components
+    local fragment = ...
 
-    if fragment_count == 1 then
-        local f1 = ...
-        cs[f1] = nil
-        return self
+    local components = self.__components
+
+    components[fragment] = nil
+
+    local primary_pairs = self.__primary_pairs
+    local secondary_pairs = self.__secondary_pairs
+
+    local maybe_has_pairs = primary_pairs and secondary_pairs
+
+    if maybe_has_pairs and __evolved_is_wildcard(fragment) then
+        ---@cast primary_pairs -?
+        ---@cast secondary_pairs -?
+
+        local fragment_primary_index, fragment_secondary_index, fragment_opts =
+            __evolved_unpack(fragment)
+
+        if fragment_opts == __WILDCARD_OPTS then
+            for primary_index, primary_fragments in __lua_next, primary_pairs do
+                local primary_fragment_list = primary_fragments.__item_list
+                local primary_fragment_count = primary_fragments.__item_count
+
+                for primary_fragment_index = 1, primary_fragment_count do
+                    local primary_fragment = primary_fragment_list[primary_fragment_index]
+                    components[primary_fragment] = nil
+                end
+
+                primary_pairs[primary_index] = nil
+            end
+
+            for secondary_index, secondary_fragments in __lua_next, secondary_pairs do
+                local secondary_fragment_list = secondary_fragments.__item_list
+                local secondary_fragment_count = secondary_fragments.__item_count
+
+                for secondary_fragment_index = 1, secondary_fragment_count do
+                    local secondary_fragment = secondary_fragment_list[secondary_fragment_index]
+                    components[secondary_fragment] = nil
+                end
+
+                secondary_pairs[secondary_index] = nil
+            end
+        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+            local secondary_fragments = secondary_pairs[fragment_secondary_index]
+            local secondary_fragment_list = secondary_fragments and secondary_fragments.__item_list
+            local secondary_fragment_count = secondary_fragments and secondary_fragments.__item_count or 0
+
+            for secondary_fragment_index = 1, secondary_fragment_count do
+                local secondary_fragment = secondary_fragment_list[secondary_fragment_index]
+                components[secondary_fragment] = nil
+
+                local secondary_fragment_primary_index, _ = __evolved_unpack(secondary_fragment)
+                if __assoc_list_remove(primary_pairs[secondary_fragment_primary_index], secondary_fragment) == 0 then
+                    primary_pairs[secondary_fragment_primary_index] = nil
+                end
+            end
+
+            secondary_pairs[fragment_secondary_index] = nil
+        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+            local primary_fragments = primary_pairs[fragment_primary_index]
+            local primary_fragment_list = primary_fragments and primary_fragments.__item_list
+            local primary_fragment_count = primary_fragments and primary_fragments.__item_count or 0
+
+            for primary_fragment_index = 1, primary_fragment_count do
+                local primary_fragment = primary_fragment_list[primary_fragment_index]
+                components[primary_fragment] = nil
+
+                local _, primary_fragment_secondary_index = __evolved_unpack(primary_fragment)
+                if __assoc_list_remove(secondary_pairs[primary_fragment_secondary_index], primary_fragment) == 0 then
+                    secondary_pairs[primary_fragment_secondary_index] = nil
+                end
+            end
+
+            primary_pairs[fragment_primary_index] = nil
+        end
     end
 
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        cs[f1] = nil; cs[f2] = nil
-        return self
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil
-        return self
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil; cs[f4] = nil
-        return self
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil; cs[f4] = nil
-        return self:remove(__lua_select(5, ...))
-    end
+    return fragment_count > 1 and self:remove(__lua_select(2, ...)) or self
 end
 
 ---@return evolved.builder builder
 function __builder_mt:clear()
-    __lua_table_clear(self.__components)
+    if self.__components then
+        __lua_table_clear(self.__components)
+    end
+
+    if self.__primary_pairs then
+        __lua_table_clear(self.__primary_pairs)
+    end
+
+    if self.__secondary_pairs then
+        __lua_table_clear(self.__secondary_pairs)
+    end
+
     return self
 end
 
