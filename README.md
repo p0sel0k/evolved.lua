@@ -1215,6 +1215,11 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
+## vX.X.X
+
+- Added the new [`evolved.name`](#evolvedname-1) function
+- Added the new [`evolved.INTERNAL`](#evolvedinternal) fragment trait
+
 ## v1.1.0
 
 - [`Systems`](#systems) can be queries themselves now
