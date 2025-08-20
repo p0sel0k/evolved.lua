@@ -54,7 +54,6 @@
   - [Aliases](#aliases)
   - [Predefs](#predefs)
   - [Functions](#functions)
-  - [Relations](#relations)
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
@@ -1049,20 +1048,14 @@ remove_hook :: {entity, fragment, component}
 
 each_state :: implementation-specific
 execute_state :: implementation-specific
-primaries_state :: implementation-specific
-secondaries_state :: implementation-specific
 
 each_iterator :: {each_state? -> fragment?, component?}
 execute_iterator :: {execute_state? -> chunk?, entity[]?, integer?}
-primaries_iterator :: {primaries_state? -> fragment?, component?}
-secondaries_iterator :: {secondaries_state? -> fragment?, component?}
 ```
 
 ### Predefs
 
 ```
-ANY :: fragment
-
 TAG :: fragment
 NAME :: fragment
 
@@ -1144,25 +1137,6 @@ process :: system... -> ()
 
 debug_mode :: boolean -> ()
 collect_garbage :: ()
-```
-
-### Relations
-
-```
-pair :: id, id -> id
-unpair :: id -> id, id
-
-is_pair :: id -> boolean
-is_wildcard :: id -> boolean
-
-primary :: entity, fragment, integer? -> fragment?, component?
-secondary :: entity, fragment, integer? -> fragment?, component?
-
-primaries :: entity, fragment -> {primaries_state? -> fragment?, component?}, primaries_state?
-secondaries :: entity, fragment -> {secondaries_state? -> fragment?, component?}, secondaries_state?
-
-primary_count :: entity, fragment -> integer
-secondary_count :: entity, fragment -> integer
 ```
 
 ### Classes
@@ -1254,8 +1228,6 @@ builder_mt:destruction_policy :: id -> builder
 
 ## Predefs
 
-### `evolved.ANY`
-
 ### `evolved.TAG`
 
 ### `evolved.NAME`
@@ -1304,7 +1276,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ### `evolved.DESTRUCTION_POLICY_REMOVE_FRAGMENT`
 
-## Core Functions
+## Functions
 
 ### `evolved.id`
 
@@ -1570,112 +1542,6 @@ function evolved.debug_mode(yesno) end
 
 ```lua
 function evolved.collect_garbage() end
-```
-
-## Relation Functions
-
-### `evolved.pair`
-
-```lua
----@param primary evolved.id
----@param secondary evolved.id
----@return evolved.id pair
----@nodiscard
-function evolved.pair(primary, secondary) end
-```
-
-### `evolved.unpair`
-
-```lua
----@param pair evolved.id
----@return evolved.id primary
----@return evolved.id secondary
----@nodiscard
-function evolved.unpair(pair) end
-```
-
-### `evolved.is_pair`
-
-```lua
----@param id evolved.id
----@return boolean
----@nodiscard
-function evolved.is_pair(id) end
-```
-
-### `evolved.is_wildcard`
-
-```lua
----@param id evolved.id
----@return boolean
----@nodiscard
-function evolved.is_wildcard(id) end
-```
-
-### `evolved.primary`
-
-```lua
----@param entity evolved.entity
----@param secondary evolved.fragment
----@param index? integer
----@return evolved.fragment? primary
----@return evolved.component? component
----@nodiscard
-function evolved.primary(entity, secondary, index) end
-```
-
-### `evolved.secondary`
-
-```lua
----@param entity evolved.entity
----@param primary evolved.fragment
----@param index? integer
----@return evolved.fragment? secondary
----@return evolved.component? component
----@nodiscard
-function evolved.secondary(entity, primary, index) end
-```
-
-### `evolved.primaries`
-
-```lua
----@param entity evolved.entity
----@param secondary evolved.fragment
----@return evolved.primaries_iterator iterator
----@return evolved.primaries_state? iterator_state
----@nodiscard
-function evolved.primaries(entity, secondary) end
-```
-
-### `evolved.secondaries`
-
-```lua
----@param entity evolved.entity
----@param primary evolved.fragment
----@return evolved.secondaries_iterator iterator
----@return evolved.secondaries_state? iterator_state
----@nodiscard
-function evolved.secondaries(entity, primary) end
-```
-
-### `evolved.primary_count`
-
-```lua
----@param entity evolved.entity
----@param secondary evolved.fragment
----@return integer
----@nodiscard
-function evolved.primary_count(entity, secondary) end
-```
-
-### `evolved.secondary_count`
-
-```lua
----@param entity evolved.entity
----@param primary evolved.fragment
----@return integer
----@nodiscard
-function evolved.secondary_count(entity, primary) end
 ```
 
 ## Classes
