@@ -35,6 +35,7 @@
     - [Spawning Entities](#spawning-entities)
     - [Entity Builders](#entity-builders)
   - [Access Operations](#access-operations)
+  - [Iterating Over Fragments](#iterating-over-fragments)
   - [Modifying Operations](#modifying-operations)
   - [Debug Mode](#debug-mode)
   - [Queries](#queries)
@@ -94,7 +95,7 @@ luarocks install evolved.lua
 
 ## Quick Start
 
-To get started with `evolved.lua`, read the [Overview](#overview) section to understand the basic concepts and how to use the library. After that, check the [Example](develop/example.lua), which demonstrates complex usage of the library. Finally, refer to the [Cheat Sheet](#cheat-sheet) for a quick reference of all the functions and classes provided by the library.
+To get started with `evolved.lua`, read the [Overview](#overview) section to understand the basic concepts and how to use the library. After that, check the [Samples](develop/samples), which demonstrate complex usage of the library. Finally, refer to the [Cheat Sheet](#cheat-sheet) for a quick reference of all the functions and classes provided by the library.
 
 ## Overview
 
@@ -146,14 +147,17 @@ function evolved.alive_any(...) end
 Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier or to pack them back into an identifier. The [`evolved.pack`](#evolvedpack) and [`evolved.unpack`](#evolvedunpack) functions can be used for this purpose.
 
 ```lua
----@param index integer
----@param version integer
+---@param primary integer
+---@param secondary integer
 ---@return evolved.id id
-function evolved.pack(index, version) end
+---@nodiscard
+function evolved.pack(primary, secondary) end
 
 ---@param id evolved.id
----@return integer index
----@return integer version
+---@return integer primary
+---@return integer secondary
+---@return integer options
+---@nodiscard
 function evolved.unpack(id) end
 ```
 
@@ -446,6 +450,35 @@ function evolved.get(entity, ...) end
 The [`evolved.alive`](#evolvedalive) function checks whether an entity is alive. The [`evolved.empty`](#evolvedempty) function checks whether an entity is empty (has no fragments). The [`evolved.has`](#evolvedhas) function checks whether an entity has a specific fragment. The [`evolved.get`](#evolvedget) function retrieves the components of an entity for the specified fragments. If the entity doesn't have some of the fragments or if the fragments are marked with the [`evolved.TAG`](#evolvedtag), the function will return `nil` for them.
 
 All of these functions can be safely called on non-alive entities and non-alive fragments. Also, they do not cause any structural changes, because they do not modify anything.
+
+### Iterating Over Fragments
+
+Sometimes, you may need to iterate over all fragments attached to an entity. You can use the [`evolved.each`](#evolvedeach) function for this purpose.
+
+```lua
+local evolved = require 'evolved'
+
+local health = evolved.builder()
+    :name('health')
+    :spawn()
+
+local stamina = evolved.builder()
+    :name('stamina')
+    :spawn()
+
+local player = evolved.builder()
+    :set(health, 100)
+    :set(stamina, 50)
+    :spawn()
+
+for fragment, component in evolved.each(player) do
+    print(string.format('Fragment (%s) has value %d',
+        evolved.name(fragment), component))
+end
+```
+
+> [!NOTE]
+> [Structural changes](#structural-changes) are not allowed during iteration. If you want to spawn new entities or insert/remove fragments while iterating, defer these operations until the iteration is complete. See the [Deferred Operations](#deferred-operations) section for more details.
 
 ### Modifying Operations
 
@@ -1028,6 +1061,7 @@ NAME :: fragment
 
 UNIQUE :: fragment
 EXPLICIT :: fragment
+INTERNAL :: fragment
 
 DEFAULT :: fragment
 DUPLICATE :: fragment
@@ -1061,9 +1095,10 @@ DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
 
 ```
 id :: integer? -> id...
+name :: id... -> string...
 
 pack :: integer, integer -> id
-unpack :: id -> integer, integer
+unpack :: id -> integer, integer, integer
 
 defer :: boolean
 commit :: boolean
@@ -1146,6 +1181,7 @@ builder_mt:name :: string -> builder
 
 builder_mt:unique :: builder
 builder_mt:explicit :: builder
+builder_mt:internal :: builder
 
 builder_mt:default :: component -> builder
 builder_mt:duplicate :: {component -> component} -> builder
@@ -1200,6 +1236,8 @@ builder_mt:destruction_policy :: id -> builder
 
 ### `evolved.EXPLICIT`
 
+### `evolved.INTERNAL`
+
 ### `evolved.DEFAULT`
 
 ### `evolved.DUPLICATE`
@@ -1249,22 +1287,32 @@ builder_mt:destruction_policy :: id -> builder
 function evolved.id(count) end
 ```
 
+### `evolved.name`
+
+```lua
+---@param ... evolved.id ids
+---@return string... names
+---@nodiscard
+function evolved.name(...) end
+```
+
 ### `evolved.pack`
 
 ```lua
----@param index integer
----@param version integer
+---@param primary integer
+---@param secondary integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(index, version) end
+function evolved.pack(primary, secondary) end
 ```
 
 ### `evolved.unpack`
 
 ```lua
 ---@param id evolved.id
----@return integer index
----@return integer version
+---@return integer primary
+---@return integer secondary
+---@return integer options
 ---@nodiscard
 function evolved.unpack(id) end
 ```
@@ -1694,6 +1742,13 @@ function evolved.builder_mt:unique() end
 ```lua
 ---@return evolved.builder builder
 function evolved.builder_mt:explicit() end
+```
+
+#### `evolved.builder_mt:internal`
+
+```lua
+---@return evolved.builder builder
+function evolved.builder_mt:internal() end
 ```
 
 #### `evolved.builder_mt:default`
