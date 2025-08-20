@@ -150,10 +150,9 @@ Sometimes (for debugging purposes, for example), it is necessary to extract the 
 ```lua
 ---@param primary integer
 ---@param secondary integer
----@param options? integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary, options) end
+function evolved.pack(primary, secondary) end
 
 ---@param id evolved.id
 ---@return integer primary
@@ -1105,7 +1104,7 @@ DESTRUCTION_POLICY_REMOVE_FRAGMENT :: id
 id :: integer? -> id...
 name :: id... -> string...
 
-pack :: integer, integer, integer? -> id
+pack :: integer, integer -> id
 unpack :: id -> integer, integer, integer
 
 defer :: boolean
@@ -1330,10 +1329,9 @@ function evolved.name(...) end
 ```lua
 ---@param primary integer
 ---@param secondary integer
----@param options? integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary, options) end
+function evolved.pack(primary, secondary) end
 ```
 
 ### `evolved.unpack`

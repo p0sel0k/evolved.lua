@@ -21,27 +21,13 @@ for _ = 1, 1000 do
 end
 
 for _ = 1, 1000 do
-    local initial_primary = math.random(1, 2 ^ 20 - 1)
-    local initial_secondary = math.random(1, 2 ^ 20 - 1)
-    local initial_options = math.random(1, 2 ^ 12 - 1)
-
-    local packed_id = evo.pack(initial_primary, initial_secondary, initial_options)
-    local unpacked_primary, unpacked_secondary, unpacked_options = evo.unpack(packed_id)
-
-    assert(initial_primary == unpacked_primary)
-    assert(initial_secondary == unpacked_secondary)
-    assert(initial_options == unpacked_options)
-end
-
-for _ = 1, 1000 do
     local initial_primary = math.random(1, 2 ^ 31 - 1)
     local initial_secondary = math.random(1, 2 ^ 31 - 1)
-    local initial_options = math.random(1, 2 ^ 31 - 1)
 
-    local packed_id = evo.pack(initial_primary, initial_secondary, initial_options)
+    local packed_id = evo.pack(initial_primary, initial_secondary)
     local unpacked_primary, unpacked_secondary, unpacked_options = evo.unpack(packed_id)
 
     assert(initial_primary % 2 ^ 20 == unpacked_primary)
     assert(initial_secondary % 2 ^ 20 == unpacked_secondary)
-    assert(initial_options % 2 ^ 12 == unpacked_options)
+    assert(0 == unpacked_options)
 end

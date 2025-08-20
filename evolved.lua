@@ -4674,13 +4674,11 @@ end
 
 ---@param primary integer
 ---@param secondary integer
----@param options? integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(primary, secondary, options)
+function __evolved_pack(primary, secondary)
     return primary % 2 ^ 20
-        + secondary % 2 ^ 20 * 2 ^ 20
-        + (options or 0) % 2 ^ 12 * 2 ^ 40 --[[@as evolved.id]]
+        + secondary % 2 ^ 20 * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
