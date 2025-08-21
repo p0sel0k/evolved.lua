@@ -1600,8 +1600,20 @@ do
     end
 end
 
+do
+    local p, s = evo.id(2)
+    evo.set(p, evo.NAME, 'p')
+    evo.set(s, evo.NAME, 's')
+    assert(evo.name(evo.pair(p, s)) == '${p,s}')
+    assert(evo.name(evo.pair(evo.ANY, s)) == '${ANY,s}')
+    assert(evo.name(evo.pair(p, evo.ANY)) == '${p,ANY}')
+    assert(evo.name(evo.pair(evo.ANY, evo.ANY)) == '${ANY,ANY}')
+end
+
 -- TODO
 -- builder:has/has_all/has_any should work with wildcards / remove too?
 -- should we provide wildcard support for get operations?
 -- prevent setting pairs with dead secondary fragments
 -- process evo.ANY as single wildcard
+-- should we provide an evolved.pair type?
+-- how should the destroy function handle pairs?

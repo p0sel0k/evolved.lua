@@ -131,6 +131,11 @@ local evolved = {
   | ANY WILDCARD |  RSVD  |   11   |   1   |  ANY index  |  ANY index  |
   \------------------------------------------------------------------]=]
 
+local __PAIR_OPTS = 1         -- 0b001
+local __PRI_WILDCARD_OPTS = 3 -- 0b011
+local __SEC_WILDCARD_OPTS = 5 -- 0b101
+local __ANY_WILDCARD_OPTS = 7 -- 0b111
+
 ---
 ---
 ---
@@ -817,16 +822,11 @@ local __DESTRUCTION_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 ---
 
-local __PAIR_OPTS = 1               -- 0b001
-local __WILDCARD_OPTS = 7           -- 0b111
-local __PRIMARY_WILDCARD_OPTS = 3   -- 0b011
-local __SECONDARY_WILDCARD_OPTS = 5 -- 0b101
-
 local __ANY_INDEX = __ANY % 2 ^ 20 --[[@as integer]]
 
-local __WILDCARD_PAIR = __ANY_INDEX
+local __ANY_WILDCARD = __ANY_INDEX
     + __ANY_INDEX * 2 ^ 20
-    + __WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+    + __ANY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
 
 ---
 ---
@@ -835,35 +835,30 @@ local __WILDCARD_PAIR = __ANY_INDEX
 ---
 
 local __safe_tbls = {
-    ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment set' end,
         __newindex = function() __error_fmt 'attempt to modify empty fragment set' end
-    }),
+    }) --[[@as table<evolved.fragment, integer>]],
 
-    ---@type evolved.fragment[]
     __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment list' end,
         __newindex = function() __error_fmt 'attempt to modify empty fragment list' end
-    }),
+    }) --[=[@as evolved.fragment[]]=],
 
-    ---@type table<evolved.fragment, evolved.component>
     __EMPTY_COMPONENT_MAP = __lua_setmetatable({}, {
         __tostring = function() return 'empty component map' end,
         __newindex = function() __error_fmt 'attempt to modify empty component map' end
-    }),
+    }) --[[@as table<evolved.fragment, evolved.component>]],
 
-    ---@type evolved.component[]
     __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
         __tostring = function() return 'empty component list' end,
         __newindex = function() __error_fmt 'attempt to modify empty component list' end
-    }),
+    }) --[=[@as evolved.component[]]=],
 
-    ---@type evolved.component[]
     __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
         __tostring = function() return 'empty component storage' end,
         __newindex = function() __error_fmt 'attempt to modify empty component storage' end
-    }),
+    }) --[=[@as evolved.component[]]=],
 }
 
 ---
@@ -991,12 +986,12 @@ function __primary_wildcard(secondary)
     local secondary_index = secondary % 2 ^ 20
 
     if secondary_index == __ANY_INDEX then
-        return __WILDCARD_PAIR
+        return __ANY_WILDCARD
     end
 
     return primary_index
         + secondary_index * 2 ^ 20
-        + __PRIMARY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+        + __PRI_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param primary evolved.id | integer id or index
@@ -1007,12 +1002,12 @@ function __secondary_wildcard(primary)
     local secondary_index = __ANY_INDEX
 
     if primary_index == __ANY_INDEX then
-        return __WILDCARD_PAIR
+        return __ANY_WILDCARD
     end
 
     return primary_index
         + secondary_index * 2 ^ 20
-        + __SECONDARY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+        + __SEC_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
 end
 
 ---@param fragment evolved.fragment
@@ -1095,7 +1090,7 @@ function __iterator_fns.__execute_major_iterator(execute_state)
                     __evolved_unpack(chunk_child_fragment)
 
                 is_chunk_child_matched =
-                    not exclude_set[__WILDCARD_PAIR] and
+                    not exclude_set[__ANY_WILDCARD] and
                     not exclude_set[__primary_wildcard(chunk_child_secondary_index)] and
                     not exclude_set[__secondary_wildcard(chunk_child_primary_index)]
             end
@@ -1400,7 +1395,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             __evolved_unpack(major)
 
         do
-            local major_wildcard = __WILDCARD_PAIR
+            local major_wildcard = __ANY_WILDCARD
             local major_wildcard_chunks = __major_chunks[major_wildcard]
 
             if not major_wildcard_chunks then
@@ -1437,7 +1432,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     if chunk_pair_count > 0 then
-        local minor_wildcard = __WILDCARD_PAIR
+        local minor_wildcard = __ANY_WILDCARD
         local minor_wildcard_chunks = __minor_chunks[minor_wildcard]
 
         if not minor_wildcard_chunks then
@@ -1849,7 +1844,7 @@ local function __chunk_without_fragment(chunk, fragment)
         local primary_index, secondary_index, fragment_opts =
             __evolved_unpack(fragment)
 
-        if fragment_opts == __WILDCARD_OPTS then
+        if fragment_opts == __ANY_WILDCARD_OPTS then
             while chunk and chunk.__has_pair_major do
                 chunk = chunk.__parent
             end
@@ -1870,7 +1865,7 @@ local function __chunk_without_fragment(chunk, fragment)
             end
 
             return sib_chunk
-        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+        elseif fragment_opts == __PRI_WILDCARD_OPTS then
             if not chunk.__secondary_pairs[secondary_index] then
                 -- the chunk does not have such pairs
                 return chunk
@@ -1901,7 +1896,7 @@ local function __chunk_without_fragment(chunk, fragment)
             end
 
             return sib_chunk
-        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+        elseif fragment_opts == __SEC_WILDCARD_OPTS then
             if not chunk.__primary_pairs[primary_index] then
                 -- the chunk does not have such pairs
                 return chunk
@@ -2086,12 +2081,12 @@ local function __chunk_has_fragment(chunk, fragment)
         local primary_index, secondary_index, fragment_opts =
             __evolved_unpack(fragment)
 
-        if fragment_opts == __WILDCARD_OPTS then
+        if fragment_opts == __ANY_WILDCARD_OPTS then
             return true
-        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+        elseif fragment_opts == __PRI_WILDCARD_OPTS then
             local secondary_fragments = chunk.__secondary_pairs[secondary_index]
             return secondary_fragments and secondary_fragments.__item_count > 0
-        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+        elseif fragment_opts == __SEC_WILDCARD_OPTS then
             local primary_fragments = chunk.__primary_pairs[primary_index]
             return primary_fragments and primary_fragments.__item_count > 0
         end
@@ -3022,7 +3017,7 @@ local function __purge_chunk(chunk)
     end
 
     if chunk.__has_pair_fragments then
-        local wildcard = __WILDCARD_PAIR
+        local wildcard = __ANY_WILDCARD
 
         local major_wildcard_chunks = __major_chunks[wildcard]
         local minor_wildcard_chunks = __minor_chunks[wildcard]
@@ -3713,7 +3708,6 @@ function __chunk_remove(old_chunk, ...)
     end
 
     if old_chunk.__has_remove_hooks then
-        ---@type table<evolved.fragment, integer>
         local new_fragment_set = new_chunk and new_chunk.__fragment_set
             or __safe_tbls.__EMPTY_FRAGMENT_SET
 
@@ -5373,7 +5367,6 @@ function __evolved_remove(entity, ...)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
-            ---@type table<evolved.fragment, integer>
             local new_fragment_set = new_chunk and new_chunk.__fragment_set
                 or __safe_tbls.__EMPTY_FRAGMENT_SET
 
@@ -6115,11 +6108,11 @@ function __evolved_pair(primary, secondary)
     local options = __PAIR_OPTS
 
     if primary == __ANY and secondary == __ANY then
-        options = __WILDCARD_OPTS
+        options = __ANY_WILDCARD_OPTS
     elseif primary == __ANY then
-        options = __PRIMARY_WILDCARD_OPTS
+        options = __PRI_WILDCARD_OPTS
     elseif secondary == __ANY then
-        options = __SECONDARY_WILDCARD_OPTS
+        options = __SEC_WILDCARD_OPTS
     end
 
     return primary % 2 ^ 20
@@ -6578,13 +6571,13 @@ function __builder_mt:has(fragment)
         local fragment_primary_index, fragment_secondary_index, fragment_opts =
             __evolved_unpack(fragment)
 
-        if fragment_opts == __WILDCARD_OPTS then
+        if fragment_opts == __ANY_WILDCARD_OPTS then
             return __lua_next(primary_pairs) ~= nil
                 and __lua_next(secondary_pairs) ~= nil
-        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+        elseif fragment_opts == __PRI_WILDCARD_OPTS then
             local secondary_fragments = secondary_pairs[fragment_secondary_index]
             return secondary_fragments ~= nil and secondary_fragments.__item_count > 0
-        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+        elseif fragment_opts == __SEC_WILDCARD_OPTS then
             local primary_fragments = primary_pairs[fragment_primary_index]
             return primary_fragments ~= nil and primary_fragments.__item_count > 0
         end
@@ -6823,7 +6816,7 @@ function __builder_mt:remove(...)
         local fragment_primary_index, fragment_secondary_index, fragment_opts =
             __evolved_unpack(fragment)
 
-        if fragment_opts == __WILDCARD_OPTS then
+        if fragment_opts == __ANY_WILDCARD_OPTS then
             for primary_index, primary_fragments in __lua_next, primary_pairs do
                 local primary_fragment_list = primary_fragments.__item_list
                 local primary_fragment_count = primary_fragments.__item_count
@@ -6847,7 +6840,7 @@ function __builder_mt:remove(...)
 
                 secondary_pairs[secondary_index] = nil
             end
-        elseif fragment_opts == __PRIMARY_WILDCARD_OPTS then
+        elseif fragment_opts == __PRI_WILDCARD_OPTS then
             local secondary_fragments = secondary_pairs[fragment_secondary_index]
             local secondary_fragment_list = secondary_fragments and secondary_fragments.__item_list
             local secondary_fragment_count = secondary_fragments and secondary_fragments.__item_count or 0
@@ -6863,7 +6856,7 @@ function __builder_mt:remove(...)
             end
 
             secondary_pairs[fragment_secondary_index] = nil
-        elseif fragment_opts == __SECONDARY_WILDCARD_OPTS then
+        elseif fragment_opts == __SEC_WILDCARD_OPTS then
             local primary_fragments = primary_pairs[fragment_primary_index]
             local primary_fragment_list = primary_fragments and primary_fragments.__item_list
             local primary_fragment_count = primary_fragments and primary_fragments.__item_count or 0
