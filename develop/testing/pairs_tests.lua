@@ -1617,3 +1617,4 @@ end
 -- process evo.ANY as single wildcard
 -- should we provide an evolved.pair type?
 -- how should the destroy function handle pairs?
+-- add debug mode for pack/unpack and pair/unpair

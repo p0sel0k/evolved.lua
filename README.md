@@ -148,11 +148,11 @@ function evolved.alive_any(...) end
 Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier or to pack them back into an identifier. The [`evolved.pack`](#evolvedpack) and [`evolved.unpack`](#evolvedunpack) functions can be used for this purpose.
 
 ```lua
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary) end
+function evolved.pack(index, version) end
 
 ---@param id evolved.id
 ---@return integer primary
@@ -1026,6 +1026,7 @@ assert(not evolved.alive(entity))
 
 ```
 id :: implementation-specific
+pair :: id
 
 entity :: id
 fragment :: id
@@ -1149,8 +1150,8 @@ collect_garbage :: ()
 ### Relation Functions
 
 ```
-pair :: id, id -> id
-unpair :: id -> id, id
+pair :: id, id -> pair
+unpair :: pair -> id, id
 
 is_pair :: id -> boolean
 is_wildcard :: id -> boolean
@@ -1332,11 +1333,11 @@ function evolved.name(...) end
 ### `evolved.pack`
 
 ```lua
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary) end
+function evolved.pack(index, version) end
 ```
 
 ### `evolved.unpack`
@@ -1584,7 +1585,7 @@ function evolved.collect_garbage() end
 ```lua
 ---@param primary evolved.id
 ---@param secondary evolved.id
----@return evolved.id pair
+---@return evolved.pair pair
 ---@nodiscard
 function evolved.pair(primary, secondary) end
 ```
@@ -1592,7 +1593,7 @@ function evolved.pair(primary, secondary) end
 ### `evolved.unpair`
 
 ```lua
----@param pair evolved.id
+---@param pair evolved.pair
 ---@return evolved.id primary
 ---@return evolved.id secondary
 ---@nodiscard

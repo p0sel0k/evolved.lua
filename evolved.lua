@@ -28,6 +28,7 @@ local evolved = {
 }
 
 ---@class evolved.id
+---@alias evolved.pair evolved.id
 
 ---@alias evolved.entity evolved.id
 ---@alias evolved.fragment evolved.id
@@ -153,8 +154,8 @@ local __defer_length = 0 ---@type integer
 local __defer_bytecode = {} ---@type any[]
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
-local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
+local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 
 local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
 
@@ -163,11 +164,11 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
+local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
+local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.fragment>>
 
-local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
+local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<evolved.system>>
 
 ---
 ---
@@ -190,10 +191,10 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
 ---@field package __component_indices table<evolved.fragment, integer>
 ---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
----@field package __pair_list evolved.id[]
+---@field package __pair_list evolved.pair[]
 ---@field package __pair_count integer
----@field package __primary_pairs table<integer, evolved.assoc_list>
----@field package __secondary_pairs table<integer, evolved.assoc_list>
+---@field package __primary_pairs table<integer, evolved.assoc_list<evolved.pair>>
+---@field package __secondary_pairs table<integer, evolved.assoc_list<evolved.pair>>
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __unreachable_or_collected boolean
@@ -219,8 +220,8 @@ __chunk_mt.__index = __chunk_mt
 
 ---@class evolved.builder
 ---@field package __components table<evolved.fragment, evolved.component>
----@field package __primary_pairs? table<integer, evolved.assoc_list>
----@field package __secondary_pairs? table<integer, evolved.assoc_list>
+---@field package __primary_pairs? table<integer, evolved.assoc_list<evolved.pair>>
+---@field package __secondary_pairs? table<integer, evolved.assoc_list<evolved.pair>>
 local __builder_mt = {}
 __builder_mt.__index = __builder_mt
 
@@ -578,10 +579,11 @@ end
 ---
 ---
 
----@class (exact) evolved.assoc_list
----@field package __item_set table<any, integer>
----@field package __item_list any[]
----@field package __item_count integer
+---@class (exact) evolved.assoc_list<K>: {
+---  __item_set: { [K]: integer },
+---  __item_list: K[],
+---  __item_count: integer,
+--- }
 
 local __assoc_list_new
 local __assoc_list_dup
@@ -826,7 +828,7 @@ local __ANY_INDEX = __ANY % 2 ^ 20 --[[@as integer]]
 
 local __ANY_WILDCARD = __ANY_INDEX
     + __ANY_INDEX * 2 ^ 20
-    + __ANY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+    + __ANY_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.pair]]
 
 ---
 ---
@@ -979,7 +981,7 @@ function __id_name(id)
 end
 
 ---@param secondary evolved.id | integer id or index
----@return evolved.id pair (*, secondary)
+---@return evolved.pair (*, secondary)
 ---@nodiscard
 function __primary_wildcard(secondary)
     local primary_index = __ANY_INDEX
@@ -991,11 +993,11 @@ function __primary_wildcard(secondary)
 
     return primary_index
         + secondary_index * 2 ^ 20
-        + __PRI_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+        + __PRI_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.pair]]
 end
 
 ---@param primary evolved.id | integer id or index
----@return evolved.id pair (primary, *)
+---@return evolved.pair (primary, *)
 ---@nodiscard
 function __secondary_wildcard(primary)
     local primary_index = primary % 2 ^ 20
@@ -1007,7 +1009,7 @@ function __secondary_wildcard(primary)
 
     return primary_index
         + secondary_index * 2 ^ 20
-        + __SEC_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.id]]
+        + __SEC_WILDCARD_OPTS * 2 ^ 40 --[[@as evolved.pair]]
 end
 
 ---@param fragment evolved.fragment
@@ -1238,11 +1240,11 @@ function __new_chunk(chunk_parent, chunk_fragment)
     local chunk_fragment_list = {} ---@type evolved.fragment[]
     local chunk_fragment_count = 0 ---@type integer
 
-    local chunk_pair_list = {} ---@type evolved.id[]
+    local chunk_pair_list = {} ---@type evolved.pair[]
     local chunk_pair_count = 0 ---@type integer
 
-    local chunk_primary_pairs = {} ---@type table<integer, evolved.assoc_list>
-    local chunk_secondary_pairs = {} ---@type table<integer, evolved.assoc_list>
+    local chunk_primary_pairs = {} ---@type table<integer, evolved.assoc_list<evolved.pair>>
+    local chunk_secondary_pairs = {} ---@type table<integer, evolved.assoc_list<evolved.pair>>
 
     if chunk_parent then
         do
@@ -1291,11 +1293,13 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local chunk_secondary_fragments = chunk_secondary_pairs[chunk_secondary_index]
 
         if not chunk_primary_fragments then
+            ---@type evolved.assoc_list<evolved.pair>
             chunk_primary_fragments = __assoc_list_new(1)
             chunk_primary_pairs[chunk_primary_index] = chunk_primary_fragments
         end
 
         if not chunk_secondary_fragments then
+            ---@type evolved.assoc_list<evolved.pair>
             chunk_secondary_fragments = __assoc_list_new(1)
             chunk_secondary_pairs[chunk_secondary_index] = chunk_secondary_fragments
         end
@@ -1370,6 +1374,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local major_chunks = __major_chunks[major]
 
         if not major_chunks then
+            ---@type evolved.assoc_list<evolved.chunk>
             major_chunks = __assoc_list_new(4)
             __major_chunks[major] = major_chunks
         end
@@ -1382,6 +1387,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local minor_chunks = __minor_chunks[minor]
 
         if not minor_chunks then
+            ---@type evolved.assoc_list<evolved.chunk>
             minor_chunks = __assoc_list_new(4)
             __minor_chunks[minor] = minor_chunks
         end
@@ -1399,6 +1405,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             local major_wildcard_chunks = __major_chunks[major_wildcard]
 
             if not major_wildcard_chunks then
+                ---@type evolved.assoc_list<evolved.chunk>
                 major_wildcard_chunks = __assoc_list_new(4)
                 __major_chunks[major_wildcard] = major_wildcard_chunks
             end
@@ -1411,6 +1418,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             local major_wildcard_chunks = __major_chunks[major_wildcard]
 
             if not major_wildcard_chunks then
+                ---@type evolved.assoc_list<evolved.chunk>
                 major_wildcard_chunks = __assoc_list_new(4)
                 __major_chunks[major_wildcard] = major_wildcard_chunks
             end
@@ -1423,6 +1431,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             local major_wildcard_chunks = __major_chunks[major_wildcard]
 
             if not major_wildcard_chunks then
+                ---@type evolved.assoc_list<evolved.chunk>
                 major_wildcard_chunks = __assoc_list_new(4)
                 __major_chunks[major_wildcard] = major_wildcard_chunks
             end
@@ -1436,6 +1445,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local minor_wildcard_chunks = __minor_chunks[minor_wildcard]
 
         if not minor_wildcard_chunks then
+            ---@type evolved.assoc_list<evolved.chunk>
             minor_wildcard_chunks = __assoc_list_new(4)
             __minor_chunks[minor_wildcard] = minor_wildcard_chunks
         end
@@ -1453,6 +1463,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             local minor_wildcard_chunks = __minor_chunks[minor_wildcard]
 
             if not minor_wildcard_chunks then
+                ---@type evolved.assoc_list<evolved.chunk>
                 minor_wildcard_chunks = __assoc_list_new(4)
                 __minor_chunks[minor_wildcard] = minor_wildcard_chunks
             end
@@ -1465,6 +1476,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
             local minor_wildcard_chunks = __minor_chunks[minor_wildcard]
 
             if not minor_wildcard_chunks then
+                ---@type evolved.assoc_list<evolved.chunk>
                 minor_wildcard_chunks = __assoc_list_new(4)
                 __minor_chunks[minor_wildcard] = minor_wildcard_chunks
             end
@@ -1617,8 +1629,8 @@ function __trace_major_chunks(major, trace, ...)
 
     do
         local major_chunks = __major_chunks[major]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
         if major_chunk_count > 0 then
             __lua_table_move(
@@ -1631,8 +1643,8 @@ function __trace_major_chunks(major, trace, ...)
 
     do
         local major_chunks = __major_chunks[__primary_wildcard(major)]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
         if major_chunk_count > 0 then
             __lua_table_move(
@@ -1645,8 +1657,8 @@ function __trace_major_chunks(major, trace, ...)
 
     do
         local major_chunks = __major_chunks[__secondary_wildcard(major)]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
         if major_chunk_count > 0 then
             __lua_table_move(
@@ -1694,8 +1706,8 @@ function __trace_minor_chunks(minor, trace, ...)
 
     do
         local minor_chunks = __minor_chunks[minor]
-        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
         if minor_chunk_count > 0 then
             __lua_table_move(
@@ -1708,8 +1720,8 @@ function __trace_minor_chunks(minor, trace, ...)
 
     do
         local minor_chunks = __minor_chunks[__primary_wildcard(minor)]
-        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
         if minor_chunk_count > 0 then
             __lua_table_move(
@@ -1722,8 +1734,8 @@ function __trace_minor_chunks(minor, trace, ...)
 
     do
         local minor_chunks = __minor_chunks[__secondary_wildcard(minor)]
-        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
         if minor_chunk_count > 0 then
             __lua_table_move(
@@ -2365,8 +2377,8 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
         end
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -2415,8 +2427,8 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
         end
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -3907,8 +3919,8 @@ local function __system_process(system)
 
     do
         local group_subsystems = __group_subsystems[system]
-        local group_subsystem_list = group_subsystems and group_subsystems.__item_list --[=[@as evolved.system[]]=]
-        local group_subsystem_count = group_subsystems and group_subsystems.__item_count or 0 --[[@as integer]]
+        local group_subsystem_list = group_subsystems and group_subsystems.__item_list
+        local group_subsystem_count = group_subsystems and group_subsystems.__item_count or 0
 
         if group_subsystem_count > 0 then
             local subsystem_list = __acquire_table(__table_pool_tag.system_list)
@@ -4666,13 +4678,13 @@ function __evolved_name(...)
     end
 end
 
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(primary, secondary)
-    return primary % 2 ^ 20
-        + secondary % 2 ^ 20 * 2 ^ 20 --[[@as evolved.id]]
+function __evolved_pack(index, version)
+    return index % 2 ^ 20
+        + version % 2 ^ 20 * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
@@ -5834,29 +5846,29 @@ function __evolved_execute(query)
     local chunk_stack_size = 0
 
     local query_includes = __sorted_includes[query]
-    local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
-    local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
-    local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
+    local query_include_set = query_includes and query_includes.__item_set
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
 
     local query_excludes = __sorted_excludes[query]
-    local query_exclude_set = query_excludes and query_excludes.__item_set --[[@as table<evolved.fragment, integer>]]
-    local query_exclude_list = query_excludes and query_excludes.__item_list --[=[@as evolved.fragment[]]=]
-    local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
+    local query_exclude_set = query_excludes and query_excludes.__item_set
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count or 0
 
     if query_include_count > 0 then
         local query_major = query_include_list[query_include_count]
 
         if __evolved_is_wildcard(query_major) then
             local minor_chunks = __minor_chunks[query_major]
-            local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-            local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+            local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+            local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
             for query_include_index = 1, query_include_count - 1 do
                 local query_minor = query_include_list[query_include_index]
 
                 local query_chunks = __minor_chunks[query_minor]
-                local query_chunk_list = query_chunks and query_chunks.__item_list --[=[@as evolved.chunk[]]=]
-                local query_chunk_count = query_chunks and query_chunks.__item_count or 0 --[[@as integer]]
+                local query_chunk_list = query_chunks and query_chunks.__item_list
+                local query_chunk_count = query_chunks and query_chunks.__item_count or 0
 
                 if query_chunk_count < minor_chunk_count then
                     minor_chunks, minor_chunk_list, minor_chunk_count =
@@ -5922,8 +5934,8 @@ function __evolved_execute(query)
             return __iterator_fns.__execute_minor_iterator, execute_state
         else
             local major_chunks = __major_chunks[query_major]
-            local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-            local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+            local major_chunk_list = major_chunks and major_chunks.__item_list
+            local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
             for major_chunk_index = 1, major_chunk_count do
                 local major_chunk = major_chunk_list[major_chunk_index]
@@ -6102,7 +6114,7 @@ end
 
 ---@param primary evolved.id
 ---@param secondary evolved.id
----@return evolved.id pair
+---@return evolved.pair pair
 ---@nodiscard
 function __evolved_pair(primary, secondary)
     local options = __PAIR_OPTS
@@ -6117,10 +6129,10 @@ function __evolved_pair(primary, secondary)
 
     return primary % 2 ^ 20
         + secondary % 2 ^ 20 * 2 ^ 20
-        + options * 2 ^ 40 --[[@as evolved.id]]
+        + options * 2 ^ 40 --[[@as evolved.pair]]
 end
 
----@param pair evolved.id
+---@param pair evolved.pair
 ---@return evolved.id primary
 ---@return evolved.id secondary
 ---@nodiscard
@@ -6773,11 +6785,13 @@ function __builder_mt:set(fragment, component)
         local secondary_fragments = secondary_pairs[fragment_secondary_index]
 
         if not primary_fragments then
+            ---@type evolved.assoc_list<evolved.pair>
             primary_fragments = __assoc_list_new(4)
             primary_pairs[fragment_primary_index] = primary_fragments
         end
 
         if not secondary_fragments then
+            ---@type evolved.assoc_list<evolved.pair>
             secondary_fragments = __assoc_list_new(4)
             secondary_pairs[fragment_secondary_index] = secondary_fragments
         end
@@ -7261,6 +7275,7 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_includes = __assoc_list_new(include_count)
 
     __assoc_list_move(include_list, 1, include_count, sorted_includes)
@@ -7289,6 +7304,7 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_excludes = __assoc_list_new(exclude_count)
 
     __assoc_list_move(exclude_list, 1, exclude_count, sorted_excludes)
@@ -7317,6 +7333,7 @@ __evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_requires = __assoc_list_new(require_count)
 
     __assoc_list_move(require_list, 1, require_count, sorted_requires)
@@ -7354,6 +7371,7 @@ __evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
     local new_group_systems = __group_subsystems[new_group]
 
     if not new_group_systems then
+        ---@type evolved.assoc_list<evolved.system>
         new_group_systems = __assoc_list_new(4)
         __group_subsystems[new_group] = new_group_systems
     end
