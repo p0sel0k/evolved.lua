@@ -948,7 +948,9 @@ local __component_storage
 ---@return string
 ---@nodiscard
 function __id_name(id)
-    if not __evolved_is_pair(id) then
+    local id_primary, id_secondary, id_options = __evolved_unpack(id)
+
+    if id_options < __PAIR_OPTS then
         ---@type string?
         local id_name = __evolved_get(id, __NAME)
 
@@ -956,27 +958,24 @@ function __id_name(id)
             return id_name
         end
     else
-        local id_primary_index, id_secondary_index = __evolved_unpack(id)
+        ---@type string?, string?
+        local pair_primary_id_name, pair_secondary_id_name
 
-        local id_primary = __freelist_ids[id_primary_index] --[[@as evolved.id?]]
-        local id_secondary = __freelist_ids[id_secondary_index] --[[@as evolved.id?]]
-
-        local id_primary_name, id_secondary_name
-
-        if id_primary and id_primary % 2 ^ 20 == id_primary_index then
-            id_primary_name = __id_name(id_primary)
+        local pair_primary_id = __freelist_ids[id_primary] --[[@as evolved.id?]]
+        if pair_primary_id and pair_primary_id % 2 ^ 20 == id_primary then
+            pair_primary_id_name = __id_name(pair_primary_id)
         end
 
-        if id_secondary and id_secondary % 2 ^ 20 == id_secondary_index then
-            id_secondary_name = __id_name(id_secondary)
+        local pair_secondary_id = __freelist_ids[id_secondary] --[[@as evolved.id?]]
+        if pair_secondary_id and pair_secondary_id % 2 ^ 20 == id_secondary then
+            pair_secondary_id_name = __id_name(pair_secondary_id)
         end
 
-        if id_primary_name and id_secondary_name then
-            return __lua_string_format('${%s,%s}', id_primary_name, id_secondary_name)
+        if pair_primary_id_name and pair_secondary_id_name then
+            return __lua_string_format('${%s,%s}', pair_primary_id_name, pair_secondary_id_name)
         end
     end
 
-    local id_primary, id_secondary, id_options = __evolved_unpack(id)
     return __lua_string_format('$%d#%d:%d:%d', id, id_primary, id_secondary, id_options)
 end
 
@@ -4683,8 +4682,16 @@ end
 ---@return evolved.id id
 ---@nodiscard
 function __evolved_pack(index, version)
-    return index % 2 ^ 20
-        + version % 2 ^ 20 * 2 ^ 20 --[[@as evolved.id]]
+    if index < 1 or index > 2 ^ 20 - 1 then
+        __error_fmt('index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+    end
+
+    if version < 1 or version > 2 ^ 20 - 1 then
+        __error_fmt('version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+    end
+
+    return index
+        + version * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
@@ -6117,19 +6124,31 @@ end
 ---@return evolved.pair pair
 ---@nodiscard
 function __evolved_pair(primary, secondary)
-    local options = __PAIR_OPTS
-
-    if primary == __ANY and secondary == __ANY then
-        options = __ANY_WILDCARD_OPTS
-    elseif primary == __ANY then
-        options = __PRI_WILDCARD_OPTS
-    elseif secondary == __ANY then
-        options = __SEC_WILDCARD_OPTS
+    local primary_index, _, primary_options = __evolved_unpack(primary)
+    if primary_options >= __PAIR_OPTS then
+        __error_fmt('the primary id (%s) is a pair and cannot be used as a primary id of a pair',
+            __id_name(primary))
     end
 
-    return primary % 2 ^ 20
-        + secondary % 2 ^ 20 * 2 ^ 20
-        + options * 2 ^ 40 --[[@as evolved.pair]]
+    local secondary_index, _, secondary_options = __evolved_unpack(secondary)
+    if secondary_options >= __PAIR_OPTS then
+        __error_fmt('the secondary id (%s) is a pair and cannot be used as a secondary id of a pair',
+            __id_name(secondary))
+    end
+
+    local pair_options = __PAIR_OPTS
+
+    if primary == __ANY and secondary == __ANY then
+        pair_options = __ANY_WILDCARD_OPTS
+    elseif primary == __ANY then
+        pair_options = __PRI_WILDCARD_OPTS
+    elseif secondary == __ANY then
+        pair_options = __SEC_WILDCARD_OPTS
+    end
+
+    return primary_index
+        + secondary_index * 2 ^ 20
+        + pair_options * 2 ^ 40 --[[@as evolved.pair]]
 end
 
 ---@param pair evolved.pair
@@ -6137,19 +6156,27 @@ end
 ---@return evolved.id secondary
 ---@nodiscard
 function __evolved_unpair(pair)
-    local primary_index = pair % 2 ^ 20
-    local secondary_index = (pair - primary_index) / 2 ^ 20 % 2 ^ 20
+    local pair_primary, pair_secondary, pair_options = __evolved_unpack(pair)
 
-    local primary = __freelist_ids[primary_index] --[[@as evolved.id]]
-    if not primary or primary % 2 ^ 20 ~= primary_index then
-        __error_fmt('the primary fragment of the pair (%s) is not alive and cannot be unpaired',
+    if pair_options < __PAIR_OPTS then
+        __error_fmt('the id (%s) is not a pair and cannot be unpaired',
             __id_name(pair))
     end
 
-    local secondary = __freelist_ids[secondary_index] --[[@as evolved.id]]
-    if not secondary or secondary % 2 ^ 20 ~= secondary_index then
-        __error_fmt('the secondary fragment of the pair (%s) is not alive and cannot be unpaired',
+    local primary = __freelist_ids[pair_primary] --[[@as evolved.id?]]
+    if not primary or primary % 2 ^ 20 ~= pair_primary then
+        __error_fmt('the primary id of the pair (%s) is not alive and cannot be unpaired',
             __id_name(pair))
+    else
+        ---@cast primary -?
+    end
+
+    local secondary = __freelist_ids[pair_secondary] --[[@as evolved.id?]]
+    if not secondary or secondary % 2 ^ 20 ~= pair_secondary then
+        __error_fmt('the secondary id of the pair (%s) is not alive and cannot be unpaired',
+            __id_name(pair))
+    else
+        ---@cast secondary -?
     end
 
     return primary, secondary

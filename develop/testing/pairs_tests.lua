@@ -1,10 +1,28 @@
 local evo = require 'evolved'
 
 do
-    local p1, s1 = evo.id(2)
-    local pair1 = evo.pair(p1, s1)
-    local p2, s2 = evo.unpair(pair1)
-    assert(p1 == p2 and s1 == s2)
+    do
+        local p, s = evo.unpair(evo.pair(evo.ANY, evo.ANY))
+        assert(p == evo.ANY and s == evo.ANY)
+    end
+
+    do
+        local f = evo.id()
+        local p, s = evo.unpair(evo.pair(evo.ANY, f))
+        assert(p == evo.ANY and s == f)
+    end
+
+    do
+        local f = evo.id()
+        local p, s = evo.unpair(evo.pair(f, evo.ANY))
+        assert(p == f and s == evo.ANY)
+    end
+
+    do
+        local fp, fs = evo.id(2)
+        local p, s = evo.unpair(evo.pair(fp, fs))
+        assert(p == fp and s == fs)
+    end
 end
 
 do
@@ -1617,4 +1635,3 @@ end
 -- process evo.ANY as single wildcard
 -- should we provide an evolved.pair type?
 -- how should the destroy function handle pairs?
--- add debug mode for pack/unpack and pair/unpair

@@ -180,9 +180,20 @@ for _ = 1, math.random(1, 100) do
 
             for fragment in evo.each(entity) do
                 if evo.has(fragment, evo.EXPLICIT) then
-                    local is_fragment_included =
-                        query_include_set[fragment] ~= nil or
-                        query_include_set[evo.pair(fragment, evo.ANY)] ~= nil
+                    local is_fragment_included = false
+
+                    if not is_fragment_included then
+                        is_fragment_included = query_include_set[fragment] ~= nil
+                    end
+
+                    if not is_fragment_included and evo.is_pair(fragment) then
+                        local fragment_primary = evo.unpair(fragment)
+                        is_fragment_included = query_include_set[evo.pair(fragment_primary, evo.ANY)] ~= nil
+                    end
+
+                    if not is_fragment_included and not evo.is_pair(fragment) then
+                        is_fragment_included = query_include_set[evo.pair(fragment, evo.ANY)] ~= nil
+                    end
 
                     if not is_fragment_included then
                         is_entity_expected = false
