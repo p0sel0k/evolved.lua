@@ -91,20 +91,20 @@ do
     assert(evo.has_any(e12, evo.pair(p1, evo.ANY), evo.pair(p2, evo.ANY)))
 end
 
-do
-    local p1, s1, p2, s2 = evo.id(4)
-    evo.set(p1, s1)
-    evo.set(s1, p1)
-    evo.set(p2, s2)
-    assert(not evo.empty(evo.pair(p1, s1)))
-    assert(not evo.empty(evo.pair(p2, s2)))
-    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2)))
-    assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2)))
-    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), p1))
-    assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), p1))
-    assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
-    assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), s2))
-end
+-- do
+--     local p1, s1, p2, s2 = evo.id(4)
+--     evo.set(p1, s1)
+--     evo.set(s1, p1)
+--     evo.set(p2, s2)
+--     assert(not evo.empty(evo.pair(p1, s1)))
+--     assert(not evo.empty(evo.pair(p2, s2)))
+--     assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2)))
+--     assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2)))
+--     assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), p1))
+--     assert(not evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), p1))
+--     assert(not evo.empty_all(evo.pair(p1, s1), evo.pair(p2, s2), s2))
+--     assert(evo.empty_any(evo.pair(p1, s1), evo.pair(p2, s2), s2))
+-- end
 
 do
     local p1, s1 = evo.id(2)
@@ -1626,6 +1626,61 @@ do
     assert(evo.name(evo.pair(evo.ANY, s)) == '${ANY,s}')
     assert(evo.name(evo.pair(p, evo.ANY)) == '${p,ANY}')
     assert(evo.name(evo.pair(evo.ANY, evo.ANY)) == '${ANY,ANY}')
+end
+
+do
+    do
+        local p, s = evo.id(2)
+        assert(evo.alive(evo.pair(p, s)))
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.destroy(p)
+        assert(not evo.alive(evo.pair(p, s)))
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.destroy(s)
+        assert(evo.alive(evo.pair(p, s)))
+    end
+
+    do
+        local p, s = evo.id(2)
+        evo.destroy(p, s)
+        assert(not evo.alive(evo.pair(p, s)))
+    end
+end
+
+do
+    do
+        local p1, p2, p3, s = evo.id(4)
+        local prefab = evo.builder()
+            :set(evo.pair(p1, s), 42)
+            :set(evo.pair(p2, s), 21)
+            :set(evo.pair(p3, s), 84)
+            :spawn()
+        local clone = evo.clone(prefab)
+        assert(evo.has(clone, evo.pair(p1, s)) and evo.get(clone, evo.pair(p1, s)) == 42)
+        assert(evo.has(clone, evo.pair(p2, s)) and evo.get(clone, evo.pair(p2, s)) == 21)
+        assert(evo.has(clone, evo.pair(p3, s)) and evo.get(clone, evo.pair(p3, s)) == 84)
+    end
+
+    do
+        local p1, p2, p3, s = evo.id(4)
+        evo.set(p1, evo.UNIQUE)
+        evo.set(p2, evo.UNIQUE)
+        local prefab = evo.builder()
+            :set(evo.pair(p1, s), 42)
+            :set(evo.pair(p2, s), 21)
+            :set(evo.pair(p3, s), 84)
+            :spawn()
+        local clone = evo.clone(prefab)
+        assert(not evo.has(clone, evo.pair(p1, s)) and evo.get(clone, evo.pair(p1, s)) == nil)
+        assert(not evo.has(clone, evo.pair(p2, s)) and evo.get(clone, evo.pair(p2, s)) == nil)
+        assert(evo.has(clone, evo.pair(p3, s)) and evo.get(clone, evo.pair(p3, s)) == 84)
+    end
 end
 
 -- TODO

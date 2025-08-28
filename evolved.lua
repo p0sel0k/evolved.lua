@@ -378,17 +378,15 @@ end)()
 
 ---@param fmt string
 ---@param ... any
----@diagnostic disable-next-line: unused-local, unused-function
 local function __error_fmt(fmt, ...)
-    __lua_error(__lua_string_format('| evolved.lua | %s',
+    __lua_error(__lua_string_format('| evolved.lua (e) | %s',
         __lua_string_format(fmt, ...)))
 end
 
 ---@param fmt string
 ---@param ... any
----@diagnostic disable-next-line: unused-local, unused-function
 local function __warning_fmt(fmt, ...)
-    __lua_print(__lua_string_format('| evolved.lua | %s',
+    __lua_print(__lua_string_format('| evolved.lua (w) | %s',
         __lua_string_format(fmt, ...)))
 end
 
@@ -4683,11 +4681,11 @@ end
 ---@nodiscard
 function __evolved_pack(index, version)
     if index < 1 or index > 2 ^ 20 - 1 then
-        __error_fmt('index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+        __error_fmt('id index (%d) is out of range [1, 2 ^ 20 - 1]', index)
     end
 
     if version < 1 or version > 2 ^ 20 - 1 then
-        __error_fmt('version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+        __error_fmt('id version (%d) is out of range [1, 2 ^ 20 - 1]', version)
     end
 
     return index
@@ -4812,24 +4810,20 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_alive(entity)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
+    if entity_options < __PAIR_OPTS then
         if __freelist_ids[entity_index] ~= entity then
             return false
         end
-
-        return true
     else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
             return false
         end
-
-        return true
     end
+
+    return true
 end
 
 ---@param ... evolved.entity entities
@@ -4878,24 +4872,20 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
+    if entity_options < __PAIR_OPTS then
         if __freelist_ids[entity_index] ~= entity then
             return true
         end
-
-        return not __entity_chunks[entity_index]
     else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
             return true
         end
-
-        return not __entity_chunks[primary_index]
     end
+
+    return not __entity_chunks[entity_index]
 end
 
 ---@param ... evolved.entity entities
@@ -4945,36 +4935,22 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
+    if entity_options < __PAIR_OPTS then
         if __freelist_ids[entity_index] ~= entity then
             return false
         end
-
-        local entity_chunk = __entity_chunks[entity_index]
-
-        if not entity_chunk then
-            return false
-        end
-
-        return __chunk_has_fragment(entity_chunk, fragment)
     else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
             return false
         end
-
-        local primary_chunk = __entity_chunks[primary_index]
-
-        if not primary_chunk then
-            return false
-        end
-
-        return __chunk_has_fragment(primary_chunk, fragment)
     end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    return entity_chunk and __chunk_has_fragment(entity_chunk, fragment) or false
 end
 
 ---@param entity evolved.entity
@@ -4982,36 +4958,28 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_all(entity, ...)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local argument_count = __lua_select('#', ...)
 
-        if __freelist_ids[entity_index] ~= entity then
-            return __lua_select('#', ...) == 0
-        end
-
-        local entity_chunk = __entity_chunks[entity_index]
-
-        if not entity_chunk then
-            return __lua_select('#', ...) == 0
-        end
-
-        return __chunk_has_all_fragments(entity_chunk, ...)
-    else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
-            return __lua_select('#', ...) == 0
-        end
-
-        local primary_chunk = __entity_chunks[primary_index]
-
-        if not primary_chunk then
-            return __lua_select('#', ...) == 0
-        end
-
-        return __chunk_has_all_fragments(primary_chunk, ...)
+    if argument_count == 0 then
+        return true
     end
+
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return false
+        end
+    else
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
+            return false
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    return entity_chunk and __chunk_has_all_fragments(entity_chunk, ...) or false
 end
 
 ---@param entity evolved.entity
@@ -5019,36 +4987,28 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_any(entity, ...)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local argument_count = __lua_select('#', ...)
 
+    if argument_count == 0 then
+        return false
+    end
+
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
         if __freelist_ids[entity_index] ~= entity then
             return false
         end
-
-        local entity_chunk = __entity_chunks[entity_index]
-
-        if not entity_chunk then
-            return false
-        end
-
-        return __chunk_has_any_fragments(entity_chunk, ...)
     else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
             return false
         end
-
-        local primary_chunk = __entity_chunks[primary_index]
-
-        if not primary_chunk then
-            return false
-        end
-
-        return __chunk_has_any_fragments(primary_chunk, ...)
     end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    return entity_chunk and __chunk_has_any_fragments(entity_chunk, ...) or false
 end
 
 ---@param entity evolved.entity
@@ -5056,59 +5016,66 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
-    if not __evolved_is_pair(entity) then
-        local entity_index = entity % 2 ^ 20
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
+    if entity_options < __PAIR_OPTS then
         if __freelist_ids[entity_index] ~= entity then
             return
         end
-
-        local entity_chunk = __entity_chunks[entity_index]
-
-        if not entity_chunk then
-            return
-        end
-
-        local entity_place = __entity_places[entity_index]
-        return __chunk_get_components(entity_chunk, entity_place, ...)
     else
-        local primary_index = entity % 2 ^ 20
-
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= entity_index then
             return
         end
-
-        local primary_chunk = __entity_chunks[primary_index]
-
-        if not primary_chunk then
-            return
-        end
-
-        local primary_place = __entity_places[primary_index]
-        return __chunk_get_components(primary_chunk, primary_place, ...)
     end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
+        return
+    end
+
+    local entity_place = __entity_places[entity_index]
+    return __chunk_get_components(entity_chunk, entity_place, ...)
 end
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_set(entity, fragment, component)
-    if __debug_mode then
-        if __evolved_is_pair(entity) then
-            __error_fmt('the pair (%s) cannot be used as an entity', __id_name(entity))
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be changed', __id_name(entity))
+    elseif __freelist_ids[entity_index] ~= entity then
+        __error_fmt('the id (%s) is not alive and cannot be changed', __id_name(entity))
+    end
+
+    local fragment_primary, fragment_secondary, fragment_options = __evolved_unpack(fragment)
+
+    if fragment_options < __PAIR_OPTS then
+        local fragment_index = fragment_primary
+
+        if fragment_index == __ANY_INDEX then
+            __error_fmt('the id (%s) is a wildcard and cannot be set', __id_name(fragment))
+        elseif __freelist_ids[fragment_index] ~= fragment then
+            __error_fmt('the id (%s) is not alive and cannot be set', __id_name(fragment))
+        end
+    else
+        local primary_index, secondary_index = fragment_primary, fragment_secondary
+
+        if fragment_options >= __PRI_WILDCARD_OPTS then
+            __error_fmt('the pair (%s) is a wildcard and cannot be set', __id_name(fragment))
         end
 
-        if __evolved_is_wildcard(fragment) then
-            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            __error_fmt('the pair (%s) has no alive primary id and cannot be set', __id_name(fragment))
         end
 
-        if not __evolved_alive(entity) then
-            __error_fmt('the entity (%s) is not alive and cannot be used', __id_name(entity))
-        end
-
-        if not __evolved_alive(fragment) then
-            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            __error_fmt('the pair (%s) has no alive secondary id and cannot be set', __id_name(fragment))
         end
     end
 
@@ -5116,8 +5083,6 @@ function __evolved_set(entity, fragment, component)
         __defer_set(entity, fragment, component)
         return
     end
-
-    local entity_index = entity % 2 ^ 20
 
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
@@ -5348,15 +5313,12 @@ function __evolved_remove(entity, ...)
         return
     end
 
-    if __evolved_is_pair(entity) then
-        -- pairs cannot have fragments, nothing to remove
-        return
-    end
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        -- this entity is not alive, nothing to remove
+    if entity_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be changed', __id_name(entity))
+    elseif __freelist_ids[entity_index] ~= entity then
+        -- the id is not alive, nothing to remove
         return
     end
 
@@ -5468,12 +5430,12 @@ function __evolved_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 2 ^ 20
+            local entity_index, _, entity_options = __evolved_unpack(entity)
 
-            if __evolved_is_pair(entity) then
-                -- pairs cannot have fragments, nothing to clear
+            if entity_options >= __PAIR_OPTS then
+                __warning_fmt('the pair (%s) cannot be changed', __id_name(entity))
             elseif __freelist_ids[entity_index] ~= entity then
-                -- this entity is not alive, nothing to clear
+                -- the id is not alive, nothing to clear
             else
                 local chunk = entity_chunks[entity_index]
                 local place = entity_places[entity_index]
@@ -5546,12 +5508,12 @@ function __evolved_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 2 ^ 20
+            local entity_index, _, entity_options = __evolved_unpack(entity)
 
-            if __evolved_is_pair(entity) then
-                -- pairs cannot be destroyed, nothing to do
+            if entity_options >= __PAIR_OPTS then
+                __warning_fmt('the pair (%s) cannot be changed', __id_name(entity))
             elseif __freelist_ids[entity_index] ~= entity then
-                -- this entity is not alive, nothing to destroy
+                -- the id is not alive, nothing to destroy
             else
                 local is_fragment =
                     minor_chunks[entity] or
@@ -5590,21 +5552,39 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_batch_set(query, fragment, component)
-    if __debug_mode then
-        if __evolved_is_pair(query) then
-            __error_fmt('the pair (%s) cannot be used as a query', __id_name(query))
+    local query_index, _, query_options = __evolved_unpack(query)
+
+    if query_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be queried', __id_name(query))
+    elseif __freelist_ids[query_index] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be queried', __id_name(query))
+    end
+
+    local fragment_primary, fragment_secondary, fragment_options = __evolved_unpack(fragment)
+
+    if fragment_options < __PAIR_OPTS then
+        local fragment_index = fragment_primary
+
+        if fragment_index == __ANY_INDEX then
+            __error_fmt('the id (%s) is a wildcard and cannot be set', __id_name(fragment))
+        elseif __freelist_ids[fragment_index] ~= fragment then
+            __error_fmt('the id (%s) is not alive and cannot be set', __id_name(fragment))
+        end
+    else
+        local primary_index, secondary_index = fragment_primary, fragment_secondary
+
+        if fragment_options >= __PRI_WILDCARD_OPTS then
+            __error_fmt('the pair (%s) is a wildcard and cannot be set', __id_name(fragment))
         end
 
-        if __evolved_is_wildcard(fragment) then
-            __error_fmt('the wildcard fragment (%s) cannot be used as a fragment', __id_name(fragment))
+        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not primary or primary % 2 ^ 20 ~= primary_index then
+            __error_fmt('the pair (%s) has no alive primary id and cannot be set', __id_name(fragment))
         end
 
-        if not __evolved_alive(query) then
-            __error_fmt('the query (%s) is not alive and cannot be used', __id_name(query))
-        end
-
-        if not __evolved_alive(fragment) then
-            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+            __error_fmt('the pair (%s) has no alive secondary id and cannot be set', __id_name(fragment))
         end
     end
 
@@ -5643,6 +5623,14 @@ function __evolved_batch_remove(query, ...)
 
     if fragment_count == 0 then
         return
+    end
+
+    local query_index, _, query_options = __evolved_unpack(query)
+
+    if query_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be queried', __id_name(query))
+    elseif __freelist_ids[query_index] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be queried', __id_name(query))
     end
 
     if __defer_depth > 0 then
@@ -5696,10 +5684,17 @@ function __evolved_batch_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
+            local query_index, _, query_options = __evolved_unpack(query)
 
-            for chunk in __evolved_execute(query) do
-                chunk_count = chunk_count + 1
-                chunk_list[chunk_count] = chunk
+            if query_options >= __PAIR_OPTS then
+                __warning_fmt('the pair (%s) cannot be queried', __id_name(query))
+            elseif __freelist_ids[query_index] ~= query then
+                __warning_fmt('the id (%s) is not alive and cannot be queried', __id_name(query))
+            else
+                for chunk in __evolved_execute(query) do
+                    chunk_count = chunk_count + 1
+                    chunk_list[chunk_count] = chunk
+                end
             end
         end
 
@@ -5744,25 +5739,32 @@ function __evolved_batch_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
+            local query_index, _, query_options = __evolved_unpack(query)
 
-            for chunk, entity_list, entity_count in __evolved_execute(query) do
-                clearing_chunk_count = clearing_chunk_count + 1
-                clearing_chunk_list[clearing_chunk_count] = chunk
+            if query_options >= __PAIR_OPTS then
+                __warning_fmt('the pair (%s) cannot be queried', __id_name(query))
+            elseif __freelist_ids[query_index] ~= query then
+                __warning_fmt('the id (%s) is not alive and cannot be queried', __id_name(query))
+            else
+                for chunk, entity_list, entity_count in __evolved_execute(query) do
+                    clearing_chunk_count = clearing_chunk_count + 1
+                    clearing_chunk_list[clearing_chunk_count] = chunk
 
-                for i = 1, entity_count do
-                    local entity = entity_list[i]
+                    for i = 1, entity_count do
+                        local entity = entity_list[i]
 
-                    local is_fragment =
-                        minor_chunks[entity] or
-                        minor_chunks[__primary_wildcard(entity)] or
-                        minor_chunks[__secondary_wildcard(entity)]
+                        local is_fragment =
+                            minor_chunks[entity] or
+                            minor_chunks[__primary_wildcard(entity)] or
+                            minor_chunks[__secondary_wildcard(entity)]
 
-                    if not is_fragment then
-                        purging_entity_count = purging_entity_count + 1
-                        purging_entity_list[purging_entity_count] = entity
-                    else
-                        purging_fragment_count = purging_fragment_count + 1
-                        purging_fragment_list[purging_fragment_count] = entity
+                        if not is_fragment then
+                            purging_entity_count = purging_entity_count + 1
+                            purging_entity_list[purging_entity_count] = entity
+                        else
+                            purging_fragment_count = purging_fragment_count + 1
+                            purging_fragment_list[purging_fragment_count] = entity
+                        end
                     end
                 end
             end
@@ -5798,16 +5800,12 @@ end
 ---@return evolved.each_state? iterator_state
 ---@nodiscard
 function __evolved_each(entity)
-    if __evolved_is_pair(entity) then
-        -- pairs cannot be used as entities, nothing to iterate
-        return __iterator_fns.__each_iterator
-    end
+    local entity_index, _, entity_options = __evolved_unpack(entity)
 
-    local entity_index = entity % 2 ^ 20
-
-    if __freelist_ids[entity_index] ~= entity then
-        -- this entity is not alive, nothing to iterate
-        return __iterator_fns.__each_iterator
+    if entity_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be iterated', __id_name(entity))
+    elseif __freelist_ids[entity_index] ~= entity then
+        __error_fmt('the id (%s) is not alive and cannot be iterated', __id_name(entity))
     end
 
     local entity_chunks = __entity_chunks
@@ -5836,16 +5834,12 @@ end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function __evolved_execute(query)
-    if __evolved_is_pair(query) then
-        -- pairs cannot be used as queries, nothing to execute
-        return __iterator_fns.__execute_major_iterator
-    end
+    local query_index, _, query_options = __evolved_unpack(query)
 
-    local query_index = query % 2 ^ 20
-
-    if __freelist_ids[query_index] ~= query then
-        -- this query is not alive, nothing to execute
-        return __iterator_fns.__execute_major_iterator
+    if query_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be executed', __id_name(query))
+    elseif __freelist_ids[query_index] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be executed', __id_name(query))
     end
 
     ---@type evolved.chunk[]
@@ -6035,13 +6029,14 @@ function __evolved_process(...)
     for argument_index = 1, argument_count do
         ---@type evolved.system
         local system = __lua_select(argument_index, ...)
+        local system_index, _, system_options = __evolved_unpack(system)
 
-        if __evolved_is_pair(system) then
-            -- pairs cannot be used as systems, nothing to process
-        elseif not __evolved_alive(system) then
-            -- this system is not alive, nothing to process
+        if system_options >= __PAIR_OPTS then
+            __warning_fmt('the pair (%s) cannot be processed', __id_name(system))
+        elseif __freelist_ids[system_index] ~= system then
+            __warning_fmt('the id (%s) is not alive and cannot be processed', __id_name(system))
         elseif __evolved_has(system, __DISABLED) then
-            -- this system is disabled, nothing to process
+            -- the system is disabled, nothing to process
         else
             __system_process(system)
         end

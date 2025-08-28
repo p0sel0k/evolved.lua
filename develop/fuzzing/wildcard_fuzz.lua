@@ -179,7 +179,17 @@ for _ = 1, math.random(1, 100) do
                 not evo.has_any(entity, __table_unpack(query_exclude_list))
 
             for fragment in evo.each(entity) do
-                if evo.has(fragment, evo.EXPLICIT) then
+                local is_fragment_explicit = false
+
+                if not is_fragment_explicit and evo.is_pair(fragment) then
+                    is_fragment_explicit = evo.has(evo.unpair(fragment), evo.EXPLICIT)
+                end
+
+                if not is_fragment_explicit and not evo.is_pair(fragment) then
+                    is_fragment_explicit = evo.has(fragment, evo.EXPLICIT)
+                end
+
+                if is_fragment_explicit then
                     local is_fragment_included = false
 
                     if not is_fragment_included then
