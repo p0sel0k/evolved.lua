@@ -4681,15 +4681,14 @@ end
 ---@nodiscard
 function __evolved_pack(index, version)
     if index < 1 or index > 2 ^ 20 - 1 then
-        __error_fmt('id index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+        __error_fmt('the index (%d) is out of range [1, 2 ^ 20 - 1]', index)
     end
 
     if version < 1 or version > 2 ^ 20 - 1 then
-        __error_fmt('id version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+        __error_fmt('the version (%d) is out of range [1, 2 ^ 20 - 1]', version)
     end
 
-    return index
-        + version * 2 ^ 20 --[[@as evolved.id]]
+    return index + version * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
@@ -4817,8 +4816,8 @@ function __evolved_alive(entity)
             return false
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return false
         end
     end
@@ -4879,8 +4878,8 @@ function __evolved_empty(entity)
             return true
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return true
         end
     end
@@ -4942,8 +4941,8 @@ function __evolved_has(entity, fragment)
             return false
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return false
         end
     end
@@ -4971,8 +4970,8 @@ function __evolved_has_all(entity, ...)
             return false
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return false
         end
     end
@@ -5000,8 +4999,8 @@ function __evolved_has_any(entity, ...)
             return false
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return false
         end
     end
@@ -5023,8 +5022,8 @@ function __evolved_get(entity, ...)
             return
         end
     else
-        local primary = __freelist_ids[entity_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= entity_index then
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
             return
         end
     end
@@ -5068,13 +5067,13 @@ function __evolved_set(entity, fragment, component)
             __error_fmt('the pair (%s) is a wildcard and cannot be set', __id_name(fragment))
         end
 
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local fragment_primary_id = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= primary_index then
             __error_fmt('the pair (%s) has no alive primary id and cannot be set', __id_name(fragment))
         end
 
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+        local fragment_secondary_id = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= secondary_index then
             __error_fmt('the pair (%s) has no alive secondary id and cannot be set', __id_name(fragment))
         end
     end
@@ -5577,13 +5576,13 @@ function __evolved_batch_set(query, fragment, component)
             __error_fmt('the pair (%s) is a wildcard and cannot be set', __id_name(fragment))
         end
 
-        local primary = __freelist_ids[primary_index] --[[@as evolved.id?]]
-        if not primary or primary % 2 ^ 20 ~= primary_index then
+        local fragment_primary_id = __freelist_ids[primary_index] --[[@as evolved.id?]]
+        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= primary_index then
             __error_fmt('the pair (%s) has no alive primary id and cannot be set', __id_name(fragment))
         end
 
-        local secondary = __freelist_ids[secondary_index] --[[@as evolved.id?]]
-        if not secondary or secondary % 2 ^ 20 ~= secondary_index then
+        local fragment_secondary_id = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= secondary_index then
             __error_fmt('the pair (%s) has no alive secondary id and cannot be set', __id_name(fragment))
         end
     end
@@ -6121,29 +6120,27 @@ end
 function __evolved_pair(primary, secondary)
     local primary_index, _, primary_options = __evolved_unpack(primary)
     if primary_options >= __PAIR_OPTS then
-        __error_fmt('the primary id (%s) is a pair and cannot be used as a primary id of a pair',
+        __error_fmt('the primary id (%s) is a pair and cannot be used as a primary id of a new pair',
             __id_name(primary))
     end
 
     local secondary_index, _, secondary_options = __evolved_unpack(secondary)
     if secondary_options >= __PAIR_OPTS then
-        __error_fmt('the secondary id (%s) is a pair and cannot be used as a secondary id of a pair',
+        __error_fmt('the secondary id (%s) is a pair and cannot be used as a secondary id of a new pair',
             __id_name(secondary))
     end
 
     local pair_options = __PAIR_OPTS
 
-    if primary == __ANY and secondary == __ANY then
+    if primary_index == __ANY_INDEX and secondary_index == __ANY_INDEX then
         pair_options = __ANY_WILDCARD_OPTS
-    elseif primary == __ANY then
+    elseif primary_index == __ANY_INDEX then
         pair_options = __PRI_WILDCARD_OPTS
-    elseif secondary == __ANY then
+    elseif secondary_index == __ANY_INDEX then
         pair_options = __SEC_WILDCARD_OPTS
     end
 
-    return primary_index
-        + secondary_index * 2 ^ 20
-        + pair_options * 2 ^ 40 --[[@as evolved.pair]]
+    return primary_index + secondary_index * 2 ^ 20 + pair_options * 2 ^ 40 --[[@as evolved.pair]]
 end
 
 ---@param pair evolved.pair
@@ -6151,44 +6148,41 @@ end
 ---@return evolved.id secondary
 ---@nodiscard
 function __evolved_unpair(pair)
-    local pair_primary, pair_secondary, pair_options = __evolved_unpack(pair)
+    local primary_index, secondary_index, pair_options = __evolved_unpack(pair)
 
     if pair_options < __PAIR_OPTS then
-        __error_fmt('the id (%s) is not a pair and cannot be unpaired',
-            __id_name(pair))
+        __error_fmt('the id (%s) is not a pair and cannot be unpaired', __id_name(pair))
     end
 
-    local primary = __freelist_ids[pair_primary] --[[@as evolved.id?]]
-    if not primary or primary % 2 ^ 20 ~= pair_primary then
-        __error_fmt('the primary id of the pair (%s) is not alive and cannot be unpaired',
-            __id_name(pair))
+    local pair_primary_id = __freelist_ids[primary_index] --[[@as evolved.id?]]
+    if not pair_primary_id or pair_primary_id % 2 ^ 20 ~= primary_index then
+        __error_fmt('the pair (%s) has not alive primary id and cannot be unpaired', __id_name(pair))
     else
-        ---@cast primary -?
+        ---@cast pair_primary_id -?
     end
 
-    local secondary = __freelist_ids[pair_secondary] --[[@as evolved.id?]]
-    if not secondary or secondary % 2 ^ 20 ~= pair_secondary then
-        __error_fmt('the secondary id of the pair (%s) is not alive and cannot be unpaired',
-            __id_name(pair))
+    local pair_secondary_id = __freelist_ids[secondary_index] --[[@as evolved.id?]]
+    if not pair_secondary_id or pair_secondary_id % 2 ^ 20 ~= secondary_index then
+        __error_fmt('the pair (%s) has not alive secondary id and cannot be unpaired', __id_name(pair))
     else
-        ---@cast secondary -?
+        ---@cast pair_secondary_id -?
     end
 
-    return primary, secondary
+    return pair_primary_id, pair_secondary_id
 end
 
 ---@param id evolved.id
 ---@return boolean
 ---@nodiscard
 function __evolved_is_pair(id)
-    return id % 2 ^ 41 >= 2 ^ 40
+    return id >= __PAIR_OPTS * 2 ^ 40
 end
 
 ---@param id evolved.id
 ---@return boolean
 ---@nodiscard
 function __evolved_is_wildcard(id)
-    return id % 2 ^ 43 >= 2 ^ 41
+    return id >= __PRI_WILDCARD_OPTS * 2 ^ 40
 end
 
 ---@param entity evolved.entity
@@ -6200,22 +6194,32 @@ end
 function __evolved_primary(entity, secondary, index)
     index = index or 1
 
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return
     end
 
-    local entity_index = entity % 2 ^ 20
+    local secondary_index, _, secondary_options = __evolved_unpack(secondary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return
+    if secondary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a secondary fragment', __id_name(secondary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
-
-    local secondary_fragments = chunk and chunk.__secondary_pairs[secondary % 2 ^ 20]
+    local secondary_fragments = entity_chunk.__secondary_pairs[secondary_index]
     local secondary_fragment_list = secondary_fragments and secondary_fragments.__item_list
     local secondary_fragment_count = secondary_fragments and secondary_fragments.__item_count or 0
 
@@ -6226,10 +6230,11 @@ function __evolved_primary(entity, secondary, index)
     local secondary_fragment = secondary_fragment_list[index]
     local primary, _ = __evolved_unpair(secondary_fragment)
 
-    local component_index = chunk.__component_indices[secondary_fragment]
-    local component_storage = chunk.__component_storages[component_index]
+    local component_index = entity_chunk.__component_indices[secondary_fragment]
+    local component_storage = entity_chunk.__component_storages[component_index]
 
-    return primary, component_storage and component_storage[place]
+    local entity_place = __entity_places[entity_index]
+    return primary, component_storage and component_storage[entity_place]
 end
 
 ---@param entity evolved.entity
@@ -6241,22 +6246,32 @@ end
 function __evolved_secondary(entity, primary, index)
     index = index or 1
 
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return
     end
 
-    local entity_index = entity % 2 ^ 20
+    local primary_index, _, primary_options = __evolved_unpack(primary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return
+    if primary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a primary fragment', __id_name(primary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
-
-    local primary_fragments = chunk and chunk.__primary_pairs[primary % 2 ^ 20]
+    local primary_fragments = entity_chunk.__primary_pairs[primary_index]
     local primary_fragment_list = primary_fragments and primary_fragments.__item_list
     local primary_fragment_count = primary_fragments and primary_fragments.__item_count or 0
 
@@ -6267,10 +6282,11 @@ function __evolved_secondary(entity, primary, index)
     local primary_fragment = primary_fragment_list[index]
     local _, secondary = __evolved_unpair(primary_fragment)
 
-    local component_index = chunk.__component_indices[primary_fragment]
-    local component_storage = chunk.__component_storages[component_index]
+    local component_index = entity_chunk.__component_indices[primary_fragment]
+    local component_storage = entity_chunk.__component_storages[component_index]
 
-    return secondary, component_storage and component_storage[place]
+    local entity_place = __entity_places[entity_index]
+    return secondary, component_storage and component_storage[entity_place]
 end
 
 ---@param entity evolved.entity
@@ -6279,26 +6295,34 @@ end
 ---@return evolved.primaries_state? iterator_state
 ---@nodiscard
 function __evolved_primaries(entity, secondary)
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return __iterator_fns.__primaries_iterator
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return __iterator_fns.__primaries_iterator
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return __iterator_fns.__primaries_iterator
     end
 
-    local entity_index = entity % 2 ^ 20
+    local secondary_index, _, secondary_options = __evolved_unpack(secondary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return __iterator_fns.__primaries_iterator
+    if secondary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a secondary fragment', __id_name(secondary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
-
-    local secondary_index = secondary % 2 ^ 20
-    local secondary_fragments = chunk and chunk.__secondary_pairs[secondary_index]
+    local secondary_fragments = entity_chunk.__secondary_pairs[secondary_index]
 
     if not secondary_fragments or secondary_fragments.__item_count == 0 then
-        -- no primaries for this secondary
         return __iterator_fns.__primaries_iterator
     end
 
@@ -6306,8 +6330,8 @@ function __evolved_primaries(entity, secondary)
     local primaries_state = __acquire_table(__table_pool_tag.primaries_state)
 
     primaries_state[1] = __structural_changes
-    primaries_state[2] = chunk
-    primaries_state[3] = place
+    primaries_state[2] = entity_chunk
+    primaries_state[3] = __entity_places[entity_index]
     primaries_state[4] = secondary_index
     primaries_state[5] = 1
 
@@ -6320,26 +6344,34 @@ end
 ---@return evolved.secondaries_state? iterator_state
 ---@nodiscard
 function __evolved_secondaries(entity, primary)
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return __iterator_fns.__secondaries_iterator
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return __iterator_fns.__secondaries_iterator
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return __iterator_fns.__secondaries_iterator
     end
 
-    local entity_index = entity % 2 ^ 20
+    local primary_index, _, primary_options = __evolved_unpack(primary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return __iterator_fns.__secondaries_iterator
+    if primary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a primary fragment', __id_name(primary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-    local place = __entity_places[entity_index]
-
-    local primary_index = primary % 2 ^ 20
-    local primary_fragments = chunk and chunk.__primary_pairs[primary_index]
+    local primary_fragments = entity_chunk.__primary_pairs[primary_index]
 
     if not primary_fragments or primary_fragments.__item_count == 0 then
-        -- no secondaries for this primary
         return __iterator_fns.__secondaries_iterator
     end
 
@@ -6347,8 +6379,8 @@ function __evolved_secondaries(entity, primary)
     local secondaries_state = __acquire_table(__table_pool_tag.secondaries_state)
 
     secondaries_state[1] = __structural_changes
-    secondaries_state[2] = chunk
-    secondaries_state[3] = place
+    secondaries_state[2] = entity_chunk
+    secondaries_state[3] = __entity_places[entity_index]
     secondaries_state[4] = primary_index
     secondaries_state[5] = 1
 
@@ -6360,22 +6392,32 @@ end
 ---@return integer
 ---@nodiscard
 function __evolved_primary_count(entity, secondary)
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return 0
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return 0
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return 0
     end
 
-    local entity_index = entity % 2 ^ 20
+    local secondary_index, _, secondary_options = __evolved_unpack(secondary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return 0
+    if secondary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a secondary fragment', __id_name(secondary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-
-    local secondary_index = secondary % 2 ^ 20
-    local secondary_fragments = chunk and chunk.__secondary_pairs[secondary_index]
+    local secondary_fragments = entity_chunk.__secondary_pairs[secondary_index]
 
     return secondary_fragments and secondary_fragments.__item_count or 0
 end
@@ -6385,22 +6427,32 @@ end
 ---@return integer
 ---@nodiscard
 function __evolved_secondary_count(entity, primary)
-    if __evolved_is_pair(entity) then
-        -- pairs are always empty
+    local entity_index, _, entity_options = __evolved_unpack(entity)
+
+    if entity_options < __PAIR_OPTS then
+        if __freelist_ids[entity_index] ~= entity then
+            return 0
+        end
+    else
+        local entity_primary_id = __freelist_ids[entity_index] --[[@as evolved.id?]]
+        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_index then
+            return 0
+        end
+    end
+
+    local entity_chunk = __entity_chunks[entity_index]
+
+    if not entity_chunk then
         return 0
     end
 
-    local entity_index = entity % 2 ^ 20
+    local primary_index, _, primary_options = __evolved_unpack(primary)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- non-alive entities do not have any fragments
-        return 0
+    if primary_options >= __PAIR_OPTS then
+        __error_fmt('the pair (%s) cannot be used as a primary fragment', __id_name(primary))
     end
 
-    local chunk = __entity_chunks[entity_index]
-
-    local primary_index = primary % 2 ^ 20
-    local primary_fragments = chunk and chunk.__primary_pairs[primary_index]
+    local primary_fragments = entity_chunk.__primary_pairs[primary_index]
 
     return primary_fragments and primary_fragments.__item_count or 0
 end

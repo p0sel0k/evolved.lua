@@ -1683,6 +1683,201 @@ do
     end
 end
 
+do
+    ---@generic T1, T2
+    ---@param first T1
+    ---@param second T2
+    ---@return T1
+    ---@diagnostic disable-next-line: unused-local
+    local function fst(first, second)
+        return first
+    end
+
+    ---@generic T1, T2
+    ---@param first T1
+    ---@param second T2
+    ---@return T2
+    ---@diagnostic disable-next-line: unused-local
+    local function snd(first, second)
+        return second
+    end
+
+    do
+        local p, s1, s2, f = evo.id(4)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 21)
+            :set(evo.pair(p, s2), 42)
+            :spawn()
+
+        assert(fst(evo.primary(e, s1)) == p)
+        assert(snd(evo.primary(e, s1)) == 21)
+        assert(fst(evo.primary(e, s2)) == p)
+        assert(snd(evo.primary(e, s2)) == 42)
+        assert(fst(evo.primary(e, s1, 1)) == p)
+        assert(snd(evo.primary(e, s1, 1)) == 21)
+        assert(fst(evo.primary(e, s2, 1)) == p)
+        assert(snd(evo.primary(e, s2, 1)) == 42)
+        assert(fst(evo.primary(e, s1, 2)) == nil)
+        assert(snd(evo.primary(e, s1, 2)) == nil)
+        assert(fst(evo.primary(e, s2, 2)) == nil)
+        assert(snd(evo.primary(e, s2, 2)) == nil)
+
+        assert(fst(evo.primary(evo.pair(e, f), s1)) == p)
+        assert(snd(evo.primary(evo.pair(e, f), s1)) == 21)
+        assert(fst(evo.primary(evo.pair(e, f), s2)) == p)
+        assert(snd(evo.primary(evo.pair(e, f), s2)) == 42)
+        assert(fst(evo.primary(evo.pair(e, f), s1, 1)) == p)
+        assert(snd(evo.primary(evo.pair(e, f), s1, 1)) == 21)
+        assert(fst(evo.primary(evo.pair(e, f), s2, 1)) == p)
+        assert(snd(evo.primary(evo.pair(e, f), s2, 1)) == 42)
+        assert(fst(evo.primary(evo.pair(e, f), s1, 2)) == nil)
+        assert(snd(evo.primary(evo.pair(e, f), s1, 2)) == nil)
+        assert(fst(evo.primary(evo.pair(e, f), s2, 2)) == nil)
+        assert(snd(evo.primary(evo.pair(e, f), s2, 2)) == nil)
+
+        assert(fst(evo.secondary(e, p)) == s1)
+        assert(snd(evo.secondary(e, p)) == 21)
+        assert(fst(evo.secondary(e, p, 1)) == s1)
+        assert(snd(evo.secondary(e, p, 1)) == 21)
+        assert(fst(evo.secondary(e, p, 2)) == s2)
+        assert(snd(evo.secondary(e, p, 2)) == 42)
+        assert(fst(evo.secondary(e, p, 3)) == nil)
+        assert(snd(evo.secondary(e, p, 3)) == nil)
+
+        assert(fst(evo.secondary(evo.pair(e, f), p)) == s1)
+        assert(snd(evo.secondary(evo.pair(e, f), p)) == 21)
+        assert(fst(evo.secondary(evo.pair(e, f), p, 1)) == s1)
+        assert(snd(evo.secondary(evo.pair(e, f), p, 1)) == 21)
+        assert(fst(evo.secondary(evo.pair(e, f), p, 2)) == s2)
+        assert(snd(evo.secondary(evo.pair(e, f), p, 2)) == 42)
+        assert(fst(evo.secondary(evo.pair(e, f), p, 3)) == nil)
+        assert(snd(evo.secondary(evo.pair(e, f), p, 3)) == nil)
+
+        assert(fst(evo.primary(evo.pair(f, e), s1)) == nil)
+        assert(snd(evo.primary(evo.pair(f, e), s1)) == nil)
+        assert(fst(evo.primary(evo.pair(f, e), s2)) == nil)
+        assert(snd(evo.primary(evo.pair(f, e), s2)) == nil)
+        assert(fst(evo.secondary(evo.pair(f, e), p)) == nil)
+        assert(snd(evo.secondary(evo.pair(f, e), p)) == nil)
+    end
+
+    do
+        local p, s1, s2, f = evo.id(4)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 21)
+            :set(evo.pair(p, s2), 42)
+            :spawn()
+
+        assert(evo.primary_count(e, p) == 0)
+        assert(evo.primary_count(e, s1) == 1)
+        assert(evo.primary_count(e, s2) == 1)
+        assert(evo.secondary_count(e, p) == 2)
+        assert(evo.secondary_count(e, s1) == 0)
+        assert(evo.secondary_count(e, s2) == 0)
+
+        assert(evo.primary_count(evo.pair(e, f), p) == 0)
+        assert(evo.primary_count(evo.pair(e, f), s1) == 1)
+        assert(evo.primary_count(evo.pair(e, f), s2) == 1)
+        assert(evo.secondary_count(evo.pair(e, f), p) == 2)
+        assert(evo.secondary_count(evo.pair(e, f), s1) == 0)
+        assert(evo.secondary_count(evo.pair(e, f), s2) == 0)
+
+        assert(evo.primary_count(evo.pair(f, e), p) == 0)
+        assert(evo.primary_count(evo.pair(f, e), s1) == 0)
+        assert(evo.primary_count(evo.pair(f, e), s2) == 0)
+        assert(evo.secondary_count(evo.pair(f, e), p) == 0)
+        assert(evo.secondary_count(evo.pair(f, e), s1) == 0)
+        assert(evo.secondary_count(evo.pair(f, e), s2) == 0)
+    end
+
+    do
+        local p, s1, s2, f = evo.id(4)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 21)
+            :set(evo.pair(p, s2), 42)
+            :spawn()
+
+        do
+            local iter, state = evo.primaries(e, p)
+            local fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+
+
+            iter, state = evo.primaries(evo.pair(e, f), p)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+        end
+
+        do
+            local iter, state = evo.primaries(e, s1)
+            local fragment, component = iter(state)
+            assert(fragment == p and component == 21)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+
+            iter, state = evo.primaries(evo.pair(e, f), s1)
+            fragment, component = iter(state)
+            assert(fragment == p and component == 21)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+        end
+
+        do
+            local iter, state = evo.primaries(e, s2)
+            local fragment, component = iter(state)
+            assert(fragment == p and component == 42)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+
+            iter, state = evo.primaries(evo.pair(e, f), s2)
+            fragment, component = iter(state)
+            assert(fragment == p and component == 42)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+        end
+    end
+
+    do
+        local p, s1, s2, f = evo.id(4)
+
+        local e = evo.builder()
+            :set(evo.pair(p, s1), 21)
+            :set(evo.pair(p, s2), 42)
+            :spawn()
+
+        do
+            local iter, state = evo.secondaries(e, s1)
+            local fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+
+            iter, state = evo.secondaries(evo.pair(e, f), s1)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+        end
+
+        do
+            local iter, state = evo.secondaries(e, p)
+            local fragment, component = iter(state)
+            assert(fragment == s1 and component == 21)
+            fragment, component = iter(state)
+            assert(fragment == s2 and component == 42)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+
+            iter, state = evo.secondaries(evo.pair(e, f), p)
+            fragment, component = iter(state)
+            assert(fragment == s1 and component == 21)
+            fragment, component = iter(state)
+            assert(fragment == s2 and component == 42)
+            fragment, component = iter(state)
+            assert(fragment == nil and component == nil)
+        end
+    end
+end
+
 -- TODO
 -- builder:has/has_all/has_any should work with wildcards / remove too?
 -- should we provide wildcard support for get operations?
