@@ -1723,43 +1723,26 @@ do
         assert(fst(evo.primary(e, s2, 2)) == nil)
         assert(snd(evo.primary(e, s2, 2)) == nil)
 
-        assert(fst(evo.primary(evo.pair(e, f), s1)) == p)
-        assert(snd(evo.primary(evo.pair(e, f), s1)) == 21)
-        assert(fst(evo.primary(evo.pair(e, f), s2)) == p)
-        assert(snd(evo.primary(evo.pair(e, f), s2)) == 42)
-        assert(fst(evo.primary(evo.pair(e, f), s1, 1)) == p)
-        assert(snd(evo.primary(evo.pair(e, f), s1, 1)) == 21)
-        assert(fst(evo.primary(evo.pair(e, f), s2, 1)) == p)
-        assert(snd(evo.primary(evo.pair(e, f), s2, 1)) == 42)
+        assert(fst(evo.primary(evo.pair(e, f), s1)) == nil)
+        assert(fst(evo.primary(evo.pair(e, f), s2)) == nil)
+        assert(fst(evo.primary(evo.pair(e, f), s1, 1)) == nil)
+        assert(fst(evo.primary(evo.pair(e, f), s2, 1)) == nil)
         assert(fst(evo.primary(evo.pair(e, f), s1, 2)) == nil)
-        assert(snd(evo.primary(evo.pair(e, f), s1, 2)) == nil)
         assert(fst(evo.primary(evo.pair(e, f), s2, 2)) == nil)
-        assert(snd(evo.primary(evo.pair(e, f), s2, 2)) == nil)
 
         assert(fst(evo.secondary(e, p)) == s1)
-        assert(snd(evo.secondary(e, p)) == 21)
         assert(fst(evo.secondary(e, p, 1)) == s1)
-        assert(snd(evo.secondary(e, p, 1)) == 21)
         assert(fst(evo.secondary(e, p, 2)) == s2)
-        assert(snd(evo.secondary(e, p, 2)) == 42)
         assert(fst(evo.secondary(e, p, 3)) == nil)
-        assert(snd(evo.secondary(e, p, 3)) == nil)
 
-        assert(fst(evo.secondary(evo.pair(e, f), p)) == s1)
-        assert(snd(evo.secondary(evo.pair(e, f), p)) == 21)
-        assert(fst(evo.secondary(evo.pair(e, f), p, 1)) == s1)
-        assert(snd(evo.secondary(evo.pair(e, f), p, 1)) == 21)
-        assert(fst(evo.secondary(evo.pair(e, f), p, 2)) == s2)
-        assert(snd(evo.secondary(evo.pair(e, f), p, 2)) == 42)
+        assert(fst(evo.secondary(evo.pair(e, f), p)) == nil)
+        assert(fst(evo.secondary(evo.pair(e, f), p, 1)) == nil)
+        assert(fst(evo.secondary(evo.pair(e, f), p, 2)) == nil)
         assert(fst(evo.secondary(evo.pair(e, f), p, 3)) == nil)
-        assert(snd(evo.secondary(evo.pair(e, f), p, 3)) == nil)
 
         assert(fst(evo.primary(evo.pair(f, e), s1)) == nil)
-        assert(snd(evo.primary(evo.pair(f, e), s1)) == nil)
         assert(fst(evo.primary(evo.pair(f, e), s2)) == nil)
-        assert(snd(evo.primary(evo.pair(f, e), s2)) == nil)
         assert(fst(evo.secondary(evo.pair(f, e), p)) == nil)
-        assert(snd(evo.secondary(evo.pair(f, e), p)) == nil)
     end
 
     do
@@ -1778,9 +1761,9 @@ do
         assert(evo.secondary_count(e, s2) == 0)
 
         assert(evo.primary_count(evo.pair(e, f), p) == 0)
-        assert(evo.primary_count(evo.pair(e, f), s1) == 1)
-        assert(evo.primary_count(evo.pair(e, f), s2) == 1)
-        assert(evo.secondary_count(evo.pair(e, f), p) == 2)
+        assert(evo.primary_count(evo.pair(e, f), s1) == 0)
+        assert(evo.primary_count(evo.pair(e, f), s2) == 0)
+        assert(evo.secondary_count(evo.pair(e, f), p) == 0)
         assert(evo.secondary_count(evo.pair(e, f), s1) == 0)
         assert(evo.secondary_count(evo.pair(e, f), s2) == 0)
 
@@ -1820,8 +1803,6 @@ do
 
             iter, state = evo.primaries(evo.pair(e, f), s1)
             fragment, component = iter(state)
-            assert(fragment == p and component == 21)
-            fragment, component = iter(state)
             assert(fragment == nil and component == nil)
         end
 
@@ -1833,8 +1814,6 @@ do
             assert(fragment == nil and component == nil)
 
             iter, state = evo.primaries(evo.pair(e, f), s2)
-            fragment, component = iter(state)
-            assert(fragment == p and component == 42)
             fragment, component = iter(state)
             assert(fragment == nil and component == nil)
         end
@@ -1868,10 +1847,6 @@ do
             assert(fragment == nil and component == nil)
 
             iter, state = evo.secondaries(evo.pair(e, f), p)
-            fragment, component = iter(state)
-            assert(fragment == s1 and component == 21)
-            fragment, component = iter(state)
-            assert(fragment == s2 and component == 42)
             fragment, component = iter(state)
             assert(fragment == nil and component == nil)
         end
@@ -1936,26 +1911,9 @@ do
         assert(not evo.has(e, evo.pair(p, s1)) and evo.get(e, evo.pair(p, s1)) == nil)
         assert(not evo.has(e, evo.pair(p, s2)) and evo.get(e, evo.pair(p, s2)) == nil)
     end
-
-    do
-        local p, s = evo.id(2)
-
-        evo.destroy(s)
-
-        evo.debug_mode(false)
-
-        local e = evo.spawn {
-            [evo.pair(p, s)] = 21,
-        }
-
-        evo.debug_mode(true)
-
-        assert(evo.has(e, evo.pair(p, s)) and evo.get(e, evo.pair(p, s)) == 21)
-    end
 end
 
 -- TODO
--- builder:has/has_all/has_any should work with wildcards / remove too?
 -- should we provide wildcard support for get operations?
 -- prevent setting pairs with dead secondary fragments
 -- process evo.ANY as single wildcard

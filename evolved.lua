@@ -1373,8 +1373,34 @@ local __update_major_chunks_trace
 ---@return evolved.chunk
 ---@nodiscard
 function __new_chunk(chunk_parent, chunk_fragment)
-    if chunk_fragment >= __PRI_WILDCARD_OPTIONS * 2 ^ 40 then
-        __error_fmt('chunk cannot contain wildcard fragments')
+    local chunk_fragment_primary, chunk_fragment_secondary, chunk_fragment_options =
+        __evolved_unpack(chunk_fragment)
+
+    if chunk_fragment_options < __PAIR_OPTIONS then
+        if chunk_fragment_primary == __ANY_INDEX then
+            __error_fmt('the id (%s) is a wildcard and cannot be used for a new chunk',
+                __universal_name(chunk_fragment))
+        elseif __freelist_ids[chunk_fragment_primary] ~= chunk_fragment then
+            __error_fmt('the id (%s) is not alive and cannot be used for a new chunk',
+                __universal_name(chunk_fragment))
+        end
+    else
+        if chunk_fragment_options >= __PRI_WILDCARD_OPTIONS then
+            __error_fmt('the pair (%s) is a wildcard and cannot be used for a new chunk',
+                __universal_name(chunk_fragment))
+        end
+
+        local fragment_primary_id = __freelist_ids[chunk_fragment_primary] --[[@as evolved.id?]]
+        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= chunk_fragment_primary then
+            __error_fmt('the pair (%s) has no alive primary id and cannot be used for a new chunk',
+                __universal_name(chunk_fragment))
+        end
+
+        local fragment_secondary_id = __freelist_ids[chunk_fragment_secondary] --[[@as evolved.id?]]
+        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= chunk_fragment_secondary then
+            __error_fmt('the pair (%s) has no alive secondary id and cannot be used for a new chunk',
+                __universal_name(chunk_fragment))
+        end
     end
 
     local chunk_fragment_set = {} ---@type table<evolved.fragment, integer>
@@ -1426,9 +1452,6 @@ function __new_chunk(chunk_parent, chunk_fragment)
     if chunk_fragment >= __PAIR_OPTIONS * 2 ^ 40 then
         chunk_pair_count = chunk_pair_count + 1
         chunk_pair_list[chunk_pair_count] = chunk_fragment
-
-        local chunk_fragment_primary, chunk_fragment_secondary =
-            __evolved_unpack(chunk_fragment)
 
         local chunk_primary_fragments = chunk_primary_pairs[chunk_fragment_primary]
         local chunk_secondary_fragments = chunk_secondary_pairs[chunk_fragment_secondary]
@@ -6352,15 +6375,12 @@ function __evolved_primary(entity, secondary, index)
 
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
@@ -6405,15 +6425,12 @@ function __evolved_secondary(entity, primary, index)
 
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
@@ -6455,15 +6472,12 @@ end
 function __evolved_primaries(entity, secondary)
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return __iterator_fns.__primaries_iterator
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return __iterator_fns.__primaries_iterator
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return __iterator_fns.__primaries_iterator
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return __iterator_fns.__primaries_iterator
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
@@ -6505,15 +6519,12 @@ end
 function __evolved_secondaries(entity, primary)
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return __iterator_fns.__secondaries_iterator
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return __iterator_fns.__secondaries_iterator
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return __iterator_fns.__secondaries_iterator
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return __iterator_fns.__secondaries_iterator
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
@@ -6554,15 +6565,12 @@ end
 function __evolved_primary_count(entity, secondary)
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return 0
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return 0
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return 0
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return 0
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
@@ -6590,15 +6598,12 @@ end
 function __evolved_secondary_count(entity, primary)
     local entity_primary, _, entity_options = __evolved_unpack(entity)
 
-    if entity_options < __PAIR_OPTIONS then
-        if __freelist_ids[entity_primary] ~= entity then
-            return 0
-        end
-    else
-        local entity_primary_id = __freelist_ids[entity_primary] --[[@as evolved.id?]]
-        if not entity_primary_id or entity_primary_id % 2 ^ 20 ~= entity_primary then
-            return 0
-        end
+    if entity_options >= __PAIR_OPTIONS then
+        return 0
+    end
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return 0
     end
 
     local entity_chunk = __entity_chunks[entity_primary]
