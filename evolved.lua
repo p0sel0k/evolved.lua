@@ -132,10 +132,10 @@ local evolved = {
   | ANY WILDCARD |  RSVD  |   11   |   1   |  ANY index  |  ANY index  |
   \------------------------------------------------------------------]=]
 
-local __PAIR_OPTIONS = 1          -- 0b001
-local __PRI_WILDCARD_OPTIONS = 3  -- 0b011
-local __SEC_WILDCARD_OPTIONS = 5  -- 0b101
-local __ANY_WILDCARD_OPTIONSS = 7 -- 0b111
+local __PAIR_OPTIONS = 1         -- 0b001
+local __PRI_WILDCARD_OPTIONS = 3 -- 0b011
+local __SEC_WILDCARD_OPTIONS = 5 -- 0b101
+local __ANY_WILDCARD_OPTIONS = 7 -- 0b111
 
 ---
 ---
@@ -826,7 +826,7 @@ local __ANY_INDEX = __ANY % 2 ^ 20 --[[@as integer]]
 
 local __ANY_WILDCARD = __ANY_INDEX
     + __ANY_INDEX * 2 ^ 20
-    + __ANY_WILDCARD_OPTIONSS * 2 ^ 40 --[[@as evolved.pair]]
+    + __ANY_WILDCARD_OPTIONS * 2 ^ 40 --[[@as evolved.pair]]
 
 ---
 ---
@@ -2018,7 +2018,7 @@ function __chunk_without_fragment(chunk, fragment)
         local fragment_primary, fragment_secondary, fragment_options =
             __evolved_unpack(fragment)
 
-        if fragment_options == __ANY_WILDCARD_OPTIONSS then
+        if fragment_options == __ANY_WILDCARD_OPTIONS then
             while chunk and chunk.__has_pair_major do
                 chunk = chunk.__parent
             end
@@ -2255,7 +2255,7 @@ function __chunk_has_fragment(chunk, fragment)
         local fragment_primary, fragment_secondary, fragment_options =
             __evolved_unpack(fragment)
 
-        if fragment_options == __ANY_WILDCARD_OPTIONSS then
+        if fragment_options == __ANY_WILDCARD_OPTIONS then
             return true
         elseif fragment_options == __PRI_WILDCARD_OPTIONS then
             local secondary_fragments = chunk.__secondary_pairs[fragment_secondary]
@@ -6314,7 +6314,7 @@ function __evolved_pair(primary, secondary)
     local pair_options = __PAIR_OPTIONS
 
     if primary_index == __ANY_INDEX and secondary_index == __ANY_INDEX then
-        pair_options = __ANY_WILDCARD_OPTIONSS
+        pair_options = __ANY_WILDCARD_OPTIONS
     elseif primary_index == __ANY_INDEX then
         pair_options = __PRI_WILDCARD_OPTIONS
     elseif secondary_index == __ANY_INDEX then
@@ -6828,7 +6828,7 @@ function __builder_mt:has(fragment)
         local fragment_primary, fragment_secondary, fragment_options =
             __evolved_unpack(fragment)
 
-        if fragment_options == __ANY_WILDCARD_OPTIONSS then
+        if fragment_options == __ANY_WILDCARD_OPTIONS then
             return __lua_next(primary_pairs) ~= nil
                 and __lua_next(secondary_pairs) ~= nil
         elseif fragment_options == __PRI_WILDCARD_OPTIONS then
@@ -7094,7 +7094,7 @@ function __builder_mt:remove(...)
         local fragment_primary, fragment_secondary, fragment_options =
             __evolved_unpack(fragment)
 
-        if fragment_options == __ANY_WILDCARD_OPTIONSS then
+        if fragment_options == __ANY_WILDCARD_OPTIONS then
             for primary_index, primary_fragments in __lua_next, primary_pairs do
                 local primary_fragment_list = primary_fragments.__item_list
                 local primary_fragment_count = primary_fragments.__item_count

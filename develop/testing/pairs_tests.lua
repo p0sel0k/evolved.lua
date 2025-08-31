@@ -1914,8 +1914,7 @@ do
 end
 
 -- TODO
--- should we provide wildcard support for get operations?
--- prevent setting pairs with dead secondary fragments
 -- process evo.ANY as single wildcard
 -- should we provide an evolved.pair type?
--- how should the destroy function handle pairs?
+-- we should not add any wildcards to chunk `with` edges, lol
+-- edges `without` to nil don't work because they are cannot be found
