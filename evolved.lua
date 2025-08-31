@@ -5213,30 +5213,32 @@ function __evolved_set(entity, fragment, component)
     local fragment_primary, fragment_secondary, fragment_options =
         __evolved_unpack(fragment)
 
-    if fragment_options < __PAIR_OPTIONS then
-        if fragment_primary == __ANY_INDEX then
-            __error_fmt('the id (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        elseif __freelist_ids[fragment_primary] ~= fragment then
-            __error_fmt('the id (%s) is not alive and cannot be set',
-                __universal_name(fragment))
-        end
-    else
-        if fragment_options >= __PRI_WILDCARD_OPTIONS then
-            __error_fmt('the pair (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        end
+    if __debug_mode then
+        if fragment_options < __PAIR_OPTIONS then
+            if fragment_primary == __ANY_INDEX then
+                __error_fmt('the id (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            elseif __freelist_ids[fragment_primary] ~= fragment then
+                __error_fmt('the id (%s) is not alive and cannot be set',
+                    __universal_name(fragment))
+            end
+        else
+            if fragment_options >= __PRI_WILDCARD_OPTIONS then
+                __error_fmt('the pair (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
-        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
-            __error_fmt('the pair (%s) has no alive primary id and cannot be set',
-                __universal_name(fragment))
-        end
+            local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
+            if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
+                __error_fmt('the pair (%s) has no alive primary id and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
-        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
-            __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
-                __universal_name(fragment))
+            local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
+            if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
+                __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
+                    __universal_name(fragment))
+            end
         end
     end
 
@@ -5726,33 +5728,35 @@ function __evolved_batch_set(query, fragment, component)
             __universal_name(query))
     end
 
-    local fragment_primary, fragment_secondary, fragment_options =
-        __evolved_unpack(fragment)
+    if __debug_mode then
+        local fragment_primary, fragment_secondary, fragment_options =
+            __evolved_unpack(fragment)
 
-    if fragment_options < __PAIR_OPTIONS then
-        if fragment_primary == __ANY_INDEX then
-            __error_fmt('the id (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        elseif __freelist_ids[fragment_primary] ~= fragment then
-            __error_fmt('the id (%s) is not alive and cannot be set',
-                __universal_name(fragment))
-        end
-    else
-        if fragment_options >= __PRI_WILDCARD_OPTIONS then
-            __error_fmt('the pair (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        end
+        if fragment_options < __PAIR_OPTIONS then
+            if fragment_primary == __ANY_INDEX then
+                __error_fmt('the id (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            elseif __freelist_ids[fragment_primary] ~= fragment then
+                __error_fmt('the id (%s) is not alive and cannot be set',
+                    __universal_name(fragment))
+            end
+        else
+            if fragment_options >= __PRI_WILDCARD_OPTIONS then
+                __error_fmt('the pair (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
-        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
-            __error_fmt('the pair (%s) has no alive primary id and cannot be set',
-                __universal_name(fragment))
-        end
+            local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
+            if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
+                __error_fmt('the pair (%s) has no alive primary id and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
-        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
-            __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
-                __universal_name(fragment))
+            local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
+            if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
+                __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
+                    __universal_name(fragment))
+            end
         end
     end
 
@@ -6985,30 +6989,32 @@ function __builder_mt:set(fragment, component)
     local fragment_primary, fragment_secondary, fragment_options =
         __evolved_unpack(fragment)
 
-    if fragment_options < __PAIR_OPTIONS then
-        if fragment_primary == __ANY_INDEX then
-            __error_fmt('the id (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        elseif __freelist_ids[fragment_primary] ~= fragment then
-            __error_fmt('the id (%s) is not alive and cannot be set',
-                __universal_name(fragment))
-        end
-    else
-        if fragment_options >= __PRI_WILDCARD_OPTIONS then
-            __error_fmt('the pair (%s) is a wildcard and cannot be set',
-                __universal_name(fragment))
-        end
+    if __debug_mode then
+        if fragment_options < __PAIR_OPTIONS then
+            if fragment_primary == __ANY_INDEX then
+                __error_fmt('the id (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            elseif __freelist_ids[fragment_primary] ~= fragment then
+                __error_fmt('the id (%s) is not alive and cannot be set',
+                    __universal_name(fragment))
+            end
+        else
+            if fragment_options >= __PRI_WILDCARD_OPTIONS then
+                __error_fmt('the pair (%s) is a wildcard and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
-        if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
-            __error_fmt('the pair (%s) has no alive primary id and cannot be set',
-                __universal_name(fragment))
-        end
+            local fragment_primary_id = __freelist_ids[fragment_primary] --[[@as evolved.id?]]
+            if not fragment_primary_id or fragment_primary_id % 2 ^ 20 ~= fragment_primary then
+                __error_fmt('the pair (%s) has no alive primary id and cannot be set',
+                    __universal_name(fragment))
+            end
 
-        local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
-        if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
-            __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
-                __universal_name(fragment))
+            local fragment_secondary_id = __freelist_ids[fragment_secondary] --[[@as evolved.id?]]
+            if not fragment_secondary_id or fragment_secondary_id % 2 ^ 20 ~= fragment_secondary then
+                __error_fmt('the pair (%s) has no alive secondary id and cannot be set',
+                    __universal_name(fragment))
+            end
         end
     end
 
