@@ -122,8 +122,8 @@ local __defer_length = 0 ---@type integer
 local __defer_bytecode = {} ---@type any[]
 
 local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
-local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
-local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
+local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 
 local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
 
@@ -132,11 +132,11 @@ local __entity_places = {} ---@type table<integer, integer>
 
 local __structural_changes = 0 ---@type integer
 
-local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list>
-local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list>
+local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
+local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
+local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.fragment>>
 
-local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list>
+local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<evolved.system>>
 
 ---
 ---
@@ -337,17 +337,15 @@ end)()
 
 ---@param fmt string
 ---@param ... any
----@diagnostic disable-next-line: unused-local, unused-function
 local function __error_fmt(fmt, ...)
-    __lua_error(__lua_string_format('| evolved.lua | %s',
+    __lua_error(__lua_string_format('| evolved.lua (e) | %s',
         __lua_string_format(fmt, ...)))
 end
 
 ---@param fmt string
 ---@param ... any
----@diagnostic disable-next-line: unused-local, unused-function
 local function __warning_fmt(fmt, ...)
-    __lua_print(__lua_string_format('| evolved.lua | %s',
+    __lua_print(__lua_string_format('| evolved.lua (w) | %s',
         __lua_string_format(fmt, ...)))
 end
 
@@ -536,10 +534,11 @@ end
 ---
 ---
 
----@class (exact) evolved.assoc_list
----@field package __item_set table<any, integer>
----@field package __item_list any[]
----@field package __item_count integer
+---@class (exact) evolved.assoc_list<K>: {
+---  __item_set: { [K]: integer },
+---  __item_list: K[],
+---  __item_count: integer,
+--- }
 
 local __assoc_list_new
 local __assoc_list_move
@@ -753,35 +752,30 @@ local __DESTRUCTION_POLICY_REMOVE_FRAGMENT = __acquire_id()
 ---
 
 local __safe_tbls = {
-    ---@type table<evolved.fragment, integer>
     __EMPTY_FRAGMENT_SET = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment set' end,
         __newindex = function() __error_fmt 'attempt to modify empty fragment set' end
-    }),
+    }) --[[@as table<evolved.fragment, integer>]],
 
-    ---@type evolved.fragment[]
     __EMPTY_FRAGMENT_LIST = __lua_setmetatable({}, {
         __tostring = function() return 'empty fragment list' end,
         __newindex = function() __error_fmt 'attempt to modify empty fragment list' end
-    }),
+    }) --[=[@as evolved.fragment[]]=],
 
-    ---@type table<evolved.fragment, evolved.component>
     __EMPTY_COMPONENT_MAP = __lua_setmetatable({}, {
         __tostring = function() return 'empty component map' end,
         __newindex = function() __error_fmt 'attempt to modify empty component map' end
-    }),
+    }) --[[@as table<evolved.fragment, evolved.component>]],
 
-    ---@type evolved.component[]
     __EMPTY_COMPONENT_LIST = __lua_setmetatable({}, {
         __tostring = function() return 'empty component list' end,
         __newindex = function() __error_fmt 'attempt to modify empty component list' end
-    }),
+    }) --[=[@as evolved.component[]]=],
 
-    ---@type evolved.component[]
     __EMPTY_COMPONENT_STORAGE = __lua_setmetatable({}, {
         __tostring = function() return 'empty component storage' end,
         __newindex = function() __error_fmt 'attempt to modify empty component storage' end
-    }),
+    }) --[=[@as evolved.component[]]=],
 }
 
 ---
@@ -843,14 +837,40 @@ local __evolved_builder
 ---
 ---
 
-local __id_name
-
+local __universal_name
 local __component_storage
+
+local __chunk_with_fragment
+local __chunk_with_components
+local __chunk_without_fragment
+local __chunk_without_fragments
+local __chunk_without_unique_fragments
+
+local __chunk_fragments
+local __chunk_components
+
+local __chunk_has_fragment
+local __chunk_has_all_fragments
+local __chunk_has_all_fragment_list
+local __chunk_has_any_fragments
+local __chunk_has_any_fragment_list
+local __chunk_get_components
+
+local __chunk_required_fragments
+local __fragment_required_fragments
+
+---
+---
+---
+---
+---
 
 ---@param id evolved.id
 ---@return string
 ---@nodiscard
-function __id_name(id)
+function __universal_name(id)
+    local id_primary, id_secondary = __evolved_unpack(id)
+
     ---@type string?
     local id_name = __evolved_get(id, __NAME)
 
@@ -858,8 +878,7 @@ function __id_name(id)
         return id_name
     end
 
-    local id_primary, id_secondary, id_options = __evolved_unpack(id)
-    return __lua_string_format('$%d#%d:%d:%d', id, id_primary, id_secondary, id_options)
+    return __lua_string_format('$%d#%d:%d', id, id_primary, id_secondary)
 end
 
 ---@param fragment evolved.fragment
@@ -908,7 +927,7 @@ function __iterator_fns.__each_iterator(each_state)
 end
 
 ---@type evolved.execute_iterator
-function __iterator_fns.__execute_major_iterator(execute_state)
+function __iterator_fns.__execute_iterator(execute_state)
     if not execute_state then return end
 
     local structural_changes = execute_state[1]
@@ -956,37 +975,6 @@ function __iterator_fns.__execute_major_iterator(execute_state)
     __release_table(__table_pool_tag.execute_state, execute_state, true)
 end
 
----@type evolved.execute_iterator
-function __iterator_fns.__execute_minor_iterator(execute_state)
-    if not execute_state then return end
-
-    local structural_changes = execute_state[1]
-    local chunk_stack = execute_state[2]
-    local chunk_stack_size = execute_state[3]
-
-    if structural_changes ~= __structural_changes then
-        __error_fmt('structural changes are prohibited during iteration')
-    end
-
-    while chunk_stack_size > 0 do
-        local chunk = chunk_stack[chunk_stack_size]
-
-        chunk_stack[chunk_stack_size] = nil
-        chunk_stack_size = chunk_stack_size - 1
-
-        local chunk_entity_list = chunk.__entity_list
-        local chunk_entity_count = chunk.__entity_count
-
-        if chunk_entity_count > 0 then
-            execute_state[3] = chunk_stack_size
-            return chunk, chunk_entity_list, chunk_entity_count
-        end
-    end
-
-    __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
-    __release_table(__table_pool_tag.execute_state, execute_state, true)
-end
-
 ---
 ---
 ---
@@ -1006,6 +994,13 @@ local __update_major_chunks_trace
 ---@return evolved.chunk
 ---@nodiscard
 function __new_chunk(chunk_parent, chunk_fragment)
+    local chunk_fragment_primary, _ = __evolved_unpack(chunk_fragment)
+
+    if __freelist_ids[chunk_fragment_primary] ~= chunk_fragment then
+        __error_fmt('the id (%s) is not alive and cannot be used for a new chunk',
+            __universal_name(chunk_fragment))
+    end
+
     local chunk_fragment_set = {} ---@type table<evolved.fragment, integer>
     local chunk_fragment_list = {} ---@type evolved.fragment[]
     local chunk_fragment_count = 0 ---@type integer
@@ -1084,6 +1079,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local major_chunks = __major_chunks[major]
 
         if not major_chunks then
+            ---@type evolved.assoc_list<evolved.chunk>
             major_chunks = __assoc_list_new(4)
             __major_chunks[major] = major_chunks
         end
@@ -1096,6 +1092,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         local minor_chunks = __minor_chunks[minor]
 
         if not minor_chunks then
+            ---@type evolved.assoc_list<evolved.chunk>
             minor_chunks = __assoc_list_new(4)
             __minor_chunks[minor] = minor_chunks
         end
@@ -1235,8 +1232,8 @@ function __trace_major_chunks(major, trace, ...)
 
     do
         local major_chunks = __major_chunks[major]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
         if major_chunk_count > 0 then
             __lua_table_move(
@@ -1280,8 +1277,8 @@ function __trace_minor_chunks(minor, trace, ...)
 
     do
         local minor_chunks = __minor_chunks[minor]
-        local minor_chunk_list = minor_chunks and minor_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0 --[[@as integer]]
+        local minor_chunk_list = minor_chunks and minor_chunks.__item_list
+        local minor_chunk_count = minor_chunks and minor_chunks.__item_count or 0
 
         if minor_chunk_count > 0 then
             __lua_table_move(
@@ -1325,7 +1322,7 @@ end
 ---@param fragment evolved.fragment
 ---@return evolved.chunk
 ---@nodiscard
-local function __chunk_with_fragment(chunk, fragment)
+function __chunk_with_fragment(chunk, fragment)
     if not chunk then
         local root_chunk = __root_chunks[fragment]
         return root_chunk or __new_chunk(nil, fragment)
@@ -1372,7 +1369,7 @@ end
 ---@param components table<evolved.fragment, evolved.component>
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_with_components(chunk, components)
+function __chunk_with_components(chunk, components)
     for fragment in __lua_next, components do
         chunk = __chunk_with_fragment(chunk, fragment)
     end
@@ -1384,7 +1381,7 @@ end
 ---@param fragment evolved.fragment
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_without_fragment(chunk, fragment)
+function __chunk_without_fragment(chunk, fragment)
     if not chunk then
         return nil
     end
@@ -1432,7 +1429,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_without_fragments(chunk, ...)
+function __chunk_without_fragments(chunk, ...)
     if not chunk then
         return nil
     end
@@ -1455,7 +1452,7 @@ end
 ---@param chunk? evolved.chunk
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_without_unique_fragments(chunk)
+function __chunk_without_unique_fragments(chunk)
     while chunk and chunk.__has_unique_major do
         chunk = chunk.__parent
     end
@@ -1495,7 +1492,7 @@ end
 ---@param ... evolved.fragment tail_fragments
 ---@return evolved.chunk
 ---@nodiscard
-local function __chunk_fragments(head_fragment, ...)
+function __chunk_fragments(head_fragment, ...)
     local chunk = __root_chunks[head_fragment]
         or __new_chunk(nil, head_fragment)
 
@@ -1512,7 +1509,7 @@ end
 ---@param components table<evolved.fragment, evolved.component>
 ---@return evolved.chunk?
 ---@nodiscard
-local function __chunk_components(components)
+function __chunk_components(components)
     local head_fragment = __lua_next(components)
 
     if not head_fragment then
@@ -1540,7 +1537,7 @@ end
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_fragment(chunk, fragment)
+function __chunk_has_fragment(chunk, fragment)
     if chunk.__fragment_set[fragment] then
         return true
     end
@@ -1552,7 +1549,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_all_fragments(chunk, ...)
+function __chunk_has_all_fragments(chunk, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
@@ -1593,7 +1590,7 @@ end
 ---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
+function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
     if fragment_count == 0 then
         return true
     end
@@ -1614,7 +1611,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_any_fragments(chunk, ...)
+function __chunk_has_any_fragments(chunk, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
@@ -1655,7 +1652,7 @@ end
 ---@param fragment_count integer
 ---@return boolean
 ---@nodiscard
-local function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
+function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
     if fragment_count == 0 then
         return false
     end
@@ -1677,7 +1674,7 @@ end
 ---@param ... evolved.fragment fragments
 ---@return evolved.component ... components
 ---@nodiscard
-local function __chunk_get_components(chunk, place, ...)
+function __chunk_get_components(chunk, place, ...)
     local fragment_count = __lua_select('#', ...)
 
     if fragment_count == 0 then
@@ -1745,7 +1742,7 @@ end
 ---@param req_fragment_count integer
 ---@return integer
 ---@nodiscard
-local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
+function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
     ---@type evolved.fragment[]
     local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
     local fragment_stack_size = 0
@@ -1768,8 +1765,8 @@ local function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_
         fragment_stack_size = fragment_stack_size - 1
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -1797,7 +1794,7 @@ end
 ---@param req_fragment_count integer
 ---@return integer
 ---@nodiscard
-local function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_list, req_fragment_count)
+function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_list, req_fragment_count)
     ---@type evolved.fragment[]
     local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
     local fragment_stack_size = 0
@@ -1814,8 +1811,8 @@ local function __fragment_required_fragments(fragment, req_fragment_set, req_fra
         fragment_stack_size = fragment_stack_size - 1
 
         local fragment_requires = __sorted_requires[stack_fragment]
-        local fragment_require_list = fragment_requires and fragment_requires.__item_list --[=[@as evolved.fragment[]]=]
-        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0 --[[@as integer]]
+        local fragment_require_list = fragment_requires and fragment_requires.__item_list
+        local fragment_require_count = fragment_requires and fragment_requires.__item_count or 0
 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
@@ -2580,7 +2577,7 @@ local function __destroy_fragment_list(fragment_list, fragment_count)
                 remove_fragment_policy_fragment_list[remove_fragment_policy_fragment_count] = processing_fragment
             else
                 __error_fmt('unknown DESTRUCTION_POLICY (%s) on (%s)',
-                    __id_name(processing_fragment_destruction_policy), __id_name(processing_fragment))
+                    __universal_name(processing_fragment_destruction_policy), __universal_name(processing_fragment))
             end
         end
     end
@@ -3059,7 +3056,6 @@ function __chunk_remove(old_chunk, ...)
     end
 
     if old_chunk.__has_remove_hooks then
-        ---@type table<evolved.fragment, integer>
         local new_fragment_set = new_chunk and new_chunk.__fragment_set
             or __safe_tbls.__EMPTY_FRAGMENT_SET
 
@@ -3259,8 +3255,8 @@ local function __system_process(system)
 
     do
         local group_subsystems = __group_subsystems[system]
-        local group_subsystem_list = group_subsystems and group_subsystems.__item_list --[=[@as evolved.system[]]=]
-        local group_subsystem_count = group_subsystems and group_subsystems.__item_count or 0 --[[@as integer]]
+        local group_subsystem_list = group_subsystems and group_subsystems.__item_list
+        local group_subsystem_count = group_subsystems and group_subsystems.__item_count or 0
 
         if group_subsystem_count > 0 then
             local subsystem_list = __acquire_table(__table_pool_tag.system_list)
@@ -3993,49 +3989,54 @@ function __evolved_name(...)
 
     if id_count == 1 then
         local id1 = ...
-        return __id_name(id1)
+        return __universal_name(id1)
     end
 
     if id_count == 2 then
         local id1, id2 = ...
-        return __id_name(id1), __id_name(id2)
+        return __universal_name(id1), __universal_name(id2)
     end
 
     if id_count == 3 then
         local id1, id2, id3 = ...
-        return __id_name(id1), __id_name(id2), __id_name(id3)
+        return __universal_name(id1), __universal_name(id2), __universal_name(id3)
     end
 
     if id_count == 4 then
         local id1, id2, id3, id4 = ...
-        return __id_name(id1), __id_name(id2), __id_name(id3), __id_name(id4)
+        return __universal_name(id1), __universal_name(id2), __universal_name(id3), __universal_name(id4)
     end
 
     do
         local id1, id2, id3, id4 = ...
-        return __id_name(id1), __id_name(id2), __id_name(id3), __id_name(id4),
+        return __universal_name(id1), __universal_name(id2), __universal_name(id3), __universal_name(id4),
             __evolved_name(__lua_select(5, ...))
     end
 end
 
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(primary, secondary)
-    return primary % 2 ^ 20
-        + secondary % 2 ^ 20 * 2 ^ 20 --[[@as evolved.id]]
+function __evolved_pack(index, version)
+    if index < 1 or index > 2 ^ 20 - 1 then
+        __error_fmt('the index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+    end
+
+    if version < 1 or version > 2 ^ 20 - 1 then
+        __error_fmt('the version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+    end
+
+    return index + version * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
 ---@return integer primary
 ---@return integer secondary
----@return integer options
 ---@nodiscard
 function __evolved_unpack(id)
     return id % 2 ^ 20,
-        (id - id % 2 ^ 20) / 2 ^ 20 % 2 ^ 20,
-        (id - id % 2 ^ 40) / 2 ^ 40 % 2 ^ 12
+        (id - id % 2 ^ 20) / 2 ^ 20 % 2 ^ 20
 end
 
 ---@return boolean started
@@ -4086,7 +4087,8 @@ function __evolved_spawn(components)
     if __debug_mode then
         for fragment in __lua_next, components do
             if not __evolved_alive(fragment) then
-                __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __universal_name(fragment))
             end
         end
     end
@@ -4116,12 +4118,14 @@ function __evolved_clone(prefab, components)
 
     if __debug_mode then
         if not __evolved_alive(prefab) then
-            __error_fmt('the prefab (%s) is not alive and cannot be used', __id_name(prefab))
+            __error_fmt('the prefab (%s) is not alive and cannot be used',
+                __universal_name(prefab))
         end
 
         for fragment in __lua_next, components do
             if not __evolved_alive(fragment) then
-                __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __universal_name(fragment))
             end
         end
     end
@@ -4145,9 +4149,9 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_alive(entity)
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
+    if __freelist_ids[entity_primary] ~= entity then
         return false
     end
 
@@ -4200,13 +4204,13 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
+    if __freelist_ids[entity_primary] ~= entity then
         return true
     end
 
-    return not __entity_chunks[entity_index]
+    return not __entity_chunks[entity_primary]
 end
 
 ---@param ... evolved.entity entities
@@ -4256,19 +4260,15 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
+    if __freelist_ids[entity_primary] ~= entity then
         return false
     end
 
-    local entity_chunk = __entity_chunks[entity_index]
+    local entity_chunk = __entity_chunks[entity_primary]
 
-    if not entity_chunk then
-        return false
-    end
-
-    return __chunk_has_fragment(entity_chunk, fragment)
+    return entity_chunk and __chunk_has_fragment(entity_chunk, fragment) or false
 end
 
 ---@param entity evolved.entity
@@ -4276,19 +4276,21 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_all(entity, ...)
-    local entity_index = entity % 2 ^ 20
+    local argument_count = __lua_select('#', ...)
 
-    if __freelist_ids[entity_index] ~= entity then
-        return __lua_select('#', ...) == 0
+    if argument_count == 0 then
+        return true
     end
 
-    local entity_chunk = __entity_chunks[entity_index]
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if not entity_chunk then
-        return __lua_select('#', ...) == 0
+    if __freelist_ids[entity_primary] ~= entity then
+        return false
     end
 
-    return __chunk_has_all_fragments(entity_chunk, ...)
+    local entity_chunk = __entity_chunks[entity_primary]
+
+    return entity_chunk and __chunk_has_all_fragments(entity_chunk, ...) or false
 end
 
 ---@param entity evolved.entity
@@ -4296,19 +4298,21 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has_any(entity, ...)
-    local entity_index = entity % 2 ^ 20
+    local argument_count = __lua_select('#', ...)
 
-    if __freelist_ids[entity_index] ~= entity then
+    if argument_count == 0 then
         return false
     end
 
-    local entity_chunk = __entity_chunks[entity_index]
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if not entity_chunk then
+    if __freelist_ids[entity_primary] ~= entity then
         return false
     end
 
-    return __chunk_has_any_fragments(entity_chunk, ...)
+    local entity_chunk = __entity_chunks[entity_primary]
+
+    return entity_chunk and __chunk_has_any_fragments(entity_chunk, ...) or false
 end
 
 ---@param entity evolved.entity
@@ -4316,19 +4320,19 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
+    if __freelist_ids[entity_primary] ~= entity then
         return
     end
 
-    local entity_chunk = __entity_chunks[entity_index]
+    local entity_chunk = __entity_chunks[entity_primary]
 
     if not entity_chunk then
         return
     end
 
-    local entity_place = __entity_places[entity_index]
+    local entity_place = __entity_places[entity_primary]
     return __chunk_get_components(entity_chunk, entity_place, ...)
 end
 
@@ -4336,13 +4340,19 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_set(entity, fragment, component)
-    if __debug_mode then
-        if not __evolved_alive(entity) then
-            __error_fmt('the entity (%s) is not alive and cannot be used', __id_name(entity))
-        end
+    local entity_primary, _ = __evolved_unpack(entity)
 
-        if not __evolved_alive(fragment) then
-            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+    if __freelist_ids[entity_primary] ~= entity then
+        __error_fmt('the id (%s) is not alive and cannot be changed',
+            __universal_name(entity))
+    end
+
+    local fragment_primary, _ = __evolved_unpack(fragment)
+
+    if __debug_mode then
+        if __freelist_ids[fragment_primary] ~= fragment then
+            __error_fmt('the id (%s) is not alive and cannot be set',
+                __universal_name(fragment))
         end
     end
 
@@ -4351,13 +4361,11 @@ function __evolved_set(entity, fragment, component)
         return
     end
 
-    local entity_index = entity % 2 ^ 20
-
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
 
-    local old_chunk = entity_chunks[entity_index]
-    local old_place = entity_places[entity_index]
+    local old_chunk = entity_chunks[entity_primary]
+    local old_place = entity_places[entity_primary]
 
     local new_chunk = __chunk_with_fragment(old_chunk, fragment)
 
@@ -4474,8 +4482,8 @@ function __evolved_set(entity, fragment, component)
         end
 
         do
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_place
+            entity_chunks[entity_primary] = new_chunk
+            entity_places[entity_primary] = new_place
 
             __structural_changes = __structural_changes + 1
         end
@@ -4582,10 +4590,10 @@ function __evolved_remove(entity, ...)
         return
     end
 
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- this entity is not alive, nothing to remove
+    if __freelist_ids[entity_primary] ~= entity then
+        -- the id is not alive, nothing to remove
         return
     end
 
@@ -4597,8 +4605,8 @@ function __evolved_remove(entity, ...)
     local entity_chunks = __entity_chunks
     local entity_places = __entity_places
 
-    local old_chunk = entity_chunks[entity_index]
-    local old_place = entity_places[entity_index]
+    local old_chunk = entity_chunks[entity_primary]
+    local old_place = entity_places[entity_primary]
 
     local new_chunk = __chunk_without_fragments(old_chunk, ...)
 
@@ -4615,7 +4623,6 @@ function __evolved_remove(entity, ...)
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
-            ---@type table<evolved.fragment, integer>
             local new_fragment_set = new_chunk and new_chunk.__fragment_set
                 or __safe_tbls.__EMPTY_FRAGMENT_SET
 
@@ -4666,8 +4673,8 @@ function __evolved_remove(entity, ...)
         do
             __detach_entity(old_chunk, old_place)
 
-            entity_chunks[entity_index] = new_chunk
-            entity_places[entity_index] = new_chunk and new_chunk.__entity_count
+            entity_chunks[entity_primary] = new_chunk
+            entity_places[entity_primary] = new_chunk and new_chunk.__entity_count
 
             __structural_changes = __structural_changes + 1
         end
@@ -4698,13 +4705,13 @@ function __evolved_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 2 ^ 20
+            local entity_primary, _ = __evolved_unpack(entity)
 
-            if __freelist_ids[entity_index] ~= entity then
-                -- this entity is not alive, nothing to clear
+            if __freelist_ids[entity_primary] ~= entity then
+                -- the id is not alive, nothing to clear
             else
-                local chunk = entity_chunks[entity_index]
-                local place = entity_places[entity_index]
+                local chunk = entity_chunks[entity_primary]
+                local place = entity_places[entity_primary]
 
                 if chunk and chunk.__has_remove_hooks then
                     local chunk_fragment_list = chunk.__fragment_list
@@ -4735,8 +4742,8 @@ function __evolved_clear(...)
                 if chunk then
                     __detach_entity(chunk, place)
 
-                    entity_chunks[entity_index] = nil
-                    entity_places[entity_index] = nil
+                    entity_chunks[entity_primary] = nil
+                    entity_places[entity_primary] = nil
 
                     __structural_changes = __structural_changes + 1
                 end
@@ -4774,10 +4781,10 @@ function __evolved_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_index = entity % 2 ^ 20
+            local entity_primary, _ = __evolved_unpack(entity)
 
-            if __freelist_ids[entity_index] ~= entity then
-                -- this entity is not alive, nothing to destroy
+            if __freelist_ids[entity_primary] ~= entity then
+                -- the id is not alive, nothing to destroy
             else
                 local is_fragment = minor_chunks[entity]
 
@@ -4813,13 +4820,19 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_batch_set(query, fragment, component)
-    if __debug_mode then
-        if not __evolved_alive(query) then
-            __error_fmt('the query (%s) is not alive and cannot be used', __id_name(query))
-        end
+    local query_primary, _ = __evolved_unpack(query)
 
-        if not __evolved_alive(fragment) then
-            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+    if __freelist_ids[query_primary] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be queried',
+            __universal_name(query))
+    end
+
+    if __debug_mode then
+        local fragment_primary, _ = __evolved_unpack(fragment)
+
+        if __freelist_ids[fragment_primary] ~= fragment then
+            __error_fmt('the id (%s) is not alive and cannot be set',
+                __universal_name(fragment))
         end
     end
 
@@ -4858,6 +4871,13 @@ function __evolved_batch_remove(query, ...)
 
     if fragment_count == 0 then
         return
+    end
+
+    local query_primary, _ = __evolved_unpack(query)
+
+    if __freelist_ids[query_primary] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be queried',
+            __universal_name(query))
     end
 
     if __defer_depth > 0 then
@@ -4911,10 +4931,16 @@ function __evolved_batch_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
+            local query_primary, _ = __evolved_unpack(query)
 
-            for chunk in __evolved_execute(query) do
-                chunk_count = chunk_count + 1
-                chunk_list[chunk_count] = chunk
+            if __freelist_ids[query_primary] ~= query then
+                __warning_fmt('the id (%s) is not alive and cannot be queried',
+                    __universal_name(query))
+            else
+                for chunk in __evolved_execute(query) do
+                    chunk_count = chunk_count + 1
+                    chunk_list[chunk_count] = chunk
+                end
             end
         end
 
@@ -4959,22 +4985,28 @@ function __evolved_batch_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
+            local query_primary, _ = __evolved_unpack(query)
 
-            for chunk, entity_list, entity_count in __evolved_execute(query) do
-                clearing_chunk_count = clearing_chunk_count + 1
-                clearing_chunk_list[clearing_chunk_count] = chunk
+            if __freelist_ids[query_primary] ~= query then
+                __warning_fmt('the id (%s) is not alive and cannot be queried',
+                    __universal_name(query))
+            else
+                for chunk, entity_list, entity_count in __evolved_execute(query) do
+                    clearing_chunk_count = clearing_chunk_count + 1
+                    clearing_chunk_list[clearing_chunk_count] = chunk
 
-                for i = 1, entity_count do
-                    local entity = entity_list[i]
+                    for i = 1, entity_count do
+                        local entity = entity_list[i]
 
-                    local is_fragment = minor_chunks[entity]
+                        local is_fragment = minor_chunks[entity]
 
-                    if not is_fragment then
-                        purging_entity_count = purging_entity_count + 1
-                        purging_entity_list[purging_entity_count] = entity
-                    else
-                        purging_fragment_count = purging_fragment_count + 1
-                        purging_fragment_list[purging_fragment_count] = entity
+                        if not is_fragment then
+                            purging_entity_count = purging_entity_count + 1
+                            purging_entity_list[purging_entity_count] = entity
+                        else
+                            purging_fragment_count = purging_fragment_count + 1
+                            purging_fragment_list[purging_fragment_count] = entity
+                        end
                     end
                 end
             end
@@ -5010,20 +5042,16 @@ end
 ---@return evolved.each_state? iterator_state
 ---@nodiscard
 function __evolved_each(entity)
-    local entity_index = entity % 2 ^ 20
+    local entity_primary, _ = __evolved_unpack(entity)
 
-    if __freelist_ids[entity_index] ~= entity then
-        -- this entity is not alive, nothing to iterate
-        return __iterator_fns.__each_iterator
+    if __freelist_ids[entity_primary] ~= entity then
+        __error_fmt('the id (%s) is not alive and cannot be iterated',
+            __universal_name(entity))
     end
 
-    local entity_chunks = __entity_chunks
-    local entity_places = __entity_places
+    local entity_chunk = __entity_chunks[entity_primary]
 
-    local chunk = entity_chunks[entity_index]
-    local place = entity_places[entity_index]
-
-    if not chunk then
+    if not entity_chunk then
         return __iterator_fns.__each_iterator
     end
 
@@ -5031,8 +5059,8 @@ function __evolved_each(entity)
     local each_state = __acquire_table(__table_pool_tag.each_state)
 
     each_state[1] = __structural_changes
-    each_state[2] = chunk
-    each_state[3] = place
+    each_state[2] = entity_chunk
+    each_state[3] = __entity_places[entity_primary]
     each_state[4] = 1
 
     return __iterator_fns.__each_iterator, each_state
@@ -5043,11 +5071,11 @@ end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function __evolved_execute(query)
-    local query_index = query % 2 ^ 20
+    local query_primary, _ = __evolved_unpack(query)
 
-    if __freelist_ids[query_index] ~= query then
-        -- this query is not alive, nothing to execute
-        return __iterator_fns.__execute_major_iterator
+    if __freelist_ids[query_primary] ~= query then
+        __error_fmt('the id (%s) is not alive and cannot be executed',
+            __universal_name(query))
     end
 
     ---@type evolved.chunk[]
@@ -5055,21 +5083,21 @@ function __evolved_execute(query)
     local chunk_stack_size = 0
 
     local query_includes = __sorted_includes[query]
-    local query_include_set = query_includes and query_includes.__item_set --[[@as table<evolved.fragment, integer>]]
-    local query_include_list = query_includes and query_includes.__item_list --[=[@as evolved.fragment[]]=]
-    local query_include_count = query_includes and query_includes.__item_count or 0 --[[@as integer]]
+    local query_include_set = query_includes and query_includes.__item_set
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
 
     local query_excludes = __sorted_excludes[query]
-    local query_exclude_set = query_excludes and query_excludes.__item_set --[[@as table<evolved.fragment, integer>]]
-    local query_exclude_list = query_excludes and query_excludes.__item_list --[=[@as evolved.fragment[]]=]
-    local query_exclude_count = query_excludes and query_excludes.__item_count or 0 --[[@as integer]]
+    local query_exclude_set = query_excludes and query_excludes.__item_set
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count or 0
 
     if query_include_count > 0 then
         local query_major = query_include_list[query_include_count]
 
         local major_chunks = __major_chunks[query_major]
-        local major_chunk_list = major_chunks and major_chunks.__item_list --[=[@as evolved.chunk[]]=]
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0 --[[@as integer]]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
 
         for major_chunk_index = 1, major_chunk_count do
             local major_chunk = major_chunk_list[major_chunk_index]
@@ -5093,8 +5121,7 @@ function __evolved_execute(query)
                 for major_chunk_fragment_index = 1, major_chunk_minor_count do
                     local major_chunk_minor = major_chunk_minor_list[major_chunk_fragment_index]
 
-                    local is_major_chunk_minor_included =
-                        query_include_set[major_chunk_minor]
+                    local is_major_chunk_minor_included = query_include_set[major_chunk_minor]
 
                     if not is_major_chunk_minor_included and __evolved_has(major_chunk_minor, __EXPLICIT) then
                         is_major_chunk_matched = false
@@ -5117,7 +5144,7 @@ function __evolved_execute(query)
         execute_state[3] = chunk_stack_size
         execute_state[4] = query_exclude_set
 
-        return __iterator_fns.__execute_major_iterator, execute_state
+        return __iterator_fns.__execute_iterator, execute_state
     else
         for _, root_chunk in __lua_next, __root_chunks do
             local is_root_chunk_matched = true
@@ -5145,7 +5172,7 @@ function __evolved_execute(query)
         execute_state[3] = chunk_stack_size
         execute_state[4] = query_exclude_set
 
-        return __iterator_fns.__execute_major_iterator, execute_state
+        return __iterator_fns.__execute_iterator, execute_state
     end
 end
 
@@ -5160,11 +5187,13 @@ function __evolved_process(...)
     for argument_index = 1, argument_count do
         ---@type evolved.system
         local system = __lua_select(argument_index, ...)
+        local system_primary, _ = __evolved_unpack(system)
 
-        if not __evolved_alive(system) then
-            -- this system is not alive, nothing to process
+        if __freelist_ids[system_primary] ~= system then
+            __warning_fmt('the id (%s) is not alive and cannot be processed',
+                __universal_name(system))
         elseif __evolved_has(system, __DISABLED) then
-            -- this system is disabled, nothing to process
+            -- the system is disabled, nothing to process
         else
             __system_process(system)
         end
@@ -5263,7 +5292,7 @@ function __chunk_mt:__tostring()
     local fragment_names = {} ---@type string[]
 
     for i = 1, self.__fragment_count do
-        fragment_names[i] = __id_name(self.__fragment_list[i])
+        fragment_names[i] = __universal_name(self.__fragment_list[i])
     end
 
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
@@ -5405,7 +5434,7 @@ function __builder_mt:__tostring()
     local fragment_names = {} ---@type string[]
 
     for i = 1, fragment_count do
-        fragment_names[i] = __id_name(fragment_list[i])
+        fragment_names[i] = __universal_name(fragment_list[i])
     end
 
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
@@ -5554,9 +5583,12 @@ end
 ---@param component evolved.component
 ---@return evolved.builder builder
 function __builder_mt:set(fragment, component)
+    local fragment_primary, _ = __evolved_unpack(fragment)
+
     if __debug_mode then
-        if not __evolved_alive(fragment) then
-            __error_fmt('the fragment (%s) is not alive and cannot be used', __id_name(fragment))
+        if __freelist_ids[fragment_primary] ~= fragment then
+            __error_fmt('the id (%s) is not alive and cannot be set',
+                __universal_name(fragment))
         end
     end
 
@@ -5595,25 +5627,25 @@ function __builder_mt:remove(...)
 
     if fragment_count == 2 then
         local f1, f2 = ...
-        cs[f1] = nil; cs[f2] = nil
+        cs[f1], cs[f2] = nil, nil
         return self
     end
 
     if fragment_count == 3 then
         local f1, f2, f3 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil
+        cs[f1], cs[f2], cs[f3] = nil, nil, nil
         return self
     end
 
     if fragment_count == 4 then
         local f1, f2, f3, f4 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil; cs[f4] = nil
+        cs[f1], cs[f2], cs[f3], cs[f4] = nil, nil, nil, nil
         return self
     end
 
     do
         local f1, f2, f3, f4 = ...
-        cs[f1] = nil; cs[f2] = nil; cs[f3] = nil; cs[f4] = nil
+        cs[f1], cs[f2], cs[f3], cs[f4] = nil, nil, nil, nil
         return self:remove(__lua_select(5, ...))
     end
 end
@@ -5984,6 +6016,7 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_includes = __assoc_list_new(include_count)
 
     __assoc_list_move(include_list, 1, include_count, sorted_includes)
@@ -6012,6 +6045,7 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_excludes = __assoc_list_new(exclude_count)
 
     __assoc_list_move(exclude_list, 1, exclude_count, sorted_excludes)
@@ -6040,6 +6074,7 @@ __evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
         return
     end
 
+    ---@type evolved.assoc_list<evolved.fragment>
     local sorted_requires = __assoc_list_new(require_count)
 
     __assoc_list_move(require_list, 1, require_count, sorted_requires)
@@ -6077,6 +6112,7 @@ __evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
     local new_group_systems = __group_subsystems[new_group]
 
     if not new_group_systems then
+        ---@type evolved.assoc_list<evolved.system>
         new_group_systems = __assoc_list_new(4)
         __group_subsystems[new_group] = new_group_systems
     end

@@ -147,16 +147,15 @@ function evolved.alive_any(...) end
 Sometimes (for debugging purposes, for example), it is necessary to extract the index and version from an identifier or to pack them back into an identifier. The [`evolved.pack`](#evolvedpack) and [`evolved.unpack`](#evolvedunpack) functions can be used for this purpose.
 
 ```lua
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary) end
+function evolved.pack(index, version) end
 
 ---@param id evolved.id
 ---@return integer primary
 ---@return integer secondary
----@return integer options
 ---@nodiscard
 function evolved.unpack(id) end
 ```
@@ -1304,11 +1303,11 @@ function evolved.name(...) end
 ### `evolved.pack`
 
 ```lua
----@param primary integer
----@param secondary integer
+---@param index integer
+---@param version integer
 ---@return evolved.id id
 ---@nodiscard
-function evolved.pack(primary, secondary) end
+function evolved.pack(index, version) end
 ```
 
 ### `evolved.unpack`
@@ -1317,7 +1316,6 @@ function evolved.pack(primary, secondary) end
 ---@param id evolved.id
 ---@return integer primary
 ---@return integer secondary
----@return integer options
 ---@nodiscard
 function evolved.unpack(id) end
 ```
