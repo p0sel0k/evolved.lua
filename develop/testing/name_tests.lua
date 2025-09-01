@@ -3,8 +3,8 @@ local evo = require 'evolved'
 do
     local id = evo.id()
 
-    local index, version, options = evo.unpack(id)
-    assert(evo.name(id) == string.format('$%d#%d:%d:%d', id, index, version, options))
+    local index, version = evo.unpack(id)
+    assert(evo.name(id) == string.format('$%d#%d:%d', id, index, version))
 
     evo.set(id, evo.NAME, 'hello')
     assert(evo.name(id) == 'hello')
@@ -13,7 +13,7 @@ do
     assert(evo.name(id) == 'world')
 
     evo.destroy(id)
-    assert(evo.name(id) == string.format('$%d#%d:%d:%d', id, index, version, options))
+    assert(evo.name(id) == string.format('$%d#%d:%d', id, index, version))
 end
 
 do
