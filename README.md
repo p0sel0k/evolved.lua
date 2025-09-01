@@ -1097,7 +1097,7 @@ id :: integer? -> id...
 name :: id... -> string...
 
 pack :: integer, integer -> id
-unpack :: id -> integer, integer, integer
+unpack :: id -> integer, integer
 
 defer :: boolean
 commit :: boolean
