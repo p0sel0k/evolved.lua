@@ -179,6 +179,10 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<
 local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
+---@class evolved.scheme
+local __scheme_mt = {}
+__scheme_mt.__index = __scheme_mt
+
 ---@class evolved.builder
 ---@field package __components table<evolved.fragment, evolved.component>
 local __builder_mt = {}
@@ -718,6 +722,7 @@ local __UNIQUE = __acquire_id()
 local __EXPLICIT = __acquire_id()
 local __INTERNAL = __acquire_id()
 
+local __SCHEME = __acquire_id()
 local __DEFAULT = __acquire_id()
 local __DUPLICATE = __acquire_id()
 
@@ -5682,6 +5687,12 @@ function __builder_mt:internal()
     return self:set(__INTERNAL)
 end
 
+---@param scheme evolved.scheme
+---@return evolved.builder builder
+function __builder_mt:scheme(scheme)
+    return self:set(__SCHEME, scheme)
+end
+
 ---@param default evolved.component
 ---@return evolved.builder builder
 function __builder_mt:default(default)
@@ -5873,6 +5884,9 @@ __evolved_set(__EXPLICIT, __ON_REMOVE, __update_major_chunks_hook)
 __evolved_set(__INTERNAL, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__INTERNAL, __ON_REMOVE, __update_major_chunks_hook)
 
+__evolved_set(__SCHEME, __ON_INSERT, __update_major_chunks_hook)
+__evolved_set(__SCHEME, __ON_REMOVE, __update_major_chunks_hook)
+
 __evolved_set(__DEFAULT, __ON_INSERT, __update_major_chunks_hook)
 __evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks_hook)
 
@@ -5895,6 +5909,7 @@ __evolved_set(__UNIQUE, __NAME, 'UNIQUE')
 __evolved_set(__EXPLICIT, __NAME, 'EXPLICIT')
 __evolved_set(__INTERNAL, __NAME, 'INTERNAL')
 
+__evolved_set(__SCHEME, __NAME, 'SCHEME')
 __evolved_set(__DEFAULT, __NAME, 'DEFAULT')
 __evolved_set(__DUPLICATE, __NAME, 'DUPLICATE')
 
@@ -5935,6 +5950,7 @@ __evolved_set(__UNIQUE, __INTERNAL)
 __evolved_set(__EXPLICIT, __INTERNAL)
 __evolved_set(__INTERNAL, __INTERNAL)
 
+__evolved_set(__SCHEME, __INTERNAL)
 __evolved_set(__DEFAULT, __INTERNAL)
 __evolved_set(__DUPLICATE, __INTERNAL)
 
@@ -6143,6 +6159,7 @@ evolved.UNIQUE = __UNIQUE
 evolved.EXPLICIT = __EXPLICIT
 evolved.INTERNAL = __INTERNAL
 
+evolved.SCHEME = __SCHEME
 evolved.DEFAULT = __DEFAULT
 evolved.DUPLICATE = __DUPLICATE
 
