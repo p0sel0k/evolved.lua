@@ -598,29 +598,31 @@ do
     evo.set(e2b, f2, 45)
 
     do
-        local chunk, entities = evo.chunk(f1)
-        assert(entities and entities[1] == e1)
+        local chunk, entity_list, entity_count = evo.chunk(f1)
+        assert(entity_list and entity_list[1] == e1)
+        assert(entity_count and entity_count == 1)
         assert(chunk and chunk:components(f1)[1] == 41)
     end
 
     do
-        local chunk, entities = evo.chunk(f1, f2)
+        local chunk, entity_list, entity_count = evo.chunk(f1, f2)
         assert(chunk == evo.chunk(f1, f2))
         assert(chunk == evo.chunk(f1, f1, f2))
         assert(chunk == evo.chunk(f1, f1, f2, f2))
         assert(chunk == evo.chunk(f1, f2, f2, f1))
         assert(chunk == evo.chunk(f2, f1))
         assert(chunk == evo.chunk(f2, f1, f2, f1))
-        assert(entities and entities[1] == e2 and entities[2] == e2b)
+        assert(entity_list and entity_list[1] == e2 and entity_list[2] == e2b)
+        assert(entity_count and entity_count == 2)
         assert(chunk and chunk:components(f1)[1] == 42 and chunk:components(f2)[1] == 43)
         assert(chunk and chunk:components(f1)[2] == 44 and chunk:components(f2)[2] == 45)
     end
 
     do
-        local chunk123, entities123 = evo.chunk(f1, f2, f3)
-        local chunk321, entities321 = evo.chunk(f3, f2, f1)
-        assert(chunk123 and #entities123 == 0)
-        assert(chunk321 and #entities321 == 0)
+        local chunk123, entities123, entity123_count = evo.chunk(f1, f2, f3)
+        local chunk321, entities321, entity321_count = evo.chunk(f3, f2, f1)
+        assert(chunk123 and #entities123 >= 0 and entity123_count == 0)
+        assert(chunk321 and #entities321 >= 0 and entity321_count == 0)
         assert(chunk123 == chunk321 and entities123 == entities321)
     end
 end
@@ -1864,13 +1866,13 @@ do
             assert(evo.get(e3, f1) == nil and evo.get(e3, f2) == nil and evo.get(e3, f3) == 43)
 
             do
-                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
-                assert(chunk and chunk_entities)
+                local chunk, chunk_entity_list, chunk_entity_count = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entity_list and chunk_entity_count == 2)
 
-                assert(chunk_entities[1] == e3 and chunk_entities[2] == e1)
+                assert(chunk_entity_list[1] == e3 and chunk_entity_list[2] == e1)
 
-                assert(#chunk:components(f1) == 0)
-                assert(#chunk:components(f2) == 0)
+                assert(#chunk:components(f1) >= 0)
+                assert(#chunk:components(f2) >= 0)
                 assert(chunk:components(f3)[1] == 43 and chunk:components(f3)[2] == 50)
             end
         end
@@ -1906,22 +1908,22 @@ do
             assert(not evo.has(e3, f1) and evo.has(e3, f2) and evo.has(e3, f3))
 
             do
-                local chunk, chunk_entities = evo.chunk(f2)
-                assert(chunk and chunk_entities)
+                local chunk, chunk_entity_list, chunk_entity_count = evo.chunk(f2)
+                assert(chunk and chunk_entity_list and chunk_entity_count == 1)
 
-                assert(chunk_entities[1] == e1)
-                assert(#chunk:components(f1) == 0)
-                assert(#chunk:components(f2) == 0)
-                assert(#chunk:components(f3) == 0)
+                assert(chunk_entity_list[1] == e1)
+                assert(#chunk:components(f1) >= 0)
+                assert(#chunk:components(f2) >= 0)
+                assert(#chunk:components(f3) >= 0)
             end
 
             do
-                local chunk, chunk_entities = evo.chunk(f2, f3)
-                assert(chunk and chunk_entities)
+                local chunk, chunk_entity_list, chunk_entity_count = evo.chunk(f2, f3)
+                assert(chunk and chunk_entity_list and chunk_entity_count == 1)
 
-                assert(chunk_entities[1] == e3)
-                assert(#chunk:components(f1) == 0)
-                assert(#chunk:components(f2) == 0)
+                assert(chunk_entity_list[1] == e3)
+                assert(#chunk:components(f1) >= 0)
+                assert(#chunk:components(f2) >= 0)
                 assert(chunk:components(f3)[1] == 43)
             end
         end
@@ -1961,13 +1963,13 @@ do
             assert(not evo.has(e3, f1) and not evo.has(e3, f2) and not evo.has(e3, f3))
 
             do
-                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
-                assert(chunk and chunk_entities)
+                local chunk, chunk_entity_list, chunk_entity_count = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entity_list and chunk_entity_count == 0)
 
-                assert(next(chunk_entities) == nil)
-                assert(#chunk:components(f1) == 0)
-                assert(#chunk:components(f2) == 0)
-                assert(#chunk:components(f3) == 0)
+                assert(#chunk_entity_list >= 0)
+                assert(#chunk:components(f1) >= 0)
+                assert(#chunk:components(f2) >= 0)
+                assert(#chunk:components(f3) >= 0)
             end
         end
     end
@@ -2006,13 +2008,13 @@ do
             assert(not evo.has(e3, f1) and not evo.has(e3, f2) and not evo.has(e3, f3))
 
             do
-                local chunk, chunk_entities = evo.chunk(f1, f2, f3)
-                assert(chunk and chunk_entities)
+                local chunk, chunk_entity_list, chunk_entity_count = evo.chunk(f1, f2, f3)
+                assert(chunk and chunk_entity_list and chunk_entity_count == 0)
 
-                assert(next(chunk_entities) == nil)
-                assert(#chunk:components(f1) == 0)
-                assert(#chunk:components(f2) == 0)
-                assert(#chunk:components(f3) == 0)
+                assert(#chunk_entity_list >= 0)
+                assert(#chunk:components(f1) >= 0)
+                assert(#chunk:components(f2) >= 0)
+                assert(#chunk:components(f3) >= 0)
             end
         end
     end
@@ -2197,13 +2199,15 @@ do
     do
         local iter, state = evo.execute(q)
 
-        local chunk, entities = iter(state)
+        local chunk, entity_list, entity_count = iter(state)
         assert(chunk == evo.chunk(f2))
-        assert(entities and entities[1] == e2)
+        assert(entity_list and entity_list[1] == e2)
+        assert(entity_count == 1)
 
-        chunk, entities = iter(state)
+        chunk, entity_list, entity_count = iter(state)
         assert(not chunk)
-        assert(not entities)
+        assert(not entity_list)
+        assert(not entity_count)
     end
 end
 
@@ -2224,9 +2228,9 @@ do
     do
         local entity_sum = 0
 
-        for _, entities in evo.execute(q) do
-            assert(#entities > 0)
-            for _, e in ipairs(entities) do
+        for _, entity_list, entity_count in evo.execute(q) do
+            assert(entity_count > 0)
+            for _, e in ipairs(entity_list) do
                 entity_sum = entity_sum + e
             end
         end
@@ -2253,30 +2257,35 @@ do
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
+        local chunk, entity_list, entity_count = iter(state)
         assert(chunk == evo.chunk(f1))
-        assert(entities and entities[1] == e1)
+        assert(entity_list and entity_list[1] == e1)
+        assert(entity_count == 1)
 
-        chunk, entities = iter(state)
+        chunk, entity_list, entity_count = iter(state)
         assert(not chunk)
-        assert(not entities)
+        assert(not entity_list)
+        assert(not entity_count)
     end
 
     evo.set(q, evo.EXCLUDES)
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
+        local chunk, entity_list, entity_count = iter(state)
         assert(chunk == evo.chunk(f1))
-        assert(entities and entities[1] == e1)
+        assert(entity_list and entity_list[1] == e1)
+        assert(entity_count == 1)
 
-        chunk, entities = iter(state)
+        chunk, entity_list, entity_count = iter(state)
         assert(chunk == evo.chunk(f1, f2))
-        assert(entities and entities[1] == e2)
+        assert(entity_list and entity_list[1] == e2)
+        assert(entity_count == 1)
 
-        chunk, entities = iter(state)
+        chunk, entity_list, entity_count = iter(state)
         assert(not chunk)
-        assert(not entities)
+        assert(not entity_list)
+        assert(not entity_count)
     end
 end
 
@@ -2310,9 +2319,10 @@ do
 
     do
         local iter, state = evo.execute(q)
-        local chunk, entities = iter(state)
+        local chunk, entity_list, entity_count = iter(state)
         assert(chunk == evo.chunk(f1))
-        assert(entities and entities[1] == e1)
+        assert(entity_list and entity_list[1] == e1)
+        assert(entity_count == 1)
     end
 end
 
@@ -2448,7 +2458,7 @@ do
     local function collect_entities(q)
         local entities = {}
         for _, es, es_count in evo.execute(q) do
-            assert(#es == es_count)
+            assert(#es >= es_count)
             for _, e in ipairs(es) do
                 entities[#entities + 1] = e
             end
@@ -2462,7 +2472,7 @@ do
 
     do
         local entities = collect_entities(q1)
-        assert(#entities == 3)
+        assert(#entities >= 3)
         assert(entities[1] == e1)
         assert(entities[2] == e2)
         assert(entities[3] == e3)
@@ -2470,14 +2480,14 @@ do
 
     do
         local entities = collect_entities(q2)
-        assert(#entities == 2)
+        assert(#entities >= 2)
         assert(entities[1] == e2)
         assert(entities[2] == e3)
     end
 
     do
         local entities = collect_entities(q3)
-        assert(#entities == 1)
+        assert(#entities >= 1)
         assert(entities[1] == e2)
     end
 end
@@ -3246,36 +3256,36 @@ do
     local e = evo.spawn({ [f1] = 1, [f2] = 2, [f3] = 3, [f4] = 4, [f5] = 5 })
 
     local c, es = evo.chunk(f1, f2, f3, f4, f5)
-    assert(c and es and #es == 1 and es[1] == e)
+    assert(c and es and #es >= 1 and es[1] == e)
 
     do
         local c1, c2 = c:components(f1, f2)
-        assert(c1 and #c1 == 1 and c1[1] == 1)
-        assert(c2 and #c2 == 1 and c2[1] == 2)
+        assert(c1 and #c1 >= 1 and c1[1] == 1)
+        assert(c2 and #c2 >= 1 and c2[1] == 2)
     end
 
     do
         local c1, c2, c3 = c:components(f1, f2, f3)
-        assert(c1 and #c1 == 1 and c1[1] == 1)
-        assert(c2 and #c2 == 1 and c2[1] == 2)
-        assert(c3 and #c3 == 1 and c3[1] == 3)
+        assert(c1 and #c1 >= 1 and c1[1] == 1)
+        assert(c2 and #c2 >= 1 and c2[1] == 2)
+        assert(c3 and #c3 >= 1 and c3[1] == 3)
     end
 
     do
         local c1, c2, c3, c4 = c:components(f1, f2, f3, f4)
-        assert(c1 and #c1 == 1 and c1[1] == 1)
-        assert(c2 and #c2 == 1 and c2[1] == 2)
-        assert(c3 and #c3 == 1 and c3[1] == 3)
-        assert(c4 and #c4 == 1 and c4[1] == 4)
+        assert(c1 and #c1 >= 1 and c1[1] == 1)
+        assert(c2 and #c2 >= 1 and c2[1] == 2)
+        assert(c3 and #c3 >= 1 and c3[1] == 3)
+        assert(c4 and #c4 >= 1 and c4[1] == 4)
     end
 
     do
         local c1, c2, c3, c4, c5 = c:components(f1, f2, f3, f4, f5)
-        assert(c1 and #c1 == 1 and c1[1] == 1)
-        assert(c2 and #c2 == 1 and c2[1] == 2)
-        assert(c3 and #c3 == 1 and c3[1] == 3)
-        assert(c4 and #c4 == 1 and c4[1] == 4)
-        assert(c5 and #c5 == 1 and c5[1] == 5)
+        assert(c1 and #c1 >= 1 and c1[1] == 1)
+        assert(c2 and #c2 >= 1 and c2[1] == 2)
+        assert(c3 and #c3 >= 1 and c3[1] == 3)
+        assert(c4 and #c4 >= 1 and c4[1] == 4)
+        assert(c5 and #c5 >= 1 and c5[1] == 5)
     end
 end
 
@@ -3722,7 +3732,7 @@ do
 
     do
         local c1, c1_es = evo.chunk(f1)
-        assert(c1 and c1_es and #c1_es == 2)
+        assert(c1 and c1_es and #c1_es >= 2)
         assert(c1_es[1] == e1a and c1_es[2] == e1b)
         assert(c1:components(f1)[1] == 1 and c1:components(f1)[2] == 11)
     end
@@ -3731,10 +3741,10 @@ do
 
     do
         local c1, c1_es = evo.chunk(f1)
-        assert(c1 and c1_es and #c1_es == 0)
+        assert(c1 and c1_es and #c1_es >= 0)
 
         local c12, c12_es = evo.chunk(f1, f2)
-        assert(c12 and c12_es and #c12_es == 2)
+        assert(c12 and c12_es and #c12_es >= 2)
         assert(c12_es[1] == e1a and c12_es[2] == e1b)
         assert(c12:components(f1)[1] == 1 and c12:components(f1)[2] == 11)
         assert(c12:components(f2)[1] == 2 and c12:components(f2)[2] == 2)
@@ -3745,7 +3755,7 @@ do
 
     do
         local c1, c1_es = evo.chunk(f1)
-        assert(c1 and c1_es and #c1_es == 2)
+        assert(c1 and c1_es and #c1_es >= 2)
         assert(c1_es[1] == e1c and c1_es[2] == e1d)
         assert(c1:components(f1)[1] == 111 and c1:components(f1)[2] == 1111)
     end
@@ -3755,10 +3765,10 @@ do
 
     do
         local c1, c1_es = evo.chunk(f1)
-        assert(c1 and c1_es and #c1_es == 0)
+        assert(c1 and c1_es and #c1_es >= 0)
 
         local c12, c12_es = evo.chunk(f1, f2)
-        assert(c12 and c12_es and #c12_es == 4)
+        assert(c12 and c12_es and #c12_es >= 4)
         assert(c12_es[1] == e1a and c12_es[2] == e1b)
         assert(c12_es[3] == e1c and c12_es[4] == e1d)
         assert(c12:components(f1)[1] == 1 and c12:components(f1)[2] == 11)
@@ -3778,7 +3788,7 @@ do
 
     do
         local c123, c123_es = evo.chunk(f1, f2, f3)
-        assert(c123 and c123_es and #c123_es == 2)
+        assert(c123 and c123_es and #c123_es >= 2)
         assert(c123_es[1] == e123a and c123_es[2] == e123b)
         assert(c123:components(f1)[1] == 1 and c123:components(f1)[2] == 11)
         assert(c123:components(f2)[1] == 2 and c123:components(f2)[2] == 22)
@@ -3789,7 +3799,7 @@ do
 
     do
         local c13, c13_es = evo.chunk(f3, f1)
-        assert(c13 and c13_es and #c13_es == 2)
+        assert(c13 and c13_es and #c13_es >= 2)
         assert(c13_es[1] == e123a and c13_es[2] == e123b)
         assert(c13:components(f1)[1] == 1 and c13:components(f1)[2] == 11)
         assert(c13:components(f2)[1] == nil and c13:components(f2)[2] == nil)
@@ -3801,7 +3811,7 @@ do
 
     do
         local c3, c3_es = evo.chunk(f3)
-        assert(c3 and c3_es and #c3_es == 2)
+        assert(c3 and c3_es and #c3_es >= 2)
         assert(c3_es[1] == e3a and c3_es[2] == e3b)
         assert(c3:components(f3)[1] == 3 and c3:components(f3)[2] == 33)
     end
@@ -3810,7 +3820,7 @@ do
 
     do
         local c3, c3_es = evo.chunk(f3)
-        assert(c3 and c3_es and #c3_es == 4)
+        assert(c3 and c3_es and #c3_es >= 4)
         assert(c3_es[1] == e3a and c3_es[2] == e3b)
         assert(c3_es[3] == e123a and c3_es[4] == e123b)
         assert(c3:components(f1)[1] == nil and c3:components(f1)[2] == nil)
@@ -3833,13 +3843,13 @@ do
     do
         local c1, c1_es, c1_ec = evo.chunk(f1)
         assert(c1 and c1_es and c1_ec)
-        assert(c1_ec == 2 and #c1_es == 2 and c1_es[1] == e1a and c1_es[2] == e1b)
+        assert(c1_ec == 2 and #c1_es >= 2 and c1_es[1] == e1a and c1_es[2] == e1b)
     end
 
     do
         local c12, c12_es, c12_ec = evo.chunk(f1, f2)
         assert(c12 and c12_es and c12_ec)
-        assert(c12_ec == 1 and #c12_es == 1 and c12_es[1] == e12)
+        assert(c12_ec == 1 and #c12_es >= 1 and c12_es[1] == e12)
     end
 end
 
@@ -3897,14 +3907,14 @@ do
 
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 2 and c1_ec == 2)
+        assert(c1_es and #c1_es >= 2 and c1_ec == 2)
         assert(c1_es[1] == e1a and c1_es[2] == e1b)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+        assert(c2_es and #c2_es >= 0 and c2_ec == 0)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es and #c12_es >= 2 and c12_ec == 2)
         assert(c12_es[1] == e12a and c12_es[2] == e12b)
     end
 
@@ -3915,14 +3925,14 @@ do
 
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 2 and c2_ec == 2)
+        assert(c2_es and #c2_es >= 2 and c2_ec == 2)
         assert(c2_es[1] == e12a and c2_es[2] == e12b)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 2 and c12_ec == 2)
+        assert(c12_es and #c12_es >= 2 and c12_ec == 2)
         assert(c12_es[1] == e1a and c12_es[2] == e1b)
     end
 end
@@ -3938,7 +3948,7 @@ do
         assert(evo.empty(f2))
 
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
     end
 end
 
@@ -3949,7 +3959,7 @@ do
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
     end
 end
 
@@ -3964,26 +3974,26 @@ do
     evo.set(f2, f2)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+        assert(c2_es and #c2_es >= 0 and c2_ec == 0)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 1 and c12_ec == 1)
+        assert(c12_es and #c12_es >= 1 and c12_ec == 1)
         assert(c12_es[1] == f2)
     end
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f2)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 0 and c12_ec == 0)
+        assert(c12_es and #c12_es >= 0 and c12_ec == 0)
     end
 end
 
@@ -3998,25 +4008,25 @@ do
     evo.set(f2, f2)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+        assert(c2_es and #c2_es >= 0 and c2_ec == 0)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 1 and c12_ec == 1)
+        assert(c12_es and #c12_es >= 1 and c12_ec == 1)
         assert(c12_es[1] == f2)
     end
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+        assert(c2_es and #c2_es >= 0 and c2_ec == 0)
 
         local c12_es, c12_ec = c12:entities()
-        assert(c12_es and #c12_es == 0 and c12_ec == 0)
+        assert(c12_es and #c12_es >= 0 and c12_ec == 0)
     end
 end
 
@@ -4028,20 +4038,20 @@ do
     evo.set(f3, f2)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es and #c1_es >= 1 and c1_ec == 1)
         assert(c1_es[1] == f2)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f3)
     end
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f3)
     end
 end
@@ -4055,20 +4065,20 @@ do
     evo.set(f3, f2)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es and #c1_es >= 1 and c1_ec == 1)
         assert(c1_es[1] == f2)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f3)
     end
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f3)
     end
 end
@@ -4082,20 +4092,20 @@ do
     evo.set(f3, f2)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 1 and c1_ec == 1)
+        assert(c1_es and #c1_es >= 1 and c1_ec == 1)
         assert(c1_es[1] == f2)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 1 and c2_ec == 1)
+        assert(c2_es and #c2_es >= 1 and c2_ec == 1)
         assert(c2_es[1] == f3)
     end
     evo.destroy(f1)
     do
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
 
         local c2_es, c2_ec = c2:entities()
-        assert(c2_es and #c2_es == 0 and c2_ec == 0)
+        assert(c2_es and #c2_es >= 0 and c2_ec == 0)
     end
 end
 
@@ -4122,14 +4132,14 @@ do
 
     do
         local c4_es, c4_ec = c4:entities()
-        assert(c4_es and #c4_es == 3 and c4_ec == 3)
+        assert(c4_es and #c4_es >= 3 and c4_ec == 3)
         assert(c4_es[1] == e24 and c4_es[2] == e14 and c4_es[3] == e124)
     end
 
-    assert(#c14:entities() == 0)
-    assert(#c24:entities() == 0)
-    assert(#c124:entities() == 0)
-    assert(#c234:entities() == 0)
+    assert(#c14:entities() >= 0)
+    assert(#c24:entities() >= 0)
+    assert(#c124:entities() >= 0)
+    assert(#c234:entities() >= 0)
 
     assert(evo.alive(e14) and not evo.empty(e14))
     assert(evo.alive(e24) and not evo.empty(e24))
@@ -4159,7 +4169,7 @@ do
         assert(remove_count == 1)
 
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
     end
 end
 
@@ -4185,7 +4195,7 @@ do
         assert(remove_count == 1)
 
         local c1_es, c1_ec = c1:entities()
-        assert(c1_es and #c1_es == 0 and c1_ec == 0)
+        assert(c1_es and #c1_es >= 0 and c1_ec == 0)
     end
 end
 
@@ -4219,27 +4229,27 @@ do
     do
         local c1_es, c1_ec = c1:entities()
         assert(c1 and c1_es and c1_ec)
-        assert(c1_ec == 4 and #c1_es == 4)
+        assert(c1_ec == 4 and #c1_es >= 4)
         assert(c1_es[1] == e1a and c1_es[2] == e1b and c1_es[3] == e12a and c1_es[4] == e12b)
     end
 
     do
         local c12_es, c12_ec = c12:entities()
         assert(c12 and c12_es and c12_ec)
-        assert(c12_ec == 0 and #c12_es == 0)
+        assert(c12_ec == 0 and #c12_es >= 0)
     end
 
     do
         local c13_es, c13_ec = c13:entities()
         assert(c13 and c13_es and c13_ec)
-        assert(c13_ec == 2 and #c13_es == 2)
+        assert(c13_ec == 2 and #c13_es >= 2)
         assert(c13_es[1] == e123a and c13_es[2] == e123b)
     end
 
     do
         local c123_es, c123_ec = c123:entities()
         assert(c123 and c123_es and c123_ec)
-        assert(c123_ec == 0 and #c123_es == 0)
+        assert(c123_ec == 0 and #c123_es >= 0)
     end
 end
 
@@ -4291,7 +4301,7 @@ do
     do
         local c2, c2_es, c2_ec = evo.chunk(f2)
         assert(c2 and c2_es and c2_ec)
-        assert(#c2_es == 2 and c2_ec == 2)
+        assert(#c2_es >= 2 and c2_ec == 2)
         assert(c2_es[1] == e2a and c2_es[2] == e2b)
     end
 end
@@ -4324,7 +4334,7 @@ do
     do
         local c2, c2_es, c2_ec = evo.chunk(f2)
         assert(c2 and c2_es and c2_ec)
-        assert(#c2_es == 4 and c2_ec == 4)
+        assert(#c2_es >= 4 and c2_ec == 4)
         assert(c2_es[1] == e2a and c2_es[2] == e2b and c2_es[3] == e12a and c2_es[4] == e12b)
     end
 end
@@ -4349,10 +4359,10 @@ do
 
     assert(c1 and c23)
 
-    assert(#c1:fragments() == 1)
+    assert(#c1:fragments() >= 1)
     assert(c1:fragments()[1] == f1)
 
-    assert(#c23:fragments() == 2)
+    assert(#c23:fragments() >= 2)
     assert(c23:fragments()[1] == f2)
     assert(c23:fragments()[2] == f3)
 end
@@ -4372,20 +4382,23 @@ do
 
         local iter, state = evo.execute(q1)
 
-        local chunk, entity_list = iter(state)
-        assert(entity_list and #entity_list == 1)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(entity_list and #entity_list >= 1)
+        assert(entity_count and entity_count == 1)
         assert(chunk == evo.chunk(f0, f1) and entity_list[1] == e1)
 
-        chunk, entity_list = iter(state)
-        assert(entity_list and #entity_list == 1)
+        chunk, entity_list, entity_count = iter(state)
+        assert(entity_list and #entity_list >= 1)
+        assert(entity_count and entity_count == 1)
         assert(chunk == evo.chunk(f0, f1, f2) and entity_list[1] == e12)
 
-        chunk, entity_list = iter(state)
-        assert(entity_list and #entity_list == 1)
+        chunk, entity_list, entity_count = iter(state)
+        assert(entity_list and #entity_list >= 1)
+        assert(entity_count and entity_count == 1)
         assert(chunk == evo.chunk(f0, f1, f2, f3) and entity_list[1] == e123)
 
-        chunk, entity_list = iter(state)
-        assert(not chunk and not entity_list)
+        chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
     end
 
     do
@@ -4393,16 +4406,18 @@ do
 
         local iter, state = evo.execute(q1)
 
-        local chunk, entity_list = iter(state)
-        assert(entity_list and #entity_list == 1)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(entity_list and #entity_list >= 1)
+        assert(entity_count and entity_count == 1)
         assert(chunk == evo.chunk(f0, f1) and entity_list[1] == e1)
 
-        chunk, entity_list = iter(state)
-        assert(entity_list and #entity_list == 1)
+        chunk, entity_list, entity_count = iter(state)
+        assert(entity_list and #entity_list >= 1)
+        assert(entity_count and entity_count == 1)
         assert(chunk == evo.chunk(f0, f1, f2) and entity_list[1] == e12)
 
-        chunk, entity_list = iter(state)
-        assert(not chunk and not entity_list)
+        chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
     end
 end
 
@@ -4435,7 +4450,7 @@ do
 
         for c, es, ec in evo.execute(qe12) do
             assert(ec > 0)
-            assert(#es == ec)
+            assert(#es >= ec)
             assert(c ~= c1 and c ~= c2 and c ~= c12)
             matched_chunk_count = matched_chunk_count + 1
             matched_entity_count = matched_entity_count + ec
@@ -4453,7 +4468,7 @@ do
 
         for _, es, ec in evo.execute(qe12) do
             assert(ec > 0)
-            assert(#es == ec)
+            assert(#es >= ec)
             matched_chunk_count = matched_chunk_count + 1
             matched_entity_count = matched_entity_count + ec
         end
@@ -4468,7 +4483,7 @@ do
         local iter, state = evo.execute(qe12)
         local chunk, entity_list, entity_count = iter(state)
         assert(chunk == c12)
-        assert(entity_list and #entity_list == 1)
+        assert(entity_list and #entity_list >= 1)
         assert(entity_count and entity_count == 1)
         assert(entity_list[1] == e12)
     end
@@ -4495,7 +4510,7 @@ do
 
         local old_c1_es, old_c1_ec = old_c1:entities()
         assert(old_c1_es and old_c1_ec)
-        assert(#old_c1_es == 1 and old_c1_ec == 1)
+        assert(#old_c1_es >= 1 and old_c1_ec == 1)
         assert(old_c1_es[1] == e1)
     end
 
@@ -4507,7 +4522,7 @@ do
 
         local new_c12_es, new_c12_ec = new_c12:entities()
         assert(new_c12_es and new_c12_ec)
-        assert(#new_c12_es == 1 and new_c12_ec == 1)
+        assert(#new_c12_es >= 1 and new_c12_ec == 1)
         assert(new_c12_es[1] == e12)
     end
 
