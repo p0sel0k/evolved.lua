@@ -994,7 +994,7 @@ local __update_major_chunks_trace
 ---@return evolved.chunk
 ---@nodiscard
 function __new_chunk(chunk_parent, chunk_fragment)
-    local chunk_fragment_primary, _ = __evolved_unpack(chunk_fragment)
+    local chunk_fragment_primary = chunk_fragment % 2 ^ 20
 
     if __freelist_ids[chunk_fragment_primary] ~= chunk_fragment then
         __error_fmt('the id (%s) is not alive and cannot be used for a new chunk',
@@ -4149,7 +4149,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_alive(entity)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return false
@@ -4204,7 +4204,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_empty(entity)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return true
@@ -4260,7 +4260,7 @@ end
 ---@return boolean
 ---@nodiscard
 function __evolved_has(entity, fragment)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return false
@@ -4282,7 +4282,7 @@ function __evolved_has_all(entity, ...)
         return true
     end
 
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return false
@@ -4304,7 +4304,7 @@ function __evolved_has_any(entity, ...)
         return false
     end
 
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return false
@@ -4320,7 +4320,7 @@ end
 ---@return evolved.component ... components
 ---@nodiscard
 function __evolved_get(entity, ...)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         return
@@ -4340,14 +4340,14 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_set(entity, fragment, component)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         __error_fmt('the id (%s) is not alive and cannot be changed',
             __universal_name(entity))
     end
 
-    local fragment_primary, _ = __evolved_unpack(fragment)
+    local fragment_primary = fragment % 2 ^ 20
 
     if __debug_mode then
         if __freelist_ids[fragment_primary] ~= fragment then
@@ -4590,7 +4590,7 @@ function __evolved_remove(entity, ...)
         return
     end
 
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         -- the id is not alive, nothing to remove
@@ -4705,7 +4705,7 @@ function __evolved_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_primary, _ = __evolved_unpack(entity)
+            local entity_primary = entity % 2 ^ 20
 
             if __freelist_ids[entity_primary] ~= entity then
                 -- the id is not alive, nothing to clear
@@ -4781,7 +4781,7 @@ function __evolved_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.entity
             local entity = __lua_select(argument_index, ...)
-            local entity_primary, _ = __evolved_unpack(entity)
+            local entity_primary = entity % 2 ^ 20
 
             if __freelist_ids[entity_primary] ~= entity then
                 -- the id is not alive, nothing to destroy
@@ -4820,7 +4820,7 @@ end
 ---@param fragment evolved.fragment
 ---@param component evolved.component
 function __evolved_batch_set(query, fragment, component)
-    local query_primary, _ = __evolved_unpack(query)
+    local query_primary = query % 2 ^ 20
 
     if __freelist_ids[query_primary] ~= query then
         __error_fmt('the id (%s) is not alive and cannot be queried',
@@ -4828,7 +4828,7 @@ function __evolved_batch_set(query, fragment, component)
     end
 
     if __debug_mode then
-        local fragment_primary, _ = __evolved_unpack(fragment)
+        local fragment_primary = fragment % 2 ^ 20
 
         if __freelist_ids[fragment_primary] ~= fragment then
             __error_fmt('the id (%s) is not alive and cannot be set',
@@ -4873,7 +4873,7 @@ function __evolved_batch_remove(query, ...)
         return
     end
 
-    local query_primary, _ = __evolved_unpack(query)
+    local query_primary = query % 2 ^ 20
 
     if __freelist_ids[query_primary] ~= query then
         __error_fmt('the id (%s) is not alive and cannot be queried',
@@ -4931,7 +4931,7 @@ function __evolved_batch_clear(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
-            local query_primary, _ = __evolved_unpack(query)
+            local query_primary = query % 2 ^ 20
 
             if __freelist_ids[query_primary] ~= query then
                 __warning_fmt('the id (%s) is not alive and cannot be queried',
@@ -4985,7 +4985,7 @@ function __evolved_batch_destroy(...)
         for argument_index = 1, argument_count do
             ---@type evolved.query
             local query = __lua_select(argument_index, ...)
-            local query_primary, _ = __evolved_unpack(query)
+            local query_primary = query % 2 ^ 20
 
             if __freelist_ids[query_primary] ~= query then
                 __warning_fmt('the id (%s) is not alive and cannot be queried',
@@ -5042,7 +5042,7 @@ end
 ---@return evolved.each_state? iterator_state
 ---@nodiscard
 function __evolved_each(entity)
-    local entity_primary, _ = __evolved_unpack(entity)
+    local entity_primary = entity % 2 ^ 20
 
     if __freelist_ids[entity_primary] ~= entity then
         __error_fmt('the id (%s) is not alive and cannot be iterated',
@@ -5071,7 +5071,7 @@ end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function __evolved_execute(query)
-    local query_primary, _ = __evolved_unpack(query)
+    local query_primary = query % 2 ^ 20
 
     if __freelist_ids[query_primary] ~= query then
         __error_fmt('the id (%s) is not alive and cannot be executed',
@@ -5187,7 +5187,7 @@ function __evolved_process(...)
     for argument_index = 1, argument_count do
         ---@type evolved.system
         local system = __lua_select(argument_index, ...)
-        local system_primary, _ = __evolved_unpack(system)
+        local system_primary = system % 2 ^ 20
 
         if __freelist_ids[system_primary] ~= system then
             __warning_fmt('the id (%s) is not alive and cannot be processed',
@@ -5583,7 +5583,7 @@ end
 ---@param component evolved.component
 ---@return evolved.builder builder
 function __builder_mt:set(fragment, component)
-    local fragment_primary, _ = __evolved_unpack(fragment)
+    local fragment_primary = fragment % 2 ^ 20
 
     if __debug_mode then
         if __freelist_ids[fragment_primary] ~= fragment then
