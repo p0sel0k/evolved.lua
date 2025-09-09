@@ -115,7 +115,7 @@ local __debug_mode = false ---@type boolean
 
 local __freelist_ids = {} ---@type integer[]
 local __acquired_count = 0 ---@type integer
-local __available_index = 0 ---@type integer
+local __available_primary = 0 ---@type integer
 
 local __defer_depth = 0 ---@type integer
 local __defer_length = 0 ---@type integer
@@ -359,36 +359,36 @@ end
 ---@nodiscard
 local function __acquire_id()
     local freelist_ids = __freelist_ids
-    local available_index = __available_index
+    local available_primary = __available_primary
 
-    if available_index ~= 0 then
-        local acquired_index = available_index
-        local freelist_id = freelist_ids[acquired_index]
+    if available_primary ~= 0 then
+        local acquired_primary = available_primary
+        local freelist_id = freelist_ids[acquired_primary]
 
-        local next_available_index = freelist_id % 0x100000
-        local shifted_version = freelist_id - next_available_index
+        local next_available_primary = freelist_id % 2 ^ 20
+        local shifted_secondary = freelist_id - next_available_primary
 
-        __available_index = next_available_index
+        __available_primary = next_available_primary
 
-        local acquired_id = acquired_index + shifted_version
-        freelist_ids[acquired_index] = acquired_id
+        local acquired_id = acquired_primary + shifted_secondary
+        freelist_ids[acquired_primary] = acquired_id
 
         return acquired_id --[[@as evolved.id]]
     else
         local acquired_count = __acquired_count
 
-        if acquired_count == 0xFFFFF then
+        if acquired_count == 2 ^ 20 - 1 then
             __error_fmt('id index overflow')
         end
 
         acquired_count = acquired_count + 1
         __acquired_count = acquired_count
 
-        local acquired_index = acquired_count
-        local shifted_version = 0x100000
+        local acquired_primary = acquired_count
+        local shifted_secondary = 2 ^ 20
 
-        local acquired_id = acquired_index + shifted_version
-        freelist_ids[acquired_index] = acquired_id
+        local acquired_id = acquired_primary + shifted_secondary
+        freelist_ids[acquired_primary] = acquired_id
 
         return acquired_id --[[@as evolved.id]]
     end
@@ -396,21 +396,21 @@ end
 
 ---@param id evolved.id
 local function __release_id(id)
-    local acquired_index = id % 0x100000
-    local shifted_version = id - acquired_index
+    local acquired_primary = id % 2 ^ 20
+    local shifted_secondary = id - acquired_primary
 
     local freelist_ids = __freelist_ids
 
-    if freelist_ids[acquired_index] ~= id then
+    if freelist_ids[acquired_primary] ~= id then
         __error_fmt('id is not acquired or already released')
     end
 
-    shifted_version = shifted_version == 0xFFFFF * 0x100000
-        and 0x100000
-        or shifted_version + 0x100000
+    shifted_secondary = shifted_secondary == 2 ^ 40 - 2 ^ 20
+        and 2 ^ 20
+        or shifted_secondary + 2 ^ 20
 
-    freelist_ids[acquired_index] = __available_index + shifted_version
-    __available_index = acquired_index
+    freelist_ids[acquired_primary] = __available_primary + shifted_secondary
+    __available_primary = acquired_primary
 end
 
 ---
@@ -948,8 +948,8 @@ function __iterator_fns.__execute_iterator(execute_state)
         local chunk_child_list = chunk.__child_list
         local chunk_child_count = chunk.__child_count
 
-        for i = 1, chunk_child_count do
-            local chunk_child = chunk_child_list[i]
+        for chunk_child_index = 1, chunk_child_count do
+            local chunk_child = chunk_child_list[chunk_child_index]
             local chunk_child_fragment = chunk_child.__fragment
 
             local is_chunk_child_matched =
@@ -1087,8 +1087,8 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __assoc_list_insert(major_chunks, chunk)
     end
 
-    for i = 1, chunk_fragment_count do
-        local minor = chunk_fragment_list[i]
+    for chunk_fragment_index = 1, chunk_fragment_count do
+        local minor = chunk_fragment_list[chunk_fragment_index]
         local minor_chunks = __minor_chunks[minor]
 
         if not minor_chunks then
@@ -1116,8 +1116,8 @@ function __update_chunk_tags(chunk)
     local component_storages = chunk.__component_storages
     local component_fragments = chunk.__component_fragments
 
-    for i = 1, fragment_count do
-        local fragment = fragment_list[i]
+    for fragment_index = 1, fragment_count do
+        local fragment = fragment_list[fragment_index]
         local component_index = component_indices[fragment]
 
         if component_index and __evolved_has(fragment, __TAG) then
@@ -1440,9 +1440,9 @@ function __chunk_without_fragments(chunk, ...)
         return chunk
     end
 
-    for i = 1, fragment_count do
+    for fragment_index = 1, fragment_count do
         ---@type evolved.fragment
-        local fragment = __lua_select(i, ...)
+        local fragment = __lua_select(fragment_index, ...)
         chunk = __chunk_without_fragment(chunk, fragment)
     end
 
@@ -1496,9 +1496,9 @@ function __chunk_fragments(head_fragment, ...)
     local chunk = __root_chunks[head_fragment]
         or __new_chunk(nil, head_fragment)
 
-    for i = 1, __lua_select('#', ...) do
+    for tail_fragment_index = 1, __lua_select('#', ...) do
         ---@type evolved.fragment
-        local tail_fragment = __lua_select(i, ...)
+        local tail_fragment = __lua_select(tail_fragment_index, ...)
         chunk = chunk.__with_fragment_edges[tail_fragment]
             or __chunk_with_fragment(chunk, tail_fragment)
     end
@@ -1597,8 +1597,8 @@ function __chunk_has_all_fragment_list(chunk, fragment_list, fragment_count)
 
     local fs = chunk.__fragment_set
 
-    for i = 1, fragment_count do
-        local f = fragment_list[i]
+    for fragment_index = 1, fragment_count do
+        local f = fragment_list[fragment_index]
         if fs[f] == nil then
             return false
         end
@@ -1659,8 +1659,8 @@ function __chunk_has_any_fragment_list(chunk, fragment_list, fragment_count)
 
     local fs = chunk.__fragment_set
 
-    for i = 1, fragment_count do
-        local f = fragment_list[i]
+    for fragment_index = 1, fragment_count do
+        local f = fragment_list[fragment_index]
         if fs[f] ~= nil then
             return true
         end
@@ -1879,8 +1879,8 @@ local function __detach_entity(chunk, place)
         end
     else
         local last_entity = entity_list[entity_count]
-        local last_entity_index = last_entity % 2 ^ 20
-        __entity_places[last_entity_index] = place
+        local last_entity_primary = last_entity % 2 ^ 20
+        __entity_places[last_entity_primary] = place
 
         entity_list[place] = last_entity
         entity_list[entity_count] = nil
@@ -1942,8 +1942,8 @@ local function __spawn_entity(entity, components)
         req_fragment_count = __chunk_required_fragments(ini_chunk,
             req_fragment_set, req_fragment_list, req_fragment_count)
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
             chunk = __chunk_with_fragment(chunk, req_fragment)
         end
     end
@@ -1960,10 +1960,10 @@ local function __spawn_entity(entity, components)
     chunk_entity_list[place] = entity
 
     do
-        local entity_index = entity % 0x100000
+        local entity_primary = entity % 2 ^ 20
 
-        __entity_chunks[entity_index] = chunk
-        __entity_places[entity_index] = place
+        __entity_chunks[entity_primary] = chunk
+        __entity_places[entity_primary] = place
 
         __structural_changes = __structural_changes + 1
     end
@@ -1993,8 +1993,8 @@ local function __spawn_entity(entity, components)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -2035,8 +2035,8 @@ local function __spawn_entity(entity, components)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -2108,9 +2108,10 @@ local function __clone_entity(entity, prefab, components)
         __error_fmt('clone entity operations should be deferred')
     end
 
-    local prefab_index = prefab % 0x100000
-    local prefab_chunk = __entity_chunks[prefab_index]
-    local prefab_place = __entity_places[prefab_index]
+    local prefab_primary = prefab % 2 ^ 20
+
+    local prefab_chunk = __entity_chunks[prefab_primary]
+    local prefab_place = __entity_places[prefab_primary]
 
     local chunk = __chunk_with_components(
         __chunk_without_unique_fragments(prefab_chunk),
@@ -2137,8 +2138,8 @@ local function __clone_entity(entity, prefab, components)
         req_fragment_count = __chunk_required_fragments(ini_chunk,
             req_fragment_set, req_fragment_list, req_fragment_count)
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
             chunk = __chunk_with_fragment(chunk, req_fragment)
         end
     end
@@ -2155,10 +2156,10 @@ local function __clone_entity(entity, prefab, components)
     chunk_entity_list[place] = entity
 
     do
-        local entity_index = entity % 0x100000
+        local entity_primary = entity % 2 ^ 20
 
-        __entity_chunks[entity_index] = chunk
-        __entity_places[entity_index] = place
+        __entity_chunks[entity_primary] = chunk
+        __entity_places[entity_primary] = place
 
         __structural_changes = __structural_changes + 1
     end
@@ -2244,8 +2245,8 @@ local function __clone_entity(entity, prefab, components)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -2286,8 +2287,8 @@ local function __clone_entity(entity, prefab, components)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -2403,8 +2404,8 @@ local function __purge_chunk(chunk)
         end
     end
 
-    for i = 1, chunk_fragment_count do
-        local minor = chunk_fragment_list[i]
+    for chunk_fragment_index = 1, chunk_fragment_count do
+        local minor = chunk_fragment_list[chunk_fragment_index]
         local minor_chunks = __minor_chunks[minor]
 
         if minor_chunks and __assoc_list_remove(minor_chunks, chunk) == 0 then
@@ -2442,8 +2443,8 @@ local function __clear_chunk_list(chunk_list, chunk_count)
         return
     end
 
-    for i = 1, chunk_count do
-        local chunk = chunk_list[i]
+    for chunk_index = 1, chunk_count do
+        local chunk = chunk_list[chunk_index]
         __chunk_clear(chunk)
     end
 end
@@ -2459,15 +2460,15 @@ local function __destroy_entity_list(entity_list, entity_count)
         return
     end
 
-    for i = 1, entity_count do
-        local entity = entity_list[i]
-        local entity_index = entity % 2 ^ 20
+    for entity_index = 1, entity_count do
+        local entity = entity_list[entity_index]
+        local entity_primary = entity % 2 ^ 20
 
-        if __freelist_ids[entity_index] ~= entity then
+        if __freelist_ids[entity_primary] ~= entity then
             -- this entity is not alive, nothing to purge
         else
-            local chunk = __entity_chunks[entity_index]
-            local place = __entity_places[entity_index]
+            local chunk = __entity_chunks[entity_primary]
+            local place = __entity_places[entity_primary]
 
             if chunk and chunk.__has_remove_hooks then
                 local chunk_fragment_list = chunk.__fragment_list
@@ -2498,8 +2499,8 @@ local function __destroy_entity_list(entity_list, entity_count)
             if chunk then
                 __detach_entity(chunk, place)
 
-                __entity_chunks[entity_index] = nil
-                __entity_places[entity_index] = nil
+                __entity_chunks[entity_primary] = nil
+                __entity_places[entity_primary] = nil
 
                 __structural_changes = __structural_changes + 1
             end
@@ -2764,8 +2765,8 @@ function __chunk_set(old_chunk, fragment, component)
             req_fragment_count = __fragment_required_fragments(fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
-            for i = 1, req_fragment_count do
-                local req_fragment = req_fragment_list[i]
+            for req_fragment_index = 1, req_fragment_count do
+                local req_fragment = req_fragment_list[req_fragment_index]
                 new_chunk = __chunk_with_fragment(new_chunk, req_fragment)
             end
         end
@@ -2824,9 +2825,9 @@ function __chunk_set(old_chunk, fragment, component)
 
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entity_list[new_place]
-                local entity_index = entity % 2 ^ 20
-                entity_chunks[entity_index] = new_chunk
-                entity_places[entity_index] = new_place
+                local entity_primary = entity % 2 ^ 20
+                entity_chunks[entity_primary] = new_chunk
+                entity_places[entity_primary] = new_place
             end
 
             __detach_all_entities(old_chunk)
@@ -2916,8 +2917,8 @@ function __chunk_set(old_chunk, fragment, component)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -3059,8 +3060,8 @@ function __chunk_remove(old_chunk, ...)
         local new_fragment_set = new_chunk and new_chunk.__fragment_set
             or __safe_tbls.__EMPTY_FRAGMENT_SET
 
-        for i = 1, old_fragment_count do
-            local fragment = old_fragment_list[i]
+        for old_fragment_index = 1, old_fragment_count do
+            local fragment = old_fragment_list[old_fragment_index]
 
             if not new_fragment_set[fragment] then
                 ---@type evolved.remove_hook?
@@ -3133,9 +3134,9 @@ function __chunk_remove(old_chunk, ...)
 
             for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
                 local entity = new_entity_list[new_place]
-                local entity_index = entity % 2 ^ 20
-                entity_chunks[entity_index] = new_chunk
-                entity_places[entity_index] = new_place
+                local entity_primary = entity % 2 ^ 20
+                entity_chunks[entity_primary] = new_chunk
+                entity_places[entity_primary] = new_place
             end
 
             __detach_all_entities(old_chunk)
@@ -3146,9 +3147,9 @@ function __chunk_remove(old_chunk, ...)
 
         for old_place = 1, old_entity_count do
             local entity = old_entity_list[old_place]
-            local entity_index = entity % 2 ^ 20
-            entity_chunks[entity_index] = nil
-            entity_places[entity_index] = nil
+            local entity_primary = entity % 2 ^ 20
+            entity_chunks[entity_primary] = nil
+            entity_places[entity_primary] = nil
         end
 
         __detach_all_entities(old_chunk)
@@ -3209,9 +3210,9 @@ function __chunk_clear(chunk)
 
         for place = 1, chunk_entity_count do
             local entity = chunk_entity_list[place]
-            local entity_index = entity % 2 ^ 20
-            entity_chunks[entity_index] = nil
-            entity_places[entity_index] = nil
+            local entity_primary = entity % 2 ^ 20
+            entity_chunks[entity_primary] = nil
+            entity_places[entity_primary] = nil
         end
 
         __detach_all_entities(chunk)
@@ -4437,8 +4438,8 @@ function __evolved_set(entity, fragment, component)
             req_fragment_count = __fragment_required_fragments(fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
-            for i = 1, req_fragment_count do
-                local req_fragment = req_fragment_list[i]
+            for req_fragment_index = 1, req_fragment_count do
+                local req_fragment = req_fragment_list[req_fragment_index]
                 new_chunk = __chunk_with_fragment(new_chunk, req_fragment)
             end
         end
@@ -4519,8 +4520,8 @@ function __evolved_set(entity, fragment, component)
             end
         end
 
-        for i = 1, req_fragment_count do
-            local req_fragment = req_fragment_list[i]
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
 
             if ini_fragment_set[req_fragment] then
                 -- this fragment has already been initialized
@@ -4626,8 +4627,8 @@ function __evolved_remove(entity, ...)
             local new_fragment_set = new_chunk and new_chunk.__fragment_set
                 or __safe_tbls.__EMPTY_FRAGMENT_SET
 
-            for i = 1, old_fragment_count do
-                local fragment = old_fragment_list[i]
+            for old_fragment_index = 1, old_fragment_count do
+                local fragment = old_fragment_list[old_fragment_index]
 
                 if not new_fragment_set[fragment] then
                     ---@type evolved.remove_hook?
@@ -5291,8 +5292,8 @@ end
 function __chunk_mt:__tostring()
     local fragment_names = {} ---@type string[]
 
-    for i = 1, self.__fragment_count do
-        fragment_names[i] = __universal_name(self.__fragment_list[i])
+    for fragment_index = 1, self.__fragment_count do
+        fragment_names[fragment_index] = __universal_name(self.__fragment_list[fragment_index])
     end
 
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
@@ -5433,8 +5434,8 @@ function __builder_mt:__tostring()
 
     local fragment_names = {} ---@type string[]
 
-    for i = 1, fragment_count do
-        fragment_names[i] = __universal_name(fragment_list[i])
+    for fragment_index = 1, fragment_count do
+        fragment_names[fragment_index] = __universal_name(fragment_list[fragment_index])
     end
 
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
