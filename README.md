@@ -1103,7 +1103,10 @@ defer :: boolean
 commit :: boolean
 
 spawn :: <fragment, component>? -> entity
+multi_spawn :: integer, <fragment, component>? -> entity[]
+
 clone :: entity -> <fragment, component>? -> entity
+multi_clone :: integer, entity -> <fragment, component>? -> entity
 
 alive :: entity -> boolean
 alive_all :: entity... -> boolean
@@ -1163,7 +1166,10 @@ chunk_mt:components :: fragment... -> storage...
 builder :: builder
 
 builder_mt:spawn :: entity
+builder_mt:multi_spawn :: integer -> entity[]
+
 builder_mt:clone :: entity -> entity
+builder_mt:multi_clone :: integer, entity -> entity[]
 
 builder_mt:has :: fragment -> boolean
 builder_mt:has_all :: fragment... -> boolean
@@ -1342,13 +1348,32 @@ function evolved.commit() end
 function evolved.spawn(components) end
 ```
 
+### `evolved.multi_spawn`
+
+```lua
+---@param count integer
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function evolved.multi_spawn(count, components) end
+```
+
 ### `evolved.clone`
 
 ```lua
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.clone(prefab, components) end
+```
+
+### `evolved.multi_clone`
+
+```lua
+---@param count integer
+---@param prefab evolved.entity
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function evolved.multi_clone(count, prefab, components) end
 ```
 
 ### `evolved.alive`
@@ -1646,16 +1671,33 @@ function evolved.builder() end
 #### `evolved.builder_mt:spawn`
 
 ```lua
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.builder_mt:spawn() end
+```
+
+#### `evolved.builder_mt:multi_spawn`
+
+```lua
+---@param count integer
+---@return evolved.entity[] entity_list
+function evolved.builder_mt:multi_spawn(count) end
 ```
 
 #### `evolved.builder_mt:clone`
 
 ```lua
 ---@param prefab evolved.entity
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.builder_mt:clone(prefab) end
+```
+
+#### `evolved.builder_mt:multi_clone`
+
+```lua
+---@param count integer
+---@param prefab evolved.entity
+---@return evolved.entity[] entity_list
+function evolved.builder_mt:multi_clone(count, prefab) end
 ```
 
 #### `evolved.builder_mt:has`
