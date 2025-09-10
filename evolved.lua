@@ -4053,11 +4053,52 @@ function __evolved_spawn(components)
     return entity
 end
 
----@param count integer
+---@param entity_count integer
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
-function __evolved_multi_spawn(count, components)
-    __error_fmt('not implemented yet')
+function __evolved_multi_spawn(entity_count, components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __lua_table_new(entity_count, 0)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        for entity_index = 1, entity_count do
+            local entity = entity_list[entity_index]
+            __defer_spawn_entity(entity, components)
+        end
+    else
+        __evolved_defer()
+        do
+            for entity_index = 1, entity_count do
+                local entity = entity_list[entity_index]
+                __spawn_entity(entity, components)
+            end
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
 end
 
 ---@param prefab evolved.entity
@@ -4097,12 +4138,58 @@ function __evolved_clone(prefab, components)
     return entity
 end
 
----@param count integer
+---@param entity_count integer
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
-function __evolved_multi_clone(count, prefab, components)
-    __error_fmt('not implemented yet')
+function __evolved_multi_clone(entity_count, prefab, components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        if not __evolved_alive(prefab) then
+            __error_fmt('the prefab (%s) is not alive and cannot be used',
+                __id_name(prefab))
+        end
+
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __lua_table_new(entity_count, 0)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        for entity_index = 1, entity_count do
+            local entity = entity_list[entity_index]
+            __defer_clone_entity(entity, prefab, components)
+        end
+    else
+        __evolved_defer()
+        do
+            for entity_index = 1, entity_count do
+                local entity = entity_list[entity_index]
+                __clone_entity(entity, prefab, components)
+            end
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
 end
 
 ---@param entity evolved.entity
@@ -5405,10 +5492,10 @@ function __builder_mt:spawn()
     return __evolved_spawn(self.__components)
 end
 
----@param count integer
+---@param entity_count integer
 ---@return evolved.entity[] entity_list
-function __builder_mt:multi_spawn(count)
-    __error_fmt('not implemented yet')
+function __builder_mt:multi_spawn(entity_count)
+    return __evolved_multi_spawn(entity_count, self.__components)
 end
 
 ---@param prefab evolved.entity
@@ -5417,11 +5504,11 @@ function __builder_mt:clone(prefab)
     return __evolved_clone(prefab, self.__components)
 end
 
----@param count integer
+---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
-function __builder_mt:multi_clone(count, prefab)
-    __error_fmt('not implemented yet')
+function __builder_mt:multi_clone(entity_count, prefab)
+    return __evolved_multi_clone(entity_count, prefab, self.__components)
 end
 
 ---@param fragment evolved.fragment

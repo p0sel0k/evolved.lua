@@ -1351,10 +1351,10 @@ function evolved.spawn(components) end
 ### `evolved.multi_spawn`
 
 ```lua
----@param count integer
+---@param entity_count integer
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
-function evolved.multi_spawn(count, components) end
+function evolved.multi_spawn(entity_count, components) end
 ```
 
 ### `evolved.clone`
@@ -1369,11 +1369,11 @@ function evolved.clone(prefab, components) end
 ### `evolved.multi_clone`
 
 ```lua
----@param count integer
+---@param entity_count integer
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
-function evolved.multi_clone(count, prefab, components) end
+function evolved.multi_clone(entity_count, prefab, components) end
 ```
 
 ### `evolved.alive`
@@ -1678,9 +1678,9 @@ function evolved.builder_mt:spawn() end
 #### `evolved.builder_mt:multi_spawn`
 
 ```lua
----@param count integer
+---@param entity_count integer
 ---@return evolved.entity[] entity_list
-function evolved.builder_mt:multi_spawn(count) end
+function evolved.builder_mt:multi_spawn(entity_count) end
 ```
 
 #### `evolved.builder_mt:clone`
@@ -1694,10 +1694,10 @@ function evolved.builder_mt:clone(prefab) end
 #### `evolved.builder_mt:multi_clone`
 
 ```lua
----@param count integer
+---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
-function evolved.builder_mt:multi_clone(count, prefab) end
+function evolved.builder_mt:multi_clone(entity_count, prefab) end
 ```
 
 #### `evolved.builder_mt:has`
