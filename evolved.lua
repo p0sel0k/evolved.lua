@@ -519,7 +519,7 @@ function __list_dup(list)
         return {}
     end
 
-    local dup_list = __lua_table_new(list_size, 0)
+    local dup_list = __list_new(list_size)
 
     __lua_table_move(
         list, 1, list_size,
@@ -794,7 +794,10 @@ local __evolved_defer
 local __evolved_commit
 
 local __evolved_spawn
+local __evolved_multi_spawn
+
 local __evolved_clone
+local __evolved_multi_clone
 
 local __evolved_alive
 local __evolved_alive_all
@@ -874,7 +877,10 @@ local __detach_entity
 local __detach_all_entities
 
 local __spawn_entity
+local __multi_spawn_entity
+
 local __clone_entity
+local __multi_clone_entity
 
 local __purge_chunk
 local __clear_chunk_list
@@ -896,7 +902,10 @@ local __defer_batch_clear
 local __defer_batch_destroy
 
 local __defer_spawn_entity
+local __defer_multi_spawn_entity
+
 local __defer_clone_entity
+local __defer_multi_clone_entity
 
 local __defer_call_hook
 
@@ -1838,17 +1847,16 @@ function __spawn_entity(entity, components)
     local chunk_component_storages = chunk.__component_storages
 
     local place = chunk_entity_count + 1
-    chunk.__entity_count = place
-
-    chunk_entity_list[place] = entity
 
     do
-        local entity_primary = entity % 2 ^ 20
+        chunk.__entity_count = place
+        __structural_changes = __structural_changes + 1
 
+        chunk_entity_list[place] = entity
+
+        local entity_primary = entity % 2 ^ 20
         __entity_chunks[entity_primary] = chunk
         __entity_places[entity_primary] = place
-
-        __structural_changes = __structural_changes + 1
     end
 
     if chunk.__has_setup_hooks then
@@ -1856,6 +1864,8 @@ function __spawn_entity(entity, components)
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
                 ---@type evolved.duplicate?
                 local fragment_duplicate =
                     __evolved_get(fragment, __DUPLICATE)
@@ -1870,8 +1880,6 @@ function __spawn_entity(entity, components)
                     new_component = true
                 end
 
-                local component_storage = chunk_component_storages[component_index]
-
                 component_storage[place] = new_component
             end
         end
@@ -1885,6 +1893,8 @@ function __spawn_entity(entity, components)
                 local req_component_index = chunk_component_indices[req_fragment]
 
                 if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
                     ---@type evolved.default?, evolved.duplicate?
                     local req_fragment_default, req_fragment_duplicate =
                         __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
@@ -1899,8 +1909,6 @@ function __spawn_entity(entity, components)
                         req_component = true
                     end
 
-                    local req_component_storage = chunk_component_storages[req_component_index]
-
                     req_component_storage[place] = req_component
                 end
             end
@@ -1910,10 +1918,10 @@ function __spawn_entity(entity, components)
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
-                local new_component = component
-
                 local component_storage = chunk_component_storages[component_index]
 
+                local new_component = component
+                if new_component == nil then new_component = true end
                 component_storage[place] = new_component
             end
         end
@@ -1927,10 +1935,9 @@ function __spawn_entity(entity, components)
                 local req_component_index = chunk_component_indices[req_fragment]
 
                 if req_component_index then
-                    local req_component = true
-
                     local req_component_storage = chunk_component_storages[req_component_index]
 
+                    local req_component = true
                     req_component_storage[place] = req_component
                 end
             end
@@ -1969,6 +1976,226 @@ function __spawn_entity(entity, components)
 
                 if fragment_on_insert then
                     __defer_call_hook(fragment_on_insert, entity, fragment)
+                end
+            end
+        end
+    end
+
+    if req_fragment_set then
+        __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+    end
+
+    if req_fragment_list then
+        __release_table(__table_pool_tag.fragment_list, req_fragment_list)
+    end
+end
+
+---@param entity_list evolved.entity[]
+---@param entity_count integer
+---@param components table<evolved.fragment, evolved.component>
+function __multi_spawn_entity(entity_list, entity_count, components)
+    if __defer_depth <= 0 then
+        __error_fmt('spawn entity operations should be deferred')
+    end
+
+    local chunk = __chunk_components(components)
+
+    if not chunk then
+        return
+    end
+
+    local req_fragment_set
+    local req_fragment_list
+    local req_fragment_count = 0
+
+    local ini_chunk = chunk
+    local ini_fragment_set = ini_chunk.__fragment_set
+
+    if chunk.__has_required_fragments then
+        ---@type table<evolved.fragment, integer>
+        req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+        ---@type evolved.fragment[]
+        req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+        req_fragment_count = __chunk_required_fragments(ini_chunk,
+            req_fragment_set, req_fragment_list, req_fragment_count)
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+            chunk = __chunk_with_fragment(chunk, req_fragment)
+        end
+    end
+
+    local chunk_entity_list = chunk.__entity_list
+    local chunk_entity_count = chunk.__entity_count
+
+    local chunk_component_indices = chunk.__component_indices
+    local chunk_component_storages = chunk.__component_storages
+
+    local b_place = chunk_entity_count + 1
+    local e_place = chunk_entity_count + entity_count
+
+    do
+        chunk.__entity_count = e_place
+        __structural_changes = __structural_changes + 1
+
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
+        for place = b_place, e_place do
+            local entity = entity_list[place - b_place + 1]
+            chunk_entity_list[place] = entity
+
+            local entity_primary = entity % 2 ^ 20
+            entity_chunks[entity_primary] = chunk
+            entity_places[entity_primary] = place
+        end
+    end
+
+    if chunk.__has_setup_hooks then
+        for fragment, component in __lua_next, components do
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                ---@type evolved.duplicate?
+                local fragment_duplicate =
+                    __evolved_get(fragment, __DUPLICATE)
+
+                if fragment_duplicate then
+                    for place = b_place, e_place do
+                        local new_component = component
+                        if new_component ~= nil then new_component = fragment_duplicate(new_component) end
+                        if new_component == nil then new_component = true end
+                        component_storage[place] = new_component
+                    end
+                else
+                    local new_component = component
+                    if new_component == nil then new_component = true end
+                    for place = b_place, e_place do
+                        component_storage[place] = new_component
+                    end
+                end
+            end
+        end
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    ---@type evolved.default?, evolved.duplicate?
+                    local req_fragment_default, req_fragment_duplicate =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
+
+                    if req_fragment_duplicate then
+                        for place = b_place, e_place do
+                            local req_component = req_fragment_default
+                            if req_component ~= nil then req_component = req_fragment_duplicate(req_component) end
+                            if req_component == nil then req_component = true end
+                            req_component_storage[place] = req_component
+                        end
+                    else
+                        local req_component = req_fragment_default
+                        if req_component == nil then req_component = true end
+                        for place = b_place, e_place do
+                            req_component_storage[place] = req_component
+                        end
+                    end
+                end
+            end
+        end
+    else
+        for fragment, component in __lua_next, components do
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                local new_component = component
+                if new_component == nil then new_component = true end
+                for place = b_place, e_place do
+                    component_storage[place] = new_component
+                end
+            end
+        end
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    local req_component = true
+                    for place = b_place, e_place do
+                        req_component_storage[place] = req_component
+                    end
+                end
+            end
+        end
+    end
+
+    if chunk.__has_insert_hooks then
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        for chunk_fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[chunk_fragment_index]
+
+            ---@type evolved.set_hook?, evolved.insert_hook?
+            local fragment_on_set, fragment_on_insert =
+                __evolved_get(fragment, __ON_SET, __ON_INSERT)
+
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                if fragment_on_set or fragment_on_insert then
+                    for place = b_place, e_place do
+                        local entity = chunk_entity_list[place]
+
+                        local new_component = component_storage[place]
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                        end
+                    end
+                else
+                    -- nothing
+                end
+            else
+                if fragment_on_set or fragment_on_insert then
+                    for place = b_place, e_place do
+                        local entity = chunk_entity_list[place]
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                        end
+                    end
+                else
+                    -- nothing
                 end
             end
         end
@@ -2034,17 +2261,16 @@ function __clone_entity(entity, prefab, components)
     local chunk_component_storages = chunk.__component_storages
 
     local place = chunk_entity_count + 1
-    chunk.__entity_count = place
-
-    chunk_entity_list[place] = entity
 
     do
-        local entity_primary = entity % 2 ^ 20
+        chunk.__entity_count = place
+        __structural_changes = __structural_changes + 1
 
+        chunk_entity_list[place] = entity
+
+        local entity_primary = entity % 2 ^ 20
         __entity_chunks[entity_primary] = chunk
         __entity_places[entity_primary] = place
-
-        __structural_changes = __structural_changes + 1
     end
 
     if prefab_chunk then
@@ -2058,6 +2284,8 @@ function __clone_entity(entity, prefab, components)
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+
                     ---@type evolved.duplicate?
                     local fragment_duplicate =
                         __evolved_get(fragment, __DUPLICATE)
@@ -2075,8 +2303,6 @@ function __clone_entity(entity, prefab, components)
                         new_component = true
                     end
 
-                    local component_storage = chunk_component_storages[component_index]
-
                     component_storage[place] = new_component
                 end
             end
@@ -2086,6 +2312,8 @@ function __clone_entity(entity, prefab, components)
                 local component_index = chunk_component_indices[fragment]
 
                 if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+
                     local prefab_component_storage = prefab_component_storages[prefab_component_index]
                     local prefab_component = prefab_component_storage[prefab_place]
 
@@ -2094,8 +2322,6 @@ function __clone_entity(entity, prefab, components)
                     if new_component == nil then
                         new_component = true
                     end
-
-                    local component_storage = chunk_component_storages[component_index]
 
                     component_storage[place] = new_component
                 end
@@ -2108,6 +2334,8 @@ function __clone_entity(entity, prefab, components)
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
                 ---@type evolved.duplicate?
                 local fragment_duplicate =
                     __evolved_get(fragment, __DUPLICATE)
@@ -2122,8 +2350,6 @@ function __clone_entity(entity, prefab, components)
                     new_component = true
                 end
 
-                local component_storage = chunk_component_storages[component_index]
-
                 component_storage[place] = new_component
             end
         end
@@ -2137,6 +2363,8 @@ function __clone_entity(entity, prefab, components)
                 local req_component_index = chunk_component_indices[req_fragment]
 
                 if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
                     ---@type evolved.default?, evolved.duplicate?
                     local req_fragment_default, req_fragment_duplicate =
                         __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
@@ -2151,8 +2379,6 @@ function __clone_entity(entity, prefab, components)
                         req_component = true
                     end
 
-                    local req_component_storage = chunk_component_storages[req_component_index]
-
                     req_component_storage[place] = req_component
                 end
             end
@@ -2162,10 +2388,10 @@ function __clone_entity(entity, prefab, components)
             local component_index = chunk_component_indices[fragment]
 
             if component_index then
-                local new_component = component
-
                 local component_storage = chunk_component_storages[component_index]
 
+                local new_component = component
+                if new_component == nil then new_component = true end
                 component_storage[place] = new_component
             end
         end
@@ -2179,10 +2405,9 @@ function __clone_entity(entity, prefab, components)
                 local req_component_index = chunk_component_indices[req_fragment]
 
                 if req_component_index then
-                    local req_component = true
-
                     local req_component_storage = chunk_component_storages[req_component_index]
 
+                    local req_component = true
                     req_component_storage[place] = req_component
                 end
             end
@@ -2221,6 +2446,291 @@ function __clone_entity(entity, prefab, components)
 
                 if fragment_on_insert then
                     __defer_call_hook(fragment_on_insert, entity, fragment)
+                end
+            end
+        end
+    end
+
+    if req_fragment_set then
+        __release_table(__table_pool_tag.fragment_set, req_fragment_set)
+    end
+
+    if req_fragment_list then
+        __release_table(__table_pool_tag.fragment_list, req_fragment_list)
+    end
+end
+
+---@param entity_list evolved.entity[]
+---@param entity_count integer
+---@param prefab evolved.entity
+---@param components table<evolved.fragment, evolved.component>
+function __multi_clone_entity(entity_list, entity_count, prefab, components)
+    if __defer_depth <= 0 then
+        __error_fmt('clone entity operations should be deferred')
+    end
+
+    local prefab_primary = prefab % 2 ^ 20
+
+    local prefab_chunk = __entity_chunks[prefab_primary]
+    local prefab_place = __entity_places[prefab_primary]
+
+    local chunk = __chunk_with_components(
+        __chunk_without_unique_fragments(prefab_chunk),
+        components)
+
+    if not chunk then
+        return
+    end
+
+    local req_fragment_set
+    local req_fragment_list
+    local req_fragment_count = 0
+
+    local ini_chunk = chunk
+    local ini_fragment_set = ini_chunk.__fragment_set
+
+    if chunk.__has_required_fragments then
+        ---@type table<evolved.fragment, integer>
+        req_fragment_set = __acquire_table(__table_pool_tag.fragment_set)
+
+        ---@type evolved.fragment[]
+        req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
+
+        req_fragment_count = __chunk_required_fragments(ini_chunk,
+            req_fragment_set, req_fragment_list, req_fragment_count)
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+            chunk = __chunk_with_fragment(chunk, req_fragment)
+        end
+    end
+
+    local chunk_entity_list = chunk.__entity_list
+    local chunk_entity_count = chunk.__entity_count
+
+    local chunk_component_indices = chunk.__component_indices
+    local chunk_component_storages = chunk.__component_storages
+
+    local b_place = chunk_entity_count + 1
+    local e_place = chunk_entity_count + entity_count
+
+    do
+        chunk.__entity_count = e_place
+        __structural_changes = __structural_changes + 1
+
+        local entity_chunks = __entity_chunks
+        local entity_places = __entity_places
+
+        for place = b_place, e_place do
+            local entity = entity_list[place - b_place + 1]
+            chunk_entity_list[place] = entity
+
+            local entity_primary = entity % 2 ^ 20
+            entity_chunks[entity_primary] = chunk
+            entity_places[entity_primary] = place
+        end
+    end
+
+    if prefab_chunk then
+        local prefab_component_count = prefab_chunk.__component_count
+        local prefab_component_storages = prefab_chunk.__component_storages
+        local prefab_component_fragments = prefab_chunk.__component_fragments
+
+        if prefab_chunk.__has_setup_hooks then
+            for prefab_component_index = 1, prefab_component_count do
+                local fragment = prefab_component_fragments[prefab_component_index]
+                local component_index = chunk_component_indices[fragment]
+
+                if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+
+                    ---@type evolved.duplicate?
+                    local fragment_duplicate =
+                        __evolved_get(fragment, __DUPLICATE)
+
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    if fragment_duplicate then
+                        for place = b_place, e_place do
+                            local new_component = prefab_component
+                            if new_component ~= nil then new_component = fragment_duplicate(new_component) end
+                            if new_component == nil then new_component = true end
+                            component_storage[place] = new_component
+                        end
+                    else
+                        local new_component = prefab_component
+                        if new_component == nil then new_component = true end
+                        for place = b_place, e_place do
+                            component_storage[place] = new_component
+                        end
+                    end
+                end
+            end
+        else
+            for prefab_component_index = 1, prefab_component_count do
+                local fragment = prefab_component_fragments[prefab_component_index]
+                local component_index = chunk_component_indices[fragment]
+
+                if component_index then
+                    local component_storage = chunk_component_storages[component_index]
+
+                    local prefab_component_storage = prefab_component_storages[prefab_component_index]
+                    local prefab_component = prefab_component_storage[prefab_place]
+
+                    local new_component = prefab_component
+                    if new_component == nil then new_component = true end
+                    for place = b_place, e_place do
+                        component_storage[place] = new_component
+                    end
+                end
+            end
+        end
+    end
+
+    if chunk.__has_setup_hooks then
+        for fragment, component in __lua_next, components do
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                ---@type evolved.duplicate?
+                local fragment_duplicate =
+                    __evolved_get(fragment, __DUPLICATE)
+
+                if fragment_duplicate then
+                    for place = b_place, e_place do
+                        local new_component = component
+                        if new_component ~= nil then new_component = fragment_duplicate(new_component) end
+                        if new_component == nil then new_component = true end
+                        component_storage[place] = new_component
+                    end
+                else
+                    local new_component = component
+                    if new_component == nil then new_component = true end
+                    for place = b_place, e_place do
+                        component_storage[place] = new_component
+                    end
+                end
+            end
+        end
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    ---@type evolved.default?, evolved.duplicate?
+                    local req_fragment_default, req_fragment_duplicate =
+                        __evolved_get(req_fragment, __DEFAULT, __DUPLICATE)
+
+                    if req_fragment_duplicate then
+                        for place = b_place, e_place do
+                            local req_component = req_fragment_default
+                            if req_component ~= nil then req_component = req_fragment_duplicate(req_component) end
+                            if req_component == nil then req_component = true end
+                            req_component_storage[place] = req_component
+                        end
+                    else
+                        local req_component = req_fragment_default
+                        if req_component == nil then req_component = true end
+                        for place = b_place, e_place do
+                            req_component_storage[place] = req_component
+                        end
+                    end
+                end
+            end
+        end
+    else
+        for fragment, component in __lua_next, components do
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                local new_component = component
+                if new_component == nil then new_component = true end
+                for place = b_place, e_place do
+                    component_storage[place] = new_component
+                end
+            end
+        end
+
+        for req_fragment_index = 1, req_fragment_count do
+            local req_fragment = req_fragment_list[req_fragment_index]
+
+            if ini_fragment_set[req_fragment] then
+                -- this fragment has already been initialized
+            else
+                local req_component_index = chunk_component_indices[req_fragment]
+
+                if req_component_index then
+                    local req_component_storage = chunk_component_storages[req_component_index]
+
+                    local req_component = true
+                    for place = b_place, e_place do
+                        req_component_storage[place] = req_component
+                    end
+                end
+            end
+        end
+    end
+
+    if chunk.__has_insert_hooks then
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        for chunk_fragment_index = 1, chunk_fragment_count do
+            local fragment = chunk_fragment_list[chunk_fragment_index]
+
+            ---@type evolved.set_hook?, evolved.insert_hook?
+            local fragment_on_set, fragment_on_insert =
+                __evolved_get(fragment, __ON_SET, __ON_INSERT)
+
+            local component_index = chunk_component_indices[fragment]
+
+            if component_index then
+                local component_storage = chunk_component_storages[component_index]
+
+                if fragment_on_set or fragment_on_insert then
+                    for place = b_place, e_place do
+                        local entity = chunk_entity_list[place]
+
+                        local new_component = component_storage[place]
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                        end
+                    end
+                else
+                    -- nothing
+                end
+            else
+                if fragment_on_set or fragment_on_insert then
+                    for place = b_place, e_place do
+                        local entity = chunk_entity_list[place]
+
+                        if fragment_on_set then
+                            __defer_call_hook(fragment_on_set, entity, fragment)
+                        end
+
+                        if fragment_on_insert then
+                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                        end
+                    end
+                else
+                    -- nothing
                 end
             end
         end
@@ -3101,15 +3611,18 @@ local __defer_op = {
     batch_destroy = 8,
 
     spawn_entity = 9,
-    clone_entity = 10,
+    multi_spawn_entity = 10,
 
-    call_hook = 11,
+    clone_entity = 11,
+    multi_clone_entity = 12,
 
-    __count = 11,
+    call_hook = 13,
+
+    __count = 13,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
-local __defer_ops = __lua_table_new(__defer_op.__count, 0)
+local __defer_ops = __list_new(__defer_op.__count)
 
 ---@param entity evolved.entity
 ---@param fragment evolved.fragment
@@ -3593,13 +4106,13 @@ __defer_ops[__defer_op.batch_destroy] = function(bytes, index)
 end
 
 ---@param entity evolved.entity
----@param components table<evolved.fragment, evolved.component>
-function __defer_spawn_entity(entity, components)
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_spawn_entity(entity, component_map)
     ---@type table<evolved.fragment, evolved.component>
-    local component_map = __acquire_table(__table_pool_tag.component_map)
+    local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
-    for fragment, component in __lua_next, components do
-        component_map[fragment] = component
+    for fragment, component in __lua_next, component_map do
+        component_map_dup[fragment] = component
     end
 
     local length = __defer_length
@@ -3607,23 +4120,68 @@ function __defer_spawn_entity(entity, components)
 
     bytecode[length + 1] = __defer_op.spawn_entity
     bytecode[length + 2] = entity
-    bytecode[length + 3] = component_map
+    bytecode[length + 3] = component_map_dup
 
     __defer_length = length + 3
 end
 
 __defer_ops[__defer_op.spawn_entity] = function(bytes, index)
     local entity = bytes[index + 0]
-    local component_map = bytes[index + 1]
+    local component_map_dup = bytes[index + 1]
 
     __evolved_defer()
     do
-        __spawn_entity(entity, component_map)
-        __release_table(__table_pool_tag.component_map, component_map)
+        __spawn_entity(entity, component_map_dup)
+        __release_table(__table_pool_tag.component_map, component_map_dup)
     end
     __evolved_commit()
 
     return 2
+end
+
+---@param entity_list evolved.entity[]
+---@param entity_count integer
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_multi_spawn_entity(entity_list, entity_count, component_map)
+    ---@type evolved.entity[]
+    local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
+
+    __lua_table_move(
+        entity_list, 1, entity_count,
+        1, entity_list_dup)
+
+    ---@type table<evolved.fragment, evolved.component>
+    local component_map_dup = __acquire_table(__table_pool_tag.component_map)
+
+    for fragment, component in __lua_next, component_map do
+        component_map_dup[fragment] = component
+    end
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.multi_spawn_entity
+    bytecode[length + 2] = entity_count
+    bytecode[length + 3] = entity_list_dup
+    bytecode[length + 4] = component_map_dup
+
+    __defer_length = length + 4
+end
+
+__defer_ops[__defer_op.multi_spawn_entity] = function(bytes, index)
+    local entity_count = bytes[index + 0]
+    local entity_list_dup = bytes[index + 1]
+    local component_map_dup = bytes[index + 2]
+
+    __evolved_defer()
+    do
+        __multi_spawn_entity(entity_list_dup, entity_count, component_map_dup)
+        __release_table(__table_pool_tag.entity_list, entity_list_dup)
+        __release_table(__table_pool_tag.component_map, component_map_dup)
+    end
+    __evolved_commit()
+
+    return 3
 end
 
 ---@param entity evolved.entity
@@ -3631,36 +4189,84 @@ end
 ---@param components table<evolved.fragment, evolved.component>
 function __defer_clone_entity(entity, prefab, components)
     ---@type table<evolved.fragment, evolved.component>
-    local component_map = __acquire_table(__table_pool_tag.component_map)
+    local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
     for fragment, component in __lua_next, components do
-        component_map[fragment] = component
+        component_map_dup[fragment] = component
     end
 
     local length = __defer_length
     local bytecode = __defer_bytecode
 
     bytecode[length + 1] = __defer_op.clone_entity
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = prefab
-    bytecode[length + 4] = component_map
+    bytecode[length + 2] = prefab
+    bytecode[length + 3] = entity
+    bytecode[length + 4] = component_map_dup
 
     __defer_length = length + 4
 end
 
 __defer_ops[__defer_op.clone_entity] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local prefab = bytes[index + 1]
-    local component_map = bytes[index + 2]
+    local prefab = bytes[index + 0]
+    local entity = bytes[index + 1]
+    local component_map_dup = bytes[index + 2]
 
     __evolved_defer()
     do
-        __clone_entity(entity, prefab, component_map)
-        __release_table(__table_pool_tag.component_map, component_map)
+        __clone_entity(entity, prefab, component_map_dup)
+        __release_table(__table_pool_tag.component_map, component_map_dup)
     end
     __evolved_commit()
 
     return 3
+end
+
+---@param entity_list evolved.entity[]
+---@param entity_count integer
+---@param prefab evolved.entity
+---@param components table<evolved.fragment, evolved.component>
+function __defer_multi_clone_entity(entity_list, entity_count, prefab, components)
+    ---@type evolved.entity[]
+    local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
+
+    __lua_table_move(
+        entity_list, 1, entity_count,
+        1, entity_list_dup)
+
+    ---@type table<evolved.fragment, evolved.component>
+    local component_map_dup = __acquire_table(__table_pool_tag.component_map)
+
+    for fragment, component in __lua_next, components do
+        component_map_dup[fragment] = component
+    end
+
+    local length = __defer_length
+    local bytecode = __defer_bytecode
+
+    bytecode[length + 1] = __defer_op.multi_clone_entity
+    bytecode[length + 2] = prefab
+    bytecode[length + 3] = entity_count
+    bytecode[length + 4] = entity_list_dup
+    bytecode[length + 5] = component_map_dup
+
+    __defer_length = length + 5
+end
+
+__defer_ops[__defer_op.multi_clone_entity] = function(bytes, index)
+    local prefab = bytes[index + 0]
+    local entity_count = bytes[index + 1]
+    local entity_list_dup = bytes[index + 2]
+    local component_map_dup = bytes[index + 3]
+
+    __evolved_defer()
+    do
+        __multi_clone_entity(entity_list_dup, entity_count, prefab, component_map_dup)
+        __release_table(__table_pool_tag.entity_list, entity_list_dup)
+        __release_table(__table_pool_tag.component_map, component_map_dup)
+    end
+    __evolved_commit()
+
+    return 4
 end
 
 ---@param hook fun(...)
@@ -4020,7 +4626,7 @@ function __evolved_commit()
 end
 
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function __evolved_spawn(components)
     if not components then
         components = __safe_tbls.__EMPTY_COMPONENT_MAP
@@ -4050,9 +4656,51 @@ function __evolved_spawn(components)
     return entity
 end
 
+---@param entity_count integer
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function __evolved_multi_spawn(entity_count, components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __list_new(entity_count)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        __defer_multi_spawn_entity(entity_list, entity_count, components)
+    else
+        __evolved_defer()
+        do
+            __multi_spawn_entity(entity_list, entity_count, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
+end
+
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function __evolved_clone(prefab, components)
     if not components then
         components = __safe_tbls.__EMPTY_COMPONENT_MAP
@@ -4085,6 +4733,54 @@ function __evolved_clone(prefab, components)
     end
 
     return entity
+end
+
+---@param entity_count integer
+---@param prefab evolved.entity
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function __evolved_multi_clone(entity_count, prefab, components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    if not components then
+        components = __safe_tbls.__EMPTY_COMPONENT_MAP
+    end
+
+    if __debug_mode then
+        if not __evolved_alive(prefab) then
+            __error_fmt('the prefab (%s) is not alive and cannot be used',
+                __id_name(prefab))
+        end
+
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __list_new(entity_count)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        __defer_multi_clone_entity(entity_list, entity_count, prefab, components)
+    else
+        __evolved_defer()
+        do
+            __multi_clone_entity(entity_list, entity_count, prefab, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
 end
 
 ---@param entity evolved.entity
@@ -5382,15 +6078,28 @@ function __builder_mt:__tostring()
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
 end
 
----@return evolved.entity
+---@return evolved.entity entity
 function __builder_mt:spawn()
     return __evolved_spawn(self.__components)
 end
 
+---@param entity_count integer
+---@return evolved.entity[] entity_list
+function __builder_mt:multi_spawn(entity_count)
+    return __evolved_multi_spawn(entity_count, self.__components)
+end
+
 ---@param prefab evolved.entity
----@return evolved.entity
+---@return evolved.entity entity
 function __builder_mt:clone(prefab)
     return __evolved_clone(prefab, self.__components)
+end
+
+---@param entity_count integer
+---@param prefab evolved.entity
+---@return evolved.entity[] entity_list
+function __builder_mt:multi_clone(entity_count, prefab)
+    return __evolved_multi_clone(entity_count, prefab, self.__components)
 end
 
 ---@param fragment evolved.fragment
@@ -5659,7 +6368,7 @@ function __builder_mt:include(...)
     local include_count = include_list and #include_list or 0
 
     if include_count == 0 then
-        include_list = __lua_table_new(argument_count, 0)
+        include_list = __list_new(argument_count)
     end
 
     for argument_index = 1, argument_count do
@@ -5684,7 +6393,7 @@ function __builder_mt:exclude(...)
     local exclude_count = exclude_list and #exclude_list or 0
 
     if exclude_count == 0 then
-        exclude_list = __lua_table_new(argument_count, 0)
+        exclude_list = __list_new(argument_count)
     end
 
     for argument_index = 1, argument_count do
@@ -5709,7 +6418,7 @@ function __builder_mt:require(...)
     local require_count = require_list and #require_list or 0
 
     if require_count == 0 then
-        require_list = __lua_table_new(argument_count, 0)
+        require_list = __list_new(argument_count)
     end
 
     for argument_index = 1, argument_count do
@@ -6130,7 +6839,10 @@ evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
 
 evolved.spawn = __evolved_spawn
+evolved.multi_spawn = __evolved_multi_spawn
+
 evolved.clone = __evolved_clone
+evolved.multi_clone = __evolved_multi_clone
 
 evolved.alive = __evolved_alive
 evolved.alive_all = __evolved_alive_all
