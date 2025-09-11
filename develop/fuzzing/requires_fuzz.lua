@@ -108,6 +108,24 @@ end
 ---
 ---
 
-evo.destroy(__table_unpack(all_entity_list))
-evo.destroy(__table_unpack(all_fragment_list))
-evo.collect_garbage()
+if math.random(1, 2) == 1 then
+    evo.collect_garbage()
+end
+
+if math.random(1, 2) == 1 then
+    evo.destroy(__table_unpack(all_entity_list))
+    if math.random(1, 2) == 1 then
+        evo.collect_garbage()
+    end
+    evo.destroy(__table_unpack(all_fragment_list))
+else
+    evo.destroy(__table_unpack(all_fragment_list))
+    if math.random(1, 2) == 1 then
+        evo.collect_garbage()
+    end
+    evo.destroy(__table_unpack(all_entity_list))
+end
+
+if math.random(1, 2) == 1 then
+    evo.collect_garbage()
+end

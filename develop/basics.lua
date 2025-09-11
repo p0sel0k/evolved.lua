@@ -1,5 +1,13 @@
 local basics = {}
 
+local MIN_FUZZ_SECS = 0.5
+local MIN_BENCH_SECS = 0.1
+local MIN_WARMUP_SECS = 0.1
+
+local MIN_FUZZ_ITERS = 100
+local MIN_BENCH_ITERS = 100
+local MIN_WARMUP_ITERS = 100
+
 local __table_pack = (function()
     ---@diagnostic disable-next-line: deprecated
     return table.pack or function(...)
@@ -23,7 +31,12 @@ end
 
 ---@param modname string
 function basics.describe_fuzz(modname)
+    basics.unload('evolved')
+
     print(string.format('| %s ... |', modname))
+
+    collectgarbage('collect')
+    collectgarbage('stop')
 
     do
         local iters = 0
@@ -36,7 +49,7 @@ function basics.describe_fuzz(modname)
                 iters = iters + 1
                 basics.unload(modname)
                 require(modname)
-            until os.clock() - start_s > 0.5
+            until iters >= MIN_FUZZ_ITERS and os.clock() - start_s >= MIN_FUZZ_SECS
         end)
 
         local finish_s = os.clock()
@@ -52,6 +65,9 @@ function basics.describe_fuzz(modname)
             print('|-- FUZZ FAIL: ' .. result)
         end
     end
+
+    collectgarbage('restart')
+    collectgarbage('collect')
 end
 
 ---@param name string
@@ -59,17 +75,22 @@ end
 ---@param init? fun(): ...
 ---@param fini? fun(...): ...
 function basics.describe_bench(name, loop, init, fini)
+    basics.unload('evolved')
+
     print(string.format('| %s ... |', name))
 
     local state = init and __table_pack(init()) or {}
 
     do
+        local iters = 0
+
         local warmup_s = os.clock()
 
         local success, result = pcall(function()
             repeat
+                iters = iters + 1
                 loop(__table_unpack(state))
-            until os.clock() - warmup_s > 0.1
+            until iters >= MIN_WARMUP_ITERS and os.clock() - warmup_s > MIN_WARMUP_SECS
         end)
 
         if not success then
@@ -91,7 +112,7 @@ function basics.describe_bench(name, loop, init, fini)
             repeat
                 iters = iters + 1
                 loop(__table_unpack(state))
-            until os.clock() - start_s > 0.1
+            until iters >= MIN_BENCH_ITERS and os.clock() - start_s > MIN_BENCH_SECS
         end)
 
         local finish_s = os.clock()
