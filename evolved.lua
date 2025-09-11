@@ -837,6 +837,7 @@ local __evolved_debug_mode
 local __evolved_collect_garbage
 
 local __evolved_chunk
+local __evolved_scheme
 local __evolved_builder
 
 ---
@@ -6055,6 +6056,19 @@ end
 ---
 ---
 
+---@return evolved.scheme scheme
+---@nodiscard
+function __evolved_scheme()
+    return __lua_setmetatable({
+    }, __scheme_mt)
+end
+
+---
+---
+---
+---
+---
+
 ---@return evolved.builder builder
 ---@nodiscard
 function __evolved_builder()
@@ -6894,6 +6908,7 @@ evolved.debug_mode = __evolved_debug_mode
 evolved.collect_garbage = __evolved_collect_garbage
 
 evolved.chunk = __evolved_chunk
+evolved.scheme = __evolved_scheme
 evolved.builder = __evolved_builder
 
 ---

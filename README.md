@@ -56,6 +56,7 @@
   - [Functions](#functions)
   - [Classes](#classes)
     - [Chunk](#chunk)
+    - [Scheme](#scheme)
     - [Builder](#builder)
 - [License](#license)
 
@@ -1062,6 +1063,7 @@ UNIQUE :: fragment
 EXPLICIT :: fragment
 INTERNAL :: fragment
 
+SCHEME :: fragment
 DEFAULT :: fragment
 DUPLICATE :: fragment
 
@@ -1160,6 +1162,12 @@ chunk_mt:fragments :: fragment[], integer
 chunk_mt:components :: fragment... -> storage...
 ```
 
+#### Scheme
+
+```
+scheme -> scheme
+```
+
 #### Builder
 
 ```
@@ -1188,6 +1196,7 @@ builder_mt:unique :: builder
 builder_mt:explicit :: builder
 builder_mt:internal :: builder
 
+builder_mt:scheme :: evolved.scheme -> builder
 builder_mt:default :: component -> builder
 builder_mt:duplicate :: {component -> component} -> builder
 
@@ -1220,6 +1229,10 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
+## vX.X.X
+
+- Added the new [`evolved.scheme`](#evovledscheme) fragment trait
+
 ## v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
@@ -1248,6 +1261,8 @@ builder_mt:destruction_policy :: id -> builder
 ### `evolved.EXPLICIT`
 
 ### `evolved.INTERNAL`
+
+### `evovled.SCHEME`
 
 ### `evolved.DEFAULT`
 
@@ -1659,6 +1674,16 @@ function evolved.chunk_mt:fragments() end
 function evolved.chunk_mt:components(...) end
 ```
 
+### Scheme
+
+#### `evolved.scheme`
+
+```lua
+---@return evolved.scheme scheme
+---@nodiscard
+function evolved.scheme() end
+```
+
 ### Builder
 
 #### `evolved.builder`
@@ -1795,6 +1820,14 @@ function evolved.builder_mt:explicit() end
 ```lua
 ---@return evolved.builder builder
 function evolved.builder_mt:internal() end
+```
+
+#### `evolved.builder_mt:scheme`
+
+```lua
+---@param scheme evolved.scheme
+---@return evolved.builder builder
+function evolved.builder_mt:scheme(scheme) end
 ```
 
 #### `evolved.builder_mt:default`
