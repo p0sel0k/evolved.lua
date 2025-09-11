@@ -1220,7 +1220,7 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
-## vX.X.X
+## v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
 - Added the new [`evolved.multi_spawn`](#evolvedmulti_spawn) and [`evolved.multi_clone`](#evolvedmulti_clone) functions
@@ -1345,7 +1345,7 @@ function evolved.commit() end
 
 ```lua
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.spawn(components) end
 ```
 
