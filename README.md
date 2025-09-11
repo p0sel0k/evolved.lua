@@ -1103,7 +1103,10 @@ defer :: boolean
 commit :: boolean
 
 spawn :: <fragment, component>? -> entity
-clone :: entity -> <fragment, component>? -> entity
+multi_spawn :: integer, <fragment, component>? -> entity[]
+
+clone :: entity, <fragment, component>? -> entity
+multi_clone :: integer, entity, <fragment, component>? -> entity[]
 
 alive :: entity -> boolean
 alive_all :: entity... -> boolean
@@ -1163,7 +1166,10 @@ chunk_mt:components :: fragment... -> storage...
 builder :: builder
 
 builder_mt:spawn :: entity
+builder_mt:multi_spawn :: integer -> entity[]
+
 builder_mt:clone :: entity -> entity
+builder_mt:multi_clone :: integer, entity -> entity[]
 
 builder_mt:has :: fragment -> boolean
 builder_mt:has_all :: fragment... -> boolean
@@ -1214,9 +1220,10 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
-## vX.X.X
+## v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
+- Added the new [`evolved.multi_spawn`](#evolvedmulti_spawn) and [`evolved.multi_clone`](#evolvedmulti_clone) functions
 - Added the new [`evolved.INTERNAL`](#evolvedinternal) fragment trait
 
 ## v1.1.0
@@ -1338,8 +1345,17 @@ function evolved.commit() end
 
 ```lua
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.spawn(components) end
+```
+
+### `evolved.multi_spawn`
+
+```lua
+---@param entity_count integer
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function evolved.multi_spawn(entity_count, components) end
 ```
 
 ### `evolved.clone`
@@ -1347,8 +1363,18 @@ function evolved.spawn(components) end
 ```lua
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.clone(prefab, components) end
+```
+
+### `evolved.multi_clone`
+
+```lua
+---@param entity_count integer
+---@param prefab evolved.entity
+---@param components? table<evolved.fragment, evolved.component>
+---@return evolved.entity[] entity_list
+function evolved.multi_clone(entity_count, prefab, components) end
 ```
 
 ### `evolved.alive`
@@ -1646,16 +1672,33 @@ function evolved.builder() end
 #### `evolved.builder_mt:spawn`
 
 ```lua
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.builder_mt:spawn() end
+```
+
+#### `evolved.builder_mt:multi_spawn`
+
+```lua
+---@param entity_count integer
+---@return evolved.entity[] entity_list
+function evolved.builder_mt:multi_spawn(entity_count) end
 ```
 
 #### `evolved.builder_mt:clone`
 
 ```lua
 ---@param prefab evolved.entity
----@return evolved.entity
+---@return evolved.entity entity
 function evolved.builder_mt:clone(prefab) end
+```
+
+#### `evolved.builder_mt:multi_clone`
+
+```lua
+---@param entity_count integer
+---@param prefab evolved.entity
+---@return evolved.entity[] entity_list
+function evolved.builder_mt:multi_clone(entity_count, prefab) end
 ```
 
 #### `evolved.builder_mt:has`
