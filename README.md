@@ -1105,8 +1105,8 @@ commit :: boolean
 spawn :: <fragment, component>? -> entity
 multi_spawn :: integer, <fragment, component>? -> entity[]
 
-clone :: entity -> <fragment, component>? -> entity
-multi_clone :: integer, entity -> <fragment, component>? -> entity
+clone :: entity, <fragment, component>? -> entity
+multi_clone :: integer, entity, <fragment, component>? -> entity[]
 
 alive :: entity -> boolean
 alive_all :: entity... -> boolean
@@ -1223,6 +1223,7 @@ builder_mt:destruction_policy :: id -> builder
 ## vX.X.X
 
 - Added the new [`evolved.name`](#evolvedname-1) function
+- Added the new [`evolved.multi_spawn`](#evolvedmulti_spawn) and [`evolved.multi_clone`](#evolvedmulti_clone) functions
 - Added the new [`evolved.INTERNAL`](#evolvedinternal) fragment trait
 
 ## v1.1.0

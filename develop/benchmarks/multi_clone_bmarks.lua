@@ -1,6 +1,8 @@
 local evo = require 'evolved'
 local basics = require 'develop.basics'
 
+evo.debug_mode(false)
+
 local N = 1000
 
 local F1, F2, F3, F4, F5 = evo.id(5)
