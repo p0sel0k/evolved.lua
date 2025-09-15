@@ -180,6 +180,11 @@ local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
 ---@class evolved.scheme
+---@field package __id evolved.id
+---@field package __name string
+---@field package __cdecl string
+---@field package __sizeof integer?
+---@field package __typeof evolved.ffi_ctype?
 local __scheme_mt = {}
 __scheme_mt.__index = __scheme_mt
 
@@ -331,6 +336,32 @@ local __lua_table_unpack = (function()
         local table_unpack = table and table.unpack
         if table_unpack then return table_unpack end
     end
+end)()
+
+---
+---
+---
+---
+---
+
+---@class evolved.ffi
+---@field cdef fun(def: string)
+---@field typeof fun(ct: evolved.ffi_ct): evolved.ffi_ctype
+---@field sizeof fun(ct: evolved.ffi_ct): integer?
+
+---@class evolved.ffi_cdata : userdata
+---@class evolved.ffi_ctype : userdata
+---@class evolved.ffi_cdecl : string
+
+---@alias evolved.ffi_ct evolved.ffi_cdata | evolved.ffi_ctype | evolved.ffi_cdecl
+
+---@type evolved.ffi?
+local __lua_ffi = (function()
+    -- https://luajit.org/ext_ffi_api.html
+    -- https://forum.defold.com/t/ffi-with-editor-2-solved/13683
+
+    local ffi_loader = package and package.preload and package.preload['ffi']
+    return ffi_loader and ffi_loader()
 end)()
 
 ---
@@ -837,7 +868,12 @@ local __evolved_debug_mode
 local __evolved_collect_garbage
 
 local __evolved_chunk
-local __evolved_scheme
+
+local __evolved_scheme_boolean
+local __evolved_scheme_list
+local __evolved_scheme_number
+local __evolved_scheme_record
+
 local __evolved_builder
 
 ---
@@ -6058,9 +6094,99 @@ end
 
 ---@return evolved.scheme scheme
 ---@nodiscard
-function __evolved_scheme()
+function __evolved_scheme_boolean()
     return __lua_setmetatable({
+        __id = __acquire_id(),
+        __name = 'bool',
+        __cdecl = 'bool',
+        __sizeof = __lua_ffi and __lua_ffi.sizeof('bool'),
+        __typeof = __lua_ffi and __lua_ffi.typeof('bool'),
     }, __scheme_mt)
+end
+
+---@param item_scheme evolved.scheme
+---@param item_count integer
+---@return evolved.scheme scheme
+---@nodiscard
+function __evolved_scheme_list(item_scheme, item_count)
+    local list_id = __acquire_id()
+    local list_cdecl = __lua_string_format('%s[%d]', item_scheme.__name, item_count)
+
+    return __lua_setmetatable({
+        __id = list_id,
+        __name = list_cdecl,
+        __cdecl = list_cdecl,
+        __sizeof = __lua_ffi and __lua_ffi.sizeof(list_cdecl),
+        __typeof = __lua_ffi and __lua_ffi.typeof(list_cdecl),
+    }, __scheme_mt)
+end
+
+---@return evolved.scheme scheme
+---@nodiscard
+function __evolved_scheme_number()
+    return __lua_setmetatable({
+        __id = __acquire_id(),
+        __name = 'double',
+        __cdecl = 'double',
+        __sizeof = __lua_ffi and __lua_ffi.sizeof('double'),
+        __typeof = __lua_ffi and __lua_ffi.typeof('double'),
+    }, __scheme_mt)
+end
+
+---@param field_schemes table<string, evolved.scheme>
+---@return evolved.scheme scheme
+---@nodiscard
+function __evolved_scheme_record(field_schemes)
+    local record_id = __acquire_id()
+    local record_name = __lua_string_format('__evolved_record_%d', record_id)
+
+    local field_list = {} ---@type {name: string, scheme: evolved.scheme}[]
+    local field_count = 0 ---@type integer
+
+    for field_name, field_scheme in __lua_next, field_schemes do
+        field_count = field_count + 1
+        field_list[field_count] = { name = field_name, scheme = field_scheme }
+    end
+
+    if __lua_ffi and field_count > 0 then
+        __lua_table_sort(field_list, function(a, b)
+            local a_name, b_name = a.scheme.__name, b.scheme.__name
+            local a_size, b_size = a.scheme.__sizeof or 0, b.scheme.__sizeof or 0
+            return a_size > b_size or (a_size == b_size and a_name < b_name)
+        end)
+    end
+
+    local field_cdecl_list = ''
+
+    for field_index = 1, field_count do
+        local field = field_list[field_index]
+
+        if field_cdecl_list ~= '' then
+            field_cdecl_list = field_cdecl_list .. ' '
+        end
+
+        field_cdecl_list = field_cdecl_list ..
+            __lua_string_format('%s %s;', field.scheme.__name, field.name)
+    end
+
+    local record_cdecl = __lua_string_format(
+        'typedef struct { %s } %s;', field_cdecl_list, record_name)
+
+    if __lua_ffi then
+        __lua_ffi.cdef(record_cdecl)
+    end
+
+    return __lua_setmetatable({
+        __id = record_id,
+        __name = record_name,
+        __cdecl = record_cdecl,
+        __sizeof = __lua_ffi and __lua_ffi.sizeof(record_name),
+        __typeof = __lua_ffi and __lua_ffi.typeof(record_name),
+    }, __scheme_mt)
+end
+
+function __scheme_mt:__tostring()
+    return self.__cdecl
 end
 
 ---
@@ -6521,16 +6647,16 @@ end
 ---
 ---
 
-__evolved_set(__ON_SET, __ON_INSERT, __update_major_chunks)
+__evolved_set(__ON_SET, __ON_SET, __update_major_chunks)
 __evolved_set(__ON_SET, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__ON_ASSIGN, __ON_INSERT, __update_major_chunks)
+__evolved_set(__ON_ASSIGN, __ON_SET, __update_major_chunks)
 __evolved_set(__ON_ASSIGN, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__ON_INSERT, __ON_INSERT, __update_major_chunks)
+__evolved_set(__ON_INSERT, __ON_SET, __update_major_chunks)
 __evolved_set(__ON_INSERT, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__ON_REMOVE, __ON_INSERT, __update_major_chunks)
+__evolved_set(__ON_REMOVE, __ON_SET, __update_major_chunks)
 __evolved_set(__ON_REMOVE, __ON_REMOVE, __update_major_chunks)
 
 ---
@@ -6539,28 +6665,28 @@ __evolved_set(__ON_REMOVE, __ON_REMOVE, __update_major_chunks)
 ---
 ---
 
-__evolved_set(__TAG, __ON_INSERT, __update_major_chunks)
+__evolved_set(__TAG, __ON_SET, __update_major_chunks)
 __evolved_set(__TAG, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__UNIQUE, __ON_INSERT, __update_major_chunks)
+__evolved_set(__UNIQUE, __ON_SET, __update_major_chunks)
 __evolved_set(__UNIQUE, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__EXPLICIT, __ON_INSERT, __update_major_chunks)
+__evolved_set(__EXPLICIT, __ON_SET, __update_major_chunks)
 __evolved_set(__EXPLICIT, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__INTERNAL, __ON_INSERT, __update_major_chunks)
+__evolved_set(__INTERNAL, __ON_SET, __update_major_chunks)
 __evolved_set(__INTERNAL, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__SCHEME, __ON_INSERT, __update_major_chunks)
+__evolved_set(__SCHEME, __ON_SET, __update_major_chunks)
 __evolved_set(__SCHEME, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__DEFAULT, __ON_INSERT, __update_major_chunks)
+__evolved_set(__DEFAULT, __ON_SET, __update_major_chunks)
 __evolved_set(__DEFAULT, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__DUPLICATE, __ON_INSERT, __update_major_chunks)
+__evolved_set(__DUPLICATE, __ON_SET, __update_major_chunks)
 __evolved_set(__DUPLICATE, __ON_REMOVE, __update_major_chunks)
 
-__evolved_set(__REQUIRES, __ON_INSERT, __update_major_chunks)
+__evolved_set(__REQUIRES, __ON_SET, __update_major_chunks)
 __evolved_set(__REQUIRES, __ON_REMOVE, __update_major_chunks)
 
 ---
@@ -6908,7 +7034,12 @@ evolved.debug_mode = __evolved_debug_mode
 evolved.collect_garbage = __evolved_collect_garbage
 
 evolved.chunk = __evolved_chunk
-evolved.scheme = __evolved_scheme
+
+evolved.scheme_boolean = __evolved_scheme_boolean
+evolved.scheme_list = __evolved_scheme_list
+evolved.scheme_number = __evolved_scheme_number
+evolved.scheme_record = __evolved_scheme_record
+
 evolved.builder = __evolved_builder
 
 ---

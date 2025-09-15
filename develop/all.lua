@@ -8,6 +8,7 @@ require 'develop.testing.system_as_query_tests'
 
 require 'develop.benchmarks.multi_clone_bmarks'
 require 'develop.benchmarks.multi_spawn_bmarks'
+require 'develop.benchmarks.scheme_bmarks'
 
 require 'develop.untests'
 

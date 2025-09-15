@@ -1165,7 +1165,10 @@ chunk_mt:components :: fragment... -> storage...
 #### Scheme
 
 ```
-scheme -> scheme
+scheme_boolean :: scheme
+scheme_list :: scheme, integer -> scheme
+scheme_number :: scheme
+scheme_record :: <string, scheme> -> scheme
 ```
 
 #### Builder
@@ -1676,12 +1679,39 @@ function evolved.chunk_mt:components(...) end
 
 ### Scheme
 
-#### `evolved.scheme`
+#### `evolved.scheme_boolean`
 
 ```lua
 ---@return evolved.scheme scheme
 ---@nodiscard
-function evolved.scheme() end
+function evolved.scheme_boolean() end
+```
+
+#### `evolved.scheme_list`
+
+```lua
+---@param item_scheme evolved.scheme
+---@param item_count integer
+---@return evolved.scheme scheme
+---@nodiscard
+function evolved.scheme_list(item_scheme, item_count) end
+```
+
+#### `evolved.scheme_number`
+
+```lua
+---@return evolved.scheme scheme
+---@nodiscard
+function evolved.scheme_number() end
+```
+
+#### `evolved.scheme_record`
+
+```lua
+---@param field_schemes table<string, evolved.scheme>
+---@return evolved.scheme scheme
+---@nodiscard
+function evolved.scheme_record(field_schemes) end
 ```
 
 ### Builder
