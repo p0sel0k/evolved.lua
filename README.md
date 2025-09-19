@@ -1220,6 +1220,10 @@ builder_mt:destruction_policy :: id -> builder
 
 # Changelog
 
+## vX.X.X
+
+- Nothing yet, stay tuned!
+
 ## v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
