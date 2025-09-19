@@ -125,8 +125,6 @@ local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 
-local __pinned_chunks = {} ---@type table<evolved.chunk, integer>
-
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
@@ -5910,16 +5908,12 @@ function __evolved_collect_garbage()
 
         for postorder_chunk_index = postorder_chunk_stack_size, 1, -1 do
             local postorder_chunk = postorder_chunk_stack[postorder_chunk_index]
-            local postorder_chunk_pins = __pinned_chunks[postorder_chunk] or 0
-
-            local is_not_pinned =
-                postorder_chunk_pins == 0
 
             local should_be_purged =
                 postorder_chunk.__child_count == 0 and
                 postorder_chunk.__entity_count == 0
 
-            if is_not_pinned and should_be_purged then
+            if should_be_purged then
                 __purge_chunk(postorder_chunk)
             end
         end
