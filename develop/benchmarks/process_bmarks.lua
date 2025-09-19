@@ -7,7 +7,7 @@ local N = 10000
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS Processing | %d entities', N),
+basics.describe_bench(string.format('Process Benchmarks: Evolved AoS Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,
@@ -48,7 +48,7 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS Processing |
         evo.destroy(w)
     end)
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved SoA Processing | %d entities', N),
+basics.describe_bench(string.format('Process Benchmarks: Evolved SoA Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,

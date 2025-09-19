@@ -56,7 +56,6 @@
   - [Functions](#functions)
   - [Classes](#classes)
     - [Chunk](#chunk)
-    - [Scheme](#scheme)
     - [Builder](#builder)
 - [License](#license)
 
@@ -1063,7 +1062,6 @@ UNIQUE :: fragment
 EXPLICIT :: fragment
 INTERNAL :: fragment
 
-SCHEME :: fragment
 DEFAULT :: fragment
 DUPLICATE :: fragment
 
@@ -1162,14 +1160,6 @@ chunk_mt:fragments :: fragment[], integer
 chunk_mt:components :: fragment... -> storage...
 ```
 
-#### Scheme
-
-```
-scheme_boolean :: scheme
-scheme_number :: scheme
-scheme_record :: <string, scheme> -> scheme
-```
-
 #### Builder
 
 ```
@@ -1198,7 +1188,6 @@ builder_mt:unique :: builder
 builder_mt:explicit :: builder
 builder_mt:internal :: builder
 
-builder_mt:scheme :: evolved.scheme -> builder
 builder_mt:default :: component -> builder
 builder_mt:duplicate :: {component -> component} -> builder
 
@@ -1233,7 +1222,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ## vX.X.X
 
-- Added the new [`evolved.scheme`](#evovledscheme) fragment trait
+- Nothing yet, stay tuned!
 
 ## v1.2.0
 
@@ -1263,8 +1252,6 @@ builder_mt:destruction_policy :: id -> builder
 ### `evolved.EXPLICIT`
 
 ### `evolved.INTERNAL`
-
-### `evovled.SCHEME`
 
 ### `evolved.DEFAULT`
 
@@ -1676,33 +1663,6 @@ function evolved.chunk_mt:fragments() end
 function evolved.chunk_mt:components(...) end
 ```
 
-### Scheme
-
-#### `evolved.scheme_boolean`
-
-```lua
----@return evolved.scheme scheme
----@nodiscard
-function evolved.scheme_boolean() end
-```
-
-#### `evolved.scheme_number`
-
-```lua
----@return evolved.scheme scheme
----@nodiscard
-function evolved.scheme_number() end
-```
-
-#### `evolved.scheme_record`
-
-```lua
----@param field_schemes table<string, evolved.scheme>
----@return evolved.scheme scheme
----@nodiscard
-function evolved.scheme_record(field_schemes) end
-```
-
 ### Builder
 
 #### `evolved.builder`
@@ -1839,14 +1799,6 @@ function evolved.builder_mt:explicit() end
 ```lua
 ---@return evolved.builder builder
 function evolved.builder_mt:internal() end
-```
-
-#### `evolved.builder_mt:scheme`
-
-```lua
----@param scheme evolved.scheme
----@return evolved.builder builder
-function evolved.builder_mt:scheme(scheme) end
 ```
 
 #### `evolved.builder_mt:default`
