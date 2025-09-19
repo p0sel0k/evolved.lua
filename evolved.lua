@@ -151,12 +151,14 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<
 ---@field package __child_count integer
 ---@field package __entity_list evolved.entity[]
 ---@field package __entity_count integer
+---@field package __entity_capacity integer
 ---@field package __fragment evolved.fragment
 ---@field package __fragment_set table<evolved.fragment, integer>
 ---@field package __fragment_list evolved.fragment[]
 ---@field package __fragment_count integer
 ---@field package __component_count integer
 ---@field package __component_indices table<evolved.fragment, integer>
+---@field package __component_schemes evolved.scheme[]
 ---@field package __component_storages evolved.storage[]
 ---@field package __component_fragments evolved.fragment[]
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
@@ -345,9 +347,12 @@ end)()
 ---
 
 ---@class evolved.ffi
----@field cdef fun(def: string)
----@field typeof fun(ct: evolved.ffi_ct): evolved.ffi_ctype
+---@field cdef fun(def: string, ...)
+---@field typeof fun(ct: evolved.ffi_ct, ...): evolved.ffi_ctype
 ---@field sizeof fun(ct: evolved.ffi_ct): integer?
+---@field new fun(ct: evolved.ffi_ct, nelem?: integer, ...): evolved.ffi_cdata
+---@field metatype fun(ct: evolved.ffi_ct, mt: table): evolved.ffi_ctype
+---@field copy fun(dst: evolved.ffi_cdata, src: evolved.ffi_cdata, len: integer)
 
 ---@class evolved.ffi_cdata : userdata
 ---@class evolved.ffi_ctype : userdata
@@ -870,7 +875,6 @@ local __evolved_collect_garbage
 local __evolved_chunk
 
 local __evolved_scheme_boolean
-local __evolved_scheme_list
 local __evolved_scheme_number
 local __evolved_scheme_record
 
@@ -885,6 +889,9 @@ local __evolved_builder
 local __id_name
 
 local __new_chunk
+
+local __component_storage
+local __component_storage_move
 
 local __update_chunk_caches
 local __update_chunk_storages
@@ -925,6 +932,9 @@ local __clone_entity
 local __multi_clone_entity
 
 local __purge_chunk
+local __shrink_chunk
+local __expand_chunk
+
 local __clear_chunk_list
 local __destroy_entity_list
 local __destroy_fragment_list
@@ -1012,12 +1022,14 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __child_count = 0,
         __entity_list = {},
         __entity_count = 0,
+        __entity_capacity = 4,
         __fragment = chunk_fragment,
         __fragment_set = chunk_fragment_set,
         __fragment_list = chunk_fragment_list,
         __fragment_count = chunk_fragment_count,
         __component_count = 0,
         __component_indices = {},
+        __component_schemes = {},
         __component_storages = {},
         __component_fragments = {},
         __with_fragment_edges = {},
@@ -1090,6 +1102,48 @@ function __new_chunk(chunk_parent, chunk_fragment)
     return chunk
 end
 
+---@param scheme? evolved.scheme
+---@param capacity integer
+---@return evolved.storage
+---@nodiscard
+function __component_storage(scheme, capacity)
+    if not __lua_ffi or not scheme then
+        return __lua_table_new(capacity, 0)
+    end
+
+    local vla = __lua_ffi.typeof('$[?]', scheme.__typeof)
+
+    return __lua_ffi.new(vla, capacity + 1)
+end
+
+---@param scheme evolved.scheme
+---@param a1 evolved.storage
+---@param f integer
+---@param e integer
+---@param t integer
+---@param a2? evolved.storage
+---@return evolved.storage
+function __component_storage_move(scheme, a1, f, e, t, a2)
+    if not __lua_ffi or not scheme then
+        return __lua_table_move(a1, f, e, t, a2)
+    end
+
+    if a2 == nil then
+        a2 = a1
+    end
+
+    if e < f then
+        return a2
+    end
+
+    local dst, src = a2 + t, a1 + f
+    local len = (e - f + 1) * scheme.__sizeof
+
+    __lua_ffi.copy(dst, src, len)
+
+    return a2
+end
+
 ---@param chunk evolved.chunk
 function __update_chunk_caches(chunk)
     local chunk_parent = chunk.__parent
@@ -1144,11 +1198,15 @@ end
 
 ---@param chunk evolved.chunk
 function __update_chunk_storages(chunk)
+    local entity_count = chunk.__entity_count
+    local entity_capacity = chunk.__entity_capacity
+
     local fragment_list = chunk.__fragment_list
     local fragment_count = chunk.__fragment_count
 
     local component_count = chunk.__component_count
     local component_indices = chunk.__component_indices
+    local component_schemes = chunk.__component_schemes
     local component_storages = chunk.__component_storages
     local component_fragments = chunk.__component_fragments
 
@@ -1156,32 +1214,38 @@ function __update_chunk_storages(chunk)
         local fragment = fragment_list[fragment_index]
         local component_index = component_indices[fragment]
 
-        if component_index and __evolved_has(fragment, __TAG) then
+        local fragment_tag = __evolved_has(fragment, __TAG)
+        local fragment_scheme = __evolved_get(fragment, __SCHEME)
+
+        if component_index and fragment_tag then
             if component_index ~= component_count then
+                local last_component_scheme = component_schemes[component_count]
                 local last_component_storage = component_storages[component_count]
                 local last_component_fragment = component_fragments[component_count]
+
                 component_indices[last_component_fragment] = component_index
+                component_schemes[component_index] = last_component_scheme
                 component_storages[component_index] = last_component_storage
                 component_fragments[component_index] = last_component_fragment
             end
 
             component_indices[fragment] = nil
+            component_schemes[fragment] = nil
             component_storages[component_count] = nil
             component_fragments[component_count] = nil
 
             component_count = component_count - 1
             chunk.__component_count = component_count
-        end
-
-        if not component_index and not __evolved_has(fragment, __TAG) then
+        elseif not component_index and not fragment_tag then
             component_count = component_count + 1
             chunk.__component_count = component_count
 
-            ---@type evolved.storage
-            local component_storage = {}
+            local component_scheme = __evolved_get(fragment, __SCHEME)
+            local component_storage = __component_storage(component_scheme, chunk.__entity_capacity)
             local component_storage_index = component_count
 
             component_indices[fragment] = component_storage_index
+            component_schemes[component_storage_index] = component_scheme
             component_storages[component_storage_index] = component_storage
             component_fragments[component_storage_index] = fragment
 
@@ -1203,6 +1267,16 @@ function __update_chunk_storages(chunk)
                     component_storage[place] = new_component
                 end
             end
+        elseif component_index and component_schemes[component_index] ~= fragment_scheme then
+            local old_component_storage = component_storages[component_index]
+            local new_component_storage = __component_storage(fragment_scheme, entity_capacity)
+
+            for place = 1, entity_count do
+                new_component_storage[place] = old_component_storage[place]
+            end
+
+            component_schemes[component_index] = fragment_scheme
+            component_storages[component_index] = new_component_storage
         end
     end
 end
@@ -1802,28 +1876,37 @@ function __detach_entity(chunk, place)
     local entity_count = chunk.__entity_count
 
     local component_count = chunk.__component_count
+    local component_schemes = chunk.__component_schemes
     local component_storages = chunk.__component_storages
 
     if place == entity_count then
         entity_list[place] = nil
 
         for component_index = 1, component_count do
+            local component_scheme = component_schemes[component_index]
             local component_storage = component_storages[component_index]
-            component_storage[place] = nil
+
+            if not component_scheme then
+                component_storage[place] = nil
+            end
         end
     else
         local last_entity = entity_list[entity_count]
-        local last_entity_primary = last_entity % 2 ^ 20
-        __entity_places[last_entity_primary] = place
+        __entity_places[last_entity % 2 ^ 20] = place
 
         entity_list[place] = last_entity
         entity_list[entity_count] = nil
 
         for component_index = 1, component_count do
+            local component_scheme = component_schemes[component_index]
             local component_storage = component_storages[component_index]
+
             local last_component = component_storage[entity_count]
             component_storage[place] = last_component
-            component_storage[entity_count] = nil
+
+            if not component_scheme then
+                component_storage[entity_count] = nil
+            end
         end
     end
 
@@ -1835,12 +1918,18 @@ function __detach_all_entities(chunk)
     local entity_list = chunk.__entity_list
 
     local component_count = chunk.__component_count
+    local component_schemes = chunk.__component_schemes
     local component_storages = chunk.__component_storages
 
     __lua_table_clear(entity_list)
 
     for component_index = 1, component_count do
-        __lua_table_clear(component_storages[component_index])
+        local component_scheme = component_schemes[component_index]
+        local component_storage = component_storages[component_index]
+
+        if not component_scheme then
+            __lua_table_clear(component_storage)
+        end
     end
 
     chunk.__entity_count = 0
@@ -1884,11 +1973,16 @@ function __spawn_entity(entity, components)
 
     local chunk_entity_list = chunk.__entity_list
     local chunk_entity_count = chunk.__entity_count
+    local chunk_entity_capacity = chunk.__entity_capacity
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
     local place = chunk_entity_count + 1
+
+    if place > chunk_entity_capacity then
+        __expand_chunk(chunk, place)
+    end
 
     do
         chunk.__entity_count = place
@@ -2071,12 +2165,17 @@ function __multi_spawn_entity(entity_list, entity_count, components)
 
     local chunk_entity_list = chunk.__entity_list
     local chunk_entity_count = chunk.__entity_count
+    local chunk_entity_capacity = chunk.__entity_capacity
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
     local b_place = chunk_entity_count + 1
     local e_place = chunk_entity_count + entity_count
+
+    if e_place > chunk_entity_capacity then
+        __expand_chunk(chunk, e_place)
+    end
 
     do
         chunk.__entity_count = e_place
@@ -2298,11 +2397,16 @@ function __clone_entity(entity, prefab, components)
 
     local chunk_entity_list = chunk.__entity_list
     local chunk_entity_count = chunk.__entity_count
+    local chunk_entity_capacity = chunk.__entity_capacity
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
     local place = chunk_entity_count + 1
+
+    if place > chunk_entity_capacity then
+        __expand_chunk(chunk, place)
+    end
 
     do
         chunk.__entity_count = place
@@ -2549,12 +2653,17 @@ function __multi_clone_entity(entity_list, entity_count, prefab, components)
 
     local chunk_entity_list = chunk.__entity_list
     local chunk_entity_count = chunk.__entity_count
+    local chunk_entity_capacity = chunk.__entity_capacity
 
     local chunk_component_indices = chunk.__component_indices
     local chunk_component_storages = chunk.__component_storages
 
     local b_place = chunk_entity_count + 1
     local e_place = chunk_entity_count + entity_count
+
+    if e_place > chunk_entity_capacity then
+        __expand_chunk(chunk, e_place)
+    end
 
     do
         chunk.__entity_count = e_place
@@ -2851,6 +2960,80 @@ function __purge_chunk(chunk)
     chunk.__unreachable_or_collected = true
 end
 
+---@param chunk evolved.chunk
+---@param min_capacity integer
+function __shrink_chunk(chunk, min_capacity)
+    if __defer_depth <= 0 then
+        __error_fmt('this operation should be deferred')
+    end
+
+    local entity_count = chunk.__entity_count
+    min_capacity = math.max(min_capacity, entity_count)
+
+    local old_capacity = chunk.__entity_capacity
+    if old_capacity <= min_capacity then
+        -- no need to shrink, we are already small enough
+        return
+    end
+
+    local new_capacity = math.max(min_capacity, 4)
+
+    local component_schemes = chunk.__component_schemes
+    local component_storages = chunk.__component_storages
+
+    for component_index = 1, chunk.__component_count do
+        local component_scheme = component_schemes[component_index]
+
+        local old_component_storage = component_storages[component_index]
+        local new_component_storage = __component_storage(component_scheme, new_capacity)
+
+        __component_storage_move(component_scheme,
+            old_component_storage, 1, entity_count,
+            1, new_component_storage)
+
+        component_storages[component_index] = new_component_storage
+    end
+
+    chunk.__entity_capacity = new_capacity
+end
+
+---@param chunk evolved.chunk
+---@param min_capacity integer
+function __expand_chunk(chunk, min_capacity)
+    if __defer_depth <= 0 then
+        __error_fmt('this operation should be deferred')
+    end
+
+    local entity_count = chunk.__entity_count
+    min_capacity = math.max(min_capacity, entity_count)
+
+    local old_capacity = chunk.__entity_capacity
+    if old_capacity >= min_capacity then
+        -- no need to expand, we are already large enough
+        return
+    end
+
+    local new_capacity = math.max(min_capacity, old_capacity * 2)
+
+    local component_schemes = chunk.__component_schemes
+    local component_storages = chunk.__component_storages
+
+    for component_index = 1, chunk.__component_count do
+        local component_scheme = component_schemes[component_index]
+
+        local old_component_storage = component_storages[component_index]
+        local new_component_storage = __component_storage(component_scheme, new_capacity)
+
+        __component_storage_move(component_scheme,
+            old_component_storage, 1, entity_count,
+            1, new_component_storage)
+
+        component_storages[component_index] = new_component_storage
+    end
+
+    chunk.__entity_capacity = new_capacity
+end
+
 ---@param chunk_list evolved.chunk[]
 ---@param chunk_count integer
 function __clear_chunk_list(chunk_list, chunk_count)
@@ -3050,6 +3233,7 @@ function __chunk_set(old_chunk, fragment, component)
 
     local old_component_count = old_chunk.__component_count
     local old_component_indices = old_chunk.__component_indices
+    local old_component_schemes = old_chunk.__component_schemes
     local old_component_storages = old_chunk.__component_storages
     local old_component_fragments = old_chunk.__component_fragments
 
@@ -3186,8 +3370,10 @@ function __chunk_set(old_chunk, fragment, component)
 
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
+        local new_entity_capacity = new_chunk.__entity_capacity
 
         local new_component_indices = new_chunk.__component_indices
+        local new_component_schemes = new_chunk.__component_schemes
         local new_component_storages = new_chunk.__component_storages
 
         local new_chunk_has_setup_hooks = new_chunk.__has_setup_hooks
@@ -3201,42 +3387,43 @@ function __chunk_set(old_chunk, fragment, component)
                 __evolved_get(fragment, __DEFAULT, __DUPLICATE, __ON_SET, __ON_INSERT)
         end
 
-        if new_entity_count == 0 then
-            old_chunk.__entity_list, new_chunk.__entity_list =
-                new_entity_list, old_entity_list
+        local sum_entity_count = old_entity_count + new_entity_count
 
-            old_entity_list, new_entity_list =
-                new_entity_list, old_entity_list
+        if sum_entity_count > new_entity_capacity then
+            __expand_chunk(new_chunk, sum_entity_count)
+        end
 
+        do
             for old_ci = 1, old_component_count do
                 local old_f = old_component_fragments[old_ci]
+                local old_fs = old_component_schemes[old_ci]
+                local old_cs = old_component_storages[old_ci]
+
                 local new_ci = new_component_indices[old_f]
-                old_component_storages[old_ci], new_component_storages[new_ci] =
-                    new_component_storages[new_ci], old_component_storages[old_ci]
+                local new_fs = new_component_schemes[new_ci]
+                local new_cs = new_component_storages[new_ci]
+
+                if old_fs ~= new_fs then
+                    __error_fmt('internal error: fragment scheme mismatch')
+                end
+
+                __component_storage_move(new_fs,
+                    old_cs, 1, old_entity_count,
+                    new_entity_count + 1, new_cs)
             end
 
-            new_chunk.__entity_count = old_entity_count
-        else
             __lua_table_move(
                 old_entity_list, 1, old_entity_count,
                 new_entity_count + 1, new_entity_list)
 
-            for old_ci = 1, old_component_count do
-                local old_f = old_component_fragments[old_ci]
-                local old_cs = old_component_storages[old_ci]
-                local new_ci = new_component_indices[old_f]
-                local new_cs = new_component_storages[new_ci]
-                __lua_table_move(old_cs, 1, old_entity_count, new_entity_count + 1, new_cs)
-            end
-
-            new_chunk.__entity_count = new_entity_count + old_entity_count
+            new_chunk.__entity_count = sum_entity_count
         end
 
         do
             local entity_chunks = __entity_chunks
             local entity_places = __entity_places
 
-            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+            for new_place = new_entity_count + 1, sum_entity_count do
                 local entity = new_entity_list[new_place]
                 local entity_primary = entity % 2 ^ 20
                 entity_chunks[entity_primary] = new_chunk
@@ -3253,7 +3440,7 @@ function __chunk_set(old_chunk, fragment, component)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if fragment_duplicate then
-                    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                    for new_place = new_entity_count + 1, sum_entity_count do
                         local entity = new_entity_list[new_place]
 
                         local new_component = component
@@ -3276,7 +3463,7 @@ function __chunk_set(old_chunk, fragment, component)
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
 
-                    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                    for new_place = new_entity_count + 1, sum_entity_count do
                         local entity = new_entity_list[new_place]
 
                         new_component_storage[new_place] = new_component
@@ -3291,7 +3478,7 @@ function __chunk_set(old_chunk, fragment, component)
                     end
                 end
             else
-                for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                for new_place = new_entity_count + 1, sum_entity_count do
                     local entity = new_entity_list[new_place]
 
                     if fragment_on_set then
@@ -3310,7 +3497,7 @@ function __chunk_set(old_chunk, fragment, component)
                 local new_component_storage = new_component_storages[new_component_index]
 
                 if fragment_duplicate then
-                    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                    for new_place = new_entity_count + 1, sum_entity_count do
                         local new_component = component
                         if new_component == nil then new_component = fragment_default end
                         if new_component ~= nil then new_component = fragment_duplicate(new_component) end
@@ -3321,7 +3508,7 @@ function __chunk_set(old_chunk, fragment, component)
                     local new_component = component
                     if new_component == nil then new_component = fragment_default end
                     if new_component == nil then new_component = true end
-                    for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                    for new_place = new_entity_count + 1, sum_entity_count do
                         new_component_storage[new_place] = new_component
                     end
                 end
@@ -3351,7 +3538,7 @@ function __chunk_set(old_chunk, fragment, component)
                         local req_component_storage = new_component_storages[req_component_index]
 
                         if req_fragment_duplicate then
-                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                            for new_place = new_entity_count + 1, sum_entity_count do
                                 local entity = new_entity_list[new_place]
 
                                 local req_component = req_fragment_default
@@ -3372,7 +3559,7 @@ function __chunk_set(old_chunk, fragment, component)
                             local req_component = req_fragment_default
                             if req_component == nil then req_component = true end
 
-                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                            for new_place = new_entity_count + 1, sum_entity_count do
                                 local entity = new_entity_list[new_place]
 
                                 req_component_storage[new_place] = req_component
@@ -3387,7 +3574,7 @@ function __chunk_set(old_chunk, fragment, component)
                             end
                         end
                     else
-                        for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                        for new_place = new_entity_count + 1, sum_entity_count do
                             local entity = new_entity_list[new_place]
 
                             if req_fragment_on_set then
@@ -3406,7 +3593,7 @@ function __chunk_set(old_chunk, fragment, component)
                         local req_component_storage = new_component_storages[req_component_index]
 
                         if req_fragment_duplicate then
-                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                            for new_place = new_entity_count + 1, sum_entity_count do
                                 local req_component = req_fragment_default
                                 if req_component ~= nil then req_component = req_fragment_duplicate(req_component) end
                                 if req_component == nil then req_component = true end
@@ -3415,7 +3602,7 @@ function __chunk_set(old_chunk, fragment, component)
                         else
                             local req_component = req_fragment_default
                             if req_component == nil then req_component = true end
-                            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+                            for new_place = new_entity_count + 1, sum_entity_count do
                                 req_component_storage[new_place] = req_component
                             end
                         end
@@ -3457,6 +3644,7 @@ function __chunk_remove(old_chunk, ...)
     local old_fragment_list = old_chunk.__fragment_list
     local old_fragment_count = old_chunk.__fragment_count
     local old_component_indices = old_chunk.__component_indices
+    local old_component_schemes = old_chunk.__component_schemes
     local old_component_storages = old_chunk.__component_storages
 
     if old_entity_count == 0 then
@@ -3505,47 +3693,50 @@ function __chunk_remove(old_chunk, ...)
     if new_chunk then
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
+        local new_entity_capacity = new_chunk.__entity_capacity
 
         local new_component_count = new_chunk.__component_count
+        local new_component_schemes = new_chunk.__component_schemes
         local new_component_storages = new_chunk.__component_storages
         local new_component_fragments = new_chunk.__component_fragments
 
-        if new_entity_count == 0 then
-            old_chunk.__entity_list, new_chunk.__entity_list =
-                new_entity_list, old_entity_list
+        local sum_entity_count = old_entity_count + new_entity_count
 
-            old_entity_list, new_entity_list =
-                new_entity_list, old_entity_list
+        do
+            if sum_entity_count > new_entity_capacity then
+                __expand_chunk(new_chunk, sum_entity_count)
+            end
 
             for new_ci = 1, new_component_count do
                 local new_f = new_component_fragments[new_ci]
+                local new_fs = new_component_schemes[new_ci]
+                local new_cs = new_component_storages[new_ci]
+
                 local old_ci = old_component_indices[new_f]
-                old_component_storages[old_ci], new_component_storages[new_ci] =
-                    new_component_storages[new_ci], old_component_storages[old_ci]
+                local old_fs = old_component_schemes[old_ci]
+                local old_cs = old_component_storages[old_ci]
+
+                if new_fs ~= old_fs then
+                    __error_fmt('internal error: fragment scheme mismatch')
+                end
+
+                __component_storage_move(new_fs,
+                    old_cs, 1, old_entity_count,
+                    new_entity_count + 1, new_cs)
             end
 
-            new_chunk.__entity_count = old_entity_count
-        else
             __lua_table_move(
                 old_entity_list, 1, old_entity_count,
                 new_entity_count + 1, new_entity_list)
 
-            for new_ci = 1, new_component_count do
-                local new_f = new_component_fragments[new_ci]
-                local new_cs = new_component_storages[new_ci]
-                local old_ci = old_component_indices[new_f]
-                local old_cs = old_component_storages[old_ci]
-                __lua_table_move(old_cs, 1, old_entity_count, new_entity_count + 1, new_cs)
-            end
-
-            new_chunk.__entity_count = new_entity_count + old_entity_count
+            new_chunk.__entity_count = sum_entity_count
         end
 
         do
             local entity_chunks = __entity_chunks
             local entity_places = __entity_places
 
-            for new_place = new_entity_count + 1, new_entity_count + old_entity_count do
+            for new_place = new_entity_count + 1, sum_entity_count do
                 local entity = new_entity_list[new_place]
                 local entity_primary = entity % 2 ^ 20
                 entity_chunks[entity_primary] = new_chunk
@@ -5125,8 +5316,10 @@ function __evolved_set(entity, fragment, component)
 
         local new_entity_list = new_chunk.__entity_list
         local new_entity_count = new_chunk.__entity_count
+        local new_entity_capacity = new_chunk.__entity_capacity
 
         local new_component_indices = new_chunk.__component_indices
+        local new_component_schemes = new_chunk.__component_schemes
         local new_component_storages = new_chunk.__component_storages
 
         local new_chunk_has_setup_hooks = new_chunk.__has_setup_hooks
@@ -5141,20 +5334,30 @@ function __evolved_set(entity, fragment, component)
         end
 
         local new_place = new_entity_count + 1
-        new_chunk.__entity_count = new_place
 
-        new_entity_list[new_place] = entity
+        if new_place > new_entity_capacity then
+            __expand_chunk(new_chunk, new_place)
+        end
 
         if old_chunk then
             local old_component_count = old_chunk.__component_count
+            local old_component_schemes = old_chunk.__component_schemes
             local old_component_storages = old_chunk.__component_storages
             local old_component_fragments = old_chunk.__component_fragments
 
             for old_ci = 1, old_component_count do
                 local old_f = old_component_fragments[old_ci]
+                local old_fs = old_component_schemes[old_ci]
                 local old_cs = old_component_storages[old_ci]
+
                 local new_ci = new_component_indices[old_f]
+                local new_fs = new_component_schemes[new_ci]
                 local new_cs = new_component_storages[new_ci]
+
+                if old_fs ~= new_fs then
+                    __error_fmt('internal error: fragment scheme mismatch')
+                end
+
                 new_cs[new_place] = old_cs[old_place]
             end
 
@@ -5162,6 +5365,9 @@ function __evolved_set(entity, fragment, component)
         end
 
         do
+            new_entity_list[new_place] = entity
+            new_chunk.__entity_count = new_place
+
             entity_chunks[entity_primary] = new_chunk
             entity_places[entity_primary] = new_place
 
@@ -5300,6 +5506,7 @@ function __evolved_remove(entity, ...)
         local old_fragment_list = old_chunk.__fragment_list
         local old_fragment_count = old_chunk.__fragment_count
         local old_component_indices = old_chunk.__component_indices
+        local old_component_schemes = old_chunk.__component_schemes
         local old_component_storages = old_chunk.__component_storages
 
         if old_chunk.__has_remove_hooks then
@@ -5331,23 +5538,37 @@ function __evolved_remove(entity, ...)
         if new_chunk then
             local new_entity_list = new_chunk.__entity_list
             local new_entity_count = new_chunk.__entity_count
+            local new_entity_capacity = new_chunk.__entity_capacity
 
             local new_component_count = new_chunk.__component_count
+            local new_component_schemes = new_chunk.__component_schemes
             local new_component_storages = new_chunk.__component_storages
             local new_component_fragments = new_chunk.__component_fragments
 
             local new_place = new_entity_count + 1
-            new_chunk.__entity_count = new_place
 
-            new_entity_list[new_place] = entity
+            if new_place > new_entity_capacity then
+                __expand_chunk(new_chunk, new_place)
+            end
 
             for new_ci = 1, new_component_count do
                 local new_f = new_component_fragments[new_ci]
+                local new_fs = new_component_schemes[new_ci]
                 local new_cs = new_component_storages[new_ci]
+
                 local old_ci = old_component_indices[new_f]
+                local old_fs = old_component_schemes[old_ci]
                 local old_cs = old_component_storages[old_ci]
+
+                if old_fs ~= new_fs then
+                    __error_fmt('internal error: fragment scheme mismatch')
+                end
+
                 new_cs[new_place] = old_cs[old_place]
             end
+
+            new_entity_list[new_place] = entity
+            new_chunk.__entity_count = new_place
         end
 
         do
@@ -5941,6 +6162,8 @@ function __evolved_collect_garbage()
 
             if is_not_pinned and should_be_purged then
                 __purge_chunk(postorder_chunk)
+            else
+                __shrink_chunk(postorder_chunk, 4)
             end
         end
 
@@ -6101,23 +6324,6 @@ function __evolved_scheme_boolean()
         __cdecl = 'bool',
         __sizeof = __lua_ffi and __lua_ffi.sizeof('bool'),
         __typeof = __lua_ffi and __lua_ffi.typeof('bool'),
-    }, __scheme_mt)
-end
-
----@param item_scheme evolved.scheme
----@param item_count integer
----@return evolved.scheme scheme
----@nodiscard
-function __evolved_scheme_list(item_scheme, item_count)
-    local list_id = __acquire_id()
-    local list_cdecl = __lua_string_format('%s[%d]', item_scheme.__name, item_count)
-
-    return __lua_setmetatable({
-        __id = list_id,
-        __name = list_cdecl,
-        __cdecl = list_cdecl,
-        __sizeof = __lua_ffi and __lua_ffi.sizeof(list_cdecl),
-        __typeof = __lua_ffi and __lua_ffi.typeof(list_cdecl),
     }, __scheme_mt)
 end
 
@@ -7036,7 +7242,6 @@ evolved.collect_garbage = __evolved_collect_garbage
 evolved.chunk = __evolved_chunk
 
 evolved.scheme_boolean = __evolved_scheme_boolean
-evolved.scheme_list = __evolved_scheme_list
 evolved.scheme_number = __evolved_scheme_number
 evolved.scheme_record = __evolved_scheme_record
 

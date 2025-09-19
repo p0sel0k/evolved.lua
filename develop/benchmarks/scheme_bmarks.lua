@@ -7,7 +7,7 @@ local N = 10000
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS | %d entities', N),
+basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,
@@ -20,13 +20,11 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS | %d entitie
         local pf = evo.builder():set(wf):spawn()
         local vf = evo.builder():set(wf):spawn()
 
-        for _ = 1, N do
-            evo.spawn {
-                [wf] = true,
-                [pf] = { x = 0, y = 0, z = 0, w = 0 },
-                [vf] = { x = 0, y = 0, z = 0, w = 0 },
-            }
-        end
+        evo.multi_spawn(N, {
+            [wf] = true,
+            [pf] = { x = 0, y = 0, z = 0, w = 0 },
+            [vf] = { x = 0, y = 0, z = 0, w = 0 },
+        })
 
         evo.builder()
             :set(wf)
@@ -50,7 +48,7 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved AoS | %d entitie
         evo.destroy(w)
     end)
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved SoA | %d entities', N),
+basics.describe_bench(string.format('Scheme Benchmarks: Evolved SoA Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,
@@ -69,13 +67,17 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved SoA | %d entitie
         local vzf = evo.builder():set(wf):spawn()
         local vwf = evo.builder():set(wf):spawn()
 
-        for _ = 1, N do
-            evo.spawn {
-                [wf] = true,
-                [pxf] = 0, [pyf] = 0, [pzf] = 0, [pwf] = 0,
-                [vxf] = 0, [vyf] = 0, [vzf] = 0, [vwf] = 0,
-            }
-        end
+        evo.multi_spawn(N, {
+            [wf] = true,
+            [pxf] = 0,
+            [pyf] = 0,
+            [pzf] = 0,
+            [pwf] = 0,
+            [vxf] = 0,
+            [vyf] = 0,
+            [vzf] = 0,
+            [vwf] = 0,
+        })
 
         evo.builder()
             :set(wf)
@@ -101,7 +103,7 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved SoA | %d entitie
 
 print '----------------------------------------'
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI AoS | %d entities', N),
+basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI AoS Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,
@@ -121,13 +123,11 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI AoS | %d ent
         local pf = evo.builder():set(wf):set(evo.SCHEME, vector4):spawn()
         local vf = evo.builder():set(wf):set(evo.SCHEME, vector4):spawn()
 
-        for _ = 1, N do
-            evo.spawn {
-                [wf] = true,
-                [pf] = { x = 0, y = 0, z = 0, w = 0 },
-                [vf] = { x = 0, y = 0, z = 0, w = 0 },
-            }
-        end
+        evo.multi_spawn(N, {
+            [wf] = true,
+            [pf] = { x = 0, y = 0, z = 0, w = 0 },
+            [vf] = { x = 0, y = 0, z = 0, w = 0 },
+        })
 
         evo.builder()
             :set(wf)
@@ -151,7 +151,7 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI AoS | %d ent
         evo.destroy(w)
     end)
 
-basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI SoA | %d entities', N),
+basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI SoA Processing | %d entities', N),
     function(w)
         evo.process(w)
     end,
@@ -170,13 +170,17 @@ basics.describe_bench(string.format('Scheme Benchmarks: Evolved-FFI SoA | %d ent
         local vzf = evo.builder():set(wf):set(evo.SCHEME, evo.scheme_number()):spawn()
         local vwf = evo.builder():set(wf):set(evo.SCHEME, evo.scheme_number()):spawn()
 
-        for _ = 1, N do
-            evo.spawn {
-                [wf] = true,
-                [pxf] = 0, [pyf] = 0, [pzf] = 0, [pwf] = 0,
-                [vxf] = 0, [vyf] = 0, [vzf] = 0, [vwf] = 0,
-            }
-        end
+        evo.multi_spawn(N, {
+            [wf] = true,
+            [pxf] = 0,
+            [pyf] = 0,
+            [pzf] = 0,
+            [pwf] = 0,
+            [vxf] = 0,
+            [vyf] = 0,
+            [vzf] = 0,
+            [vwf] = 0,
+        })
 
         evo.builder()
             :set(wf)
