@@ -5922,6 +5922,35 @@ function __evolved_collect_garbage()
         __release_table(__table_pool_tag.chunk_list, postorder_chunk_stack)
     end
 
+    for table_tag = 1, __table_pool_tag.__count do
+        local table_pool = __tagged_table_pools[table_tag]
+        for pool_index = 1, table_pool.__size do
+            table_pool[pool_index] = {}
+        end
+    end
+
+    do
+        ---@type table<integer, evolved.chunk>
+        local new_entity_chunks = {}
+
+        for entity_primary, entity_chunk in __lua_next, __entity_chunks do
+            new_entity_chunks[entity_primary] = entity_chunk
+        end
+
+        __entity_chunks = new_entity_chunks
+    end
+
+    do
+        ---@type table<integer, integer>
+        local new_entity_places = {}
+
+        for entity_primary, entity_place in __lua_next, __entity_places do
+            new_entity_places[entity_primary] = entity_place
+        end
+
+        __entity_places = new_entity_places
+    end
+
     __evolved_commit()
 end
 

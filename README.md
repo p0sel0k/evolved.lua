@@ -1222,7 +1222,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ## vX.X.X
 
-- Nothing yet, stay tuned!
+- The internal garbage collector now collects more garbage
 
 ## v1.2.0
 
