@@ -4466,7 +4466,7 @@ local function __system_process(system)
             local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
 
             if not success then
-                __evolved_commit()
+                __evolved_cancel()
                 __error_fmt('system execution failed: %s', result)
             end
         end
