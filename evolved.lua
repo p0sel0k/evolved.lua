@@ -118,6 +118,7 @@ local __acquired_count = 0 ---@type integer
 local __available_primary = 0 ---@type integer
 
 local __defer_depth = 0 ---@type integer
+local __defer_points = {} ---@type integer[]
 local __defer_length = 0 ---@type integer
 local __defer_bytecode = {} ---@type any[]
 
@@ -790,6 +791,7 @@ local __evolved_unpack
 
 local __evolved_defer
 local __evolved_commit
+local __evolved_cancel
 
 local __evolved_spawn
 local __evolved_multi_spawn
@@ -4606,13 +4608,14 @@ end
 ---@return boolean started
 function __evolved_defer()
     __defer_depth = __defer_depth + 1
+    __defer_points[__defer_depth] = __defer_length
     return __defer_depth == 1
 end
 
 ---@return boolean committed
 function __evolved_commit()
     if __defer_depth <= 0 then
-        __error_fmt('unbalanced defer/commit')
+        __error_fmt('unbalanced defer/commit/cancel')
     end
 
     __defer_depth = __defer_depth - 1
@@ -4639,6 +4642,17 @@ function __evolved_commit()
 
     __release_table(__table_pool_tag.bytecode, bytecode, true)
     return true
+end
+
+---@return boolean cancelled
+function __evolved_cancel()
+    if __defer_depth <= 0 then
+        __error_fmt('unbalanced defer/commit/cancel')
+    end
+
+    __defer_length = __defer_points[__defer_depth]
+
+    return __evolved_commit()
 end
 
 ---@param components? table<evolved.fragment, evolved.component>
@@ -5952,6 +5966,17 @@ function __evolved_collect_garbage()
     end
 
     do
+        ---@type integer[]
+        local new_defer_points = __lua_table_new(__defer_depth, 0)
+
+        __lua_table_move(
+            __defer_points, 1, __defer_depth,
+            1, new_defer_points)
+
+        __defer_points = new_defer_points
+    end
+
+    do
         ---@type any[]
         local new_defer_bytecode = __lua_table_new(__defer_length, 0)
 
@@ -6894,6 +6919,7 @@ evolved.unpack = __evolved_unpack
 
 evolved.defer = __evolved_defer
 evolved.commit = __evolved_commit
+evolved.cancel = __evolved_cancel
 
 evolved.spawn = __evolved_spawn
 evolved.multi_spawn = __evolved_multi_spawn

@@ -599,6 +599,9 @@ function evolved.defer() end
 
 ---@return boolean committed
 function evolved.commit() end
+
+---@return boolean cancelled
+function evolved.cancel() end
 ```
 
 The [`evolved.defer`](#evolveddefer) function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The [`evolved.commit`](#evolvedcommit) function closes the last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The [`evolved.commit`](#evolvedcommit) function will apply all queued changes only when the last deferred scope is closed.
@@ -627,6 +630,34 @@ evolved.commit()
 
 -- now the poisoned fragment is removed
 assert(not evolved.has(player, poisoned))
+```
+
+The [`evolved.cancel`](#evolvedcancel) function can be used to cancel all queued changes in the current deferred scope. This is useful if you want to discard all changes made inside the scope and revert to the previous state on an error or some other condition.
+
+```lua
+local evolved = require 'evolved'
+
+local health, poisoned = evolved.id(2)
+
+local player = evolved.builder()
+    :set(health, 100)
+    :set(poisoned, true)
+    :spawn()
+
+-- start a deferred scope
+evolved.defer()
+
+-- this removal will be queued, not applied immediately
+evolved.remove(player, poisoned)
+
+-- the player still has the poisoned fragment inside the deferred scope
+assert(evolved.has(player, poisoned))
+
+-- cancel the deferred operations
+evolved.cancel()
+
+-- the poisoned fragment is still there
+assert(evolved.has(player, poisoned))
 ```
 
 #### Batch Operations
@@ -1101,6 +1132,7 @@ unpack :: id -> integer, integer
 
 defer :: boolean
 commit :: boolean
+cancel :: boolean
 
 spawn :: <fragment, component>? -> entity
 multi_spawn :: integer, <fragment, component>? -> entity[]
@@ -1223,6 +1255,7 @@ builder_mt:destruction_policy :: id -> builder
 ## vX.X.X
 
 - The internal garbage collector now collects more garbage
+- Added the new [`evolved.cancel`](#evolvedcancel) function
 
 ## v1.2.0
 
@@ -1343,6 +1376,13 @@ function evolved.defer() end
 ```lua
 ---@return boolean committed
 function evolved.commit() end
+```
+
+### `evolved.cancel`
+
+```lua
+---@return boolean cancelled
+function evolved.cancel() end
 ```
 
 ### `evolved.spawn`

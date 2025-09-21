@@ -1,5 +1,6 @@
 require 'develop.samples.systems'
 
+require 'develop.testing.cancel_tests'
 require 'develop.testing.multi_spawn_tests'
 require 'develop.testing.name_tests'
 require 'develop.testing.requires_fragment_tests'
