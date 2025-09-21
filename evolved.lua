@@ -5951,6 +5951,18 @@ function __evolved_collect_garbage()
         __entity_places = new_entity_places
     end
 
+    do
+        ---@type any[]
+        local new_defer_bytecode = __lua_table_new(__defer_length, 0)
+
+        __lua_table_move(
+            __defer_bytecode, 1, __defer_length,
+            1, new_defer_bytecode)
+
+        __defer_bytecode = new_defer_bytecode
+    end
+
+
     __evolved_commit()
 end
 
