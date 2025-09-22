@@ -57,6 +57,11 @@
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
+- [Changelog](#changelog)
+  - [vX.X.X](#vxxx)
+  - [v1.2.0](#v120)
+  - [v1.1.0](#v110)
+  - [v1.0.0](#v100)
 - [License](#license)
 
 ## Introduction
@@ -1246,31 +1251,32 @@ builder_mt:epilogue :: {} -> builder
 builder_mt:destruction_policy :: id -> builder
 ```
 
-## License
+## Changelog
 
-`evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
-
-# Changelog
-
-## vX.X.X
+### vX.X.X
 
 - The internal garbage collector now collects more garbage
 - Added the new [`evolved.cancel`](#evolvedcancel) function
+- Improved system processing debugging experience with stack traces on errors
 
-## v1.2.0
+### v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
 - Added the new [`evolved.multi_spawn`](#evolvedmulti_spawn) and [`evolved.multi_clone`](#evolvedmulti_clone) functions
 - Added the new [`evolved.INTERNAL`](#evolvedinternal) fragment trait
 
-## v1.1.0
+### v1.1.0
 
 - [`Systems`](#systems) can be queries themselves now
 - Added the new [`evolved.REQUIRES`](#evolvedrequires) fragment trait
 
-## v1.0.0
+### v1.0.0
 
 - Initial release
+
+## License
+
+`evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
 
 # API Reference
 

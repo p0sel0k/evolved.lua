@@ -191,7 +191,6 @@ __builder_mt.__index = __builder_mt
 
 local __lua_error = error
 local __lua_next = next
-local __lua_pcall = pcall
 local __lua_print = print
 local __lua_select = select
 local __lua_setmetatable = setmetatable
@@ -199,6 +198,7 @@ local __lua_string_format = string.format
 local __lua_table_concat = table.concat
 local __lua_table_sort = table.sort
 local __lua_tostring = tostring
+local __lua_xpcall = xpcall
 
 ---@type fun(narray: integer, nhash: integer): table
 local __lua_table_new = (function()
@@ -207,7 +207,7 @@ local __lua_table_new = (function()
     -- https://forum.defold.com/t/solved-is-luajit-table-new-function-available-in-defold/78623
 
     do
-        ---@diagnostic disable-next-line: undefined-field
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_new = table and table.new
         if table_new then
             ---@cast table_new fun(narray: integer, nhash: integer): table
@@ -216,7 +216,7 @@ local __lua_table_new = (function()
     end
 
     do
-        ---@diagnostic disable-next-line: undefined-field
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_create = table and table.create
         if table_create then
             ---@cast table_create fun(count: integer, value: any): table
@@ -248,7 +248,7 @@ local __lua_table_clear = (function()
     -- https://forum.defold.com/t/solved-is-luajit-table-new-function-available-in-defold/78623
 
     do
-        ---@diagnostic disable-next-line: undefined-field
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_clear = table and table.clear
         if table_clear then
             ---@cast table_clear fun(tab: table)
@@ -279,7 +279,7 @@ local __lua_table_move = (function()
     -- https://create.roblox.com/docs/reference/engine/libraries/table#move
 
     do
-        ---@diagnostic disable-next-line: deprecated
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_move = table and table.move
         if table_move then
             ---@cast table_move fun(a1: table, f: integer, e: integer, t: integer, a2?: table): table
@@ -316,15 +316,31 @@ end)()
 ---@type fun(lst: table, i: integer, j: integer): ...
 local __lua_table_unpack = (function()
     do
-        ---@diagnostic disable-next-line: deprecated
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_unpack = unpack
         if table_unpack then return table_unpack end
     end
 
     do
-        ---@diagnostic disable-next-line: deprecated
+        ---@diagnostic disable-next-line: deprecated, undefined-field
         local table_unpack = table and table.unpack
         if table_unpack then return table_unpack end
+    end
+end)()
+
+---@type fun(message?: any, level?: integer): string
+local __lua_debug_traceback = (function()
+    do
+        ---@diagnostic disable-next-line: deprecated, undefined-field
+        local debug_traceback = debug and debug.traceback
+        if debug_traceback then
+            return debug_traceback
+        end
+    end
+
+    ---@type fun(message?: any, level?: integer): string
+    return function(message)
+        return __lua_tostring(message)
     end
 end)()
 
@@ -344,8 +360,8 @@ end
 ---@param fmt string
 ---@param ... any
 local function __warning_fmt(fmt, ...)
-    __lua_print(__lua_string_format('| evolved.lua (w) | %s',
-        __lua_string_format(fmt, ...)))
+    __lua_print(__lua_debug_traceback(__lua_string_format('| evolved.lua (w) | %s',
+        __lua_string_format(fmt, ...))))
 end
 
 ---
@@ -4446,6 +4462,24 @@ function __iterator_fns.__execute_iterator(execute_state)
     __release_table(__table_pool_tag.execute_state, execute_state, true)
 end
 
+---@type { [1]: evolved.query, [2]: evolved.execute }
+local __query_execute_external_arguments = {}
+
+---@param query? evolved.query
+---@param execute? evolved.execute
+local function __query_execute(query, execute)
+    -- we use the external arguments here to support lua 5.1 xpcall (which does not support argument passing)
+    -- also, we can not use upvalues directly, because the function may be called recursively in that case
+    -- storing the arguments in local variables makes them invulnerable to changes during recursive calls
+
+    query = query or __query_execute_external_arguments[1]
+    execute = execute or __query_execute_external_arguments[2]
+
+    for chunk, entity_list, entity_count in __evolved_execute(query) do
+        execute(chunk, entity_list, entity_count)
+    end
+end
+
 ---@param system evolved.system
 local function __system_process(system)
     ---@type evolved.query?, evolved.execute?, evolved.prologue?, evolved.epilogue?
@@ -4453,7 +4487,7 @@ local function __system_process(system)
         __QUERY, __EXECUTE, __PROLOGUE, __EPILOGUE)
 
     if prologue then
-        local success, result = __lua_pcall(prologue)
+        local success, result = __lua_xpcall(prologue, __lua_debug_traceback)
 
         if not success then
             __error_fmt('system prologue failed: %s', result)
@@ -4462,8 +4496,9 @@ local function __system_process(system)
 
     if execute then
         __evolved_defer()
-        for chunk, entity_list, entity_count in __evolved_execute(query or system) do
-            local success, result = __lua_pcall(execute, chunk, entity_list, entity_count)
+        do
+            __query_execute_external_arguments[1], __query_execute_external_arguments[2] = query or system, execute
+            local success, result = __lua_xpcall(__query_execute, __lua_debug_traceback, query or system, execute)
 
             if not success then
                 __evolved_cancel()
@@ -4497,7 +4532,7 @@ local function __system_process(system)
     end
 
     if epilogue then
-        local success, result = __lua_pcall(epilogue)
+        local success, result = __lua_xpcall(epilogue, __lua_debug_traceback)
 
         if not success then
             __error_fmt('system epilogue failed: %s', result)
