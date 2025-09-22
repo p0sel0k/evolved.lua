@@ -31,6 +31,7 @@
     - [Traits](#traits)
     - [Singletons](#singletons)
   - [Chunks](#chunks)
+  - [Entity Location](#entity-location)
   - [Structural Changes](#structural-changes)
     - [Spawning Entities](#spawning-entities)
     - [Entity Builders](#entity-builders)
@@ -364,6 +365,43 @@ end
 -- Entity: 1048602, Health: 100, Stamina: 50
 -- Entity: 1048603, Health: 75, Stamina: 40
 ```
+
+### Entity Location
+
+Sometimes it is useful to know which chunk a specific entity is in and its position within that chunk. The [`evolved.locate`](#evolvedlocate) function provides this information.
+
+```lua
+---@param entity evolved.entity
+---@return evolved.chunk? chunk
+---@return integer place
+function evolved.locate(entity) end
+```
+
+This function takes an entity and returns the chunk that contains it and the entity’s position (index) within that chunk. If the entity is not alive or is empty, the function returns `nil` for the chunk and `0` for the place.
+
+This is low-level functionality that you will rarely need. However, it can be useful in specific cases. For example, when you need to modify an entity’s component directly to avoid unnecessary [Deferred Operations](#deferred-operations) or [Fragment Hooks](#fragment-hooks), instead of using a higher-level function like [`evolved.set`](#evolvedset).
+
+```lua
+local evolved = require 'evolved'
+
+local health, stamina = evolved.id(2)
+
+local player = evolved.id()
+
+evolved.set(player, health, 100)
+evolved.set(player, stamina, 50)
+
+local player_chunk, player_place = evolved.locate(player)
+
+local health_components = player_chunk:components(health)
+local stamina_components = player_chunk:components(stamina)
+
+health_components[player_place] = 75
+stamina_components[player_place] = 42
+```
+
+> [!WARNING]
+> Do not use [`evolved.locate`](#evolvedlocate) to manipulate components directly unless you fully understand what you are doing. Because it is low-level functionality, incorrect use can lead to inconsistencies, as it bypasses the library’s safety checks and hook mechanisms. Use it only when you are certain it is safe and necessary.
 
 ### Structural Changes
 
@@ -1172,6 +1210,8 @@ batch_destroy :: query... -> ()
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
 
+locate :: entity -> chunk?, integer
+
 process :: system... -> ()
 
 debug_mode :: boolean -> ()
@@ -1255,8 +1295,9 @@ builder_mt:destruction_policy :: id -> builder
 
 ### vX.X.X
 
-- The internal garbage collector now collects more garbage
 - Added the new [`evolved.cancel`](#evolvedcancel) function
+- Added the new [`evolved.locate`](#evolvedlocate) function
+- The internal garbage collector now collects more garbage
 - Improved system processing debugging experience with stack traces on errors
 
 ### v1.2.0
@@ -1601,6 +1642,16 @@ function evolved.each(entity) end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function evolved.execute(query) end
+```
+
+### `evolved.locate`
+
+```lua
+---@param entity evolved.entity
+---@return evolved.chunk? chunk
+---@return integer place
+---@nodiscard
+function evolved.locate(entity) end
 ```
 
 ### `evolved.process`

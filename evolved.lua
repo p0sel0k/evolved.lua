@@ -842,6 +842,8 @@ local __evolved_batch_destroy
 local __evolved_each
 local __evolved_execute
 
+local __evolved_locate
+
 local __evolved_process
 
 local __evolved_debug_mode
@@ -5883,6 +5885,26 @@ function __evolved_execute(query)
     end
 end
 
+---@param entity evolved.entity
+---@return evolved.chunk? chunk
+---@return integer place
+---@nodiscard
+function __evolved_locate(entity)
+    local entity_primary = entity % 2 ^ 20
+
+    if __freelist_ids[entity_primary] ~= entity then
+        return nil, 0
+    end
+
+    local entity_chunk = __entity_chunks[entity_primary]
+
+    if not entity_chunk then
+        return nil, 0
+    end
+
+    return entity_chunk, __entity_places[entity_primary]
+end
+
 ---@param ... evolved.system systems
 function __evolved_process(...)
     local argument_count = __lua_select('#', ...)
@@ -6988,6 +7010,8 @@ evolved.batch_destroy = __evolved_batch_destroy
 
 evolved.each = __evolved_each
 evolved.execute = __evolved_execute
+
+evolved.locate = __evolved_locate
 
 evolved.process = __evolved_process
 
