@@ -31,7 +31,7 @@
     - [Traits](#traits)
     - [Singletons](#singletons)
   - [Chunks](#chunks)
-  - [Entity Location](#entity-location)
+    - [Entity Location](#entity-location)
   - [Structural Changes](#structural-changes)
     - [Spawning Entities](#spawning-entities)
     - [Entity Builders](#entity-builders)
@@ -366,7 +366,7 @@ end
 -- Entity: 1048603, Health: 75, Stamina: 40
 ```
 
-### Entity Location
+#### Entity Location
 
 Sometimes it is useful to know which chunk a specific entity is in and its position within that chunk. The [`evolved.locate`](#evolvedlocate) function provides this information.
 
