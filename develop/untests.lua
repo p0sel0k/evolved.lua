@@ -1525,7 +1525,7 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 41)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1539,13 +1539,13 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
 
             last_set_entity = 0
             evo.set(e, f2, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1559,13 +1559,13 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2) and evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == 43)
 
             last_set_entity = 0
             evo.set(e, f2, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2) and evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == 43)
 
@@ -1610,7 +1610,7 @@ do
 
             last_assign_entity = 0
             evo.set(e, f1)
-            assert(last_assign_entity == e)
+            assert(last_assign_entity == 0)
             assert(evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1623,7 +1623,7 @@ do
 
             last_assign_entity = 0
             evo.set(e, f2, 44)
-            assert(last_assign_entity == e)
+            assert(last_assign_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end

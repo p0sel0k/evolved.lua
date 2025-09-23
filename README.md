@@ -913,6 +913,9 @@ evolved.set(player, health, 200) -- prints "health set to 200"
 
 Use [`evolved.ON_SET`](#evolvedon_set) for callbacks on fragment insert or override, [`evolved.ON_ASSIGN`](#evolvedon_assign) for overrides, and [`evolved.ON_INSERT`](#evolvedon_insert)/[`evolved.ON_REMOVE`](#evolvedon_remove) for insertions or removals.
 
+> [!NOTE]
+> Because fragments marked with [`evolved.TAG`](#evolvedtag) (also called [Fragment Tags](#fragment-tags)) have no components, their [`evolved.ON_SET`](#evolvedon_set) hooks are invoked only when the tag is inserted, not when it is overridden, as there is nothing to override. Their [`evolved.ON_ASSIGN`](#evolvedon_assign) hooks are never invoked for such tags for the same reason.
+
 #### Unique Fragments
 
 Some fragments should not be cloned when cloning entities. For example, `evolved.lua` has a special fragment called `evolved.PREFAB`, which marks entities used as sources for cloning. This fragment should not be present on the cloned entities. To prevent a fragment from being cloned, mark it as unique using the [`evolved.UNIQUE`](#evolvedunique) fragment trait. This ensures the fragment will not be copied when cloning entities.
@@ -1114,7 +1117,7 @@ execute :: {chunk, entity[], integer}
 prologue :: {}
 epilogue :: {}
 
-set_hook :: {entity, fragment, component, component?}
+set_hook :: {entity, fragment, component, component}
 assign_hook :: {entity, fragment, component, component}
 insert_hook :: {entity, fragment, component}
 remove_hook :: {entity, fragment, component}
@@ -1275,7 +1278,7 @@ builder_mt:include :: fragment... -> builder
 builder_mt:exclude :: fragment... -> builder
 builder_mt:require :: fragment... -> builder
 
-builder_mt:on_set :: {entity, fragment, component, component?} -> builder
+builder_mt:on_set :: {entity, fragment, component, component} -> builder
 builder_mt:on_assign :: {entity, fragment, component, component} -> builder
 builder_mt:on_insert :: {entity, fragment, component} -> builder
 builder_mt:on_remove :: {entity, fragment} -> builder
@@ -1299,6 +1302,7 @@ builder_mt:destruction_policy :: id -> builder
 - Added the new [`evolved.locate`](#evolvedlocate) function
 - The internal garbage collector now collects more garbage
 - Improved system processing debugging experience with stack traces on errors
+- [`SET/ASSIGN hooks`](#fragment-hooks) are not invoked for tags on override operations anymore
 
 ### v1.2.0
 

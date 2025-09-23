@@ -417,7 +417,7 @@ local function __release_id(id)
     local freelist_ids = __freelist_ids
 
     if freelist_ids[acquired_primary] ~= id then
-        __error_fmt('id is not acquired or already released')
+        __error_fmt('the id (%d) is not acquired or already released', id)
     end
 
     shifted_secondary = shifted_secondary == 2 ^ 40 - 2 ^ 20
@@ -3102,17 +3102,7 @@ function __chunk_set(old_chunk, fragment, component)
                     end
                 end
             else
-                for old_place = 1, old_entity_count do
-                    local entity = old_entity_list[old_place]
-
-                    if fragment_on_set then
-                        __defer_call_hook(fragment_on_set, entity, fragment)
-                    end
-
-                    if fragment_on_assign then
-                        __defer_call_hook(fragment_on_assign, entity, fragment)
-                    end
-                end
+                -- nothing
             end
         else
             local old_component_index = old_component_indices[fragment]
@@ -5116,13 +5106,7 @@ function __evolved_set(entity, fragment, component)
                 __defer_call_hook(fragment_on_assign, entity, fragment, new_component, old_component)
             end
         else
-            if fragment_on_set then
-                __defer_call_hook(fragment_on_set, entity, fragment)
-            end
-
-            if fragment_on_assign then
-                __defer_call_hook(fragment_on_assign, entity, fragment)
-            end
+            -- nothing
         end
     else
         local req_fragment_set
