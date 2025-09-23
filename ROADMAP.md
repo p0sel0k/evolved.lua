@@ -14,4 +14,3 @@
 
 - We can return deferred status from modifying operations and spawn/clone methods.
 - Should we make one builder:build method instead of :spawn and :clone?
-- Should we cache the result of without_unique_fragments to clone faster?

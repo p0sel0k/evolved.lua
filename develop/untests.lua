@@ -6373,3 +6373,48 @@ do
         assert(evo.get(e, f) ~= v2_default)
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local prefab = evo.builder():prefab():set(f1, 11):set(f2, 22):spawn()
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+
+    evo.set(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(not evo.has(entity, f2) and evo.get(entity, f2) == nil)
+    end
+
+    evo.remove(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+
+    evo.set(f1, evo.UNIQUE)
+    evo.set(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.empty(entity))
+    end
+
+    evo.remove(f1, evo.UNIQUE)
+    evo.remove(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+end

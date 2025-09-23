@@ -160,6 +160,7 @@ local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<
 ---@field package __component_fragments evolved.fragment[]
 ---@field package __with_fragment_edges table<evolved.fragment, evolved.chunk>
 ---@field package __without_fragment_edges table<evolved.fragment, evolved.chunk>
+---@field package __without_unique_fragments? evolved.chunk
 ---@field package __unreachable_or_collected boolean
 ---@field package __has_setup_hooks boolean
 ---@field package __has_assign_hooks boolean
@@ -998,6 +999,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
         __component_fragments = {},
         __with_fragment_edges = {},
         __without_fragment_edges = {},
+        __without_unique_fragments = nil,
         __unreachable_or_collected = false,
         __has_setup_hooks = false,
         __has_assign_hooks = false,
@@ -1116,6 +1118,12 @@ function __update_chunk_caches(chunk)
     chunk.__has_internal_fragments = has_internal_fragments
 
     chunk.__has_required_fragments = has_required_fragments
+
+    if has_unique_fragments then
+        chunk.__without_unique_fragments = nil
+    else
+        chunk.__without_unique_fragments = chunk
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -2240,13 +2248,14 @@ function __clone_entity(entity, prefab, components)
         __error_fmt('clone entity operations should be deferred')
     end
 
-    local prefab_primary = prefab % 2 ^ 20
+    local prefab_chunk, prefab_place = __evolved_locate(prefab)
 
-    local prefab_chunk = __entity_chunks[prefab_primary]
-    local prefab_place = __entity_places[prefab_primary]
+    if prefab_chunk and prefab_chunk.__has_unique_fragments and not prefab_chunk.__without_unique_fragments then
+        prefab_chunk.__without_unique_fragments = __chunk_without_unique_fragments(prefab_chunk)
+    end
 
     local chunk = __chunk_with_components(
-        __chunk_without_unique_fragments(prefab_chunk),
+        prefab_chunk and prefab_chunk.__without_unique_fragments,
         components)
 
     if not chunk then
@@ -2491,13 +2500,14 @@ function __multi_clone_entity(entity_list, entity_count, prefab, components)
         __error_fmt('clone entity operations should be deferred')
     end
 
-    local prefab_primary = prefab % 2 ^ 20
+    local prefab_chunk, prefab_place = __evolved_locate(prefab)
 
-    local prefab_chunk = __entity_chunks[prefab_primary]
-    local prefab_place = __entity_places[prefab_primary]
+    if prefab_chunk and prefab_chunk.__has_unique_fragments and not prefab_chunk.__without_unique_fragments then
+        prefab_chunk.__without_unique_fragments = __chunk_without_unique_fragments(prefab_chunk)
+    end
 
     local chunk = __chunk_with_components(
-        __chunk_without_unique_fragments(prefab_chunk),
+        prefab_chunk and prefab_chunk.__without_unique_fragments,
         components)
 
     if not chunk then

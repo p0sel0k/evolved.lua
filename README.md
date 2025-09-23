@@ -1303,6 +1303,7 @@ builder_mt:destruction_policy :: id -> builder
 - The internal garbage collector now collects more garbage
 - Improved system processing debugging experience with stack traces on errors
 - [`SET/ASSIGN hooks`](#fragment-hooks) are not invoked for tags on override operations anymore
+- Improved performance of cloning prefabs with many [`Unique Fragments`](#unique-fragments)
 
 ### v1.2.0
 
