@@ -8,14 +8,13 @@ require 'develop.testing.requires_fragment_tests'
 require 'develop.testing.system_as_query_tests'
 
 require 'develop.benchmarks.clone_bmarks'
+require 'develop.benchmarks.common_bmarks'
 require 'develop.benchmarks.migration_bmarks'
 require 'develop.benchmarks.process_bmarks'
 require 'develop.benchmarks.spawn_bmarks'
 require 'develop.benchmarks.table_bmarks'
 
 require 'develop.untests'
-
-require 'develop.usbench'
 
 local basics = require 'develop.basics'
 
