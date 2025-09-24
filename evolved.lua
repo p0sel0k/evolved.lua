@@ -1683,26 +1683,44 @@ function __chunk_get_all_components(chunk, place, ...)
     end
 end
 
----@param chunk evolved.chunk
+---@param ini_chunk evolved.chunk
 ---@param req_fragment_set table<evolved.fragment, integer>
 ---@param req_fragment_list evolved.fragment[]
 ---@param req_fragment_count integer
 ---@return integer
 ---@nodiscard
-function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, req_fragment_count)
+function __chunk_required_fragments(ini_chunk, req_fragment_set, req_fragment_list, req_fragment_count)
     ---@type evolved.fragment[]
     local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
     local fragment_stack_size = 0
 
-    do
-        local chunk_fragment_list = chunk.__fragment_list
-        local chunk_fragment_count = chunk.__fragment_count
+    local ini_fragment_set = ini_chunk.__fragment_set
+    local ini_fragment_list = ini_chunk.__fragment_list
+    local ini_fragment_count = ini_chunk.__fragment_count
 
-        __lua_table_move(
-            chunk_fragment_list, 1, chunk_fragment_count,
-            fragment_stack_size + 1, fragment_stack)
+    for ini_fragment_index = 1, ini_fragment_count do
+        local ini_fragment = ini_fragment_list[ini_fragment_index]
 
-        fragment_stack_size = fragment_stack_size + chunk_fragment_count
+        local ini_fragment_requires = __sorted_requires[ini_fragment]
+        local ini_fragment_require_list = ini_fragment_requires and ini_fragment_requires.__item_list
+        local ini_fragment_require_count = ini_fragment_requires and ini_fragment_requires.__item_count or 0
+
+        for required_fragment_index = 1, ini_fragment_require_count do
+            local required_fragment = ini_fragment_require_list[required_fragment_index]
+
+            if ini_fragment_set[required_fragment] or req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                if __sorted_requires[required_fragment] then
+                    fragment_stack_size = fragment_stack_size + 1
+                    fragment_stack[fragment_stack_size] = required_fragment
+                end
+            end
+        end
     end
 
     while fragment_stack_size > 0 do
@@ -1718,15 +1736,17 @@ function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, 
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
 
-            if req_fragment_set[required_fragment] then
+            if ini_fragment_set[required_fragment] or req_fragment_set[required_fragment] then
                 -- this fragment has already been gathered
             else
                 req_fragment_count = req_fragment_count + 1
                 req_fragment_set[required_fragment] = req_fragment_count
                 req_fragment_list[req_fragment_count] = required_fragment
 
-                fragment_stack_size = fragment_stack_size + 1
-                fragment_stack[fragment_stack_size] = required_fragment
+                if __sorted_requires[required_fragment] then
+                    fragment_stack_size = fragment_stack_size + 1
+                    fragment_stack[fragment_stack_size] = required_fragment
+                end
             end
         end
     end
@@ -1735,20 +1755,41 @@ function __chunk_required_fragments(chunk, req_fragment_set, req_fragment_list, 
     return req_fragment_count
 end
 
----@param fragment evolved.fragment
+---@param ini_chunk evolved.chunk
+---@param ini_fragment evolved.fragment
 ---@param req_fragment_set table<evolved.fragment, integer>
 ---@param req_fragment_list evolved.fragment[]
 ---@param req_fragment_count integer
 ---@return integer
 ---@nodiscard
-function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_list, req_fragment_count)
+function __fragment_required_fragments(ini_chunk, ini_fragment, req_fragment_set, req_fragment_list, req_fragment_count)
     ---@type evolved.fragment[]
     local fragment_stack = __acquire_table(__table_pool_tag.fragment_list)
     local fragment_stack_size = 0
 
+    local ini_fragment_set = ini_chunk.__fragment_set
+
     do
-        fragment_stack_size = fragment_stack_size + 1
-        fragment_stack[fragment_stack_size] = fragment
+        local ini_fragment_requires = __sorted_requires[ini_fragment]
+        local ini_fragment_require_list = ini_fragment_requires and ini_fragment_requires.__item_list
+        local ini_fragment_require_count = ini_fragment_requires and ini_fragment_requires.__item_count or 0
+
+        for required_fragment_index = 1, ini_fragment_require_count do
+            local required_fragment = ini_fragment_require_list[required_fragment_index]
+
+            if ini_fragment_set[required_fragment] or req_fragment_set[required_fragment] then
+                -- this fragment has already been gathered
+            else
+                req_fragment_count = req_fragment_count + 1
+                req_fragment_set[required_fragment] = req_fragment_count
+                req_fragment_list[req_fragment_count] = required_fragment
+
+                if __sorted_requires[required_fragment] then
+                    fragment_stack_size = fragment_stack_size + 1
+                    fragment_stack[fragment_stack_size] = required_fragment
+                end
+            end
+        end
     end
 
     while fragment_stack_size > 0 do
@@ -1764,15 +1805,17 @@ function __fragment_required_fragments(fragment, req_fragment_set, req_fragment_
         for fragment_require_index = 1, fragment_require_count do
             local required_fragment = fragment_require_list[fragment_require_index]
 
-            if req_fragment_set[required_fragment] then
+            if ini_fragment_set[required_fragment] or req_fragment_set[required_fragment] then
                 -- this fragment has already been gathered
             else
                 req_fragment_count = req_fragment_count + 1
                 req_fragment_set[required_fragment] = req_fragment_count
                 req_fragment_list[req_fragment_count] = required_fragment
 
-                fragment_stack_size = fragment_stack_size + 1
-                fragment_stack[fragment_stack_size] = required_fragment
+                if __sorted_requires[required_fragment] then
+                    fragment_stack_size = fragment_stack_size + 1
+                    fragment_stack[fragment_stack_size] = required_fragment
+                end
             end
         end
     end
@@ -3155,7 +3198,7 @@ function __chunk_set(old_chunk, fragment, component)
             ---@type evolved.fragment[]
             req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-            req_fragment_count = __fragment_required_fragments(fragment,
+            req_fragment_count = __fragment_required_fragments(ini_new_chunk, fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
             for req_fragment_index = 1, req_fragment_count do
@@ -5133,7 +5176,7 @@ function __evolved_set(entity, fragment, component)
             ---@type evolved.fragment[]
             req_fragment_list = __acquire_table(__table_pool_tag.fragment_list)
 
-            req_fragment_count = __fragment_required_fragments(fragment,
+            req_fragment_count = __fragment_required_fragments(ini_new_chunk, fragment,
                 req_fragment_set, req_fragment_list, req_fragment_count)
 
             for req_fragment_index = 1, req_fragment_count do
