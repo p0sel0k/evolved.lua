@@ -1525,7 +1525,7 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 41)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1539,13 +1539,13 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
 
             last_set_entity = 0
             evo.set(e, f2, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1559,13 +1559,13 @@ do
         do
             last_set_entity = 0
             evo.set(e, f1, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2) and evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == 43)
 
             last_set_entity = 0
             evo.set(e, f2, 42)
-            assert(last_set_entity == e)
+            assert(last_set_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2) and evo.has(e, f3))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil and evo.get(e, f3) == 43)
 
@@ -1610,7 +1610,7 @@ do
 
             last_assign_entity = 0
             evo.set(e, f1)
-            assert(last_assign_entity == e)
+            assert(last_assign_entity == 0)
             assert(evo.has(e, f1) and not evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -1623,7 +1623,7 @@ do
 
             last_assign_entity = 0
             evo.set(e, f2, 44)
-            assert(last_assign_entity == e)
+            assert(last_assign_entity == 0)
             assert(evo.has(e, f1) and evo.has(e, f2))
             assert(evo.get(e, f1) == nil and evo.get(e, f2) == nil)
         end
@@ -6372,4 +6372,80 @@ do
         assert(evo.has(e, f) and evo.get(e, f).x == 1 and evo.get(e, f).y == 2)
         assert(evo.get(e, f) ~= v2_default)
     end
+end
+
+do
+    local f1, f2 = evo.id(2)
+
+    local prefab = evo.builder():prefab():set(f1, 11):set(f2, 22):spawn()
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+
+    evo.set(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(not evo.has(entity, f2) and evo.get(entity, f2) == nil)
+    end
+
+    evo.remove(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+
+    evo.set(f1, evo.UNIQUE)
+    evo.set(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.empty(entity))
+    end
+
+    evo.remove(f1, evo.UNIQUE)
+    evo.remove(f2, evo.UNIQUE)
+
+    do
+        local entity = evo.clone(prefab)
+        assert(evo.has(entity, f1) and evo.get(entity, f1) == 11)
+        assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
+    end
+end
+
+do
+    do
+        local f = evo.id()
+        local c = evo.chunk(f)
+        local b = evo.builder():set(f, 42)
+        evo.collect_garbage()
+        local e = b:spawn()
+        assert(evo.locate(e) ~= c)
+        assert(evo.locate(e) == evo.chunk(f))
+    end
+
+    do
+        local f = evo.id()
+        local c = evo.chunk(f)
+        local b = evo.builder():set(f, 42)
+        evo.collect_garbage()
+        local es = b:multi_spawn(5)
+        for i = 1, 5 do
+            assert(evo.locate(es[i]) ~= c)
+            assert(evo.locate(es[i]) == evo.chunk(f))
+        end
+    end
+end
+
+do
+    local ff, ft = evo.id(2)
+    local b = evo.builder():set(ff, false):set(ft, true)
+    assert(b:has_all() and not b:has_any())
+    assert(b:has(ff) and b:has(ft) and b:has_all(ff, ft) and b:has_any(ff, ft))
 end

@@ -31,6 +31,7 @@
     - [Traits](#traits)
     - [Singletons](#singletons)
   - [Chunks](#chunks)
+    - [Entity Location](#entity-location)
   - [Structural Changes](#structural-changes)
     - [Spawning Entities](#spawning-entities)
     - [Entity Builders](#entity-builders)
@@ -57,6 +58,11 @@
   - [Classes](#classes)
     - [Chunk](#chunk)
     - [Builder](#builder)
+- [Changelog](#changelog)
+  - [v1.3.0](#v130)
+  - [v1.2.0](#v120)
+  - [v1.1.0](#v110)
+  - [v1.0.0](#v100)
 - [License](#license)
 
 ## Introduction
@@ -360,6 +366,43 @@ end
 -- Entity: 1048603, Health: 75, Stamina: 40
 ```
 
+#### Entity Location
+
+Sometimes it is useful to know which chunk a specific entity is in and its position within that chunk. The [`evolved.locate`](#evolvedlocate) function provides this information.
+
+```lua
+---@param entity evolved.entity
+---@return evolved.chunk? chunk
+---@return integer place
+function evolved.locate(entity) end
+```
+
+This function takes an entity and returns the chunk that contains it and the entity’s position (index) within that chunk. If the entity is not alive or is empty, the function returns `nil` for the chunk and `0` for the place.
+
+This is low-level functionality that you will rarely need. However, it can be useful in specific cases. For example, when you need to modify an entity’s component directly to avoid unnecessary [Deferred Operations](#deferred-operations) or [Fragment Hooks](#fragment-hooks), instead of using a higher-level function like [`evolved.set`](#evolvedset).
+
+```lua
+local evolved = require 'evolved'
+
+local health, stamina = evolved.id(2)
+
+local player = evolved.id()
+
+evolved.set(player, health, 100)
+evolved.set(player, stamina, 50)
+
+local player_chunk, player_place = evolved.locate(player)
+
+local health_components = player_chunk:components(health)
+local stamina_components = player_chunk:components(stamina)
+
+health_components[player_place] = 75
+stamina_components[player_place] = 42
+```
+
+> [!WARNING]
+> Do not use [`evolved.locate`](#evolvedlocate) to manipulate components directly unless you fully understand what you are doing. Because it is low-level functionality, incorrect use can lead to inconsistencies, as it bypasses the library’s safety checks and hook mechanisms. Use it only when you are certain it is safe and necessary.
+
 ### Structural Changes
 
 Every time we insert or remove a fragment from an entity, the entity will be migrated to a new chunk. This is done automatically by the library, of course. However, you should be aware of this because it can affect performance, especially if you have many fragments on the entity. This is called a `structural change`.
@@ -599,6 +642,9 @@ function evolved.defer() end
 
 ---@return boolean committed
 function evolved.commit() end
+
+---@return boolean cancelled
+function evolved.cancel() end
 ```
 
 The [`evolved.defer`](#evolveddefer) function starts a deferred scope. This means that all changes made inside the scope will be queued and applied after leaving the scope. The [`evolved.commit`](#evolvedcommit) function closes the last deferred scope and applies all queued changes. These functions can be nested, so you can start a new deferred scope inside an existing one. The [`evolved.commit`](#evolvedcommit) function will apply all queued changes only when the last deferred scope is closed.
@@ -627,6 +673,34 @@ evolved.commit()
 
 -- now the poisoned fragment is removed
 assert(not evolved.has(player, poisoned))
+```
+
+The [`evolved.cancel`](#evolvedcancel) function can be used to cancel all queued changes in the current deferred scope. This is useful if you want to discard all changes made inside the scope and revert to the previous state on an error or some other condition.
+
+```lua
+local evolved = require 'evolved'
+
+local health, poisoned = evolved.id(2)
+
+local player = evolved.builder()
+    :set(health, 100)
+    :set(poisoned, true)
+    :spawn()
+
+-- start a deferred scope
+evolved.defer()
+
+-- this removal will be queued, not applied immediately
+evolved.remove(player, poisoned)
+
+-- the player still has the poisoned fragment inside the deferred scope
+assert(evolved.has(player, poisoned))
+
+-- cancel the deferred operations
+evolved.cancel()
+
+-- the poisoned fragment is still there
+assert(evolved.has(player, poisoned))
 ```
 
 #### Batch Operations
@@ -839,6 +913,9 @@ evolved.set(player, health, 200) -- prints "health set to 200"
 
 Use [`evolved.ON_SET`](#evolvedon_set) for callbacks on fragment insert or override, [`evolved.ON_ASSIGN`](#evolvedon_assign) for overrides, and [`evolved.ON_INSERT`](#evolvedon_insert)/[`evolved.ON_REMOVE`](#evolvedon_remove) for insertions or removals.
 
+> [!NOTE]
+> Because fragments marked with [`evolved.TAG`](#evolvedtag) (also called [Fragment Tags](#fragment-tags)) have no components, their [`evolved.ON_SET`](#evolvedon_set) hooks are invoked only when the tag is inserted, not when it is overridden, as there is nothing to override. Their [`evolved.ON_ASSIGN`](#evolvedon_assign) hooks are never invoked for such tags for the same reason.
+
 #### Unique Fragments
 
 Some fragments should not be cloned when cloning entities. For example, `evolved.lua` has a special fragment called `evolved.PREFAB`, which marks entities used as sources for cloning. This fragment should not be present on the cloned entities. To prevent a fragment from being cloned, mark it as unique using the [`evolved.UNIQUE`](#evolvedunique) fragment trait. This ensures the fragment will not be copied when cloning entities.
@@ -1040,7 +1117,7 @@ execute :: {chunk, entity[], integer}
 prologue :: {}
 epilogue :: {}
 
-set_hook :: {entity, fragment, component, component?}
+set_hook :: {entity, fragment, component, component}
 assign_hook :: {entity, fragment, component, component}
 insert_hook :: {entity, fragment, component}
 remove_hook :: {entity, fragment, component}
@@ -1101,6 +1178,7 @@ unpack :: id -> integer, integer
 
 defer :: boolean
 commit :: boolean
+cancel :: boolean
 
 spawn :: <fragment, component>? -> entity
 multi_spawn :: integer, <fragment, component>? -> entity[]
@@ -1134,6 +1212,8 @@ batch_destroy :: query... -> ()
 
 each :: entity -> {each_state? -> fragment?, component?}, each_state?
 execute :: query -> {execute_state? -> chunk?, entity[]?, integer?}, execute_state?
+
+locate :: entity -> chunk?, integer
 
 process :: system... -> ()
 
@@ -1198,7 +1278,7 @@ builder_mt:include :: fragment... -> builder
 builder_mt:exclude :: fragment... -> builder
 builder_mt:require :: fragment... -> builder
 
-builder_mt:on_set :: {entity, fragment, component, component?} -> builder
+builder_mt:on_set :: {entity, fragment, component, component} -> builder
 builder_mt:on_assign :: {entity, fragment, component, component} -> builder
 builder_mt:on_insert :: {entity, fragment, component} -> builder
 builder_mt:on_remove :: {entity, fragment} -> builder
@@ -1214,26 +1294,36 @@ builder_mt:epilogue :: {} -> builder
 builder_mt:destruction_policy :: id -> builder
 ```
 
-## License
+## Changelog
 
-`evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
+### v1.3.0
 
-# Changelog
+- Added the new [`evolved.cancel`](#evolvedcancel) function
+- Added the new [`evolved.locate`](#evolvedlocate) function
+- The internal garbage collector now collects more garbage
+- Improved system processing debugging experience with stack traces on errors
+- [`SET/ASSIGN hooks`](#fragment-hooks) are not invoked for tags on override operations anymore
+- Improved performance of cloning prefabs with many [`Unique Fragments`](#unique-fragments)
+- Improved performance of builders that are used for spawning multiple times
 
-## v1.2.0
+### v1.2.0
 
 - Added the new [`evolved.name`](#evolvedname-1) function
 - Added the new [`evolved.multi_spawn`](#evolvedmulti_spawn) and [`evolved.multi_clone`](#evolvedmulti_clone) functions
 - Added the new [`evolved.INTERNAL`](#evolvedinternal) fragment trait
 
-## v1.1.0
+### v1.1.0
 
 - [`Systems`](#systems) can be queries themselves now
 - Added the new [`evolved.REQUIRES`](#evolvedrequires) fragment trait
 
-## v1.0.0
+### v1.0.0
 
 - Initial release
+
+## License
+
+`evolved.lua` is licensed under the [MIT License][license]. For more details, see the [LICENSE.md](./LICENSE.md) file in the repository.
 
 # API Reference
 
@@ -1339,6 +1429,13 @@ function evolved.defer() end
 ```lua
 ---@return boolean committed
 function evolved.commit() end
+```
+
+### `evolved.cancel`
+
+```lua
+---@return boolean cancelled
+function evolved.cancel() end
 ```
 
 ### `evolved.spawn`
@@ -1551,6 +1648,16 @@ function evolved.each(entity) end
 ---@return evolved.execute_state? iterator_state
 ---@nodiscard
 function evolved.execute(query) end
+```
+
+### `evolved.locate`
+
+```lua
+---@param entity evolved.entity
+---@return evolved.chunk? chunk
+---@return integer place
+---@nodiscard
+function evolved.locate(entity) end
 ```
 
 ### `evolved.process`
