@@ -6418,3 +6418,34 @@ do
         assert(evo.has(entity, f2) and evo.get(entity, f2) == 22)
     end
 end
+
+do
+    do
+        local f = evo.id()
+        local c = evo.chunk(f)
+        local b = evo.builder():set(f, 42)
+        evo.collect_garbage()
+        local e = b:spawn()
+        assert(evo.locate(e) ~= c)
+        assert(evo.locate(e) == evo.chunk(f))
+    end
+
+    do
+        local f = evo.id()
+        local c = evo.chunk(f)
+        local b = evo.builder():set(f, 42)
+        evo.collect_garbage()
+        local es = b:multi_spawn(5)
+        for i = 1, 5 do
+            assert(evo.locate(es[i]) ~= c)
+            assert(evo.locate(es[i]) == evo.chunk(f))
+        end
+    end
+end
+
+do
+    local ff, ft = evo.id(2)
+    local b = evo.builder():set(ff, false):set(ft, true)
+    assert(b:has_all() and not b:has_any())
+    assert(b:has(ff) and b:has(ft) and b:has_all(ff, ft) and b:has_any(ff, ft))
+end

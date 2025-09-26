@@ -180,6 +180,7 @@ local __chunk_mt = {}
 __chunk_mt.__index = __chunk_mt
 
 ---@class evolved.builder
+---@field package __chunk? evolved.chunk
 ---@field package __components table<evolved.fragment, evolved.component>
 local __builder_mt = {}
 __builder_mt.__index = __builder_mt
@@ -1877,14 +1878,17 @@ function __detach_all_entities(chunk)
     chunk.__entity_count = 0
 end
 
+---@param chunk? evolved.chunk
 ---@param entity evolved.entity
 ---@param components table<evolved.fragment, evolved.component>
-function __spawn_entity(entity, components)
+function __spawn_entity(chunk, entity, components)
     if __defer_depth <= 0 then
         __error_fmt('spawn entity operations should be deferred')
     end
 
-    local chunk = __chunk_components(components)
+    if not chunk or chunk.__unreachable_or_collected then
+        chunk = __chunk_components(components)
+    end
 
     if not chunk then
         return
@@ -2063,15 +2067,18 @@ function __spawn_entity(entity, components)
     end
 end
 
+---@param chunk? evolved.chunk
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
 ---@param components table<evolved.fragment, evolved.component>
-function __multi_spawn_entity(entity_list, entity_count, components)
+function __multi_spawn_entity(chunk, entity_list, entity_count, components)
     if __defer_depth <= 0 then
         __error_fmt('spawn entity operations should be deferred')
     end
 
-    local chunk = __chunk_components(components)
+    if not chunk or chunk.__unreachable_or_collected then
+        chunk = __chunk_components(components)
+    end
 
     if not chunk then
         return
@@ -2283,10 +2290,10 @@ function __multi_spawn_entity(entity_list, entity_count, components)
     end
 end
 
----@param entity evolved.entity
 ---@param prefab evolved.entity
+---@param entity evolved.entity
 ---@param components table<evolved.fragment, evolved.component>
-function __clone_entity(entity, prefab, components)
+function __clone_entity(prefab, entity, components)
     if __defer_depth <= 0 then
         __error_fmt('clone entity operations should be deferred')
     end
@@ -2534,11 +2541,11 @@ function __clone_entity(entity, prefab, components)
     end
 end
 
+---@param prefab evolved.entity
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
----@param prefab evolved.entity
 ---@param components table<evolved.fragment, evolved.component>
-function __multi_clone_entity(entity_list, entity_count, prefab, components)
+function __multi_clone_entity(prefab, entity_list, entity_count, components)
     if __defer_depth <= 0 then
         __error_fmt('clone entity operations should be deferred')
     end
@@ -4184,9 +4191,10 @@ __defer_ops[__defer_op.batch_destroy] = function(bytes, index)
     return 1 + argument_count
 end
 
+---@param chunk? evolved.chunk
 ---@param entity evolved.entity
 ---@param component_map table<evolved.fragment, evolved.component>
-function __defer_spawn_entity(entity, component_map)
+function __defer_spawn_entity(chunk, entity, component_map)
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
@@ -4198,30 +4206,33 @@ function __defer_spawn_entity(entity, component_map)
     local bytecode = __defer_bytecode
 
     bytecode[length + 1] = __defer_op.spawn_entity
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = component_map_dup
+    bytecode[length + 2] = chunk
+    bytecode[length + 3] = entity
+    bytecode[length + 4] = component_map_dup
 
-    __defer_length = length + 3
+    __defer_length = length + 4
 end
 
 __defer_ops[__defer_op.spawn_entity] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local component_map_dup = bytes[index + 1]
+    local chunk = bytes[index + 0]
+    local entity = bytes[index + 1]
+    local component_map_dup = bytes[index + 2]
 
     __evolved_defer()
     do
-        __spawn_entity(entity, component_map_dup)
+        __spawn_entity(chunk, entity, component_map_dup)
         __release_table(__table_pool_tag.component_map, component_map_dup)
     end
     __evolved_commit()
 
-    return 2
+    return 3
 end
 
+---@param chunk? evolved.chunk
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
 ---@param component_map table<evolved.fragment, evolved.component>
-function __defer_multi_spawn_entity(entity_list, entity_count, component_map)
+function __defer_multi_spawn_entity(chunk, entity_list, entity_count, component_map)
     ---@type evolved.entity[]
     local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
 
@@ -4240,33 +4251,35 @@ function __defer_multi_spawn_entity(entity_list, entity_count, component_map)
     local bytecode = __defer_bytecode
 
     bytecode[length + 1] = __defer_op.multi_spawn_entity
-    bytecode[length + 2] = entity_count
-    bytecode[length + 3] = entity_list_dup
-    bytecode[length + 4] = component_map_dup
+    bytecode[length + 2] = chunk
+    bytecode[length + 3] = entity_count
+    bytecode[length + 4] = entity_list_dup
+    bytecode[length + 5] = component_map_dup
 
-    __defer_length = length + 4
+    __defer_length = length + 5
 end
 
 __defer_ops[__defer_op.multi_spawn_entity] = function(bytes, index)
-    local entity_count = bytes[index + 0]
-    local entity_list_dup = bytes[index + 1]
-    local component_map_dup = bytes[index + 2]
+    local chunk = bytes[index + 0]
+    local entity_count = bytes[index + 1]
+    local entity_list_dup = bytes[index + 2]
+    local component_map_dup = bytes[index + 3]
 
     __evolved_defer()
     do
-        __multi_spawn_entity(entity_list_dup, entity_count, component_map_dup)
+        __multi_spawn_entity(chunk, entity_list_dup, entity_count, component_map_dup)
         __release_table(__table_pool_tag.entity_list, entity_list_dup)
         __release_table(__table_pool_tag.component_map, component_map_dup)
     end
     __evolved_commit()
 
-    return 3
+    return 4
 end
 
----@param entity evolved.entity
 ---@param prefab evolved.entity
+---@param entity evolved.entity
 ---@param components table<evolved.fragment, evolved.component>
-function __defer_clone_entity(entity, prefab, components)
+function __defer_clone_entity(prefab, entity, components)
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
@@ -4292,7 +4305,7 @@ __defer_ops[__defer_op.clone_entity] = function(bytes, index)
 
     __evolved_defer()
     do
-        __clone_entity(entity, prefab, component_map_dup)
+        __clone_entity(prefab, entity, component_map_dup)
         __release_table(__table_pool_tag.component_map, component_map_dup)
     end
     __evolved_commit()
@@ -4300,11 +4313,11 @@ __defer_ops[__defer_op.clone_entity] = function(bytes, index)
     return 3
 end
 
+---@param prefab evolved.entity
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
----@param prefab evolved.entity
 ---@param components table<evolved.fragment, evolved.component>
-function __defer_multi_clone_entity(entity_list, entity_count, prefab, components)
+function __defer_multi_clone_entity(prefab, entity_list, entity_count, components)
     ---@type evolved.entity[]
     local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
 
@@ -4339,7 +4352,7 @@ __defer_ops[__defer_op.multi_clone_entity] = function(bytes, index)
 
     __evolved_defer()
     do
-        __multi_clone_entity(entity_list_dup, entity_count, prefab, component_map_dup)
+        __multi_clone_entity(prefab, entity_list_dup, entity_count, component_map_dup)
         __release_table(__table_pool_tag.entity_list, entity_list_dup)
         __release_table(__table_pool_tag.component_map, component_map_dup)
     end
@@ -4754,11 +4767,11 @@ function __evolved_spawn(components)
     local entity = __acquire_id()
 
     if __defer_depth > 0 then
-        __defer_spawn_entity(entity, components)
+        __defer_spawn_entity(nil, entity, components)
     else
         __evolved_defer()
         do
-            __spawn_entity(entity, components)
+            __spawn_entity(nil, entity, components)
         end
         __evolved_commit()
     end
@@ -4796,11 +4809,11 @@ function __evolved_multi_spawn(entity_count, components)
     end
 
     if __defer_depth > 0 then
-        __defer_multi_spawn_entity(entity_list, entity_count, components)
+        __defer_multi_spawn_entity(nil, entity_list, entity_count, components)
     else
         __evolved_defer()
         do
-            __multi_spawn_entity(entity_list, entity_count, components)
+            __multi_spawn_entity(nil, entity_list, entity_count, components)
         end
         __evolved_commit()
     end
@@ -4833,11 +4846,11 @@ function __evolved_clone(prefab, components)
     local entity = __acquire_id()
 
     if __defer_depth > 0 then
-        __defer_clone_entity(entity, prefab, components)
+        __defer_clone_entity(prefab, entity, components)
     else
         __evolved_defer()
         do
-            __clone_entity(entity, prefab, components)
+            __clone_entity(prefab, entity, components)
         end
         __evolved_commit()
     end
@@ -4881,11 +4894,11 @@ function __evolved_multi_clone(entity_count, prefab, components)
     end
 
     if __defer_depth > 0 then
-        __defer_multi_clone_entity(entity_list, entity_count, prefab, components)
+        __defer_multi_clone_entity(prefab, entity_list, entity_count, components)
     else
         __evolved_defer()
         do
-            __multi_clone_entity(entity_list, entity_count, prefab, components)
+            __multi_clone_entity(prefab, entity_list, entity_count, components)
         end
         __evolved_commit()
     end
@@ -6256,33 +6269,159 @@ end
 
 ---@return evolved.entity entity
 function __builder_mt:spawn()
-    return __evolved_spawn(self.__components)
+    local chunk = self.__chunk
+    local components = self.__components
+
+    if __debug_mode then
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_spawn_entity(chunk, entity, components)
+    else
+        __evolved_defer()
+        do
+            __spawn_entity(chunk, entity, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
 end
 
 ---@param entity_count integer
 ---@return evolved.entity[] entity_list
 function __builder_mt:multi_spawn(entity_count)
-    return __evolved_multi_spawn(entity_count, self.__components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    local chunk = self.__chunk
+    local components = self.__components
+
+    if __debug_mode then
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __list_new(entity_count)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        __defer_multi_spawn_entity(chunk, entity_list, entity_count, components)
+    else
+        __evolved_defer()
+        do
+            __multi_spawn_entity(chunk, entity_list, entity_count, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
 end
 
 ---@param prefab evolved.entity
 ---@return evolved.entity entity
 function __builder_mt:clone(prefab)
-    return __evolved_clone(prefab, self.__components)
+    local components = self.__components
+
+    if __debug_mode then
+        if not __evolved_alive(prefab) then
+            __error_fmt('the prefab (%s) is not alive and cannot be used',
+                __id_name(prefab))
+        end
+
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity = __acquire_id()
+
+    if __defer_depth > 0 then
+        __defer_clone_entity(prefab, entity, components)
+    else
+        __evolved_defer()
+        do
+            __clone_entity(prefab, entity, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity
 end
 
 ---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
 function __builder_mt:multi_clone(entity_count, prefab)
-    return __evolved_multi_clone(entity_count, prefab, self.__components)
+    entity_count = entity_count or 1
+
+    if entity_count <= 0 then
+        return {}
+    end
+
+    local components = self.__components
+
+    if __debug_mode then
+        if not __evolved_alive(prefab) then
+            __error_fmt('the prefab (%s) is not alive and cannot be used',
+                __id_name(prefab))
+        end
+
+        for fragment in __lua_next, components do
+            if not __evolved_alive(fragment) then
+                __error_fmt('the fragment (%s) is not alive and cannot be used',
+                    __id_name(fragment))
+            end
+        end
+    end
+
+    local entity_list = __list_new(entity_count)
+
+    for entity_index = 1, entity_count do
+        entity_list[entity_index] = __acquire_id()
+    end
+
+    if __defer_depth > 0 then
+        __defer_multi_clone_entity(prefab, entity_list, entity_count, components)
+    else
+        __evolved_defer()
+        do
+            __multi_clone_entity(prefab, entity_list, entity_count, components)
+        end
+        __evolved_commit()
+    end
+
+    return entity_list
 end
 
 ---@param fragment evolved.fragment
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has(fragment)
-    if self.__components[fragment] then
+    local chunk = self.__chunk
+
+    if chunk and __chunk_has_fragment(chunk, fragment) then
         return true
     end
 
@@ -6293,78 +6432,26 @@ end
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has_all(...)
-    local fragment_count = __lua_select("#", ...)
+    local chunk = self.__chunk
 
-    if fragment_count == 0 then
+    if chunk and __chunk_has_all_fragments(chunk, ...) then
         return true
     end
 
-    local cs = self.__components
-
-    if fragment_count == 1 then
-        local f1 = ...
-        return cs[f1] ~= nil
-    end
-
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil and cs[f2] ~= nil and cs[f3] ~= nil and cs[f4] ~= nil
-            and self:has_all(__lua_select(5, ...))
-    end
+    return __lua_select("#", ...) == 0
 end
 
 ---@param ... evolved.fragment fragments
 ---@return boolean
 ---@nodiscard
 function __builder_mt:has_any(...)
-    local fragment_count = __lua_select("#", ...)
+    local chunk = self.__chunk
 
-    if fragment_count == 0 then
-        return false
+    if chunk and __chunk_has_any_fragments(chunk, ...) then
+        return true
     end
 
-    local cs = self.__components
-
-    if fragment_count == 1 then
-        local f1 = ...
-        return cs[f1] ~= nil
-    end
-
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        return cs[f1] ~= nil or cs[f2] ~= nil or cs[f3] ~= nil or cs[f4] ~= nil
-            or self:has_any(__lua_select(5, ...))
-    end
+    return false
 end
 
 ---@param ... evolved.fragment fragments
@@ -6419,7 +6506,10 @@ function __builder_mt:set(fragment, component)
         end
     end
 
-    do
+    local new_chunk = __chunk_with_fragment(self.__chunk, fragment)
+    local components = self.__components
+
+    if new_chunk.__has_setup_hooks then
         ---@type evolved.default?, evolved.duplicate?
         local fragment_default, fragment_duplicate =
             __evolved_get(fragment, __DEFAULT, __DUPLICATE)
@@ -6429,9 +6519,15 @@ function __builder_mt:set(fragment, component)
         if new_component ~= nil and fragment_duplicate then new_component = fragment_duplicate(new_component) end
         if new_component == nil then new_component = true end
 
-        self.__components[fragment] = new_component
+        components[fragment] = new_component
+    else
+        local new_component = component
+        if new_component == nil then new_component = true end
+
+        components[fragment] = new_component
     end
 
+    self.__chunk = new_chunk
     return self
 end
 
@@ -6444,41 +6540,22 @@ function __builder_mt:remove(...)
         return self
     end
 
-    local cs = self.__components
+    local new_chunk = self.__chunk
+    local components = self.__components
 
-    if fragment_count == 1 then
-        local f1 = ...
-        cs[f1] = nil
-        return self
+    for fragment_index = 1, fragment_count do
+        ---@type evolved.fragment
+        local fragment = __lua_select(fragment_index, ...)
+        new_chunk, components[fragment] = __chunk_without_fragment(new_chunk, fragment), nil
     end
 
-    if fragment_count == 2 then
-        local f1, f2 = ...
-        cs[f1], cs[f2] = nil, nil
-        return self
-    end
-
-    if fragment_count == 3 then
-        local f1, f2, f3 = ...
-        cs[f1], cs[f2], cs[f3] = nil, nil, nil
-        return self
-    end
-
-    if fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        cs[f1], cs[f2], cs[f3], cs[f4] = nil, nil, nil, nil
-        return self
-    end
-
-    do
-        local f1, f2, f3, f4 = ...
-        cs[f1], cs[f2], cs[f3], cs[f4] = nil, nil, nil, nil
-        return self:remove(__lua_select(5, ...))
-    end
+    self.__chunk = new_chunk
+    return self
 end
 
 ---@return evolved.builder builder
 function __builder_mt:clear()
+    self.__chunk = nil
     __lua_table_clear(self.__components)
     return self
 end

@@ -99,10 +99,10 @@ print '----------------------------------------'
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 1 component', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(F1)
 
         for _ = 1, N do
-            builder:set(F1):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
@@ -110,10 +110,10 @@ basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entiti
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 3 components', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(F1):set(F2):set(F3)
 
         for _ = 1, N do
-            builder:set(F1):set(F2):set(F3):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
@@ -121,10 +121,10 @@ basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entiti
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 5 components', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(F1):set(F2):set(F3):set(F4):set(F5)
 
         for _ = 1, N do
-            builder:set(F1):set(F2):set(F3):set(F4):set(F5):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
@@ -134,10 +134,10 @@ print '----------------------------------------'
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 1 required component', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(R1)
 
         for _ = 1, N do
-            builder:set(R1):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
@@ -145,10 +145,10 @@ basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entiti
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 3 required components', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(R3)
 
         for _ = 1, N do
-            builder:set(R3):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
@@ -156,14 +156,15 @@ basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entiti
 
 basics.describe_bench(string.format('Spawn Benchmarks: Builder Spawn | %d entities with 5 required components', N),
     function()
-        local builder = evo.builder()
+        local builder = evo.builder():set(R5)
 
         for _ = 1, N do
-            builder:set(R5):spawn()
+            builder:spawn()
         end
 
         evo.batch_destroy(Q1)
     end)
+
 print '----------------------------------------'
 
 basics.describe_bench(string.format('Spawn Benchmarks: Multi Spawn | %d entities with 1 component', N),
