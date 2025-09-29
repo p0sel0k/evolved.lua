@@ -4783,8 +4783,6 @@ end
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
 function __evolved_multi_spawn(entity_count, components)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
         return {}
     end
@@ -4863,8 +4861,6 @@ end
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
 function __evolved_multi_clone(entity_count, prefab, components)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
         return {}
     end
@@ -6299,8 +6295,6 @@ end
 ---@param entity_count integer
 ---@return evolved.entity[] entity_list
 function __builder_mt:multi_spawn(entity_count)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
         return {}
     end
@@ -6374,8 +6368,6 @@ end
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
 function __builder_mt:multi_clone(entity_count, prefab)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
         return {}
     end

@@ -59,6 +59,7 @@
     - [Chunk](#chunk)
     - [Builder](#builder)
 - [Changelog](#changelog)
+  - [vX.X.X](#vxxx)
   - [v1.3.0](#v130)
   - [v1.2.0](#v120)
   - [v1.1.0](#v110)
@@ -1295,6 +1296,10 @@ builder_mt:destruction_policy :: id -> builder
 ```
 
 ## Changelog
+
+### vX.X.X
+
+- ...
 
 ### v1.3.0
 
