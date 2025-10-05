@@ -7020,12 +7020,15 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
 end)
 
 __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
-    if not __sorted_excludes[query] then
-        __remove_major_query(query)
-    end
+    __remove_major_query(query)
 
+    __query_chunks[query] = nil
     __sorted_includes[query] = nil
-    __update_query_chunks(query)
+
+    if __sorted_excludes[query] then
+        __insert_major_query(query)
+        __update_query_chunks(query)
+    end
 end)
 
 ---
@@ -7058,12 +7061,15 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
 end)
 
 __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
-    if not __sorted_includes[query] then
-        __remove_major_query(query)
-    end
+    __remove_major_query(query)
 
+    __query_chunks[query] = nil
     __sorted_excludes[query] = nil
-    __update_query_chunks(query)
+
+    if __sorted_includes[query] then
+        __insert_major_query(query)
+        __update_query_chunks(query)
+    end
 end)
 
 ---
