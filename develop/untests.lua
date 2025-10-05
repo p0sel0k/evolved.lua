@@ -6449,3 +6449,161 @@ do
     assert(b:has_all() and not b:has_any())
     assert(b:has(ff) and b:has(ft) and b:has_all(ff, ft) and b:has_any(ff, ft))
 end
+
+do
+    do
+        local f = evo.id()
+        local q = evo.builder():include(f):spawn()
+        local e = evo.builder():set(f, 42):spawn()
+
+        local iter, state = evo.execute(q)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f) and entity_count == 1 and entity_list[1] == e)
+    end
+
+    do
+        local f = evo.id()
+        local e = evo.builder():set(f, 42):spawn()
+        local q = evo.builder():include(f):spawn()
+
+        local iter, state = evo.execute(q)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f) and entity_count == 1 and entity_list[1] == e)
+    end
+
+    do
+        local f1, f2 = evo.id(2)
+        local q = evo.builder():exclude(f2):spawn()
+        local e = evo.builder():set(f1, 42):spawn()
+
+        local e_count = 0
+
+        for chunk, entity_list, entity_count in evo.execute(q) do
+            for i = 1, entity_count do
+                if entity_list[i] == e then
+                    e_count = e_count + 1
+                    assert(chunk == evo.chunk(f1))
+                    assert(chunk:components(f1)[1] == 42)
+                end
+            end
+        end
+
+        assert(e_count == 1)
+    end
+
+    do
+        local f1, f2, f3 = evo.id(3)
+        local q = evo.builder():exclude(f2):spawn()
+        local e1 = evo.builder():set(f1, 42):spawn()
+        local e2 = evo.builder():set(f1, 42):set(f3, 21):spawn()
+
+        local e1_count, e2_count = 0, 0
+
+        for chunk, entity_list, entity_count in evo.execute(q) do
+            for i = 1, entity_count do
+                if entity_list[i] == e1 then
+                    e1_count = e1_count + 1
+                    assert(chunk == evo.chunk(f1))
+                    assert(chunk:components(f1)[1] == 42)
+                end
+
+                if entity_list[i] == e2 then
+                    e2_count = e2_count + 1
+                    assert(chunk == evo.chunk(f1, f3))
+                    assert(chunk:components(f1)[1] == 42)
+                    assert(chunk:components(f3)[1] == 21)
+                end
+            end
+        end
+
+        assert(e1_count == 1)
+        assert(e2_count == 1)
+    end
+
+    do
+        local f1, f2 = evo.id(2)
+        local e = evo.builder():set(f1, 42):spawn()
+        local q = evo.builder():exclude(f2):spawn()
+
+        local e_count = 0
+
+        for chunk, entity_list, entity_count in evo.execute(q) do
+            for i = 1, entity_count do
+                if entity_list[i] == e then
+                    e_count = e_count + 1
+                    assert(chunk == evo.chunk(f1))
+                    assert(chunk:components(f1)[1] == 42)
+                end
+            end
+        end
+
+        assert(e_count == 1)
+    end
+
+    do
+        local f1, f2, f3 = evo.id(3)
+        local e1 = evo.builder():set(f1, 42):spawn()
+        local e2 = evo.builder():set(f1, 42):set(f3, 21):spawn()
+        local q = evo.builder():exclude(f2):spawn()
+
+        local e1_count, e2_count = 0, 0
+
+        for chunk, entity_list, entity_count in evo.execute(q) do
+            for i = 1, entity_count do
+                if entity_list[i] == e1 then
+                    e1_count = e1_count + 1
+                    assert(chunk == evo.chunk(f1))
+                    assert(chunk:components(f1)[1] == 42)
+                end
+
+                if entity_list[i] == e2 then
+                    e2_count = e2_count + 1
+                    assert(chunk == evo.chunk(f1, f3))
+                    assert(chunk:components(f1)[1] == 42)
+                    assert(chunk:components(f3)[1] == 21)
+                end
+            end
+        end
+
+        assert(e1_count == 1)
+        assert(e2_count == 1)
+    end
+end
+
+do
+    local f1, f2 = evo.id(2)
+    local q1 = evo.builder():include(f1):spawn()
+    local q2 = evo.builder():include(f2):spawn()
+    local e12 = evo.builder():set(f1, 42):set(f2, 21):spawn()
+
+    do
+        local iter, state = evo.execute(q1)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1, f2) and entity_count == 1 and entity_list[1] == e12)
+    end
+
+    do
+        local iter, state = evo.execute(q2)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1, f2) and entity_count == 1 and entity_list[1] == e12)
+    end
+
+    evo.set(f1, evo.EXPLICIT)
+
+    do
+        local iter, state = evo.execute(q1)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(chunk and entity_list and entity_count)
+        assert(chunk == evo.chunk(f1, f2) and entity_count == 1 and entity_list[1] == e12)
+    end
+
+    do
+        local iter, state = evo.execute(q2)
+        local chunk, entity_list, entity_count = iter(state)
+        assert(not chunk and not entity_list and not entity_count)
+    end
+end
