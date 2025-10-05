@@ -2,7 +2,6 @@
 
 ## Backlog
 
-- Queries can cache major chunks to avoid finding them every time.
 - observers and events
 - add INDEX fragment trait
 - use compact prefix-tree for chunks

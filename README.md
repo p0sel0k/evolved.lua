@@ -1299,7 +1299,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ### vX.X.X
 
-- ...
+- Improved query execution performance by caching some internal calculations
 
 ### v1.3.0
 
