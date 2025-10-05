@@ -224,6 +224,36 @@ end
 ---
 ---
 
+for _ = 1, math.random(1, 5) do
+    local fragment = all_fragment_list[math.random(1, #all_fragment_list)]
+
+    evo.set(fragment, evo.EXPLICIT)
+end
+
+for _ = 1, math.random(1, 5) do
+    local query = pre_query_list[math.random(1, pre_query_count)]
+
+    if math.random(1, 2) == 1 then
+        generate_query(query)
+    else
+        if math.random(1, 2) == 1 then
+            evo.remove(query, evo.INCLUDES)
+        else
+            evo.remove(query, evo.EXCLUDES)
+        end
+    end
+end
+
+for i = 1, all_query_count do
+    execute_query(all_query_list[i])
+end
+
+---
+---
+---
+---
+---
+
 if math.random(1, 2) == 1 then
     evo.collect_garbage()
 end
