@@ -462,7 +462,7 @@ local health, stamina = evolved.id(2)
 local enemy = evolved.builder()
     :set(health, 100)
     :set(stamina, 50)
-    :spawn()
+    :build()
 ```
 
 Builders can be reused, so you can create a builder with a specific set of fragments and components and then use it to spawn multiple entities with the same fragments and components.
@@ -503,16 +503,16 @@ local evolved = require 'evolved'
 
 local health = evolved.builder()
     :name('health')
-    :spawn()
+    :build()
 
 local stamina = evolved.builder()
     :name('stamina')
-    :spawn()
+    :build()
 
 local player = evolved.builder()
     :set(health, 100)
     :set(stamina, 50)
-    :spawn()
+    :build()
 
 for fragment, component in evolved.each(player) do
     print(string.format('Fragment (%s) has value %d',
@@ -601,7 +601,7 @@ The builder interface can be used to create queries too. It is more convenient t
 local query = evolved.builder()
     :include(health, poisoned)
     :exclude(resistant)
-    :spawn()
+    :build()
 ```
 
 We don't have to set both [`evolved.INCLUDES`](#evolvedincludes) and [`evolved.EXCLUDES`](#evolvedexcludes) fragments, we can even do it without filters at all, then the query will match all chunks in the world.
@@ -658,7 +658,7 @@ local health, poisoned = evolved.id(2)
 local player = evolved.builder()
     :set(health, 100)
     :set(poisoned, true)
-    :spawn()
+    :build()
 
 -- start a deferred scope
 evolved.defer()
@@ -686,7 +686,7 @@ local health, poisoned = evolved.id(2)
 local player = evolved.builder()
     :set(health, 100)
     :set(poisoned, true)
-    :spawn()
+    :build()
 
 -- start a deferred scope
 evolved.defer()
@@ -734,7 +734,7 @@ local destroying_mark = evolved.id()
 
 local destroying_mark_query = evolved.builder()
     :include(destroying_mark)
-    :spawn()
+    :build()
 
 -- destroy all entities with the destroying_mark fragment
 evolved.batch_destroy(destroying_mark_query)
@@ -756,7 +756,7 @@ local health, max_health = evolved.id(2)
 
 local query = evolved.builder()
     :include(health, max_health)
-    :spawn()
+    :build()
 
 local system = evolved.builder()
     :query(query)
@@ -769,7 +769,7 @@ local system = evolved.builder()
                 health_components[i] + 1,
                 max_health_components[i])
         end
-    end):spawn()
+    end):build()
 ```
 
 The [`evolved.process`](#evolvedprocess) function is used to process systems. It takes systems as arguments and executes them in the order they were passed.
@@ -796,7 +796,7 @@ local system = evolved.builder()
                 health_components[i] - 1,
                 0)
         end
-    end):spawn()
+    end):build()
 
 evolved.process(system)
 ```
@@ -815,7 +815,7 @@ local velocity_x, velocity_y = evolved.id(2)
 local physical_body_query = evolved.builder()
     :include(position_x, position_y)
     :include(velocity_x, velocity_y)
-    :spawn()
+    :build()
 
 local physics_group = evolved.id()
 
@@ -830,7 +830,7 @@ evolved.builder()
             vx[i] = vx[i] + gravity_x
             vy[i] = vy[i] + gravity_y
         end
-    end):spawn()
+    end):build()
 
 evolved.builder()
     :group(physics_group)
@@ -846,7 +846,7 @@ evolved.builder()
             px[i] = px[i] + vx[i]
             py[i] = py[i] + vy[i]
         end
-    end):spawn()
+    end):build()
 
 evolved.process(physics_group)
 ```
@@ -863,7 +863,7 @@ local system = evolved.builder()
     :epilogue(function()
         print('Epilogue')
     end)
-    :spawn()
+    :build()
 
 evolved.process(system)
 ```
@@ -905,7 +905,7 @@ local evolved = require 'evolved'
 local health = evolved.builder()
     :on_set(function(entity, fragment, component)
         print('health set to ' .. component)
-    end):spawn()
+    end):build()
 
 local player = evolved.id()
 evolved.set(player, health, 100) -- prints "health set to 100"
@@ -930,7 +930,7 @@ local enemy_prefab = evolved.builder()
     :prefab()
     :set(health, 100)
     :set(stamina, 50)
-    :spawn()
+    :build()
 
 local enemy_clone = evolved.clone(enemy_prefab)
 
@@ -952,16 +952,16 @@ local evolved = require 'evolved'
 
 local enemy_tag = evolved.builder()
     :tag()
-    :spawn()
+    :build()
 
 local only_enabled_enemies = evolved.builder()
     :include(enemy_tag)
-    :spawn()
+    :build()
 
 local all_enemies_including_disabled = evolved.builder()
     :include(enemy_tag)
     :include(evolved.DISABLED)
-    :spawn()
+    :build()
 ```
 
 #### Shared Components
@@ -977,11 +977,11 @@ local position = evolved.id()
 
 local enemy1 = evolved.builder()
     :set(position, initial_position)
-    :spawn()
+    :build()
 
 local enemy2 = evolved.builder()
     :set(position, initial_position)
-    :spawn()
+    :build()
 
 -- the enemy1 and enemy2 share the same table,
 -- and that's definitely not what we want in this case
@@ -1006,15 +1006,15 @@ end
 local position = evolved.builder()
     :default(vector2(0, 0))
     :duplicate(vector2_duplicate)
-    :spawn()
+    :build()
 
 local enemy1 = evolved.builder()
     :set(position)
-    :spawn()
+    :build()
 
 local enemy2 = evolved.builder()
     :set(position)
-    :spawn()
+    :build()
 
 -- the enemy1 and enemy2 have different tables now
 assert(evolved.get(enemy1, position) ~= evolved.get(enemy2, position))
@@ -1030,21 +1030,21 @@ local evolved = require 'evolved'
 local position = evolved.builder()
     :default(vector2(0, 0))
     :duplicate(vector2_duplicate)
-    :spawn()
+    :build()
 
 local velocity = evolved.builder()
     :default(vector2(0, 0))
     :duplicate(vector2_duplicate)
-    :spawn()
+    :build()
 
 local physical = evolved.builder()
     :tag()
     :require(position, velocity)
-    :spawn()
+    :build()
 
 local enemy = evolved.builder()
     :set(physical)
-    :spawn()
+    :build()
 
 assert(evolved.has_all(enemy, position, velocity))
 ```
@@ -1058,11 +1058,11 @@ local evolved = require 'evolved'
 
 local world = evolved.builder()
     :tag()
-    :spawn()
+    :build()
 
 local entity = evolved.builder()
     :set(world)
-    :spawn()
+    :build()
 
 -- destroy the world fragment that is attached to the entity
 evolved.destroy(world)
@@ -1083,11 +1083,11 @@ local evolved = require 'evolved'
 local world = evolved.builder()
     :tag()
     :destruction_policy(evolved.DESTRUCTION_POLICY_DESTROY_ENTITY)
-    :spawn()
+    :build()
 
 local entity = evolved.builder()
     :set(world)
-    :spawn()
+    :build()
 
 -- destroy the world fragment that is attached to the entity
 evolved.destroy(world)
@@ -1246,6 +1246,9 @@ chunk_mt:components :: fragment... -> storage...
 ```
 builder :: builder
 
+builder_mt:build :: entity? -> entity
+builder_mt:multi_build :: integer, entity? -> entity[], integer
+
 builder_mt:spawn :: entity
 builder_mt:multi_spawn :: integer -> entity[], integer
 
@@ -1300,6 +1303,7 @@ builder_mt:destruction_policy :: id -> builder
 ### vX.X.X
 
 - Improved query execution performance by caching some internal calculations
+- Added the universal [`builder.build`](#evolvedbuilder_mtbuild) and [`builder.multi_build`](#evolvedbuilder_mtmulti_build) methods that can be used to spawn or clone entities depending on the method arguments
 
 ### v1.3.0
 
@@ -1781,6 +1785,24 @@ function evolved.chunk_mt:components(...) end
 ---@return evolved.builder builder
 ---@nodiscard
 function evolved.builder() end
+```
+
+#### `evolved.builder_mt:build`
+
+```lua
+---@param prefab? evolved.entity
+---@return evolved.entity entity
+function evolved.builder_mt:build(prefab) end
+```
+
+### `evolved.builder_mt:multi_build`
+
+```lua
+---@param entity_count integer
+---@param prefab? evolved.entity
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+function evolved.builder_mt:multi_build(entity_count, prefab) end
 ```
 
 #### `evolved.builder_mt:spawn`

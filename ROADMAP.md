@@ -10,7 +10,6 @@
 ## Thoughts
 
 - We can return deferred status from modifying operations and spawn/clone methods.
-- Should we make one builder:build method instead of :spawn and :clone?
 
 ## Known Issues
 

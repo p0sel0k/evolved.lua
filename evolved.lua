@@ -6341,6 +6341,28 @@ function __builder_mt:__tostring()
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
 end
 
+---@param prefab? evolved.entity
+---@return evolved.entity entity
+function __builder_mt:build(prefab)
+    if prefab then
+        return self:clone(prefab)
+    else
+        return self:spawn()
+    end
+end
+
+---@param entity_count integer
+---@param prefab? evolved.entity
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+function __builder_mt:multi_build(entity_count, prefab)
+    if prefab then
+        return self:multi_clone(entity_count, prefab)
+    else
+        return self:multi_spawn(entity_count)
+    end
+end
+
 ---@return evolved.entity entity
 function __builder_mt:spawn()
     local chunk = self.__chunk
