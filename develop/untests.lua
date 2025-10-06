@@ -6607,3 +6607,402 @@ do
         assert(not chunk and not entity_list and not entity_count)
     end
 end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local f1, f2 = evo.id(2)
+
+    local f1_default = v2(1, 2)
+    local f2_default = v2(3, 4)
+
+    evo.set(f1, evo.DEFAULT, f1_default)
+    evo.set(f2, evo.DEFAULT, f2_default)
+
+    evo.set(f1, evo.DUPLICATE, v2_clone)
+    evo.set(f2, evo.DUPLICATE, v2_clone)
+
+    local e1 = evo.builder():set(f1, v2(10, 11)):spawn()
+    local e2 = evo.builder():set(f1, v2(12, 13)):set(f2, v2(14, 15)):spawn()
+
+    do
+        assert(evo.has(e1, f1) and evo.get(e1, f1).x == 10 and evo.get(e1, f1).y == 11)
+        assert(evo.get(e1, f1) ~= f1_default)
+
+        assert(evo.has(e2, f1) and evo.get(e2, f1).x == 12 and evo.get(e2, f1).y == 13)
+        assert(evo.get(e2, f1) ~= f1_default)
+        assert(evo.has(e2, f2) and evo.get(e2, f2).x == 14 and evo.get(e2, f2).y == 15)
+        assert(evo.get(e2, f2) ~= f2_default)
+    end
+
+    evo.set(f1, evo.TAG)
+
+    do
+        assert(evo.has(e1, f1) and evo.get(e1, f1) == nil)
+
+        assert(evo.has(e2, f1) and evo.get(e2, f1) == nil)
+        assert(evo.has(e2, f2) and evo.get(e2, f2).x == 14 and evo.get(e2, f2).y == 15)
+        assert(evo.get(e2, f2) ~= f2_default)
+    end
+
+    evo.remove(f1, evo.TAG)
+
+    do
+        assert(evo.has(e1, f1) and evo.get(e1, f1).x == 1 and evo.get(e1, f1).y == 2)
+        assert(evo.get(e1, f1) ~= f1_default)
+
+        assert(evo.has(e2, f1) and evo.get(e2, f1).x == 1 and evo.get(e2, f1).y == 2)
+        assert(evo.get(e2, f1) ~= f1_default)
+        assert(evo.has(e2, f2) and evo.get(e2, f2).x == 14 and evo.get(e2, f2).y == 15)
+        assert(evo.get(e2, f2) ~= f2_default)
+    end
+end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f1, evo.REQUIRES, { f2, f3 })
+    evo.set(f2, evo.DEFAULT, false)
+    evo.set(f3, evo.TAG)
+
+    local v_set_sum = 0
+    local v_insert_sum = 0
+
+    local f3_set_times = 0
+    local f3_insert_times = 0
+
+    evo.set(f1, evo.ON_SET, function(e, f, v)
+        assert(f == f1)
+        v_set_sum = v_set_sum + v
+        assert(evo.get(e, f) == v)
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, v)
+        assert(f == f1)
+        v_insert_sum = v_insert_sum + v
+        assert(evo.get(e, f) == v)
+    end)
+
+    evo.set(f3, evo.ON_SET, function(e, f, v)
+        assert(f == f3)
+        f3_set_times = f3_set_times + 1
+        assert(v == nil)
+        assert(evo.has(e, f))
+    end)
+
+    evo.set(f3, evo.ON_INSERT, function(e, f, v)
+        assert(f == f3)
+        f3_insert_times = f3_insert_times + 1
+        assert(v == nil)
+        assert(evo.has(e, f))
+    end)
+
+    do
+        local e = evo.spawn({ [f1] = 42 })
+        assert(e and not evo.empty(e))
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        assert(evo.has(e, f2) and evo.get(e, f2) == false)
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+
+        local e = evo.clone(entity_prefab)
+        assert(e and not evo.empty(e))
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+        assert(evo.has(e, f2) and evo.get(e, f2) == false)
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+        evo.remove(entity_prefab, f2, f3)
+
+        local e = evo.clone(entity_prefab, { [f1] = 21 })
+        assert(e and not evo.empty(e))
+
+        assert(evo.has(e, f1) and evo.get(e, f1) == 21)
+        assert(evo.has(e, f2) and evo.get(e, f2) == false)
+    end
+
+    assert(v_set_sum == 42 * 4 + 21 * 1)
+    assert(v_insert_sum == 42 * 4 + 21 * 1)
+
+    assert(f3_set_times == 5)
+    assert(f3_insert_times == 5)
+end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local f1, f2, f3, f4, f5, f6, f7 = evo.id(7)
+    evo.set(f1, evo.REQUIRES, { f2, f3, f4 })
+    evo.set(f5, evo.REQUIRES, { f6, f7 })
+
+    local f1_default = v2(1, 2)
+    local f2_default = v2(3, 4)
+    local f3_default = v2(10, 11)
+    local f4_default = v2(12, 13)
+    local f6_default = v2(14, 15)
+    local f7_default = v2(16, 17)
+
+    evo.set(f1, evo.DEFAULT, f1_default)
+    evo.set(f2, evo.DEFAULT, f2_default)
+    evo.set(f3, evo.DEFAULT, f3_default)
+    evo.set(f4, evo.DEFAULT, f4_default)
+    evo.set(f6, evo.DEFAULT, f6_default)
+    evo.set(f7, evo.DEFAULT, f7_default)
+
+    evo.set(f1, evo.DUPLICATE, v2_clone)
+    evo.set(f2, evo.DUPLICATE, v2_clone)
+    evo.set(f3, evo.DUPLICATE, v2_clone)
+    evo.set(f5, evo.DUPLICATE, v2_clone)
+    evo.set(f6, evo.DUPLICATE, v2_clone)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = v2(5, 6), [f2] = v2(7, 8) })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        local q_f1 = evo.builder():include(f1):spawn()
+
+        local f2_v = v2(20, 21)
+        evo.batch_set(q_f1, f2, f2_v)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+        end
+
+        local f5_v = v2(30, 31)
+        evo.batch_set(q_f1, f5, f5_v)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+            assert(evo.has(e, f5) and evo.get(e, f5).x == 30 and evo.get(e, f5).y == 31)
+            assert(evo.has(e, f6) and evo.get(e, f6).x == 14 and evo.get(e, f6).y == 15)
+            assert(evo.has(e, f7) and evo.get(e, f7).x == 16 and evo.get(e, f7).y == 17)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+            assert(evo.get(e, f5) ~= f5_v)
+            assert(evo.get(e, f6) ~= f6_default)
+            assert(evo.get(e, f7) == f7_default)
+        end
+
+        f5_v = v2(32, 33)
+        evo.batch_set(q_f1, f5, f5_v)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+            assert(evo.has(e, f5) and evo.get(e, f5).x == 32 and evo.get(e, f5).y == 33)
+            assert(evo.has(e, f6) and evo.get(e, f6).x == 14 and evo.get(e, f6).y == 15)
+            assert(evo.has(e, f7) and evo.get(e, f7).x == 16 and evo.get(e, f7).y == 17)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+            assert(evo.get(e, f5) ~= f5_v)
+            assert(evo.get(e, f6) ~= f6_default)
+            assert(evo.get(e, f7) == f7_default)
+        end
+    end
+end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local f1, f2, f3, f4, f5, f6, f7 = evo.id(7)
+    evo.set(f1, evo.REQUIRES, { f2, f3, f4 })
+    evo.set(f5, evo.REQUIRES, { f6, f7 })
+
+    local f1_default = v2(1, 2)
+    local f2_default = v2(3, 4)
+    local f3_default = v2(10, 11)
+    local f4_default = v2(12, 13)
+    local f6_default = v2(14, 15)
+    local f7_default = v2(16, 17)
+
+    evo.set(f1, evo.DEFAULT, f1_default)
+    evo.set(f2, evo.DEFAULT, f2_default)
+    evo.set(f3, evo.DEFAULT, f3_default)
+    evo.set(f4, evo.DEFAULT, f4_default)
+    evo.set(f6, evo.DEFAULT, f6_default)
+    evo.set(f7, evo.DEFAULT, f7_default)
+
+    evo.set(f1, evo.DUPLICATE, v2_clone)
+    evo.set(f2, evo.DUPLICATE, v2_clone)
+    evo.set(f3, evo.DUPLICATE, v2_clone)
+    evo.set(f5, evo.DUPLICATE, v2_clone)
+    evo.set(f6, evo.DUPLICATE, v2_clone)
+
+    local f5_set_sum = 0
+    local f5_insert_sum = 0
+    local f6_set_sum = 0
+    local f6_insert_sum = 0
+    local f7_set_sum = 0
+    local f7_insert_sum = 0
+
+    evo.set(f5, evo.ON_SET, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f5)
+        f5_set_sum = f5_set_sum + v.x + v.y
+    end)
+
+    evo.set(f5, evo.ON_INSERT, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f5)
+        f5_insert_sum = f5_insert_sum + v.x + v.y
+    end)
+
+    evo.set(f6, evo.ON_SET, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f6)
+        f6_set_sum = f6_set_sum + v.x + v.y
+    end)
+
+    evo.set(f6, evo.ON_INSERT, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f6)
+        f6_insert_sum = f6_insert_sum + v.x + v.y
+    end)
+
+    evo.set(f7, evo.ON_SET, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f7)
+        f7_set_sum = f7_set_sum + v.x + v.y
+    end)
+
+    evo.set(f7, evo.ON_INSERT, function(e, f, v)
+        assert(evo.get(e, f) == v)
+        assert(f == f7)
+        f7_insert_sum = f7_insert_sum + v.x + v.y
+    end)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = v2(5, 6), [f2] = v2(7, 8) })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        local q_f1 = evo.builder():include(f1):spawn()
+
+        local f2_v = v2(20, 21)
+        evo.batch_set(q_f1, f2, f2_v)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+        end
+
+        assert(f5_set_sum == 0)
+        assert(f5_insert_sum == 0)
+        assert(f6_set_sum == 0)
+        assert(f6_insert_sum == 0)
+        assert(f7_set_sum == 0)
+        assert(f7_insert_sum == 0)
+
+        local f5_v = v2(30, 31)
+        evo.batch_set(q_f1, f5, f5_v)
+
+        assert(f5_set_sum == (30 + 31) * entity_count)
+        assert(f5_insert_sum == (30 + 31) * entity_count)
+        assert(f6_set_sum == (14 + 15) * entity_count)
+        assert(f6_insert_sum == (14 + 15) * entity_count)
+        assert(f7_set_sum == (16 + 17) * entity_count)
+        assert(f7_insert_sum == (16 + 17) * entity_count)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+            assert(evo.has(e, f5) and evo.get(e, f5).x == 30 and evo.get(e, f5).y == 31)
+            assert(evo.has(e, f6) and evo.get(e, f6).x == 14 and evo.get(e, f6).y == 15)
+            assert(evo.has(e, f7) and evo.get(e, f7).x == 16 and evo.get(e, f7).y == 17)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+            assert(evo.get(e, f5) ~= f5_v)
+            assert(evo.get(e, f6) ~= f6_default)
+            assert(evo.get(e, f7) == f7_default)
+        end
+
+        f5_set_sum = 0
+        f5_insert_sum = 0
+        f6_set_sum = 0
+        f6_insert_sum = 0
+        f7_set_sum = 0
+        f7_insert_sum = 0
+
+        f5_v = v2(32, 33)
+        evo.batch_set(q_f1, f5, f5_v)
+
+        assert(f5_set_sum == (32 + 33) * entity_count)
+        assert(f5_insert_sum == 0)
+        assert(f6_set_sum == 0)
+        assert(f6_insert_sum == 0)
+        assert(f7_set_sum == 0)
+        assert(f7_insert_sum == 0)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+
+            assert(evo.has(e, f1) and evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+            assert(evo.has(e, f2) and evo.get(e, f2).x == 20 and evo.get(e, f2).y == 21)
+            assert(evo.has(e, f3) and evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+            assert(evo.has(e, f4) and evo.get(e, f4).x == 12 and evo.get(e, f4).y == 13)
+            assert(evo.has(e, f5) and evo.get(e, f5).x == 32 and evo.get(e, f5).y == 33)
+            assert(evo.has(e, f6) and evo.get(e, f6).x == 14 and evo.get(e, f6).y == 15)
+            assert(evo.has(e, f7) and evo.get(e, f7).x == 16 and evo.get(e, f7).y == 17)
+
+            assert(evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f2) ~= f2_v and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f4) == f4_default)
+            assert(evo.get(e, f5) ~= f5_v)
+            assert(evo.get(e, f6) ~= f6_default)
+            assert(evo.get(e, f7) == f7_default)
+        end
+    end
+end

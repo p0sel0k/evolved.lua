@@ -1182,10 +1182,10 @@ commit :: boolean
 cancel :: boolean
 
 spawn :: <fragment, component>? -> entity
-multi_spawn :: integer, <fragment, component>? -> entity[]
+multi_spawn :: integer, <fragment, component>? -> entity[], integer
 
 clone :: entity, <fragment, component>? -> entity
-multi_clone :: integer, entity, <fragment, component>? -> entity[]
+multi_clone :: integer, entity, <fragment, component>? -> entity[], integer
 
 alive :: entity -> boolean
 alive_all :: entity... -> boolean
@@ -1247,10 +1247,10 @@ chunk_mt:components :: fragment... -> storage...
 builder :: builder
 
 builder_mt:spawn :: entity
-builder_mt:multi_spawn :: integer -> entity[]
+builder_mt:multi_spawn :: integer -> entity[], integer
 
 builder_mt:clone :: entity -> entity
-builder_mt:multi_clone :: integer, entity -> entity[]
+builder_mt:multi_clone :: integer, entity -> entity[], integer
 
 builder_mt:has :: fragment -> boolean
 builder_mt:has_all :: fragment... -> boolean
@@ -1457,6 +1457,7 @@ function evolved.spawn(components) end
 ---@param entity_count integer
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function evolved.multi_spawn(entity_count, components) end
 ```
 
@@ -1476,6 +1477,7 @@ function evolved.clone(prefab, components) end
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function evolved.multi_clone(entity_count, prefab, components) end
 ```
 
@@ -1793,6 +1795,7 @@ function evolved.builder_mt:spawn() end
 ```lua
 ---@param entity_count integer
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function evolved.builder_mt:multi_spawn(entity_count) end
 ```
 
@@ -1810,6 +1813,7 @@ function evolved.builder_mt:clone(prefab) end
 ---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function evolved.builder_mt:multi_clone(entity_count, prefab) end
 ```
 

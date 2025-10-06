@@ -4898,9 +4898,10 @@ end
 ---@param entity_count integer
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __evolved_multi_spawn(entity_count, components)
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     if not components then
@@ -4932,7 +4933,7 @@ function __evolved_multi_spawn(entity_count, components)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param prefab evolved.entity
@@ -4976,9 +4977,10 @@ end
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __evolved_multi_clone(entity_count, prefab, components)
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     if not components then
@@ -5015,7 +5017,7 @@ function __evolved_multi_clone(entity_count, prefab, components)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param entity evolved.entity
@@ -6370,9 +6372,10 @@ end
 
 ---@param entity_count integer
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __builder_mt:multi_spawn(entity_count)
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     local chunk = self.__chunk
@@ -6403,7 +6406,7 @@ function __builder_mt:multi_spawn(entity_count)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param prefab evolved.entity
@@ -6443,9 +6446,10 @@ end
 ---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __builder_mt:multi_clone(entity_count, prefab)
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     local components = self.__components
@@ -6480,7 +6484,7 @@ function __builder_mt:multi_clone(entity_count, prefab)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param fragment evolved.fragment
