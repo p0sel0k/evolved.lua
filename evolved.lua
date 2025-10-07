@@ -4789,20 +4789,20 @@ function __evolved_name(...)
     end
 end
 
----@param index integer
----@param version integer
+---@param primary integer
+---@param secondary integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(index, version)
-    if index < 1 or index > 2 ^ 20 - 1 then
-        __error_fmt('the index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+function __evolved_pack(primary, secondary)
+    if primary < 1 or primary > 2 ^ 20 - 1 then
+        __error_fmt('the primary (%d) is out of range [1, 2 ^ 20 - 1]', primary)
     end
 
-    if version < 1 or version > 2 ^ 20 - 1 then
-        __error_fmt('the version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+    if secondary < 1 or secondary > 2 ^ 20 - 1 then
+        __error_fmt('the secondary (%d) is out of range [1, 2 ^ 20 - 1]', secondary)
     end
 
-    return index + version * 2 ^ 20 --[[@as evolved.id]]
+    return primary + secondary * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
