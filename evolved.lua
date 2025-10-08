@@ -138,6 +138,7 @@ local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list<ev
 local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
 local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.fragment>>
 
+local __subsystem_groups = {} ---@type table<evolved.system, evolved.system>
 local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<evolved.system>>
 
 ---
@@ -7006,6 +7007,7 @@ __evolved_set(__ON_REMOVE, __UNIQUE)
 ---
 ---
 
+---@param query evolved.query
 local function __insert_query(query)
     local query_includes = __sorted_includes[query]
     local query_include_list = query_includes and query_includes.__item_list
@@ -7024,6 +7026,7 @@ local function __insert_query(query)
     end
 end
 
+---@param query evolved.query
 local function __remove_query(query)
     local query_includes = __sorted_includes[query]
     local query_include_list = query_includes and query_includes.__item_list
@@ -7060,9 +7063,7 @@ __evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
         __sorted_includes[query] = nil
     end
 
-    if include_count > 0 or __sorted_excludes[query] then
-        __insert_query(query)
-    end
+    __insert_query(query)
 end)
 
 __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
@@ -7070,9 +7071,7 @@ __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
 
     __sorted_includes[query] = nil
 
-    if __sorted_excludes[query] then
-        __insert_query(query)
-    end
+    __insert_query(query)
 end)
 
 ---
@@ -7100,9 +7099,7 @@ __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
         __sorted_excludes[query] = nil
     end
 
-    if exclude_count > 0 or __sorted_includes[query] then
-        __insert_query(query)
-    end
+    __insert_query(query)
 end)
 
 __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
@@ -7110,9 +7107,7 @@ __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
 
     __sorted_excludes[query] = nil
 
-    if __sorted_includes[query] then
-        __insert_query(query)
-    end
+    __insert_query(query)
 end)
 
 ---
@@ -7126,18 +7121,17 @@ end)
 __evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
     local require_count = #require_list
 
-    if require_count == 0 then
+    if require_count > 0 then
+        ---@type evolved.assoc_list<evolved.fragment>
+        local sorted_requires = __assoc_list_new(require_count)
+
+        __assoc_list_move(require_list, 1, require_count, sorted_requires)
+        __assoc_list_sort(sorted_requires)
+
+        __sorted_requires[fragment] = sorted_requires
+    else
         __sorted_requires[fragment] = nil
-        return
     end
-
-    ---@type evolved.assoc_list<evolved.fragment>
-    local sorted_requires = __assoc_list_new(require_count)
-
-    __assoc_list_move(require_list, 1, require_count, sorted_requires)
-    __assoc_list_sort(sorted_requires)
-
-    __sorted_requires[fragment] = sorted_requires
 end)
 
 __evolved_set(__REQUIRES, __ON_REMOVE, function(fragment)
@@ -7150,41 +7144,52 @@ end)
 ---
 ---
 
----@param system evolved.system
----@param new_group evolved.system
----@param old_group? evolved.system
-__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
-    if new_group == old_group then
-        return
+---@param subsystem evolved.system
+local function __add_subsystem(subsystem)
+    local subsystem_group = __subsystem_groups[subsystem]
+
+    if subsystem_group then
+        local group_subsystems = __group_subsystems[subsystem_group]
+
+        if not group_subsystems then
+            ---@type evolved.assoc_list<evolved.system>
+            group_subsystems = __assoc_list_new(4)
+            __group_subsystems[subsystem_group] = group_subsystems
+        end
+
+        __assoc_list_insert(group_subsystems, subsystem)
     end
+end
 
-    if old_group then
-        local old_group_systems = __group_subsystems[old_group]
+---@param subsystem evolved.system
+local function __remove_subsystem(subsystem)
+    local subsystem_group = __subsystem_groups[subsystem]
 
-        if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
-            __group_subsystems[old_group] = nil
+    if subsystem_group then
+        local group_subsystems = __group_subsystems[subsystem_group]
+
+        if group_subsystems and __assoc_list_remove(group_subsystems, subsystem) == 0 then
+            __group_subsystems[subsystem_group] = nil
         end
     end
+end
 
-    local new_group_systems = __group_subsystems[new_group]
+---@param system evolved.system
+__evolved_set(__GROUP, __ON_SET, function(system, _, group)
+    __remove_subsystem(system)
 
-    if not new_group_systems then
-        ---@type evolved.assoc_list<evolved.system>
-        new_group_systems = __assoc_list_new(4)
-        __group_subsystems[new_group] = new_group_systems
-    end
+    __subsystem_groups[system] = group
 
-    __assoc_list_insert(new_group_systems, system)
+    __add_subsystem(system)
 end)
 
 ---@param system evolved.system
----@param old_group evolved.system
-__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
-    local old_group_systems = __group_subsystems[old_group]
+__evolved_set(__GROUP, __ON_REMOVE, function(system)
+    __remove_subsystem(system)
 
-    if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
-        __group_subsystems[old_group] = nil
-    end
+    __subsystem_groups[system] = nil
+
+    __add_subsystem(system)
 end)
 
 ---

@@ -7006,3 +7006,65 @@ do
         end
     end
 end
+
+do
+    local s1, s2 = evo.id(2)
+
+    local process_order = ''
+
+    evo.set(s1, evo.PROLOGUE, function()
+        process_order = process_order .. '1'
+    end)
+
+    evo.set(s2, evo.PROLOGUE, function()
+        process_order = process_order .. '2'
+    end)
+
+    do
+        process_order = ''
+        evo.set(s2, evo.GROUP, s1)
+        evo.process(s1)
+        assert(process_order == '12')
+    end
+
+    do
+        process_order = ''
+        evo.remove(s2, evo.GROUP)
+        evo.process(s1)
+        assert(process_order == '1')
+    end
+end
+
+do
+    local s1, s2, s3 = evo.id(3)
+
+    local process_order = ''
+
+    evo.set(s1, evo.PROLOGUE, function()
+        process_order = process_order .. '1'
+    end)
+
+    evo.set(s2, evo.PROLOGUE, function()
+        process_order = process_order .. '2'
+    end)
+
+    evo.set(s3, evo.PROLOGUE, function()
+        process_order = process_order .. '3'
+    end)
+
+    do
+        process_order = ''
+        evo.set(s2, evo.GROUP, s1)
+        evo.process(s1)
+        assert(process_order == '12')
+    end
+
+    do
+        process_order = ''
+        evo.set(s2, evo.GROUP, s3)
+        evo.process(s1)
+        assert(process_order == '1')
+        evo.process(s3)
+        assert(process_order == '132')
+    end
+end
