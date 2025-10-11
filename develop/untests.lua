@@ -2530,7 +2530,7 @@ do
         end)
         :on_remove(function(e, f, c)
             f2_remove_count = f2_remove_count + 1
-            assert(evo.get(e, f) == nil)
+            assert(evo.get(e, f) == c)
             assert(evo.alive(f))
             assert(c == 82)
         end)
@@ -3321,7 +3321,7 @@ do
             remove_count = remove_count + 1
             assert(f == f1)
             assert(c == 51)
-            assert(evo.get(e, f1) == nil)
+            assert(evo.get(e, f1) == c)
 
             do
                 evo.remove(e, f2)
@@ -3348,7 +3348,7 @@ do
             remove_count = remove_count + 1
             assert(f == f2)
             assert(c == 51)
-            assert(evo.get(e, f2) == nil)
+            assert(evo.get(e, f2) == c)
         end)
     end
 
@@ -3518,8 +3518,7 @@ do
         assert(e == e1 or e == e2)
         assert(f == f1)
         assert(c == 51)
-        assert(evo.get(e1, f1) == nil)
-        assert(evo.get(e2, f1) == nil)
+        assert(evo.get(e, f) == c)
     end)
 
     do

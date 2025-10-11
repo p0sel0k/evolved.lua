@@ -1347,7 +1347,11 @@ end
 
 ---@param major evolved.fragment
 function __update_major_chunks(major)
-    __trace_major_chunks(major, __update_major_chunks_trace)
+    if __defer_depth > 0 then
+        __defer_call_hook(__update_major_chunks, major)
+    else
+        __trace_major_chunks(major, __update_major_chunks_trace)
+    end
 end
 
 ---@param chunk evolved.chunk
@@ -2157,19 +2161,19 @@ function __spawn_entity(chunk, entity, components)
                 local new_component = component_storage[place]
 
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    fragment_on_set(entity, fragment, new_component)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    fragment_on_insert(entity, fragment, new_component)
                 end
             else
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment)
+                    fragment_on_set(entity, fragment)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                    fragment_on_insert(entity, fragment)
                 end
             end
         end
@@ -2368,11 +2372,11 @@ function __multi_spawn_entity(chunk, entity_list, entity_count, components)
                         local new_component = component_storage[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                            fragment_on_set(entity, fragment, new_component)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                            fragment_on_insert(entity, fragment, new_component)
                         end
                     end
                 else
@@ -2384,11 +2388,11 @@ function __multi_spawn_entity(chunk, entity_list, entity_count, components)
                         local entity = chunk_entity_list[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment)
+                            fragment_on_set(entity, fragment)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                            fragment_on_insert(entity, fragment)
                         end
                     end
                 else
@@ -2631,19 +2635,19 @@ function __clone_entity(prefab, entity, components)
                 local new_component = component_storage[place]
 
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    fragment_on_set(entity, fragment, new_component)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    fragment_on_insert(entity, fragment, new_component)
                 end
             else
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment)
+                    fragment_on_set(entity, fragment)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                    fragment_on_insert(entity, fragment)
                 end
             end
         end
@@ -2905,11 +2909,11 @@ function __multi_clone_entity(prefab, entity_list, entity_count, components)
                         local new_component = component_storage[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                            fragment_on_set(entity, fragment, new_component)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                            fragment_on_insert(entity, fragment, new_component)
                         end
                     end
                 else
@@ -2921,11 +2925,11 @@ function __multi_clone_entity(prefab, entity_list, entity_count, components)
                         local entity = chunk_entity_list[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment)
+                            fragment_on_set(entity, fragment)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                            fragment_on_insert(entity, fragment)
                         end
                     end
                 else
@@ -3064,9 +3068,9 @@ function __destroy_entity_list(entity_list, entity_count)
                         if component_index then
                             local component_storage = chunk_component_storages[component_index]
                             local old_component = component_storage[place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         else
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -3643,12 +3647,12 @@ function __chunk_remove(old_chunk, ...)
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
                             local old_component = old_component_storage[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         end
                     else
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -3766,12 +3770,12 @@ function __chunk_clear(chunk)
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entity_list[place]
                         local old_component = component_storage[place]
-                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                        fragment_on_remove(entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entity_list[place]
-                        __defer_call_hook(fragment_on_remove, entity, fragment)
+                        fragment_on_remove(entity, fragment)
                     end
                 end
             end
@@ -5511,9 +5515,9 @@ function __evolved_remove(entity, ...)
                         if old_component_index then
                             local old_component_storage = old_component_storages[old_component_index]
                             local old_component = old_component_storage[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         else
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -5605,9 +5609,9 @@ function __evolved_clear(...)
                             if component_index then
                                 local component_storage = chunk_component_storages[component_index]
                                 local old_component = component_storage[place]
-                                __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                                fragment_on_remove(entity, fragment, old_component)
                             else
-                                __defer_call_hook(fragment_on_remove, entity, fragment)
+                                fragment_on_remove(entity, fragment)
                             end
                         end
                     end

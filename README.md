@@ -1304,6 +1304,7 @@ builder_mt:destruction_policy :: id -> builder
 
 - Improved query execution performance by caching some internal calculations
 - Added the universal [`builder.build`](#evolvedbuilder_mtbuild) and [`builder.multi_build`](#evolvedbuilder_mtmulti_build) methods that can be used to spawn or clone entities depending on the method arguments
+- [`evolved.ON_REMOVE`](#evolvedon_remove) hooks are now invoked before the fragment is actually removed from the entity
 
 ### v1.3.0
 
