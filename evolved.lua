@@ -3971,12 +3971,12 @@ end
 
 ---@param prefab evolved.entity
 ---@param entity evolved.entity
----@param components table<evolved.fragment, evolved.component>
-function __defer_clone_entity(prefab, entity, components)
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_clone_entity(prefab, entity, component_map)
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
-    for fragment, component in __lua_next, components do
+    for fragment, component in __lua_next, component_map do
         component_map_dup[fragment] = component
     end
 
@@ -4009,8 +4009,8 @@ end
 ---@param prefab evolved.entity
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
----@param components table<evolved.fragment, evolved.component>
-function __defer_multi_clone_entity(prefab, entity_list, entity_count, components)
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_multi_clone_entity(prefab, entity_list, entity_count, component_map)
     ---@type evolved.entity[]
     local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
 
@@ -4021,7 +4021,7 @@ function __defer_multi_clone_entity(prefab, entity_list, entity_count, component
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
-    for fragment, component in __lua_next, components do
+    for fragment, component in __lua_next, component_map do
         component_map_dup[fragment] = component
     end
 

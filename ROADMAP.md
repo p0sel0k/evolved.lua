@@ -10,6 +10,7 @@
 ## Thoughts
 
 - We can return deferred status from modifying operations and spawn/clone methods.
+- We should have a way to not copy components on deferred spawn/clone.
 
 ## Known Issues
 
