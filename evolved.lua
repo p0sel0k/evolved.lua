@@ -920,23 +920,13 @@ local __chunk_set
 local __chunk_remove
 local __chunk_clear
 
-local __defer_set
-local __defer_remove
-local __defer_clear
-local __defer_destroy
-
-local __defer_batch_set
-local __defer_batch_remove
-local __defer_batch_clear
-local __defer_batch_destroy
+local __defer_call_hook
 
 local __defer_spawn_entity
 local __defer_multi_spawn_entity
 
 local __defer_clone_entity
 local __defer_multi_clone_entity
-
-local __defer_call_hook
 
 ---
 ---
@@ -3807,509 +3797,91 @@ end
 
 ---@enum evolved.defer_op
 local __defer_op = {
-    set = 1,
-    remove = 2,
-    clear = 3,
-    destroy = 4,
+    call_hook = 1,
 
-    batch_set = 5,
-    batch_remove = 6,
-    batch_clear = 7,
-    batch_destroy = 8,
+    spawn_entity = 2,
+    multi_spawn_entity = 3,
 
-    spawn_entity = 9,
-    multi_spawn_entity = 10,
+    clone_entity = 4,
+    multi_clone_entity = 5,
 
-    clone_entity = 11,
-    multi_clone_entity = 12,
-
-    call_hook = 13,
-
-    __count = 13,
+    __count = 5,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
 local __defer_ops = __list_new(__defer_op.__count)
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param component evolved.component
-function __defer_set(entity, fragment, component)
+---@param hook fun(...)
+---@param ... any hook arguments
+function __defer_call_hook(hook, ...)
     local length = __defer_length
     local bytecode = __defer_bytecode
 
-    bytecode[length + 1] = __defer_op.set
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.set] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local component = bytes[index + 2]
-
-    __evolved_set(entity, fragment, component)
-
-    return 3
-end
-
----@param entity evolved.entity
----@param ... evolved.fragment fragments
-function __defer_remove(entity, ...)
-    local fragment_count = __lua_select('#', ...)
-    if fragment_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.remove
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment_count
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = ...
-        bytecode[length + 4] = f1
-    elseif fragment_count == 2 then
-        local f1, f2 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-    else
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-        for i = 5, fragment_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + fragment_count
-end
-
-__defer_ops[__defer_op.remove] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment_count = bytes[index + 1]
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = bytes[index + 2]
-        __evolved_remove(entity, f1)
-    elseif fragment_count == 2 then
-        local f1, f2 = bytes[index + 2], bytes[index + 3]
-        __evolved_remove(entity, f1, f2)
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_remove(entity, f1, f2, f3)
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_remove(entity, f1, f2, f3, f4)
-    else
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_remove(entity, f1, f2, f3, f4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + fragment_count))
-    end
-
-    return 2 + fragment_count
-end
-
----@param ... evolved.entity entities
-function __defer_clear(...)
-    local entity_count = __lua_select('#', ...)
-    if entity_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.clear
-    bytecode[length + 2] = entity_count
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = ...
-        bytecode[length + 3] = e1
-    elseif entity_count == 2 then
-        local e1, e2 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-    elseif entity_count == 3 then
-        local e1, e2, e3 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-    else
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-        for i = 5, entity_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + entity_count
-end
-
-__defer_ops[__defer_op.clear] = function(bytes, index)
-    local entity_count = bytes[index + 0]
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = bytes[index + 1]
-        __evolved_clear(e1)
-    elseif entity_count == 2 then
-        local e1, e2 = bytes[index + 1], bytes[index + 2]
-        __evolved_clear(e1, e2)
-    elseif entity_count == 3 then
-        local e1, e2, e3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_clear(e1, e2, e3)
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_clear(e1, e2, e3, e4)
-    else
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_clear(e1, e2, e3, e4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + entity_count))
-    end
-
-    return 1 + entity_count
-end
-
----@param ... evolved.entity entities
-function __defer_destroy(...)
-    local entity_count = __lua_select('#', ...)
-    if entity_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.destroy
-    bytecode[length + 2] = entity_count
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = ...
-        bytecode[length + 3] = e1
-    elseif entity_count == 2 then
-        local e1, e2 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-    elseif entity_count == 3 then
-        local e1, e2, e3 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-    else
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-        for i = 5, entity_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + entity_count
-end
-
-__defer_ops[__defer_op.destroy] = function(bytes, index)
-    local entity_count = bytes[index + 0]
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = bytes[index + 1]
-        __evolved_destroy(e1)
-    elseif entity_count == 2 then
-        local e1, e2 = bytes[index + 1], bytes[index + 2]
-        __evolved_destroy(e1, e2)
-    elseif entity_count == 3 then
-        local e1, e2, e3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_destroy(e1, e2, e3)
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_destroy(e1, e2, e3, e4)
-    else
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_destroy(e1, e2, e3, e4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + entity_count))
-    end
-
-    return 1 + entity_count
-end
-
----@param query evolved.query
----@param fragment evolved.fragment
----@param component evolved.component
-function __defer_batch_set(query, fragment, component)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_set
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.batch_set] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local component = bytes[index + 2]
-
-    __evolved_batch_set(query, fragment, component)
-
-    return 3
-end
-
----@param query evolved.query
----@param ... evolved.fragment fragments
-function __defer_batch_remove(query, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local fragment_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.batch_remove
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment_count
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = ...
-        bytecode[length + 4] = f1
-    elseif fragment_count == 2 then
-        local f1, f2 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-    else
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-        for i = 5, fragment_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + fragment_count
-end
-
-__defer_ops[__defer_op.batch_remove] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragment_count = bytes[index + 1]
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = bytes[index + 2]
-        __evolved_batch_remove(query, f1)
-    elseif fragment_count == 2 then
-        local f1, f2 = bytes[index + 2], bytes[index + 3]
-        __evolved_batch_remove(query, f1, f2)
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_remove(query, f1, f2, f3)
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_remove(query, f1, f2, f3, f4)
-    else
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_remove(query, f1, f2, f3, f4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + fragment_count))
-    end
-
-    return 2 + fragment_count
-end
-
----@param ... evolved.query chunks_or_queries
-function __defer_batch_clear(...)
     local argument_count = __lua_select('#', ...)
-    if argument_count == 0 then return end
 
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_clear
-    bytecode[length + 2] = argument_count
+    bytecode[length + 1] = __defer_op.call_hook
+    bytecode[length + 2] = hook
+    bytecode[length + 3] = argument_count
 
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
         local a1 = ...
-        bytecode[length + 3] = a1
+        bytecode[length + 4] = a1
     elseif argument_count == 2 then
         local a1, a2 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
     elseif argument_count == 3 then
         local a1, a2, a3 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
     elseif argument_count == 4 then
         local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
     else
         local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
         for i = 5, argument_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
+            bytecode[length + 3 + i] = __lua_select(i, ...)
         end
     end
 
-    __defer_length = length + 2 + argument_count
+    __defer_length = length + 3 + argument_count
 end
 
-__defer_ops[__defer_op.batch_clear] = function(bytes, index)
-    local argument_count = bytes[index + 0]
+__defer_ops[__defer_op.call_hook] = function(bytes, index)
+    local hook = bytes[index + 0]
+    local argument_count = bytes[index + 1]
 
     if argument_count == 0 then
-        -- nothing
+        hook()
     elseif argument_count == 1 then
-        local a1 = bytes[index + 1]
-        __evolved_batch_clear(a1)
+        local a1 = bytes[index + 2]
+        hook(a1)
     elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 1], bytes[index + 2]
-        __evolved_batch_clear(a1, a2)
+        local a1, a2 = bytes[index + 2], bytes[index + 3]
+        hook(a1, a2)
     elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_batch_clear(a1, a2, a3)
+        local a1, a2, a3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        hook(a1, a2, a3)
     elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_clear(a1, a2, a3, a4)
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4)
     else
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_clear(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4,
+            __lua_table_unpack(bytes, index + 6, index + 1 + argument_count))
     end
 
-    return 1 + argument_count
-end
-
----@param ... evolved.query chunks_or_queries
-function __defer_batch_destroy(...)
-    local argument_count = __lua_select('#', ...)
-    if argument_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_destroy
-    bytecode[length + 2] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 3] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
-        for i = 5, argument_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + argument_count
-end
-
-__defer_ops[__defer_op.batch_destroy] = function(bytes, index)
-    local argument_count = bytes[index + 0]
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 1]
-        __evolved_batch_destroy(a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 1], bytes[index + 2]
-        __evolved_batch_destroy(a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_batch_destroy(a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_destroy(a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_destroy(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + argument_count))
-    end
-
-    return 1 + argument_count
+    return 2 + argument_count
 end
 
 ---@param chunk? evolved.chunk
@@ -4480,79 +4052,6 @@ __defer_ops[__defer_op.multi_clone_entity] = function(bytes, index)
     __evolved_commit()
 
     return 4
-end
-
----@param hook fun(...)
----@param ... any hook arguments
-function __defer_call_hook(hook, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.call_hook
-    bytecode[length + 2] = hook
-    bytecode[length + 3] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 4] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-        bytecode[length + 7] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-        bytecode[length + 7] = a4
-        for i = 5, argument_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + argument_count
-end
-
-__defer_ops[__defer_op.call_hook] = function(bytes, index)
-    local hook = bytes[index + 0]
-    local argument_count = bytes[index + 1]
-
-    if argument_count == 0 then
-        hook()
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 2]
-        hook(a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 2], bytes[index + 3]
-        hook(a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        hook(a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        hook(a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        hook(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + argument_count))
-    end
-
-    return 2 + argument_count
 end
 
 ---
@@ -5237,7 +4736,7 @@ function __evolved_set(entity, fragment, component)
     end
 
     if __defer_depth > 0 then
-        __defer_set(entity, fragment, component)
+        __defer_call_hook(__evolved_set, entity, fragment, component)
         return
     end
 
@@ -5474,7 +4973,7 @@ function __evolved_remove(entity, ...)
     end
 
     if __defer_depth > 0 then
-        __defer_remove(entity, ...)
+        __defer_call_hook(__evolved_remove, entity, ...)
         return
     end
 
@@ -5570,7 +5069,7 @@ function __evolved_clear(...)
     end
 
     if __defer_depth > 0 then
-        __defer_clear(...)
+        __defer_call_hook(__evolved_clear, ...)
         return
     end
 
@@ -5641,7 +5140,7 @@ function __evolved_destroy(...)
     end
 
     if __defer_depth > 0 then
-        __defer_destroy(...)
+        __defer_call_hook(__evolved_destroy, ...)
         return
     end
 
@@ -5715,7 +5214,7 @@ function __evolved_batch_set(query, fragment, component)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_set(query, fragment, component)
+        __defer_call_hook(__evolved_batch_set, query, fragment, component)
         return
     end
 
@@ -5759,7 +5258,7 @@ function __evolved_batch_remove(query, ...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_remove(query, ...)
+        __defer_call_hook(__evolved_batch_remove, query, ...)
         return
     end
 
@@ -5795,7 +5294,7 @@ function __evolved_batch_clear(...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_clear(...)
+        __defer_call_hook(__evolved_batch_clear, ...)
         return
     end
 
@@ -5842,7 +5341,7 @@ function __evolved_batch_destroy(...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_destroy(...)
+        __defer_call_hook(__evolved_batch_destroy, ...)
         return
     end
 
