@@ -7067,3 +7067,31 @@ do
         assert(process_order == '132')
     end
 end
+
+do
+    local f1, f2 = evo.id(2)
+    evo.set(f1, evo.NAME, 'f1')
+    evo.set(f2, evo.NAME, 'f2')
+
+    do
+        local c1 = evo.chunk(f1)
+        assert(tostring(c1) == '<f1>')
+
+        local c2 = evo.chunk(f2)
+        assert(tostring(c2) == '<f2>')
+
+        local c12 = evo.chunk(f1, f2)
+        assert(tostring(c12) == '<f1, f2>')
+
+        local c21 = evo.chunk(f2, f1)
+        assert(tostring(c21) == '<f1, f2>')
+    end
+
+    do
+        local b = evo.builder():set(f1)
+        assert(tostring(b) == '<f1>')
+
+        b:set(f1, 1):set(f2, 2)
+        assert(tostring(b) == '<f1, f2>')
+    end
+end
