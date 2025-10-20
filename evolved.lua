@@ -1,7 +1,7 @@
 local evolved = {
     __HOMEPAGE = 'https://github.com/BlackMATov/evolved.lua',
     __DESCRIPTION = 'Evolved ECS (Entity-Component-System) for Lua',
-    __VERSION = '1.3.0',
+    __VERSION = '1.4.0',
     __LICENSE = [[
         MIT License
 
@@ -126,6 +126,9 @@ local __root_chunks = {} ---@type table<evolved.fragment, evolved.chunk>
 local __major_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 local __minor_chunks = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.chunk>>
 
+local __query_chunks = {} ---@type table<evolved.query, evolved.assoc_list<evolved.chunk>>
+local __major_queries = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.query>>
+
 local __entity_chunks = {} ---@type table<integer, evolved.chunk>
 local __entity_places = {} ---@type table<integer, integer>
 
@@ -135,6 +138,7 @@ local __sorted_includes = {} ---@type table<evolved.query, evolved.assoc_list<ev
 local __sorted_excludes = {} ---@type table<evolved.query, evolved.assoc_list<evolved.fragment>>
 local __sorted_requires = {} ---@type table<evolved.fragment, evolved.assoc_list<evolved.fragment>>
 
+local __subsystem_groups = {} ---@type table<evolved.system, evolved.system>
 local __group_subsystems = {} ---@type table<evolved.system, evolved.assoc_list<evolved.system>>
 
 ---
@@ -865,10 +869,14 @@ local __id_name
 local __new_chunk
 
 local __update_chunk_caches
+local __update_chunk_queries
 local __update_chunk_storages
 
 local __trace_major_chunks
 local __trace_minor_chunks
+
+local __cache_query_chunks
+local __reset_query_chunks
 
 local __update_major_chunks
 local __update_major_chunks_trace
@@ -879,6 +887,7 @@ local __chunk_without_fragment
 local __chunk_without_fragments
 local __chunk_without_unique_fragments
 
+local __chunk_matches
 local __chunk_fragments
 local __chunk_components
 
@@ -911,23 +920,13 @@ local __chunk_set
 local __chunk_remove
 local __chunk_clear
 
-local __defer_set
-local __defer_remove
-local __defer_clear
-local __defer_destroy
-
-local __defer_batch_set
-local __defer_batch_remove
-local __defer_batch_clear
-local __defer_batch_destroy
+local __defer_call_hook
 
 local __defer_spawn_entity
 local __defer_multi_spawn_entity
 
 local __defer_clone_entity
 local __defer_multi_clone_entity
-
-local __defer_call_hook
 
 ---
 ---
@@ -1064,6 +1063,7 @@ function __new_chunk(chunk_parent, chunk_fragment)
     end
 
     __update_chunk_caches(chunk)
+    __update_chunk_queries(chunk)
     __update_chunk_storages(chunk)
 
     return chunk
@@ -1124,6 +1124,26 @@ function __update_chunk_caches(chunk)
         chunk.__without_unique_fragments = nil
     else
         chunk.__without_unique_fragments = chunk
+    end
+end
+
+---@param chunk evolved.chunk
+function __update_chunk_queries(chunk)
+    local major_queries = __major_queries[chunk.__fragment]
+    local major_query_list = major_queries and major_queries.__item_list
+    local major_query_count = major_queries and major_queries.__item_count or 0
+
+    for major_query_index = 1, major_query_count do
+        local major_query = major_query_list[major_query_index]
+        local major_query_chunks = __query_chunks[major_query]
+
+        if major_query_chunks then
+            if __chunk_matches(chunk, major_query) then
+                __assoc_list_insert(major_query_chunks, chunk)
+            else
+                __assoc_list_remove(major_query_chunks, chunk)
+            end
+        end
     end
 end
 
@@ -1273,14 +1293,61 @@ function __trace_minor_chunks(minor, trace, ...)
     __release_table(__table_pool_tag.chunk_list, chunk_stack, true)
 end
 
+---@param query evolved.query
+---@return evolved.assoc_list<evolved.chunk>
+function __cache_query_chunks(query)
+    __reset_query_chunks(query)
+
+    local query_includes = __sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
+
+    if query_include_count == 0 then
+        __error_fmt('the query (%s) has no include fragments and cannot be cached',
+            __id_name(query))
+    end
+
+    ---@type evolved.assoc_list<evolved.chunk>
+    local query_chunks = __assoc_list_new(4)
+    __query_chunks[query] = query_chunks
+
+    do
+        local query_major = query_include_list[query_include_count]
+
+        local major_chunks = __major_chunks[query_major]
+        local major_chunk_list = major_chunks and major_chunks.__item_list
+        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
+
+        for major_chunk_index = 1, major_chunk_count do
+            local major_chunk = major_chunk_list[major_chunk_index]
+
+            if __chunk_matches(major_chunk, query) then
+                __assoc_list_insert(query_chunks, major_chunk)
+            end
+        end
+    end
+
+    return query_chunks
+end
+
+---@param query evolved.query
+function __reset_query_chunks(query)
+    __query_chunks[query] = nil
+end
+
 ---@param major evolved.fragment
 function __update_major_chunks(major)
-    __trace_major_chunks(major, __update_major_chunks_trace)
+    if __defer_depth > 0 then
+        __defer_call_hook(__update_major_chunks, major)
+    else
+        __trace_major_chunks(major, __update_major_chunks_trace)
+    end
 end
 
 ---@param chunk evolved.chunk
 function __update_major_chunks_trace(chunk)
     __update_chunk_caches(chunk)
+    __update_chunk_queries(chunk)
     __update_chunk_storages(chunk)
 end
 
@@ -1446,6 +1513,50 @@ function __chunk_without_unique_fragments(chunk)
     end
 
     return sib_chunk
+end
+
+---@param chunk evolved.chunk
+---@param query evolved.query
+---@return boolean
+---@nodiscard
+function __chunk_matches(chunk, query)
+    local query_includes = __sorted_includes[query]
+    local query_include_set = query_includes and query_includes.__item_set
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
+
+    if query_include_count > 0 then
+        if not __chunk_has_all_fragment_list(chunk, query_include_list, query_include_count) then
+            return false
+        end
+    elseif chunk.__has_explicit_fragments then
+        return false
+    end
+
+    local query_excludes = __sorted_excludes[query]
+    local query_exclude_list = query_excludes and query_excludes.__item_list
+    local query_exclude_count = query_excludes and query_excludes.__item_count or 0
+
+    if query_exclude_count > 0 then
+        if __chunk_has_any_fragment_list(chunk, query_exclude_list, query_exclude_count) then
+            return false
+        end
+    end
+
+    if chunk.__has_explicit_fragments then
+        local chunk_fragment_list = chunk.__fragment_list
+        local chunk_fragment_count = chunk.__fragment_count
+
+        for chunk_fragment_index = 1, chunk_fragment_count do
+            local chunk_fragment = chunk_fragment_list[chunk_fragment_index]
+
+            if not query_include_set[chunk_fragment] and __evolved_has(chunk_fragment, __EXPLICIT) then
+                return false
+            end
+        end
+    end
+
+    return true
 end
 
 ---@param head_fragment evolved.fragment
@@ -2040,19 +2151,19 @@ function __spawn_entity(chunk, entity, components)
                 local new_component = component_storage[place]
 
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    fragment_on_set(entity, fragment, new_component)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    fragment_on_insert(entity, fragment, new_component)
                 end
             else
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment)
+                    fragment_on_set(entity, fragment)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                    fragment_on_insert(entity, fragment)
                 end
             end
         end
@@ -2251,11 +2362,11 @@ function __multi_spawn_entity(chunk, entity_list, entity_count, components)
                         local new_component = component_storage[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                            fragment_on_set(entity, fragment, new_component)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                            fragment_on_insert(entity, fragment, new_component)
                         end
                     end
                 else
@@ -2267,11 +2378,11 @@ function __multi_spawn_entity(chunk, entity_list, entity_count, components)
                         local entity = chunk_entity_list[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment)
+                            fragment_on_set(entity, fragment)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                            fragment_on_insert(entity, fragment)
                         end
                     end
                 else
@@ -2514,19 +2625,19 @@ function __clone_entity(prefab, entity, components)
                 local new_component = component_storage[place]
 
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                    fragment_on_set(entity, fragment, new_component)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                    fragment_on_insert(entity, fragment, new_component)
                 end
             else
                 if fragment_on_set then
-                    __defer_call_hook(fragment_on_set, entity, fragment)
+                    fragment_on_set(entity, fragment)
                 end
 
                 if fragment_on_insert then
-                    __defer_call_hook(fragment_on_insert, entity, fragment)
+                    fragment_on_insert(entity, fragment)
                 end
             end
         end
@@ -2788,11 +2899,11 @@ function __multi_clone_entity(prefab, entity_list, entity_count, components)
                         local new_component = component_storage[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment, new_component)
+                            fragment_on_set(entity, fragment, new_component)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment, new_component)
+                            fragment_on_insert(entity, fragment, new_component)
                         end
                     end
                 else
@@ -2804,11 +2915,11 @@ function __multi_clone_entity(prefab, entity_list, entity_count, components)
                         local entity = chunk_entity_list[place]
 
                         if fragment_on_set then
-                            __defer_call_hook(fragment_on_set, entity, fragment)
+                            fragment_on_set(entity, fragment)
                         end
 
                         if fragment_on_insert then
-                            __defer_call_hook(fragment_on_insert, entity, fragment)
+                            fragment_on_insert(entity, fragment)
                         end
                     end
                 else
@@ -2947,9 +3058,9 @@ function __destroy_entity_list(entity_list, entity_count)
                         if component_index then
                             local component_storage = chunk_component_storages[component_index]
                             local old_component = component_storage[place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         else
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -3526,12 +3637,12 @@ function __chunk_remove(old_chunk, ...)
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
                             local old_component = old_component_storage[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         end
                     else
                         for old_place = 1, old_entity_count do
                             local entity = old_entity_list[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -3649,12 +3760,12 @@ function __chunk_clear(chunk)
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entity_list[place]
                         local old_component = component_storage[place]
-                        __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                        fragment_on_remove(entity, fragment, old_component)
                     end
                 else
                     for place = 1, chunk_entity_count do
                         local entity = chunk_entity_list[place]
-                        __defer_call_hook(fragment_on_remove, entity, fragment)
+                        fragment_on_remove(entity, fragment)
                     end
                 end
             end
@@ -3686,509 +3797,91 @@ end
 
 ---@enum evolved.defer_op
 local __defer_op = {
-    set = 1,
-    remove = 2,
-    clear = 3,
-    destroy = 4,
+    call_hook = 1,
 
-    batch_set = 5,
-    batch_remove = 6,
-    batch_clear = 7,
-    batch_destroy = 8,
+    spawn_entity = 2,
+    multi_spawn_entity = 3,
 
-    spawn_entity = 9,
-    multi_spawn_entity = 10,
+    clone_entity = 4,
+    multi_clone_entity = 5,
 
-    clone_entity = 11,
-    multi_clone_entity = 12,
-
-    call_hook = 13,
-
-    __count = 13,
+    __count = 5,
 }
 
 ---@type table<evolved.defer_op, fun(bytes: any[], index: integer): integer>
 local __defer_ops = __list_new(__defer_op.__count)
 
----@param entity evolved.entity
----@param fragment evolved.fragment
----@param component evolved.component
-function __defer_set(entity, fragment, component)
+---@param hook fun(...)
+---@param ... any hook arguments
+function __defer_call_hook(hook, ...)
     local length = __defer_length
     local bytecode = __defer_bytecode
 
-    bytecode[length + 1] = __defer_op.set
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.set] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local component = bytes[index + 2]
-
-    __evolved_set(entity, fragment, component)
-
-    return 3
-end
-
----@param entity evolved.entity
----@param ... evolved.fragment fragments
-function __defer_remove(entity, ...)
-    local fragment_count = __lua_select('#', ...)
-    if fragment_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.remove
-    bytecode[length + 2] = entity
-    bytecode[length + 3] = fragment_count
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = ...
-        bytecode[length + 4] = f1
-    elseif fragment_count == 2 then
-        local f1, f2 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-    else
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-        for i = 5, fragment_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + fragment_count
-end
-
-__defer_ops[__defer_op.remove] = function(bytes, index)
-    local entity = bytes[index + 0]
-    local fragment_count = bytes[index + 1]
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = bytes[index + 2]
-        __evolved_remove(entity, f1)
-    elseif fragment_count == 2 then
-        local f1, f2 = bytes[index + 2], bytes[index + 3]
-        __evolved_remove(entity, f1, f2)
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_remove(entity, f1, f2, f3)
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_remove(entity, f1, f2, f3, f4)
-    else
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_remove(entity, f1, f2, f3, f4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + fragment_count))
-    end
-
-    return 2 + fragment_count
-end
-
----@param ... evolved.entity entities
-function __defer_clear(...)
-    local entity_count = __lua_select('#', ...)
-    if entity_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.clear
-    bytecode[length + 2] = entity_count
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = ...
-        bytecode[length + 3] = e1
-    elseif entity_count == 2 then
-        local e1, e2 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-    elseif entity_count == 3 then
-        local e1, e2, e3 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-    else
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-        for i = 5, entity_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + entity_count
-end
-
-__defer_ops[__defer_op.clear] = function(bytes, index)
-    local entity_count = bytes[index + 0]
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = bytes[index + 1]
-        __evolved_clear(e1)
-    elseif entity_count == 2 then
-        local e1, e2 = bytes[index + 1], bytes[index + 2]
-        __evolved_clear(e1, e2)
-    elseif entity_count == 3 then
-        local e1, e2, e3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_clear(e1, e2, e3)
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_clear(e1, e2, e3, e4)
-    else
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_clear(e1, e2, e3, e4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + entity_count))
-    end
-
-    return 1 + entity_count
-end
-
----@param ... evolved.entity entities
-function __defer_destroy(...)
-    local entity_count = __lua_select('#', ...)
-    if entity_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.destroy
-    bytecode[length + 2] = entity_count
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = ...
-        bytecode[length + 3] = e1
-    elseif entity_count == 2 then
-        local e1, e2 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-    elseif entity_count == 3 then
-        local e1, e2, e3 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-    else
-        local e1, e2, e3, e4 = ...
-        bytecode[length + 3] = e1
-        bytecode[length + 4] = e2
-        bytecode[length + 5] = e3
-        bytecode[length + 6] = e4
-        for i = 5, entity_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + entity_count
-end
-
-__defer_ops[__defer_op.destroy] = function(bytes, index)
-    local entity_count = bytes[index + 0]
-
-    if entity_count == 0 then
-        -- nothing
-    elseif entity_count == 1 then
-        local e1 = bytes[index + 1]
-        __evolved_destroy(e1)
-    elseif entity_count == 2 then
-        local e1, e2 = bytes[index + 1], bytes[index + 2]
-        __evolved_destroy(e1, e2)
-    elseif entity_count == 3 then
-        local e1, e2, e3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_destroy(e1, e2, e3)
-    elseif entity_count == 4 then
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_destroy(e1, e2, e3, e4)
-    else
-        local e1, e2, e3, e4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_destroy(e1, e2, e3, e4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + entity_count))
-    end
-
-    return 1 + entity_count
-end
-
----@param query evolved.query
----@param fragment evolved.fragment
----@param component evolved.component
-function __defer_batch_set(query, fragment, component)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_set
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment
-    bytecode[length + 4] = component
-
-    __defer_length = length + 4
-end
-
-__defer_ops[__defer_op.batch_set] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragment = bytes[index + 1]
-    local component = bytes[index + 2]
-
-    __evolved_batch_set(query, fragment, component)
-
-    return 3
-end
-
----@param query evolved.query
----@param ... evolved.fragment fragments
-function __defer_batch_remove(query, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local fragment_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.batch_remove
-    bytecode[length + 2] = query
-    bytecode[length + 3] = fragment_count
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = ...
-        bytecode[length + 4] = f1
-    elseif fragment_count == 2 then
-        local f1, f2 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-    else
-        local f1, f2, f3, f4 = ...
-        bytecode[length + 4] = f1
-        bytecode[length + 5] = f2
-        bytecode[length + 6] = f3
-        bytecode[length + 7] = f4
-        for i = 5, fragment_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + fragment_count
-end
-
-__defer_ops[__defer_op.batch_remove] = function(bytes, index)
-    local query = bytes[index + 0]
-    local fragment_count = bytes[index + 1]
-
-    if fragment_count == 0 then
-        -- nothing
-    elseif fragment_count == 1 then
-        local f1 = bytes[index + 2]
-        __evolved_batch_remove(query, f1)
-    elseif fragment_count == 2 then
-        local f1, f2 = bytes[index + 2], bytes[index + 3]
-        __evolved_batch_remove(query, f1, f2)
-    elseif fragment_count == 3 then
-        local f1, f2, f3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_remove(query, f1, f2, f3)
-    elseif fragment_count == 4 then
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_remove(query, f1, f2, f3, f4)
-    else
-        local f1, f2, f3, f4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        __evolved_batch_remove(query, f1, f2, f3, f4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + fragment_count))
-    end
-
-    return 2 + fragment_count
-end
-
----@param ... evolved.query chunks_or_queries
-function __defer_batch_clear(...)
     local argument_count = __lua_select('#', ...)
-    if argument_count == 0 then return end
 
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_clear
-    bytecode[length + 2] = argument_count
+    bytecode[length + 1] = __defer_op.call_hook
+    bytecode[length + 2] = hook
+    bytecode[length + 3] = argument_count
 
     if argument_count == 0 then
         -- nothing
     elseif argument_count == 1 then
         local a1 = ...
-        bytecode[length + 3] = a1
+        bytecode[length + 4] = a1
     elseif argument_count == 2 then
         local a1, a2 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
     elseif argument_count == 3 then
         local a1, a2, a3 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
     elseif argument_count == 4 then
         local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
     else
         local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
+        bytecode[length + 4] = a1
+        bytecode[length + 5] = a2
+        bytecode[length + 6] = a3
+        bytecode[length + 7] = a4
         for i = 5, argument_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
+            bytecode[length + 3 + i] = __lua_select(i, ...)
         end
     end
 
-    __defer_length = length + 2 + argument_count
+    __defer_length = length + 3 + argument_count
 end
 
-__defer_ops[__defer_op.batch_clear] = function(bytes, index)
-    local argument_count = bytes[index + 0]
+__defer_ops[__defer_op.call_hook] = function(bytes, index)
+    local hook = bytes[index + 0]
+    local argument_count = bytes[index + 1]
 
     if argument_count == 0 then
-        -- nothing
+        hook()
     elseif argument_count == 1 then
-        local a1 = bytes[index + 1]
-        __evolved_batch_clear(a1)
+        local a1 = bytes[index + 2]
+        hook(a1)
     elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 1], bytes[index + 2]
-        __evolved_batch_clear(a1, a2)
+        local a1, a2 = bytes[index + 2], bytes[index + 3]
+        hook(a1, a2)
     elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_batch_clear(a1, a2, a3)
+        local a1, a2, a3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
+        hook(a1, a2, a3)
     elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_clear(a1, a2, a3, a4)
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4)
     else
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_clear(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + argument_count))
+        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
+        hook(a1, a2, a3, a4,
+            __lua_table_unpack(bytes, index + 6, index + 1 + argument_count))
     end
 
-    return 1 + argument_count
-end
-
----@param ... evolved.query chunks_or_queries
-function __defer_batch_destroy(...)
-    local argument_count = __lua_select('#', ...)
-    if argument_count == 0 then return end
-
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    bytecode[length + 1] = __defer_op.batch_destroy
-    bytecode[length + 2] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 3] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 3] = a1
-        bytecode[length + 4] = a2
-        bytecode[length + 5] = a3
-        bytecode[length + 6] = a4
-        for i = 5, argument_count do
-            bytecode[length + 2 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 2 + argument_count
-end
-
-__defer_ops[__defer_op.batch_destroy] = function(bytes, index)
-    local argument_count = bytes[index + 0]
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 1]
-        __evolved_batch_destroy(a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 1], bytes[index + 2]
-        __evolved_batch_destroy(a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 1], bytes[index + 2], bytes[index + 3]
-        __evolved_batch_destroy(a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_destroy(a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        __evolved_batch_destroy(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 5, index + 0 + argument_count))
-    end
-
-    return 1 + argument_count
+    return 2 + argument_count
 end
 
 ---@param chunk? evolved.chunk
@@ -4278,12 +3971,12 @@ end
 
 ---@param prefab evolved.entity
 ---@param entity evolved.entity
----@param components table<evolved.fragment, evolved.component>
-function __defer_clone_entity(prefab, entity, components)
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_clone_entity(prefab, entity, component_map)
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
-    for fragment, component in __lua_next, components do
+    for fragment, component in __lua_next, component_map do
         component_map_dup[fragment] = component
     end
 
@@ -4316,8 +4009,8 @@ end
 ---@param prefab evolved.entity
 ---@param entity_list evolved.entity[]
 ---@param entity_count integer
----@param components table<evolved.fragment, evolved.component>
-function __defer_multi_clone_entity(prefab, entity_list, entity_count, components)
+---@param component_map table<evolved.fragment, evolved.component>
+function __defer_multi_clone_entity(prefab, entity_list, entity_count, component_map)
     ---@type evolved.entity[]
     local entity_list_dup = __acquire_table(__table_pool_tag.entity_list)
 
@@ -4328,7 +4021,7 @@ function __defer_multi_clone_entity(prefab, entity_list, entity_count, component
     ---@type table<evolved.fragment, evolved.component>
     local component_map_dup = __acquire_table(__table_pool_tag.component_map)
 
-    for fragment, component in __lua_next, components do
+    for fragment, component in __lua_next, component_map do
         component_map_dup[fragment] = component
     end
 
@@ -4359,79 +4052,6 @@ __defer_ops[__defer_op.multi_clone_entity] = function(bytes, index)
     __evolved_commit()
 
     return 4
-end
-
----@param hook fun(...)
----@param ... any hook arguments
-function __defer_call_hook(hook, ...)
-    local length = __defer_length
-    local bytecode = __defer_bytecode
-
-    local argument_count = __lua_select('#', ...)
-
-    bytecode[length + 1] = __defer_op.call_hook
-    bytecode[length + 2] = hook
-    bytecode[length + 3] = argument_count
-
-    if argument_count == 0 then
-        -- nothing
-    elseif argument_count == 1 then
-        local a1 = ...
-        bytecode[length + 4] = a1
-    elseif argument_count == 2 then
-        local a1, a2 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-    elseif argument_count == 3 then
-        local a1, a2, a3 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-        bytecode[length + 7] = a4
-    else
-        local a1, a2, a3, a4 = ...
-        bytecode[length + 4] = a1
-        bytecode[length + 5] = a2
-        bytecode[length + 6] = a3
-        bytecode[length + 7] = a4
-        for i = 5, argument_count do
-            bytecode[length + 3 + i] = __lua_select(i, ...)
-        end
-    end
-
-    __defer_length = length + 3 + argument_count
-end
-
-__defer_ops[__defer_op.call_hook] = function(bytes, index)
-    local hook = bytes[index + 0]
-    local argument_count = bytes[index + 1]
-
-    if argument_count == 0 then
-        hook()
-    elseif argument_count == 1 then
-        local a1 = bytes[index + 2]
-        hook(a1)
-    elseif argument_count == 2 then
-        local a1, a2 = bytes[index + 2], bytes[index + 3]
-        hook(a1, a2)
-    elseif argument_count == 3 then
-        local a1, a2, a3 = bytes[index + 2], bytes[index + 3], bytes[index + 4]
-        hook(a1, a2, a3)
-    elseif argument_count == 4 then
-        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        hook(a1, a2, a3, a4)
-    else
-        local a1, a2, a3, a4 = bytes[index + 2], bytes[index + 3], bytes[index + 4], bytes[index + 5]
-        hook(a1, a2, a3, a4,
-            __lua_table_unpack(bytes, index + 6, index + 1 + argument_count))
-    end
-
-    return 2 + argument_count
 end
 
 ---
@@ -4673,20 +4293,20 @@ function __evolved_name(...)
     end
 end
 
----@param index integer
----@param version integer
+---@param primary integer
+---@param secondary integer
 ---@return evolved.id id
 ---@nodiscard
-function __evolved_pack(index, version)
-    if index < 1 or index > 2 ^ 20 - 1 then
-        __error_fmt('the index (%d) is out of range [1, 2 ^ 20 - 1]', index)
+function __evolved_pack(primary, secondary)
+    if primary < 1 or primary > 2 ^ 20 - 1 then
+        __error_fmt('the primary (%d) is out of range [1, 2 ^ 20 - 1]', primary)
     end
 
-    if version < 1 or version > 2 ^ 20 - 1 then
-        __error_fmt('the version (%d) is out of range [1, 2 ^ 20 - 1]', version)
+    if secondary < 1 or secondary > 2 ^ 20 - 1 then
+        __error_fmt('the secondary (%d) is out of range [1, 2 ^ 20 - 1]', secondary)
     end
 
-    return index + version * 2 ^ 20 --[[@as evolved.id]]
+    return primary + secondary * 2 ^ 20 --[[@as evolved.id]]
 end
 
 ---@param id evolved.id
@@ -4782,11 +4402,10 @@ end
 ---@param entity_count integer
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __evolved_multi_spawn(entity_count, components)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     if not components then
@@ -4818,7 +4437,7 @@ function __evolved_multi_spawn(entity_count, components)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param prefab evolved.entity
@@ -4862,11 +4481,10 @@ end
 ---@param prefab evolved.entity
 ---@param components? table<evolved.fragment, evolved.component>
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __evolved_multi_clone(entity_count, prefab, components)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     if not components then
@@ -4903,7 +4521,7 @@ function __evolved_multi_clone(entity_count, prefab, components)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param entity evolved.entity
@@ -5118,7 +4736,7 @@ function __evolved_set(entity, fragment, component)
     end
 
     if __defer_depth > 0 then
-        __defer_set(entity, fragment, component)
+        __defer_call_hook(__evolved_set, entity, fragment, component)
         return
     end
 
@@ -5355,7 +4973,7 @@ function __evolved_remove(entity, ...)
     end
 
     if __defer_depth > 0 then
-        __defer_remove(entity, ...)
+        __defer_call_hook(__evolved_remove, entity, ...)
         return
     end
 
@@ -5396,9 +5014,9 @@ function __evolved_remove(entity, ...)
                         if old_component_index then
                             local old_component_storage = old_component_storages[old_component_index]
                             local old_component = old_component_storage[old_place]
-                            __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                            fragment_on_remove(entity, fragment, old_component)
                         else
-                            __defer_call_hook(fragment_on_remove, entity, fragment)
+                            fragment_on_remove(entity, fragment)
                         end
                     end
                 end
@@ -5451,7 +5069,7 @@ function __evolved_clear(...)
     end
 
     if __defer_depth > 0 then
-        __defer_clear(...)
+        __defer_call_hook(__evolved_clear, ...)
         return
     end
 
@@ -5490,9 +5108,9 @@ function __evolved_clear(...)
                             if component_index then
                                 local component_storage = chunk_component_storages[component_index]
                                 local old_component = component_storage[place]
-                                __defer_call_hook(fragment_on_remove, entity, fragment, old_component)
+                                fragment_on_remove(entity, fragment, old_component)
                             else
-                                __defer_call_hook(fragment_on_remove, entity, fragment)
+                                fragment_on_remove(entity, fragment)
                             end
                         end
                     end
@@ -5522,7 +5140,7 @@ function __evolved_destroy(...)
     end
 
     if __defer_depth > 0 then
-        __defer_destroy(...)
+        __defer_call_hook(__evolved_destroy, ...)
         return
     end
 
@@ -5596,7 +5214,7 @@ function __evolved_batch_set(query, fragment, component)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_set(query, fragment, component)
+        __defer_call_hook(__evolved_batch_set, query, fragment, component)
         return
     end
 
@@ -5640,7 +5258,7 @@ function __evolved_batch_remove(query, ...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_remove(query, ...)
+        __defer_call_hook(__evolved_batch_remove, query, ...)
         return
     end
 
@@ -5676,7 +5294,7 @@ function __evolved_batch_clear(...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_clear(...)
+        __defer_call_hook(__evolved_batch_clear, ...)
         return
     end
 
@@ -5723,7 +5341,7 @@ function __evolved_batch_destroy(...)
     end
 
     if __defer_depth > 0 then
-        __defer_batch_destroy(...)
+        __defer_call_hook(__evolved_batch_destroy, ...)
         return
     end
 
@@ -5842,8 +5460,6 @@ function __evolved_execute(query)
     local chunk_stack_size = 0
 
     local query_includes = __sorted_includes[query]
-    local query_include_set = query_includes and query_includes.__item_set
-    local query_include_list = query_includes and query_includes.__item_list
     local query_include_count = query_includes and query_includes.__item_count or 0
 
     local query_excludes = __sorted_excludes[query]
@@ -5852,87 +5468,49 @@ function __evolved_execute(query)
     local query_exclude_count = query_excludes and query_excludes.__item_count or 0
 
     if query_include_count > 0 then
-        local query_major = query_include_list[query_include_count]
+        local query_chunks = __query_chunks[query] or __cache_query_chunks(query)
+        local query_chunk_list = query_chunks and query_chunks.__item_list
+        local query_chunk_count = query_chunks and query_chunks.__item_count or 0
 
-        local major_chunks = __major_chunks[query_major]
-        local major_chunk_list = major_chunks and major_chunks.__item_list
-        local major_chunk_count = major_chunks and major_chunks.__item_count or 0
+        if query_chunk_count > 0 then
+            __lua_table_move(
+                query_chunk_list, 1, query_chunk_count,
+                chunk_stack_size + 1, chunk_stack)
 
-        for major_chunk_index = 1, major_chunk_count do
-            local major_chunk = major_chunk_list[major_chunk_index]
-
-            local is_major_chunk_matched = true
-
-            if is_major_chunk_matched and query_include_count > 1 then
-                is_major_chunk_matched = __chunk_has_all_fragment_list(
-                    major_chunk, query_include_list, query_include_count - 1)
-            end
-
-            if is_major_chunk_matched and query_exclude_count > 0 then
-                is_major_chunk_matched = not __chunk_has_any_fragment_list(
-                    major_chunk, query_exclude_list, query_exclude_count)
-            end
-
-            if is_major_chunk_matched and major_chunk.__has_explicit_minors then
-                local major_chunk_minor_list = major_chunk.__fragment_list
-                local major_chunk_minor_count = major_chunk.__fragment_count - 1
-
-                for major_chunk_fragment_index = 1, major_chunk_minor_count do
-                    local major_chunk_minor = major_chunk_minor_list[major_chunk_fragment_index]
-
-                    local is_major_chunk_minor_included = query_include_set[major_chunk_minor]
-
-                    if not is_major_chunk_minor_included and __evolved_has(major_chunk_minor, __EXPLICIT) then
-                        is_major_chunk_matched = false
-                        break
-                    end
-                end
-            end
-
-            if is_major_chunk_matched then
-                chunk_stack_size = chunk_stack_size + 1
-                chunk_stack[chunk_stack_size] = major_chunk
-            end
+            chunk_stack_size = chunk_stack_size + query_chunk_count
         end
-
-        ---@type evolved.execute_state
-        local execute_state = __acquire_table(__table_pool_tag.execute_state)
-
-        execute_state[1] = __structural_changes
-        execute_state[2] = chunk_stack
-        execute_state[3] = chunk_stack_size
-        execute_state[4] = query_exclude_set
-
-        return __iterator_fns.__execute_iterator, execute_state
-    else
+    elseif query_exclude_count > 0 then
         for _, root_chunk in __lua_next, __root_chunks do
-            local is_root_chunk_matched = true
-
-            if is_root_chunk_matched and root_chunk.__has_explicit_fragments then
-                is_root_chunk_matched = false
-            end
-
-            if is_root_chunk_matched and query_exclude_count > 0 then
-                is_root_chunk_matched = not __chunk_has_any_fragment_list(
-                    root_chunk, query_exclude_list, query_exclude_count)
-            end
+            local is_root_chunk_matched =
+                not root_chunk.__has_explicit_fragments and
+                not __chunk_has_any_fragment_list(root_chunk, query_exclude_list, query_exclude_count)
 
             if is_root_chunk_matched then
                 chunk_stack_size = chunk_stack_size + 1
                 chunk_stack[chunk_stack_size] = root_chunk
             end
         end
+    else
+        for _, root_chunk in __lua_next, __root_chunks do
+            local is_root_chunk_matched =
+                not root_chunk.__has_explicit_fragments
 
-        ---@type evolved.execute_state
-        local execute_state = __acquire_table(__table_pool_tag.execute_state)
-
-        execute_state[1] = __structural_changes
-        execute_state[2] = chunk_stack
-        execute_state[3] = chunk_stack_size
-        execute_state[4] = query_exclude_set
-
-        return __iterator_fns.__execute_iterator, execute_state
+            if is_root_chunk_matched then
+                chunk_stack_size = chunk_stack_size + 1
+                chunk_stack[chunk_stack_size] = root_chunk
+            end
+        end
     end
+
+    ---@type evolved.execute_state
+    local execute_state = __acquire_table(__table_pool_tag.execute_state)
+
+    execute_state[1] = __structural_changes
+    execute_state[2] = chunk_stack
+    execute_state[3] = chunk_stack_size
+    execute_state[4] = query_exclude_set
+
+    return __iterator_fns.__execute_iterator, execute_state
 end
 
 ---@param entity evolved.entity
@@ -6267,6 +5845,28 @@ function __builder_mt:__tostring()
     return __lua_string_format('<%s>', __lua_table_concat(fragment_names, ', '))
 end
 
+---@param prefab? evolved.entity
+---@return evolved.entity entity
+function __builder_mt:build(prefab)
+    if prefab then
+        return self:clone(prefab)
+    else
+        return self:spawn()
+    end
+end
+
+---@param entity_count integer
+---@param prefab? evolved.entity
+---@return evolved.entity[] entity_list
+---@return integer entity_count
+function __builder_mt:multi_build(entity_count, prefab)
+    if prefab then
+        return self:multi_clone(entity_count, prefab)
+    else
+        return self:multi_spawn(entity_count)
+    end
+end
+
 ---@return evolved.entity entity
 function __builder_mt:spawn()
     local chunk = self.__chunk
@@ -6298,11 +5898,10 @@ end
 
 ---@param entity_count integer
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __builder_mt:multi_spawn(entity_count)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     local chunk = self.__chunk
@@ -6333,7 +5932,7 @@ function __builder_mt:multi_spawn(entity_count)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param prefab evolved.entity
@@ -6373,11 +5972,10 @@ end
 ---@param entity_count integer
 ---@param prefab evolved.entity
 ---@return evolved.entity[] entity_list
+---@return integer entity_count
 function __builder_mt:multi_clone(entity_count, prefab)
-    entity_count = entity_count or 1
-
     if entity_count <= 0 then
-        return {}
+        return {}, 0
     end
 
     local components = self.__components
@@ -6412,7 +6010,7 @@ function __builder_mt:multi_clone(entity_count, prefab)
         __evolved_commit()
     end
 
-    return entity_list
+    return entity_list, entity_count
 end
 
 ---@param fragment evolved.fragment
@@ -6913,26 +6511,70 @@ __evolved_set(__ON_REMOVE, __UNIQUE)
 ---
 
 ---@param query evolved.query
----@param include_list evolved.fragment[]
-__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
-    local include_count = #include_list
+local function __insert_query(query)
+    local query_includes = __sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
 
-    if include_count == 0 then
-        __sorted_includes[query] = nil
-        return
+    if query_include_count > 0 then
+        local query_major = query_include_list[query_include_count]
+        local major_queries = __major_queries[query_major]
+
+        if not major_queries then
+            major_queries = __assoc_list_new(4)
+            __major_queries[query_major] = major_queries
+        end
+
+        __assoc_list_insert(major_queries, query)
+    end
+end
+
+---@param query evolved.query
+local function __remove_query(query)
+    local query_includes = __sorted_includes[query]
+    local query_include_list = query_includes and query_includes.__item_list
+    local query_include_count = query_includes and query_includes.__item_count or 0
+
+    if query_include_count > 0 then
+        local query_major = query_include_list[query_include_count]
+        local major_queries = __major_queries[query_major]
+
+        if major_queries and __assoc_list_remove(major_queries, query) == 0 then
+            __major_queries[query_major] = nil
+        end
     end
 
-    ---@type evolved.assoc_list<evolved.fragment>
-    local sorted_includes = __assoc_list_new(include_count)
+    __reset_query_chunks(query)
+end
 
-    __assoc_list_move(include_list, 1, include_count, sorted_includes)
-    __assoc_list_sort(sorted_includes)
+---@param query evolved.query
+---@param include_list evolved.fragment[]
+__evolved_set(__INCLUDES, __ON_SET, function(query, _, include_list)
+    __remove_query(query)
 
-    __sorted_includes[query] = sorted_includes
+    local include_count = #include_list
+
+    if include_count > 0 then
+        ---@type evolved.assoc_list<evolved.fragment>
+        local sorted_includes = __assoc_list_new(include_count)
+
+        __assoc_list_move(include_list, 1, include_count, sorted_includes)
+        __assoc_list_sort(sorted_includes)
+
+        __sorted_includes[query] = sorted_includes
+    else
+        __sorted_includes[query] = nil
+    end
+
+    __insert_query(query)
 end)
 
 __evolved_set(__INCLUDES, __ON_REMOVE, function(query)
+    __remove_query(query)
+
     __sorted_includes[query] = nil
+
+    __insert_query(query)
 end)
 
 ---
@@ -6944,24 +6586,31 @@ end)
 ---@param query evolved.query
 ---@param exclude_list evolved.fragment[]
 __evolved_set(__EXCLUDES, __ON_SET, function(query, _, exclude_list)
+    __remove_query(query)
+
     local exclude_count = #exclude_list
 
-    if exclude_count == 0 then
+    if exclude_count > 0 then
+        ---@type evolved.assoc_list<evolved.fragment>
+        local sorted_excludes = __assoc_list_new(exclude_count)
+
+        __assoc_list_move(exclude_list, 1, exclude_count, sorted_excludes)
+        __assoc_list_sort(sorted_excludes)
+
+        __sorted_excludes[query] = sorted_excludes
+    else
         __sorted_excludes[query] = nil
-        return
     end
 
-    ---@type evolved.assoc_list<evolved.fragment>
-    local sorted_excludes = __assoc_list_new(exclude_count)
-
-    __assoc_list_move(exclude_list, 1, exclude_count, sorted_excludes)
-    __assoc_list_sort(sorted_excludes)
-
-    __sorted_excludes[query] = sorted_excludes
+    __insert_query(query)
 end)
 
 __evolved_set(__EXCLUDES, __ON_REMOVE, function(query)
+    __remove_query(query)
+
     __sorted_excludes[query] = nil
+
+    __insert_query(query)
 end)
 
 ---
@@ -6975,18 +6624,17 @@ end)
 __evolved_set(__REQUIRES, __ON_SET, function(fragment, _, require_list)
     local require_count = #require_list
 
-    if require_count == 0 then
+    if require_count > 0 then
+        ---@type evolved.assoc_list<evolved.fragment>
+        local sorted_requires = __assoc_list_new(require_count)
+
+        __assoc_list_move(require_list, 1, require_count, sorted_requires)
+        __assoc_list_sort(sorted_requires)
+
+        __sorted_requires[fragment] = sorted_requires
+    else
         __sorted_requires[fragment] = nil
-        return
     end
-
-    ---@type evolved.assoc_list<evolved.fragment>
-    local sorted_requires = __assoc_list_new(require_count)
-
-    __assoc_list_move(require_list, 1, require_count, sorted_requires)
-    __assoc_list_sort(sorted_requires)
-
-    __sorted_requires[fragment] = sorted_requires
 end)
 
 __evolved_set(__REQUIRES, __ON_REMOVE, function(fragment)
@@ -6999,41 +6647,52 @@ end)
 ---
 ---
 
----@param system evolved.system
----@param new_group evolved.system
----@param old_group? evolved.system
-__evolved_set(__GROUP, __ON_SET, function(system, _, new_group, old_group)
-    if new_group == old_group then
-        return
+---@param subsystem evolved.system
+local function __add_subsystem(subsystem)
+    local subsystem_group = __subsystem_groups[subsystem]
+
+    if subsystem_group then
+        local group_subsystems = __group_subsystems[subsystem_group]
+
+        if not group_subsystems then
+            ---@type evolved.assoc_list<evolved.system>
+            group_subsystems = __assoc_list_new(4)
+            __group_subsystems[subsystem_group] = group_subsystems
+        end
+
+        __assoc_list_insert(group_subsystems, subsystem)
     end
+end
 
-    if old_group then
-        local old_group_systems = __group_subsystems[old_group]
+---@param subsystem evolved.system
+local function __remove_subsystem(subsystem)
+    local subsystem_group = __subsystem_groups[subsystem]
 
-        if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
-            __group_subsystems[old_group] = nil
+    if subsystem_group then
+        local group_subsystems = __group_subsystems[subsystem_group]
+
+        if group_subsystems and __assoc_list_remove(group_subsystems, subsystem) == 0 then
+            __group_subsystems[subsystem_group] = nil
         end
     end
+end
 
-    local new_group_systems = __group_subsystems[new_group]
+---@param system evolved.system
+__evolved_set(__GROUP, __ON_SET, function(system, _, group)
+    __remove_subsystem(system)
 
-    if not new_group_systems then
-        ---@type evolved.assoc_list<evolved.system>
-        new_group_systems = __assoc_list_new(4)
-        __group_subsystems[new_group] = new_group_systems
-    end
+    __subsystem_groups[system] = group
 
-    __assoc_list_insert(new_group_systems, system)
+    __add_subsystem(system)
 end)
 
 ---@param system evolved.system
----@param old_group evolved.system
-__evolved_set(__GROUP, __ON_REMOVE, function(system, _, old_group)
-    local old_group_systems = __group_subsystems[old_group]
+__evolved_set(__GROUP, __ON_REMOVE, function(system)
+    __remove_subsystem(system)
 
-    if old_group_systems and __assoc_list_remove(old_group_systems, system) == 0 then
-        __group_subsystems[old_group] = nil
-    end
+    __subsystem_groups[system] = nil
+
+    __add_subsystem(system)
 end)
 
 ---

@@ -1,7 +1,9 @@
 require 'develop.samples.systems'
 
+require 'develop.testing.build_tests'
 require 'develop.testing.cancel_tests'
 require 'develop.testing.locate_tests'
+require 'develop.testing.main_tests'
 require 'develop.testing.multi_spawn_tests'
 require 'develop.testing.name_tests'
 require 'develop.testing.requires_fragment_tests'
@@ -14,12 +16,12 @@ require 'develop.benchmarks.process_bmarks'
 require 'develop.benchmarks.spawn_bmarks'
 require 'develop.benchmarks.table_bmarks'
 
-require 'develop.untests'
-
 local basics = require 'develop.basics'
 
 print '----------------------------------------'
 basics.describe_fuzz 'develop.fuzzing.destroy_fuzz'
+print '----------------------------------------'
+basics.describe_fuzz 'develop.fuzzing.execute_fuzz'
 print '----------------------------------------'
 basics.describe_fuzz 'develop.fuzzing.batch_destroy_fuzz'
 print '----------------------------------------'

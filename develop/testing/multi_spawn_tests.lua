@@ -306,3 +306,302 @@ do
         end
     end
 end
+
+do
+    local f1, f2, f3 = evo.id(3)
+
+    evo.set(f1, evo.REQUIRES, { f2, f3 })
+    evo.set(f3, evo.TAG)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = 42 })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab)
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+        evo.remove(entity_prefab, f2, f3)
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab, { [f1] = 21 })
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 21)
+            assert(evo.has(e, f2) and evo.get(e, f2) == true)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    evo.set(f2, evo.DEFAULT, false)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = 42 })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab)
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+        evo.remove(entity_prefab, f2, f3)
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab, { [f1] = 21 })
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 21)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+            assert(evo.has(e, f3) and evo.get(e, f3) == nil)
+        end
+    end
+
+    local v_set_sum = 0
+    local v_insert_sum = 0
+
+    local f3_set_times = 0
+    local f3_insert_times = 0
+
+    evo.set(f1, evo.ON_SET, function(e, f, v)
+        assert(f == f1)
+        v_set_sum = v_set_sum + v
+        assert(evo.get(e, f) == v)
+    end)
+
+    evo.set(f1, evo.ON_INSERT, function(e, f, v)
+        assert(f == f1)
+        v_insert_sum = v_insert_sum + v
+        assert(evo.get(e, f) == v)
+    end)
+
+    evo.set(f3, evo.ON_SET, function(e, f, v)
+        assert(f == f3)
+        f3_set_times = f3_set_times + 1
+        assert(v == nil)
+        assert(evo.has(e, f))
+    end)
+
+    evo.set(f3, evo.ON_INSERT, function(e, f, v)
+        assert(f == f3)
+        f3_insert_times = f3_insert_times + 1
+        assert(v == nil)
+        assert(evo.has(e, f))
+    end)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = 42 })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab)
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 42)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, 42):spawn()
+        evo.remove(entity_prefab, f2, f3)
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab, { [f1] = 21 })
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) == 21)
+            assert(evo.has(e, f2) and evo.get(e, f2) == false)
+        end
+    end
+
+    assert(v_set_sum == 42 * 6 + 21 * 2)
+    assert(v_insert_sum == 42 * 6 + 21 * 2)
+
+    assert(f3_set_times == 8)
+    assert(f3_insert_times == 8)
+end
+
+do
+    local function v2(x, y) return { x = x or 0, y = y or 0 } end
+    local function v2_clone(v) return { x = v.x, y = v.y } end
+
+    local f1, f2, f3, f4 = evo.id(4)
+    evo.set(f1, evo.REQUIRES, { f2, f3, f4 })
+
+    local f1_default = v2(1, 2)
+    local f2_default = v2(3, 4)
+    local f3_default = v2(10, 11)
+    local f4_default = v2(12, 13)
+
+    evo.set(f1, evo.DEFAULT, f1_default)
+    evo.set(f2, evo.DEFAULT, f2_default)
+    evo.set(f3, evo.DEFAULT, f3_default)
+    evo.set(f4, evo.DEFAULT, f4_default)
+
+    evo.set(f1, evo.DUPLICATE, v2_clone)
+    evo.set(f2, evo.DUPLICATE, v2_clone)
+    evo.set(f3, evo.DUPLICATE, v2_clone)
+
+    do
+        local entity_list, entity_count = evo.multi_spawn(2, { [f1] = v2(5, 6), [f2] = v2(7, 8) })
+
+        assert(entity_list and #entity_list == 2)
+        assert(entity_count == 2)
+
+        for i = 1, entity_count do
+            local e = entity_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) ~= f1_default)
+            assert(evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+
+            assert(evo.has(e, f2) and evo.get(e, f2) ~= f2_default)
+            assert(evo.get(e, f2).x == 7 and evo.get(e, f2).y == 8)
+
+            assert(evo.has(e, f3) and evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+
+            assert(evo.has(e, f4) and evo.get(e, f4) == f4_default)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, v2(5, 6)):set(f2, v2(7, 8)):spawn()
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab, { [f2] = f2_default })
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) ~= f1_default and evo.get(e, f1) ~= evo.get(entity_prefab, f1))
+            assert(evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+
+            assert(evo.has(e, f2) and evo.get(e, f2) ~= f2_default and evo.get(e, f2) ~= evo.get(entity_prefab, f2))
+            assert(evo.get(e, f2).x == 3 and evo.get(e, f2).y == 4)
+
+            assert(evo.has(e, f3) and evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+
+            assert(evo.has(e, f4) and evo.get(e, f4) == f4_default)
+        end
+    end
+
+    do
+        local entity_prefab = evo.builder():set(f1, v2(5, 6)):set(f2, v2(7, 8)):spawn()
+        evo.remove(entity_prefab, f2, f3, f4)
+
+        local clone_list, clone_count = evo.multi_clone(2, entity_prefab, { [f2] = f2_default })
+
+        assert(clone_list and #clone_list == 2)
+        assert(clone_count == 2)
+
+        for i = 1, clone_count do
+            local e = clone_list[i]
+            assert(e and not evo.empty(e))
+
+            assert(evo.has(e, f1) and evo.get(e, f1) ~= f1_default and evo.get(e, f1) ~= evo.get(entity_prefab, f1))
+            assert(evo.get(e, f1).x == 5 and evo.get(e, f1).y == 6)
+
+            assert(evo.has(e, f2) and evo.get(e, f2) ~= f2_default and evo.get(e, f2) ~= evo.get(entity_prefab, f2))
+            assert(evo.get(e, f2).x == 3 and evo.get(e, f2).y == 4)
+
+            assert(evo.has(e, f3) and evo.get(e, f3) ~= f3_default)
+            assert(evo.get(e, f3).x == 10 and evo.get(e, f3).y == 11)
+
+            assert(evo.has(e, f4) and evo.get(e, f4) == f4_default)
+        end
+    end
+end

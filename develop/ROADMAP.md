@@ -2,7 +2,6 @@
 
 ## Backlog
 
-- Queries can cache major chunks to avoid finding them every time.
 - observers and events
 - add INDEX fragment trait
 - use compact prefix-tree for chunks
@@ -11,8 +10,9 @@
 ## Thoughts
 
 - We can return deferred status from modifying operations and spawn/clone methods.
-- Should we make one builder:build method instead of :spawn and :clone?
+- We should have a way to not copy components on deferred spawn/clone.
 
 ## Known Issues
 
 - Required fragments are slower than they should be
+- Errors in hooks are cannot be handled properly right now
