@@ -59,7 +59,7 @@
     - [Chunk](#chunk)
     - [Builder](#builder)
 - [Changelog](#changelog)
-  - [vX.X.X](#vxxx)
+  - [v1.4.0](#v140)
   - [v1.3.0](#v130)
   - [v1.2.0](#v120)
   - [v1.1.0](#v110)
@@ -1300,7 +1300,7 @@ builder_mt:destruction_policy :: id -> builder
 
 ## Changelog
 
-### vX.X.X
+### v1.4.0
 
 - Improved query execution performance by caching some internal calculations
 - Added the universal [`builder.build`](#evolvedbuilder_mtbuild) and [`builder.multi_build`](#evolvedbuilder_mtmulti_build) methods that can be used to spawn or clone entities depending on the method arguments
