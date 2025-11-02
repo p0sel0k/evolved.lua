@@ -14,7 +14,7 @@ local record Evolved
 
     interface IComponent
     end
-    
+
     type Component = any | IComponent
 
     type Storage = { Component }
@@ -75,10 +75,10 @@ local record Evolved
         on_insert: function(self: Builder, on_insert: InsertHook): Builder
         on_remove: function(self: Builder, on_remove: RemoveHook): Builder
         group: function(self: Builder, group: System): Builder
-        query: function(self: Builder, q: Query): Builder
-        execute: function(self: Builder, exec_fn: Execute): Builder
-        prologue: function(self: Builder, p: Prologue): Builder
-        epilogue: function(self: Builder, e: Epilogue): Builder
+        query: function(self: Builder, query: Query): Builder
+        execute: function(self: Builder, execute: Execute): Builder
+        prologue: function(self: Builder, prologue: Prologue): Builder
+        epilogue: function(self: Builder, epilogue: Epilogue): Builder
         destruction_policy: function(self: Builder, policy: ID): Builder
     end
 
@@ -149,20 +149,20 @@ local record Evolved
     clear: function(...: Entity)
     destroy: function(...: Entity)
 
-    batch_set: function(q: Query, fragment: Fragment, component: Component)
-    batch_remove: function(q: Query, ...: Fragment)
+    batch_set: function(query: Query, fragment: Fragment, component: Component)
+    batch_remove: function(query: Query, ...: Fragment)
     batch_clear: function(...: Query)
     batch_destroy: function(...: Query)
 
     each: function(entity: Entity): (EachIterator, EachState | nil)
-    execute: function(q: Query): (ExecuteIterator, ExecuteState | nil)
+    execute: function(query: Query): (ExecuteIterator, ExecuteState | nil)
     locate: function(entity: Entity): (any | nil, number)
 
     process: function(...: System)
     debug_mode: function(yesno: boolean)
     collect_garbage: function()
 
-    chunk: function(first_fragment: Fragment, ...: Fragment): (Chunk, { Entity }, integer)
+    chunk: function(fragment: Fragment, ...: Fragment): (Chunk, { Entity }, integer)
     builder: function(): Builder
 end
 
