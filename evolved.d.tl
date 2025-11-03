@@ -11,11 +11,7 @@ local record Evolved
     type Fragment = ID
     type Query = ID
     type System = ID
-
-    interface IComponent
-    end
-
-    type Component = any | IComponent
+    type Component = any
 
     type Storage = { Component }
     type EachState = { integer, Chunk, integer, integer }
@@ -28,10 +24,10 @@ local record Evolved
     type Prologue = function()
     type Epilogue = function()
 
-    type SetHook = function(entity: Entity, fragment: Fragment, new: Component, old?: Component)
-    type AssignHook = function(entity: Entity, fragment: Fragment, new: Component, old?: Component)
-    type InsertHook = function(entity: Entity, fragment: Fragment, new: Component)
-    type RemoveHook = function(entity: Entity, fragment: Fragment, component: Component)
+    type SetHook<T> = function(entity: Entity, fragment: Fragment, new: T, old?: T)
+    type AssignHook<T> = function(entity: Entity, fragment: Fragment, new: T, old?: T)
+    type InsertHook<T> = function(entity: Entity, fragment: Fragment, new: T)
+    type RemoveHook<T> = function(entity: Entity, fragment: Fragment, component: T)
 
     record Chunk
         alive: function(self: Chunk): boolean
@@ -55,7 +51,7 @@ local record Evolved
         has_all: function(self: Builder, ...: Fragment): boolean
         has_any: function(self: Builder, ...: Fragment): boolean
         get: function(self: Builder, ...: Fragment): Component...
-        set: function(self: Builder, fragment: Fragment, component?: Component): Builder
+        set: function<T>(self: Builder, fragment: Fragment, component?: T): Builder
         remove: function(self: Builder, ...: Fragment): Builder
         clear: function(self: Builder): Builder
         tag: function(self: Builder): Builder
@@ -63,17 +59,17 @@ local record Evolved
         unique: function(self: Builder): Builder
         explicit: function(self: Builder): Builder
         internal: function(self: Builder): Builder
-        default: function(self: Builder, default: Component): Builder
-        duplicate: function(self: Builder, duplicate: function(Component): Component): Builder
+        default: function<T>(self: Builder, default: T): Builder
+        duplicate: function<T>(self: Builder, duplicate: function(T): T): Builder
         prefab: function(self: Builder): Builder
         disabled: function(self: Builder): Builder
         include: function(self: Builder, ...: Fragment): Builder
         exclude: function(self: Builder, ...: Fragment): Builder
         require: function(self: Builder, ...: Fragment): Builder
-        on_set: function(self: Builder, on_set: SetHook): Builder
-        on_assign: function(self: Builder, on_assign: AssignHook): Builder
-        on_insert: function(self: Builder, on_insert: InsertHook): Builder
-        on_remove: function(self: Builder, on_remove: RemoveHook): Builder
+        on_set: function<T>(self: Builder, on_set: SetHook<T>): Builder
+        on_assign: function<T>(self: Builder, on_assign: AssignHook<T>): Builder
+        on_insert: function<T>(self: Builder, on_insert: InsertHook<T>): Builder
+        on_remove: function<T>(self: Builder, on_remove: RemoveHook<T>): Builder
         group: function(self: Builder, group: System): Builder
         query: function(self: Builder, query: Query): Builder
         execute: function(self: Builder, execute: Execute): Builder
@@ -144,12 +140,12 @@ local record Evolved
     has_any: function(entity: Entity, ...: Fragment): boolean
 
     get: function(entity: Entity, ...: Fragment): Component...
-    set: function(entity: Entity, fragment: Fragment, component: Component)
+    set: function<T>(entity: Entity, fragment: Fragment, component: T)
     remove: function(entity: Entity, ...: Fragment)
     clear: function(...: Entity)
     destroy: function(...: Entity)
 
-    batch_set: function(query: Query, fragment: Fragment, component: Component)
+    batch_set: function<T>(query: Query, fragment: Fragment, component: T)
     batch_remove: function(query: Query, ...: Fragment)
     batch_clear: function(...: Query)
     batch_destroy: function(...: Query)
