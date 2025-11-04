@@ -144,12 +144,12 @@ local record Evolved
     has_any: function(entity: Entity, ...: Fragment): boolean
 
     get: function(entity: Entity, ...: Fragment): Component...
-    set: function<T>(entity: Entity, fragment: Fragment, component: T)
+    set: function<T>(entity: Entity, fragment: Fragment, component?: T)
     remove: function(entity: Entity, ...: Fragment)
     clear: function(...: Entity)
     destroy: function(...: Entity)
 
-    batch_set: function<T>(query: Query, fragment: Fragment, component: T)
+    batch_set: function<T>(query: Query, fragment: Fragment, component?: T)
     batch_remove: function(query: Query, ...: Fragment)
     batch_clear: function(...: Query)
     batch_destroy: function(...: Query)
