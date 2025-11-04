@@ -15,8 +15,14 @@ local record Evolved
 
     type Storage = { Component }
 
-    type EachIterator = function(): (Fragment, Component)
-    type ExecuteIterator = function(): (Chunk, { Entity }, integer)
+    record EachState
+    end
+
+    record ExecuteState
+    end
+
+    type EachIterator = function(state?: EachState): (Fragment, Component)
+    type ExecuteIterator = function(state?: ExecuteState): (Chunk, { Entity }, integer)
 
     type Execute = function(chunk: Chunk, entity_list: { Entity }, entity_count: integer)
     type Prologue = function()
@@ -33,18 +39,18 @@ local record Evolved
         has: function(self: Chunk, fragment: Fragment): boolean
         has_all: function(self: Chunk, ...: Fragment): boolean
         has_any: function(self: Chunk, ...: Fragment): boolean
-        entities: function(self: Chunk): ({ Entity }, number)
-        fragments: function(self: Chunk): ({ Fragment }, number)
+        entities: function(self: Chunk): ({ Entity }, integer)
+        fragments: function(self: Chunk): ({ Fragment }, integer)
         components: function(self: Chunk, ...: Fragment): Storage...
     end
 
     record Builder
         build: function(self: Builder, prefab?: Entity): Entity
-        multi_build: function(self: Builder, entity_count: number, prefab?: Entity): ({ Entity }, number)
+        multi_build: function(self: Builder, entity_count: integer, prefab?: Entity): ({ Entity }, integer)
         spawn: function(self: Builder): Entity
-        multi_spawn: function(self: Builder, entity_count: number): ({ Entity }, number)
+        multi_spawn: function(self: Builder, entity_count: integer): ({ Entity }, integer)
         clone: function(self: Builder, prefab: Entity): Entity
-        multi_clone: function(self: Builder, entity_count: number, prefab: Entity): ({ Entity }, number)
+        multi_clone: function(self: Builder, entity_count: integer, prefab: Entity): ({ Entity }, integer)
         has: function(self: Builder, fragment: Fragment): boolean
         has_all: function(self: Builder, ...: Fragment): boolean
         has_any: function(self: Builder, ...: Fragment): boolean
@@ -109,21 +115,21 @@ local record Evolved
     DESTRUCTION_POLICY_DESTROY_ENTITY: ID
     DESTRUCTION_POLICY_REMOVE_FRAGMENT: ID
 
-    id: function(count?: number): ID...
+    id: function(count?: integer): ID...
     name: function(...: ID): string...
 
-    pack: function(primary: number, secondary: number): ID
-    unpack: function(id: ID): (number, number)
+    pack: function(primary: integer, secondary: integer): ID
+    unpack: function(id: ID): (integer, integer)
 
     defer: function(): boolean
     commit: function(): boolean
     cancel: function(): boolean
 
     spawn: function(components?: { Fragment: Component }): Entity
-    multi_spawn: function(entity_count: number, components?: { Fragment: Component }): ({ Entity }, number)
+    multi_spawn: function(entity_count: integer, components?: { Fragment: Component }): ({ Entity }, integer)
 
     clone: function(prefab: Entity, components?: { Fragment: Component }): Entity
-    multi_clone: function(entity_count: number, prefab: Entity, components?: { Fragment: Component }): ({ Entity }, number)
+    multi_clone: function(entity_count: integer, prefab: Entity, components?: { Fragment: Component }): ({ Entity }, integer)
 
     alive: function(entity: Entity): boolean
     alive_all: function(...: Entity): boolean
@@ -148,9 +154,9 @@ local record Evolved
     batch_clear: function(...: Query)
     batch_destroy: function(...: Query)
 
-    each: function(entity: Entity): EachIterator
-    execute: function(query: Query): ExecuteIterator
-    locate: function(entity: Entity): (any, number)
+    each: function(entity: Entity): (EachIterator, EachState)
+    execute: function(query: Query): (ExecuteIterator, ExecuteState)
+    locate: function(entity: Entity): (Chunk, integer)
 
     process: function(...: System)
     debug_mode: function(yesno: boolean)
