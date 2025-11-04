@@ -14,11 +14,9 @@ local record Evolved
     type Component = any
 
     type Storage = { Component }
-    type EachState = { integer, Chunk, integer, integer }
-    type ExecuteState = { integer, { Chunk }, integer, {Fragment: integer} | nil }
 
-    type EachIterator = function(state?: EachState): (Fragment | nil, Component | nil)
-    type ExecuteIterator = function(state?: ExecuteState): (Chunk | nil, { Entity } | nil, integer | nil)
+    type EachIterator = function(): (Fragment, Component)
+    type ExecuteIterator = function(): (Chunk, { Entity }, integer)
 
     type Execute = function(chunk: Chunk, entity_list: { Entity }, entity_count: integer)
     type Prologue = function()
@@ -150,9 +148,9 @@ local record Evolved
     batch_clear: function(...: Query)
     batch_destroy: function(...: Query)
 
-    each: function(entity: Entity): (EachIterator, EachState | nil)
-    execute: function(query: Query): (ExecuteIterator, ExecuteState | nil)
-    locate: function(entity: Entity): (any | nil, number)
+    each: function(entity: Entity): EachIterator
+    execute: function(query: Query): ExecuteIterator
+    locate: function(entity: Entity): (any, number)
 
     process: function(...: System)
     debug_mode: function(yesno: boolean)
